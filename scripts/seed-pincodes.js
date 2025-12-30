@@ -1,0 +1,87 @@
+import { config } from "dotenv";
+import { PrismaClient } from "@prisma/client";
+import { PrismaPg } from "@prisma/adapter-pg";
+import { Pool } from "pg";
+
+// Load environment variables
+config({ path: ".env.local", override: true });
+config({ path: ".env" });
+
+// Initialize Prisma Client
+const connectionString = process.env.DATABASE_URL;
+const pool = new Pool({ connectionString });
+const adapter = new PrismaPg(pool);
+const prisma = new PrismaClient({
+  adapter,
+  log: ["error"],
+});
+
+const pincodeData = [
+  { pincode: "680001", localityName: "Thrissur H.O / Central / Town" },
+  { pincode: "680002", localityName: "Punkunnu" },
+  { pincode: "680003", localityName: "Ayyanthole / Ayyanthole North" },
+  { pincode: "680004", localityName: "Poothole / West Fort" },
+  { pincode: "680005", localityName: "Thrissur East / Nellikunnu" },
+  { pincode: "680006", localityName: "Kuriachira / Anchery / Nehrunagar" },
+  { pincode: "680007", localityName: "Kurkancheri / Nedupuzha / Vadookkara" },
+  { pincode: "680008", localityName: "Cherur / Peringavu" },
+  { pincode: "680010", localityName: "Viyyur / Kolazhi" },
+  { pincode: "680012", localityName: "Pullazhi / Chettupuzha / Manakkodi" },
+  { pincode: "680014", localityName: "Puthur / Kuttanellur / Mannamangalam" },
+  { pincode: "680020", localityName: "Thrissur City" },
+  { pincode: "680026", localityName: "Chiyyaram" },
+];
+
+const district = "Thrissur";
+const state = "Kerala";
+
+async function seedPincodes() {
+  console.log("🌱 Starting to seed pincodes...");
+
+  try {
+    // Use createMany with skipDuplicates to avoid errors if pincode already exists
+    const result = await prisma.pincode.createMany({
+      data: pincodeData.map((item) => ({
+        pincode: item.pincode,
+        localityName: item.localityName,
+        district: district,
+        state: state,
+      })),
+      skipDuplicates: true, // Skip if pincode already exists
+    });
+
+    console.log(`✅ Successfully inserted ${result.count} pincodes!`);
+    console.log(`📍 District: ${district}, State: ${state}`);
+
+    // Display inserted pincodes
+    const insertedPincodes = await prisma.pincode.findMany({
+      where: {
+        district: district,
+        state: state,
+      },
+      orderBy: {
+        pincode: "asc",
+      },
+    });
+
+    console.log("\n📋 Inserted Pincodes:");
+    insertedPincodes.forEach((p) => {
+      console.log(`  ${p.pincode} - ${p.localityName}`);
+    });
+  } catch (error) {
+    console.error("❌ Error seeding pincodes:", error);
+    throw error;
+  } finally {
+    await prisma.$disconnect();
+  }
+}
+
+seedPincodes()
+  .then(() => {
+    console.log("\n✨ Seeding completed successfully!");
+    process.exit(0);
+  })
+  .catch((error) => {
+    console.error("\n💥 Seeding failed:", error);
+    process.exit(1);
+  });
