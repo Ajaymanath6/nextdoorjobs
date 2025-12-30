@@ -3,6 +3,16 @@
 :root {
   --background: #ffffff;
   --foreground: #171717;
+  
+  /* Brand Colors */
+  --brand-color: #7c00ff;
+  --brand-text-strong: #0A0A0A;
+  --brand-text-weak: #1A1A1A;
+  --brand-stroke-strong: #575757;
+  --brand-stroke-weak: #F5F5F5;
+  --brand-stroke-border: #E5E5E5;
+  --brand-bg-fill: #fcfcfb;
+  --brand-bg-white: #FFFFFF;
 }
 
 @theme inline {
@@ -10,6 +20,16 @@
   --color-foreground: var(--foreground);
   --font-sans: var(--font-geist-sans);
   --font-mono: var(--font-geist-mono);
+  
+  /* Brand Color Theme */
+  --color-brand: var(--brand-color);
+  --color-brand-text-strong: var(--brand-text-strong);
+  --color-brand-text-weak: var(--brand-text-weak);
+  --color-brand-stroke-strong: var(--brand-stroke-strong);
+  --color-brand-stroke-weak: var(--brand-stroke-weak);
+  --color-brand-stroke-border: var(--brand-stroke-border);
+  --color-brand-bg-fill: var(--brand-bg-fill);
+  --color-brand-bg-white: var(--brand-bg-white);
 }
 
 @media (prefers-color-scheme: dark) {
@@ -22,5 +42,5 @@
 body {
   background: var(--background);
   color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  font-family: "Open Sans", Arial, Helvetica, sans-serif;
 }

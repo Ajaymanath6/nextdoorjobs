@@ -1,0 +1,71 @@
+{
+  "_comments": {
+    "brand-stroke-strong": "Use for: icons, input borders, sidebar borders - Color: #575757",
+    "brand-stroke-weak": "Use for: dividers only - Color: #F5F5F5",
+    "brand-stroke-border": "Use for: sidebar right border, logo section border - Color: #E5E5E5"
+  },
+  "brand": {
+    "color": {
+      "primary": "bg-brand text-white",
+      "primary-text": "text-brand",
+      "primary-border": "border-brand"
+    },
+    "text": {
+      "strong": "text-brand-text-strong",
+      "weak": "text-brand-text-weak"
+    },
+    "background": {
+      "fill": "bg-brand-bg-fill",
+      "white": "bg-brand-bg-white",
+      "hover": "bg-brand-stroke-weak"
+    },
+    "stroke": {
+      "strong": "border-brand-stroke-strong",
+      "weak": "border-brand-stroke-weak",
+      "border": "border-brand-stroke-border",
+      "strong-divider": "border-t border-brand-stroke-strong",
+      "weak-divider": "border-t border-brand-stroke-weak",
+      "border-divider": "border-t border-brand-stroke-border"
+    }
+  },
+  "components": {
+    "sidebar": {
+      "container-expanded": "w-52 bg-brand-bg-white border-r border-brand-stroke-border transition-all duration-300",
+      "container-collapsed": "w-16 bg-brand-bg-white border-r border-brand-stroke-border transition-all duration-300",
+      "logo-section": "p-4 border-b border-brand-stroke-border",
+      "logo-container": "w-6 h-6",
+      "logo-text": "text-brand-text-weak font-medium text-base leading-6 tracking-[-0.03em]",
+      "toggle-button": "w-8 h-8 rounded bg-brand-stroke-weak hover:bg-brand-stroke-weak flex items-center justify-center",
+      "nav-container": "p-2 space-y-2",
+      "nav-button": "flex items-center pt-1 pr-2 pb-1 pl-2 rounded-[12px] transition-colors border-0 w-full",
+      "nav-button-expanded": "space-x-3",
+      "nav-button-collapsed": "justify-center",
+      "nav-button-active": "bg-brand-stroke-weak",
+      "nav-button-hover": "hover:bg-brand-stroke-weak",
+      "nav-icon-container": "w-8 h-8 rounded-md flex items-center justify-center",
+      "nav-text": "text-brand-stroke-strong font-medium text-base leading-6 tracking-[-0.03em]",
+      "whats-new-section": "p-2",
+      "user-section": "p-2",
+      "user-button-expanded": "pt-1 pr-2 pb-1 pl-2",
+      "user-button-collapsed": "p-2"
+    },
+    "button": {
+      "primary": "bg-brand text-white hover:opacity-90",
+      "secondary": "bg-brand-bg-fill text-brand-text-strong border border-brand-stroke-weak",
+      "outline": "border border-brand-stroke-strong text-brand-text-strong hover:bg-brand-bg-fill"
+    },
+    "card": {
+      "container": "bg-brand-bg-white border border-brand-stroke-weak",
+      "title": "text-brand-text-strong",
+      "body": "text-brand-text-weak"
+    },
+    "input": {
+      "border": "border-brand-stroke-strong",
+      "focus": "focus:border-brand focus:ring-brand"
+    },
+    "icon": {
+      "border": "border-brand-stroke-strong",
+      "color": "text-brand-stroke-strong"
+    }
+  }
+}
