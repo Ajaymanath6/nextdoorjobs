@@ -18,7 +18,7 @@ import {
   EarthFilled,
 } from "@carbon/icons-react";
 
-export default function Sidebar({ activeItem = "home", onToggle, isOpen: externalIsOpen }) {
+export default function Sidebar({ activeItem = "jobs-near-you", onToggle, isOpen: externalIsOpen }) {
   const router = useRouter();
   const [isOpen, setIsOpen] = useState(externalIsOpen !== undefined ? externalIsOpen : true);
   const [showUserDropdown, setShowUserDropdown] = useState(false);
@@ -140,13 +140,17 @@ export default function Sidebar({ activeItem = "home", onToggle, isOpen: externa
           {navigationItems.map((item) => {
             const IconComponent = item.icon;
             const isActive = activeItem === item.id;
+            const isDisabled = !isActive && item.id !== "jobs-near-you";
             return (
               <li key={item.id}>
                 <button
-                  onClick={() => handleNavigation(item.route)}
+                  onClick={() => !isDisabled && handleNavigation(item.route)}
+                  disabled={isDisabled}
                   className={`${sidebar["nav-button"]} ${
                     isOpen ? sidebar["nav-button-expanded"] : sidebar["nav-button-collapsed"]
-                  } ${isActive ? sidebar["nav-button-active"] : sidebar["nav-button-hover"]}`}
+                  } ${isActive ? sidebar["nav-button-active"] : sidebar["nav-button-hover"]} ${
+                    isDisabled ? "opacity-50 cursor-not-allowed" : ""
+                  }`}
                 >
                   <div className={sidebar["nav-icon-container"]}>
                     <IconComponent

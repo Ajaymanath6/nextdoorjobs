@@ -30,6 +30,14 @@ const pincodeData = [
   { pincode: "680014", localityName: "Puthur / Kuttanellur / Mannamangalam" },
   { pincode: "680020", localityName: "Thrissur City" },
   { pincode: "680026", localityName: "Chiyyaram" },
+  { pincode: "680121", localityName: "Irinjalakuda / Chelur" },
+  { pincode: "680122", localityName: "Edathirinji" },
+  { pincode: "680123", localityName: "Konathukunnu / Karumathra" },
+  { pincode: "680125", localityName: "Irinjalakuda North / Porathissery" },
+  { pincode: "680683", localityName: "Kallettumkara / Alur / Avittathur" },
+  { pincode: "680684", localityName: "Kodakara / Chembuchira" },
+  { pincode: "680702", localityName: "Kattoor / Karanchira" },
+  { pincode: "680711", localityName: "Karuvannur / Karalam" },
 ];
 
 const district = "Thrissur";

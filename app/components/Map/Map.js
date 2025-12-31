@@ -1,7 +1,17 @@
 "use client";
 
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, useState } from "react";
 import dynamic from "next/dynamic";
+import themeClasses from "../../theme-utility-classes.json";
+import {
+  EarthFilled,
+  List,
+  Filter,
+  Return,
+  SendFilled,
+} from "@carbon/icons-react";
+import { RiArrowDownSLine, RiSearchLine } from "@remixicon/react";
+import FilterDropdown from "./FilterDropdown";
 
 // Import CSS files (Next.js handles these)
 import "leaflet/dist/leaflet.css";
@@ -12,13 +22,373 @@ import "leaflet.markercluster/dist/MarkerCluster.Default.css";
 const MapComponent = () => {
   const mapRef = useRef(null);
   const mapInstanceRef = useRef(null);
+  const [isClient, setIsClient] = useState(false);
+  const [hasSearched, setHasSearched] = useState(false);
+  const [searchQuery, setSearchQuery] = useState("");
+  const [isGlobeView, setIsGlobeView] = useState(true);
+  const [selectedFilterOption, setSelectedFilterOption] = useState(null);
+  const [isHomeFilterActive, setIsHomeFilterActive] = useState(false);
+  const [showViewDropdown, setShowViewDropdown] = useState(false);
+  const [showFilterDropdown, setShowFilterDropdown] = useState(false);
+  const [showHomeLocationDropdown, setShowHomeLocationDropdown] = useState(false);
+  const [homeLocation, setHomeLocation] = useState("");
+
+  const searchBar = themeClasses.components.searchBar;
+  const brand = themeClasses.brand;
+  const markers = themeClasses.components.markers;
+  const homeMarkerRef = useRef(null);
+  const companyMarkersRef = useRef([]);
+  const straightLinesRef = useRef([]);
+  const clusterGroupRef = useRef(null);
+  const filterDropdownRef = useRef(null);
+  const filterButtonRef = useRef(null);
+  const [locationsData, setLocationsData] = useState(null);
+  const [companyDistances, setCompanyDistances] = useState({});
+
+  // Load locations data (client-side only)
+  useEffect(() => {
+    if (typeof window !== "undefined") {
+      fetch("/data/locations.json")
+        .then((response) => response.json())
+        .then((data) => {
+          setLocationsData(data);
+        })
+        .catch((error) => {
+          console.error("Error loading locations data:", error);
+        });
+    }
+  }, []);
+
+  // Cleanup markers and lines on unmount
+  useEffect(() => {
+    return () => {
+      if (mapInstanceRef.current) {
+        // Remove home marker
+        if (homeMarkerRef.current) {
+          mapInstanceRef.current.removeLayer(homeMarkerRef.current);
+        }
+        // Remove company markers
+        if (clusterGroupRef.current) {
+          mapInstanceRef.current.removeLayer(clusterGroupRef.current);
+        }
+        // Remove lines
+        straightLinesRef.current.forEach((line) => {
+          mapInstanceRef.current.removeLayer(line);
+        });
+        straightLinesRef.current = [];
+      }
+    };
+  }, []);
+
+  // Calculate optimal padding based on pin count
+  const calculateOptimalPadding = (pinCount) => {
+    if (pinCount <= 3) return 80;   // 80px padding for 1-3 pins
+    if (pinCount <= 10) return 120;  // 120px padding for 4-10 pins
+    return 150;                      // 150px padding for 11+ pins
+  };
+
+  // Distance calculation function using OSRM API
+  const fetchRoadDistance = async (start, end) => {
+    try {
+      // OSRM API: lon,lat format, overview=false to get only distance
+      const url = `http://router.project-osrm.org/route/v1/driving/${start[1]},${start[0]};${end[1]},${end[0]}?overview=false`;
+      
+      const response = await fetch(url, {
+        headers: { "User-Agent": "NextDoorJobs/1.0" },
+      });
+
+      if (!response.ok) {
+        throw new Error(`OSRM API error: ${response.status}`);
+      }
+
+      const data = await response.json();
+
+      if (data.code === "Ok" && data.routes && data.routes.length > 0) {
+        // Return distance in meters
+        return data.routes[0].distance;
+      }
+
+      return null;
+    } catch (error) {
+      console.error("Error fetching road distance:", error);
+      return null;
+    }
+  };
+
+  // Calculate distances for all companies
+  const calculateDistances = async (homeLoc, companies, map) => {
+    if (!homeLoc || !homeLoc.lat || !homeLoc.lon || !map) return {};
+
+    const distances = {};
+    const homeCoords = [homeLoc.lat, homeLoc.lon];
+
+    await Promise.all(
+      companies.map(async (company) => {
+        const companyCoords = [company.lat, company.lon];
+        const roadDistanceMeters = await fetchRoadDistance(
+          homeCoords,
+          companyCoords
+        );
+
+        if (roadDistanceMeters !== null) {
+          distances[company.name] = (roadDistanceMeters / 1000).toFixed(1);
+        } else {
+          // Fallback to straight-line distance
+          const straightDistance = map.distance(homeCoords, companyCoords);
+          distances[company.name] = (straightDistance / 1000).toFixed(1);
+        }
+      })
+    );
+
+    return distances;
+  };
+
+  // Create home icon function
+  const createHomeIcon = (L) => {
+    return L.divIcon({
+      html: `<div style="background-color:#FFFFFF;border-radius:50%;width:40px;height:40px;display:flex;align-items:center;justify-content:center;font-size:20px;border:3px solid #E5E5E5;box-shadow:0 2px 8px rgba(0,0,0,0.3);">🏠</div>`,
+      className: "home-marker",
+      iconSize: [40, 40],
+      iconAnchor: [20, 20],
+    });
+  };
+
+  // Render company markers with popups
+  const renderCompanyMarkers = (companies) => {
+    if (!mapInstanceRef.current || !window.L) return;
+
+    const L = window.L;
+
+    // Clear existing company markers
+    if (clusterGroupRef.current) {
+      mapInstanceRef.current.removeLayer(clusterGroupRef.current);
+      clusterGroupRef.current = null;
+    }
+    companyMarkersRef.current = [];
+
+    // Create new cluster group
+    const clusterGroup = L.markerClusterGroup({
+      chunkedLoading: true,
+      maxClusterRadius: 80,
+      spiderfyOnMaxZoom: true,
+      showCoverageOnHover: false,
+      zoomToBoundsOnClick: true,
+      disableClusteringAtZoom: 15,
+      iconCreateFunction: function(cluster) {
+        const count = cluster.getChildCount();
+        return L.divIcon({
+          html: `<div style="background-color:#7c00ff;color:white;border-radius:50%;width:40px;height:40px;display:flex;align-items:center;justify-content:center;font-weight:bold;font-size:14px;border:3px solid white;box-shadow:0 2px 8px rgba(0,0,0,0.3);">${count}</div>`,
+          className: 'marker-cluster-custom',
+          iconSize: L.point(40, 40),
+        });
+      },
+    });
+    clusterGroupRef.current = clusterGroup;
+
+    // Create markers for each company
+    companies.forEach((company, index) => {
+      const logoUrl = company.logoUrl || null;
+      const customIcon = createCustomTeardropIcon(L, logoUrl, 50, null);
+
+      const marker = L.marker([company.latitude, company.longitude], {
+        icon: customIcon,
+        zIndexOffset: 1000 + index,
+        opacity: 1,
+      });
+
+      // Store company data on marker
+      marker.companyData = company;
+
+      // Create popup content
+      const popupContent = `
+        <div style="font-family: 'Open Sans', sans-serif; padding: 4px;">
+          <div style="font-weight: 600; font-size: 14px; color: #0A0A0A; margin-bottom: 4px;">
+            ${company.company_name}
+          </div>
+          <div style="font-size: 12px; color: #1A1A1A;">
+            ${company.type}
+          </div>
+        </div>
+      `;
+
+      marker.bindPopup(popupContent, {
+        className: "company-popup",
+      });
+
+      clusterGroup.addLayer(marker);
+      companyMarkersRef.current.push(marker);
+    });
+
+    // Add cluster group to map
+    mapInstanceRef.current.addLayer(clusterGroup);
+  };
+
+  // Perform district-level zoom (state → district, stops at district)
+  const performDistrictZoom = (dbData, showNoCompaniesMessage = false) => {
+    // #region agent log
+    fetch('http://127.0.0.1:7244/ingest/f2d2fb18-25f0-4f18-a513-0d2323a91392',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'Map.js:performDistrictZoom:entry',message:'District zoom called',data:{dbData,showNoCompaniesMessage,hasMap:!!mapInstanceRef.current,hasL:!!window.L},timestamp:Date.now(),sessionId:'debug-session',hypothesisId:'H4'})}).catch(()=>{});
+    // #endregion
+    
+    if (!mapInstanceRef.current || !window.L) return;
+
+    const L = window.L;
+    const state = dbData.state; // "Kerala"
+    const district = dbData.district; // "Thrissur"
+
+    // Use database coordinates if available, otherwise use default
+    const hasCoordinates = dbData.latitude && dbData.longitude;
+    const districtCenter = hasCoordinates 
+      ? [dbData.latitude, dbData.longitude]
+      : [10.5276, 76.2144]; // Default Thrissur center
+
+    // #region agent log
+    fetch('http://127.0.0.1:7244/ingest/f2d2fb18-25f0-4f18-a513-0d2323a91392',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'Map.js:performDistrictZoom:coordinates',message:'Coordinates calculated',data:{hasCoordinates,districtCenter,latitude:dbData.latitude,longitude:dbData.longitude},timestamp:Date.now(),sessionId:'debug-session',hypothesisId:'H4'})}).catch(()=>{});
+    // #endregion
+
+    // Calculate state center (Kerala center - Thrissur area)
+    const stateCenter = [10.5276, 76.2144]; // Kerala center (Thrissur area)
+
+    // Stage 1: Fly to State (zoom 8)
+    mapInstanceRef.current.flyTo(stateCenter, 8, {
+      duration: 1.5,
+      easeLinearity: 0.25,
+    });
+
+    // Stage 2: After Stage 1 completes, fly to District (zoom 11) and stop here
+    mapInstanceRef.current.once("moveend", () => {
+      setTimeout(() => {
+        mapInstanceRef.current.flyTo(districtCenter, 11, {
+          duration: 1.5,
+          easeLinearity: 0.25,
+        });
+
+        // After district zoom completes, show "No companies found" message if needed
+        mapInstanceRef.current.once("moveend", () => {
+          if (showNoCompaniesMessage) {
+            // Show a temporary message on the map
+            const noCompaniesMessage = L.popup({
+              className: "no-companies-message",
+              closeButton: true,
+              autoClose: false,
+              closeOnClick: false,
+            })
+              .setLatLng(districtCenter)
+              .setContent(`
+                <div style="font-family: 'Open Sans', sans-serif; padding: 12px; text-align: center;">
+                  <div style="font-weight: 600; font-size: 16px; color: #0A0A0A; margin-bottom: 8px;">
+                    No Companies Found
+                  </div>
+                  <div style="font-size: 14px; color: #1A1A1A;">
+                    No companies available for ${dbData.localityName || district} at this time.
+                  </div>
+                </div>
+              `)
+              .openOn(mapInstanceRef.current);
+
+            // Auto-close after 5 seconds
+            setTimeout(() => {
+              if (noCompaniesMessage && mapInstanceRef.current) {
+                mapInstanceRef.current.closePopup(noCompaniesMessage);
+              }
+            }, 5000);
+          }
+        });
+      }, 500); // Small delay between stages
+    });
+  };
+
+  // Perform multi-stage zoom animation for locality search with database data
+  const performLocalitySearchWithDBData = (dbData, localityData) => {
+    if (!mapInstanceRef.current || !window.L) return;
+
+    const L = window.L;
+    const companies = localityData.companies;
+    const state = dbData.state; // "Kerala"
+    const district = dbData.district; // "Thrissur"
+
+    // Use database coordinates if available, otherwise fall back to locations.json
+    const hasCoordinates = dbData.latitude && dbData.longitude;
+    const localityCenter = hasCoordinates
+      ? [dbData.latitude, dbData.longitude]
+      : [localityData.center.lat, localityData.center.lon];
+
+    // Calculate state center (Kerala center - Thrissur area)
+    const stateCenter = [10.5276, 76.2144]; // Kerala center (Thrissur area)
+    
+    // Use database coordinates for district center if available
+    const districtCenter = hasCoordinates
+      ? [dbData.latitude, dbData.longitude]
+      : [10.5276, 76.2144]; // Default Thrissur center
+
+    // Stage 1: Fly to State (zoom 8)
+    mapInstanceRef.current.flyTo(stateCenter, 8, {
+      duration: 1.5,
+      easeLinearity: 0.25,
+    });
+
+    // Stage 2: After Stage 1 completes, fly to District (zoom 11)
+    mapInstanceRef.current.once("moveend", () => {
+      setTimeout(() => {
+        mapInstanceRef.current.flyTo(districtCenter, 11, {
+          duration: 1.5,
+          easeLinearity: 0.25,
+        });
+
+        // Stage 3: After Stage 2 completes, fly to Locality (zoom 15)
+        mapInstanceRef.current.once("moveend", () => {
+          mapInstanceRef.current.flyTo(localityCenter, 15, {
+            duration: 1.5,
+            easeLinearity: 0.25,
+          });
+
+          // After final zoom, render company markers
+          mapInstanceRef.current.once("moveend", () => {
+            renderCompanyMarkers(companies);
+          });
+        });
+      }, 500); // Small delay between stages
+    });
+  };
+
+  // Create company marker icon function
+  const createCustomTeardropIcon = (L, logoUrl = null, size = 50, distanceKm = null) => {
+    const boxSize = size;
+    const lightBlueBorder = "#87CEEB";
+
+    // Distance badge HTML
+    const badgeHtml =
+      distanceKm !== null
+        ? `<div style="position:absolute;bottom:-8px;left:50%;transform:translateX(-50%);background-color:#0A0A0A;color:white;border-radius:4px;padding:2px 6px;font-size:11px;font-weight:600;white-space:nowrap;box-shadow:0 2px 4px rgba(0,0,0,0.3);pointer-events:none;z-index:1000;">${distanceKm} km</div>`
+        : "";
+
+    // Main marker HTML
+    const html = `<div class="company-marker" style="position:relative;width:${boxSize}px;height:${boxSize}px;background-color:#FFFFFF;border-radius:8px;display:flex;align-items:center;justify-content:center;padding:0;box-shadow:0 2px 8px rgba(0,0,0,0.12),0 1px 3px rgba(0,0,0,0.08);border:2px solid ${lightBlueBorder};cursor:pointer;transition:transform 0.2s ease,box-shadow 0.2s ease;overflow:visible;">${
+      logoUrl
+        ? `<img src="${logoUrl}" alt="Logo" style="width:100%;height:100%;object-fit:cover;border-radius:6px;" />`
+        : `<div style="width:100%;height:100%;background:#7c00ff;border-radius:6px;"></div>`
+    }${badgeHtml}</div>`;
+
+    return L.divIcon({
+      html: html,
+      className: "custom-pindrop-marker",
+      iconSize: [boxSize, boxSize + (distanceKm !== null ? 20 : 0)],
+      iconAnchor: [
+        boxSize / 2,
+        (boxSize + (distanceKm !== null ? 20 : 0)) / 2,
+      ],
+      popupAnchor: [0, -(boxSize + (distanceKm !== null ? 20 : 0)) - 10],
+    });
+  };
 
   useEffect(() => {
-    if (typeof window === "undefined" || !mapRef.current || mapInstanceRef.current) {
-      return;
-    }
+    setIsClient(true);
+  }, []);
 
-    // Import Leaflet first, then markercluster
+  useEffect(() => {
+    // Only run on client side
+    if (!isClient || !mapRef.current || mapInstanceRef.current) return;
+
+    // Dynamic import of Leaflet to avoid SSR issues
     import("leaflet").then((LModule) => {
       const L = LModule.default;
       
@@ -38,7 +408,11 @@ const MapComponent = () => {
             "https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/images/marker-shadow.png",
         });
 
-        const zoom = 2;
+        // Set initial view to home location (Thrissur, Kerala)
+        // Will be adjusted by fitBounds when markers are added
+        const initialLat = 10.5276;
+        const initialLon = 76.2144;
+        const zoom = 10; // Default zoom, will be adjusted by fitBounds
 
         // Map initialization with exact configuration
         const map = L.map(mapRef.current, {
@@ -46,7 +420,7 @@ const MapComponent = () => {
           attributionControl: true,
           zoomAnimation: true,
           zoomAnimationThreshold: 4,
-        }).setView([0, 0], zoom);
+        }).setView([initialLat, initialLon], zoom);
 
         // Tile layer with OpenStreetMap
         L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
@@ -62,6 +436,18 @@ const MapComponent = () => {
     // Cleanup function
     return () => {
       if (mapInstanceRef.current) {
+        // Remove all markers and lines
+        if (homeMarkerRef.current) {
+          mapInstanceRef.current.removeLayer(homeMarkerRef.current);
+        }
+        if (clusterGroupRef.current) {
+          mapInstanceRef.current.removeLayer(clusterGroupRef.current);
+        }
+        straightLinesRef.current.forEach((line) => {
+          mapInstanceRef.current.removeLayer(line);
+        });
+        straightLinesRef.current = [];
+        
         mapInstanceRef.current.remove();
         mapInstanceRef.current = null;
       }
@@ -70,12 +456,691 @@ const MapComponent = () => {
         delete window.L;
       }
     };
-  }, []);
+  }, [isClient]);
+
+  // Add markers when locations data and map are ready
+  useEffect(() => {
+    if (!mapInstanceRef.current || !locationsData) {
+      return;
+    }
+
+    // Don't add markers if they already exist
+    if (homeMarkerRef.current !== null) {
+      return;
+    }
+
+    const addMarkersToMap = async () => {
+      const L = window.L;
+      if (!L || !mapInstanceRef.current) {
+        // Retry after a short delay if L is not available yet
+        setTimeout(() => {
+          if (window.L && mapInstanceRef.current && locationsData) {
+            addMarkersToMap();
+          }
+        }, 100);
+        return;
+      }
+
+      const homeLoc = locationsData.homeLocation;
+      const companies = locationsData.companies;
+
+      if (!homeLoc || !homeLoc.lat || !homeLoc.lon) {
+        return;
+      }
+
+      // Create home marker
+      const homeIcon = createHomeIcon(L);
+      const homeMarker = L.marker([homeLoc.lat, homeLoc.lon], {
+        icon: homeIcon,
+        zIndexOffset: 2000,
+        interactive: true,
+      }).addTo(mapInstanceRef.current);
+
+      homeMarkerRef.current = homeMarker;
+
+      // Simple tooltip for home marker
+      homeMarker.bindTooltip(
+        `<div style="font-weight:bold;color:#1A1A1A;font-size:14px;">${homeLoc.name || "Home"}</div>`,
+        {
+          permanent: false,
+          direction: "right",
+          offset: [10, 0],
+          className: "home-panel-tooltip",
+          interactive: true,
+        }
+      );
+
+      // Click handler for home marker
+      homeMarker.on("click", function () {
+        if (homeMarker.isTooltipOpen()) {
+          homeMarker.closeTooltip();
+        } else {
+          homeMarker.openTooltip();
+        }
+      });
+
+      // Close tooltip on map click
+      mapInstanceRef.current.on("click", function () {
+        if (homeMarker.isTooltipOpen()) {
+          homeMarker.closeTooltip();
+        }
+      });
+
+      // Create company markers if companies exist
+      if (companies && companies.length > 0) {
+        // Create marker cluster group for companies
+        const clusterGroup = L.markerClusterGroup();
+        clusterGroupRef.current = clusterGroup;
+
+        // Create company markers
+        companies.forEach((company, index) => {
+          const logoUrl = company.logoUrl || null;
+          const customIcon = createCustomTeardropIcon(L, logoUrl, 50, null);
+
+          const marker = L.marker([company.lat, company.lon], {
+            icon: customIcon,
+            zIndexOffset: 1000 + index,
+            opacity: 1,
+          });
+
+          // Store company data on marker
+          marker.companyData = company;
+
+          // Click handler for company marker
+          marker.on("click", function () {
+            console.log("Company clicked:", company.name);
+          });
+
+          clusterGroup.addLayer(marker);
+          companyMarkersRef.current.push(marker);
+        });
+
+        // Add cluster group to map
+        mapInstanceRef.current.addLayer(clusterGroup);
+
+        // Calculate bounds from all coordinates (home + companies)
+        const allCoords = [
+          [homeLoc.lat, homeLoc.lon],
+          ...companies.map(c => [c.lat, c.lon])
+        ];
+        const lats = allCoords.map(c => c[0]);
+        const lons = allCoords.map(c => c[1]);
+        const minLat = Math.min(...lats);
+        const maxLat = Math.max(...lats);
+        const minLon = Math.min(...lons);
+        const maxLon = Math.max(...lons);
+
+        // Add 10% coordinate padding
+        const latPadding = (maxLat - minLat) * 0.1;
+        const lonPadding = (maxLon - minLon) * 0.1;
+        const bounds = L.latLngBounds(
+          [minLat - latPadding, minLon - lonPadding],
+          [maxLat + latPadding, maxLon + lonPadding]
+        );
+
+        // Calculate optimal pixel padding based on pin count
+        const totalPinCount = 1 + companies.length; // home + companies
+        const padding = calculateOptimalPadding(totalPinCount);
+
+        // Determine max zoom level: 12 for Thrissur with 5+ companies, 14 for others
+        // Check if location is Thrissur (based on coordinates or name)
+        const isThrissur = 
+          (homeLoc.lat >= 10.4 && homeLoc.lat <= 10.6 && homeLoc.lon >= 76.1 && homeLoc.lon <= 76.3) ||
+          (homeLoc.name && homeLoc.name.toLowerCase().includes('thrissur'));
+        const maxZoomLevel = isThrissur && companies.length >= 5 ? 12 : 14;
+
+        // Use setTimeout to ensure markers are fully added before fitting bounds
+        setTimeout(() => {
+          // Create feature group from all markers
+          const group = new L.featureGroup([
+            homeMarker,
+            ...companyMarkersRef.current,
+          ]);
+          
+          // Get bounds
+          const groupBounds = group.getBounds();
+          
+          // Pad the bounds (10% coordinate padding is already in bounds calculation)
+          // Add additional pixel padding by expanding bounds
+          const paddedBounds = groupBounds.pad(0.1);
+          
+          // Fit bounds with maxZoom limit
+          // Note: Leaflet's fitBounds doesn't support padding option directly in older versions
+          // So we use pad() on bounds and then fitBounds
+          mapInstanceRef.current.fitBounds(paddedBounds, {
+            maxZoom: maxZoomLevel,
+          });
+        }, 200);
+      } else {
+        // If no companies, center on home location
+        mapInstanceRef.current.setView([homeLoc.lat, homeLoc.lon], 13);
+      }
+    };
+
+    addMarkersToMap();
+  }, [locationsData, isClient]);
+
+  // Parse locality from search query
+  const parseLocalityFromQuery = (query) => {
+    // #region agent log
+    fetch('http://127.0.0.1:7244/ingest/f2d2fb18-25f0-4f18-a513-0d2323a91392',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'Map.js:parseLocalityFromQuery:entry',message:'Parse function called',data:{query,queryType:typeof query},timestamp:Date.now(),sessionId:'debug-session',hypothesisId:'H1'})}).catch(()=>{});
+    // #endregion
+    
+    if (!query || !query.trim()) return null;
+
+    const normalizedQuery = query.toLowerCase().trim();
+    
+    // Pattern 1: "companies in [Locality]"
+    const pattern1 = /companies\s+in\s+(.+)/i;
+    const match1 = normalizedQuery.match(pattern1);
+    if (match1) {
+      const result = match1[1].trim();
+      // #region agent log
+      fetch('http://127.0.0.1:7244/ingest/f2d2fb18-25f0-4f18-a513-0d2323a91392',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'Map.js:parseLocalityFromQuery:pattern1',message:'Pattern 1 matched',data:{result},timestamp:Date.now(),sessionId:'debug-session',hypothesisId:'H1'})}).catch(()=>{});
+      // #endregion
+      return result;
+    }
+
+    // Pattern 2: Just the locality name - return the query itself
+    // The database API will handle the search matching
+    // This allows searching for any locality, not just those in locations.json
+    const result = query.trim();
+    // #region agent log
+    fetch('http://127.0.0.1:7244/ingest/f2d2fb18-25f0-4f18-a513-0d2323a91392',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'Map.js:parseLocalityFromQuery:pattern2',message:'Pattern 2 - returning query',data:{result},timestamp:Date.now(),sessionId:'debug-session',hypothesisId:'H1'})}).catch(()=>{});
+    // #endregion
+    return result;
+  };
+
+  // Get locality data from locations.json by pincode or locality name
+  const getLocalityDataByPincode = (pincode, localityName) => {
+    if (!locationsData || !locationsData.localities) return null;
+    
+    // Try to find by locality name first
+    if (locationsData.localities[localityName]) {
+      return locationsData.localities[localityName];
+    }
+    
+    // Try to find by pincode
+    for (const [key, value] of Object.entries(locationsData.localities)) {
+      if (value.pincode === pincode) {
+        return value;
+      }
+    }
+    
+    return null;
+  };
+
+  const handleSearch = async () => {
+    if (searchQuery.trim()) {
+      // #region agent log
+      fetch('http://127.0.0.1:7244/ingest/f2d2fb18-25f0-4f18-a513-0d2323a91392',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'Map.js:handleSearch:entry',message:'Search initiated',data:{searchQuery},timestamp:Date.now(),sessionId:'debug-session',hypothesisId:'H2'})}).catch(()=>{});
+      // #endregion
+      
+      setHasSearched(true);
+      
+      // Parse locality from search query
+      const localityName = parseLocalityFromQuery(searchQuery);
+      
+      // #region agent log
+      fetch('http://127.0.0.1:7244/ingest/f2d2fb18-25f0-4f18-a513-0d2323a91392',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'Map.js:handleSearch:afterParse',message:'After parsing locality',data:{localityName,isNull:localityName===null},timestamp:Date.now(),sessionId:'debug-session',hypothesisId:'H1'})}).catch(()=>{});
+      // #endregion
+      
+      if (localityName) {
+        try {
+          // Step 1: Query database to find locality, pincode, district, state
+          const apiUrl = `/api/search-locality?locality=${encodeURIComponent(localityName)}`;
+          // #region agent log
+          fetch('http://127.0.0.1:7244/ingest/f2d2fb18-25f0-4f18-a513-0d2323a91392',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'Map.js:handleSearch:beforeFetch',message:'About to fetch API',data:{apiUrl,localityName},timestamp:Date.now(),sessionId:'debug-session',hypothesisId:'H2'})}).catch(()=>{});
+          // #endregion
+          
+          const response = await fetch(apiUrl);
+          
+          // #region agent log
+          fetch('http://127.0.0.1:7244/ingest/f2d2fb18-25f0-4f18-a513-0d2323a91392',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'Map.js:handleSearch:afterFetch',message:'API response received',data:{ok:response.ok,status:response.status,statusText:response.statusText},timestamp:Date.now(),sessionId:'debug-session',hypothesisId:'H2'})}).catch(()=>{});
+          // #endregion
+          
+          if (!response.ok) {
+            const errorData = await response.json().catch(() => ({}));
+            // #region agent log
+            fetch('http://127.0.0.1:7244/ingest/f2d2fb18-25f0-4f18-a513-0d2323a91392',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'Map.js:handleSearch:responseNotOk',message:'Response not OK',data:{errorData,status:response.status},timestamp:Date.now(),sessionId:'debug-session',hypothesisId:'H5'})}).catch(()=>{});
+            // #endregion
+            console.error("Locality not found in database:", errorData.error || "Unknown error");
+            // Show user-friendly error message
+            alert(`Locality "${localityName}" not found. Please try searching with the full locality name.`);
+            return;
+          }
+
+          const dbData = await response.json();
+          // #region agent log
+          fetch('http://127.0.0.1:7244/ingest/f2d2fb18-25f0-4f18-a513-0d2323a91392',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'Map.js:handleSearch:dbDataParsed',message:'DB data parsed',data:{dbData,hasLatitude:!!dbData.latitude,hasLongitude:!!dbData.longitude},timestamp:Date.now(),sessionId:'debug-session',hypothesisId:'H3'})}).catch(()=>{});
+          // #endregion
+          console.log("Found locality in database:", dbData);
+
+          // Step 2: Get company data from locations.json using pincode/locality
+          const localityData = getLocalityDataByPincode(
+            dbData.pincode,
+            dbData.localityName
+          );
+          
+          // #region agent log
+          fetch('http://127.0.0.1:7244/ingest/f2d2fb18-25f0-4f18-a513-0d2323a91392',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'Map.js:handleSearch:afterGetLocality',message:'After getting locality data',data:{hasLocalityData:!!localityData,localityDataType:typeof localityData},timestamp:Date.now(),sessionId:'debug-session',hypothesisId:'H3'})}).catch(()=>{});
+          // #endregion
+          
+          if (!localityData) {
+            console.log(`No company data found for locality: ${dbData.localityName} (pincode: ${dbData.pincode})`);
+            // #region agent log
+            fetch('http://127.0.0.1:7244/ingest/f2d2fb18-25f0-4f18-a513-0d2323a91392',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'Map.js:handleSearch:beforeDistrictZoom',message:'Calling performDistrictZoom',data:{dbData,hasMap:!!mapInstanceRef.current},timestamp:Date.now(),sessionId:'debug-session',hypothesisId:'H4'})}).catch(()=>{});
+            // #endregion
+            // Still zoom to district level and show "No companies found" message
+            performDistrictZoom(dbData, true);
+            return;
+          }
+
+          if (localityData.companies && localityData.companies.length > 0) {
+            // Step 3: Perform multi-stage zoom with database info and show companies
+            performLocalitySearchWithDBData(dbData, localityData);
+          } else {
+            console.log(`No companies found for locality: ${dbData.localityName}`);
+            // Still zoom to district level and show "No companies found" message
+            performDistrictZoom(dbData, true);
+          }
+        } catch (error) {
+          // #region agent log
+          fetch('http://127.0.0.1:7244/ingest/f2d2fb18-25f0-4f18-a513-0d2323a91392',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'Map.js:handleSearch:catchError',message:'Caught error',data:{errorMessage:error.message,errorStack:error.stack},timestamp:Date.now(),sessionId:'debug-session',hypothesisId:'H2'})}).catch(()=>{});
+          // #endregion
+          console.error("Error searching locality:", error);
+          alert("An error occurred while searching. Please try again.");
+        }
+      }
+    }
+  };
+
+  const handleReturn = () => {
+    setHasSearched(false);
+    // Preserve searchQuery, selectedFilterOption, etc.
+  };
+
+  const handleDistanceToggle = () => {
+    setIsHomeFilterActive(!isHomeFilterActive);
+  };
+
+  const handleHomeLocationRightClick = (e) => {
+    e.preventDefault();
+    setShowHomeLocationDropdown(!showHomeLocationDropdown);
+  };
+
+  // Function to show road distance on line hover
+  const showRoadDistanceOnHover = async (line, company, home) => {
+    if (!mapInstanceRef.current || !home || !company || !line) return;
+    const homeCoords = [home.lat, home.lon];
+    const companyCoords = [company.lat, company.lon];
+    const roadDistanceMeters = await fetchRoadDistance(homeCoords, companyCoords);
+
+    if (roadDistanceMeters !== null) {
+      const roadDistanceKm = (roadDistanceMeters / 1000).toFixed(1);
+      line.bindTooltip(
+        `${company.name || "Location"}: ${roadDistanceKm} km by road`,
+        {
+          permanent: false,
+          direction: "top",
+          className: "road-distance-tooltip",
+        }
+      );
+    }
+  };
+
+  // Handle connecting lines when distance toggle is active
+  useEffect(() => {
+    if (!mapInstanceRef.current || !locationsData) {
+      // Remove lines if map is not ready
+      if (straightLinesRef.current.length > 0 && mapInstanceRef.current) {
+        straightLinesRef.current.forEach((line) => {
+          mapInstanceRef.current.removeLayer(line);
+        });
+        straightLinesRef.current = [];
+      }
+      return;
+    }
+
+    const L = window.L;
+    if (!L) return;
+
+    const homeLoc = locationsData.homeLocation;
+    const companies = locationsData.companies;
+
+    if (!homeLoc || !homeLoc.lat || !homeLoc.lon || !companies || companies.length === 0) {
+      // Remove lines if no valid data
+      if (straightLinesRef.current.length > 0) {
+        straightLinesRef.current.forEach((line) => {
+          mapInstanceRef.current.removeLayer(line);
+        });
+        straightLinesRef.current = [];
+      }
+      return;
+    }
+
+    // Remove existing lines
+    straightLinesRef.current.forEach((line) => {
+      mapInstanceRef.current.removeLayer(line);
+    });
+    straightLinesRef.current = [];
+
+    // Only create lines if distance toggle is active
+    if (isHomeFilterActive && homeMarkerRef.current) {
+      // Create new lines
+      companies.forEach(async (company) => {
+        const home = [homeLoc.lat, homeLoc.lon];
+        const companyLoc = [company.lat, company.lon];
+
+        // Create dashed line
+        const straightLine = L.polyline([home, companyLoc], {
+          color: "#0A0A0A",
+          weight: 2,
+          opacity: 0.6,
+          dashArray: "5, 5",
+          interactive: true,
+        }).addTo(mapInstanceRef.current);
+
+        // Add hover handler to show road distance
+        straightLine.on("mouseover", async function () {
+          await showRoadDistanceOnHover(straightLine, company, homeLoc);
+        });
+
+        straightLine.on("mouseout", function () {
+          straightLine.closeTooltip();
+        });
+
+        straightLinesRef.current.push(straightLine);
+      });
+    }
+  }, [isHomeFilterActive, locationsData]);
+
+  // Handle click outside filter dropdown
+  useEffect(() => {
+    const handleClickOutside = (event) => {
+      if (
+        filterDropdownRef.current &&
+        !filterDropdownRef.current.contains(event.target) &&
+        filterButtonRef.current &&
+        !filterButtonRef.current.contains(event.target)
+      ) {
+        setShowFilterDropdown(false);
+      }
+    };
+
+    if (showFilterDropdown) {
+      document.addEventListener("mousedown", handleClickOutside);
+    }
+
+    return () => {
+      document.removeEventListener("mousedown", handleClickOutside);
+    };
+  }, [showFilterDropdown]);
+
+  if (!isClient) {
+    return (
+      <div className="flex-1 h-screen bg-gray-50 dark:bg-gray-950 relative flex items-center justify-center">
+        <div className="text-center space-y-4">
+          <div className="text-6xl">🗺️</div>
+          <p className="text-gray-600 dark:text-gray-400">Loading map...</p>
+        </div>
+      </div>
+    );
+  }
 
   return (
-    <div className="flex-1 h-screen bg-gray-50 dark:bg-gray-950 relative">
+    <div className="flex-1 h-screen bg-gray-50 dark:bg-gray-950 relative overflow-hidden">
       {/* Map Container */}
-      <div ref={mapRef} className="w-full h-full" />
+      <div ref={mapRef} className="w-full h-full absolute inset-0" />
+
+      {/* Collapsed Search Bar - Shows in Globe view by default */}
+      {isGlobeView && (
+        <div
+          className={`${searchBar.container} ${searchBar["container-width"]}`}
+          style={{ gap: "24px" }}
+        >
+          {/* Search Bar Card */}
+          <div className={searchBar.card}>
+            <div className={searchBar["inner-flex"]}>
+              {/* View Selector Button */}
+              <div className="relative flex-shrink-0">
+                <button
+                  className={`${searchBar["view-selector-button"]} ${searchBar["view-selector-text-default"]} ${searchBar["view-selector-text-hover"]}`}
+                  onClick={() => setShowViewDropdown(!showViewDropdown)}
+                >
+                  <EarthFilled size={18} className={searchBar["view-icon"]} />
+                  <span
+                    style={{
+                      fontFamily: "Open Sans",
+                      fontSize: "14px",
+                      color: "#1A1A1A",
+                    }}
+                  >
+                    Globe view
+                  </span>
+                  <RiArrowDownSLine size={16} style={{ color: "#1A1A1A" }} />
+                </button>
+                {showViewDropdown && (
+                  <div className="absolute top-full mt-2 left-0 w-[200px] bg-brand-bg-white border border-brand-stroke-border rounded-lg shadow-lg z-50">
+                    <button
+                      className="w-full text-left px-4 py-2 hover:bg-brand-stroke-weak transition-colors flex items-center gap-2"
+                      onClick={() => {
+                        setIsGlobeView(true);
+                        setShowViewDropdown(false);
+                      }}
+                    >
+                      <EarthFilled size={18} className={searchBar["view-icon"]} />
+                      <span style={{ fontFamily: "Open Sans", fontSize: "14px" }}>
+                        Globe view
+                      </span>
+                    </button>
+                    <button
+                      className="w-full text-left px-4 py-2 hover:bg-brand-stroke-weak transition-colors flex items-center gap-2"
+                      onClick={() => {
+                        setIsGlobeView(false);
+                        setShowViewDropdown(false);
+                      }}
+                    >
+                      <List size={18} style={{ color: "#575757" }} />
+                      <span style={{ fontFamily: "Open Sans", fontSize: "14px" }}>
+                        List view
+                      </span>
+                    </button>
+                  </div>
+                )}
+              </div>
+
+              {/* Search Input */}
+              <input
+                type="text"
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter" && searchQuery.trim()) {
+                    handleSearch();
+                  }
+                }}
+                className={`${searchBar["search-input"]} ${searchBar["search-input-focus"]} ${searchBar["search-input-hover"]} ${searchBar["search-input-text"]} ${searchBar["search-input-placeholder"]}`}
+                style={{
+                  fontFamily: "Open Sans",
+                  fontSize: "14px",
+                  boxShadow: "0 1px 6px rgba(32,33,36,0.08)",
+                }}
+                placeholder="Search for keywords, product design, frontend developer..."
+              />
+
+              {/* Search Button */}
+              <button
+                onClick={handleSearch}
+                disabled={!searchQuery.trim()}
+                className={`${searchBar["search-button"]} ${
+                  !searchQuery.trim() ? "opacity-50 cursor-not-allowed" : ""
+                }`}
+              >
+                <SendFilled
+                  size={20}
+                  className={
+                    searchQuery.trim()
+                      ? searchBar["search-button-icon-active"]
+                      : searchBar["search-button-icon-disabled"]
+                  }
+                />
+              </button>
+
+              {/* Filter Button */}
+              <div className="relative flex-shrink-0">
+                <button
+                  ref={filterButtonRef}
+                  className={`${searchBar["filter-button"]} ${searchBar["filter-button-text-default"]} ${searchBar["filter-button-text-hover"]}`}
+                  onClick={() => setShowFilterDropdown(!showFilterDropdown)}
+                  style={{ border: "none" }}
+                  aria-label="Filter"
+                >
+                  <span style={{ fontSize: "16px" }}>🇮🇳</span>
+                  <Filter size={16} style={{ color: "#575757" }} />
+                  <span
+                    style={{
+                      color: "#1A1A1A",
+                      fontFamily: "Open Sans",
+                      fontSize: "12px",
+                    }}
+                  >
+                    {selectedFilterOption
+                      ? selectedFilterOption.state
+                        ? selectedFilterOption.state
+                        : "India"
+                      : "India"}
+                  </span>
+                </button>
+
+                <FilterDropdown
+                  isOpen={showFilterDropdown}
+                  onClose={() => setShowFilterDropdown(false)}
+                  dropdownRef={filterDropdownRef}
+                  selectedOption={selectedFilterOption}
+                  onSelect={(option) => setSelectedFilterOption(option)}
+                  position={
+                    isGlobeView
+                      ? {
+                          top: "100%",
+                          bottom: "auto",
+                          right: "0",
+                          left: "auto",
+                          marginTop: "8px",
+                        }
+                      : {
+                          top: "auto",
+                          bottom: "100%",
+                          right: "0",
+                          left: "auto",
+                          marginBottom: "8px",
+                        }
+                  }
+                  width="300px"
+                />
+              </div>
+
+              {/* Return Button */}
+              <button
+                onClick={handleReturn}
+                className={searchBar["return-button"]}
+              >
+                <Return size={20} className={searchBar["return-button-icon"]} />
+              </button>
+            </div>
+          </div>
+
+          {/* Distance Button */}
+          <div className="relative">
+            <button
+              className={`${searchBar["distance-button"]} ${searchBar["distance-button-height"]} ${searchBar["distance-button-nowrap"]} ${
+                isHomeFilterActive ? searchBar["distance-button-active"] : ""
+              }`}
+              onClick={handleDistanceToggle}
+              onContextMenu={handleHomeLocationRightClick}
+              style={{ fontFamily: "Open Sans", fontSize: "14px" }}
+            >
+              <span style={{ fontSize: "16px" }}>🏠</span>
+              <span style={{ fontFamily: "Open Sans", fontSize: "14px" }}>
+                {isHomeFilterActive ? "Hide Distance" : "Show Distance"}
+              </span>
+            </button>
+
+            {/* Home Location Dropdown */}
+            {showHomeLocationDropdown && (
+              <div className="absolute top-full mt-2 right-0 w-[300px] bg-brand-bg-white border border-brand-stroke-border rounded-lg shadow-lg z-50 p-3 flex flex-col gap-3">
+                <div
+                  style={{
+                    fontFamily: "Open Sans",
+                    fontSize: "14px",
+                    fontWeight: 600,
+                    color: "#1A1A1A",
+                  }}
+                >
+                  Home Location
+                </div>
+                <div className="relative">
+                  <RiSearchLine
+                    size={18}
+                    style={{
+                      color: "#A5A5A5",
+                      position: "absolute",
+                      left: "12px",
+                      top: "50%",
+                      transform: "translateY(-50%)",
+                    }}
+                  />
+                  <input
+                    type="text"
+                    value={homeLocation}
+                    onChange={(e) => setHomeLocation(e.target.value)}
+                    className="w-full pl-10 pr-3 py-2 border border-brand-stroke-border rounded-lg focus:outline-none focus:border-brand text-sm"
+                    style={{
+                      fontFamily: "Open Sans",
+                      fontSize: "14px",
+                      color: "#1A1A1A",
+                    }}
+                    placeholder="Enter location"
+                  />
+                </div>
+                <div className="flex gap-2">
+                  <button
+                    className="px-4 py-2 bg-brand text-white rounded-lg hover:opacity-90 transition-opacity text-sm"
+                    style={{ fontFamily: "Open Sans" }}
+                    onClick={() => {
+                      // Handle set location
+                      setShowHomeLocationDropdown(false);
+                    }}
+                  >
+                    Set Location
+                  </button>
+                  <button
+                    className="px-4 py-2 bg-transparent border border-brand-stroke-border text-brand-stroke-strong rounded-lg hover:bg-brand-stroke-weak transition-colors text-sm"
+                    style={{ fontFamily: "Open Sans" }}
+                    onClick={() => {
+                      setHomeLocation("");
+                      setShowHomeLocationDropdown(false);
+                    }}
+                  >
+                    Clear
+                  </button>
+                </div>
+                {homeLocation && (
+                  <div
+                    style={{
+                      fontFamily: "Open Sans",
+                      fontSize: "12px",
+                      color: "#575757",
+                    }}
+                  >
+                    Current: {homeLocation}
+                  </div>
+                )}
+              </div>
+            )}
+          </div>
+        </div>
+      )}
     </div>
   );
 };

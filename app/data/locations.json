@@ -1,0 +1,141 @@
+{
+  "homeLocation": {
+    "lat": 10.5276,
+    "lon": 76.2144,
+    "name": "Home"
+  },
+  "companies": [
+    {
+      "name": "Company 1",
+      "lat": 10.5300,
+      "lon": 76.2200,
+      "logoUrl": null
+    },
+    {
+      "name": "Company 2",
+      "lat": 10.5250,
+      "lon": 76.2100,
+      "logoUrl": null
+    },
+    {
+      "name": "Company 3",
+      "lat": 10.5320,
+      "lon": 76.2180,
+      "logoUrl": null
+    },
+    {
+      "name": "Company 4",
+      "lat": 10.5200,
+      "lon": 76.2150,
+      "logoUrl": null
+    },
+    {
+      "name": "Company 5",
+      "lat": 10.5350,
+      "lon": 76.2120,
+      "logoUrl": null
+    }
+  ],
+  "localities": {
+    "Irinjalakuda": {
+      "pincode": "680121",
+      "locality": "Irinjalakuda",
+      "center": {
+        "lat": 10.3424,
+        "lon": 76.2200
+      },
+      "companies": [
+        {
+          "company_name": "K.L.F. Nirmal Industries",
+          "type": "Manufacturing (Coconut Oil)",
+          "pincode": "680121",
+          "locality": "Irinjalakuda",
+          "latitude": 10.3424,
+          "longitude": 76.2200
+        },
+        {
+          "company_name": "Christ College of Engineering",
+          "type": "Educational Institution",
+          "pincode": "680121",
+          "locality": "Irinjalakuda",
+          "latitude": 10.3400,
+          "longitude": 76.2220
+        },
+        {
+          "company_name": "Foodmark Private Limited",
+          "type": "Food Processing",
+          "pincode": "680121",
+          "locality": "Irinjalakuda",
+          "latitude": 10.3448,
+          "longitude": 76.2180
+        },
+        {
+          "company_name": "Shadowfax Courier Center",
+          "type": "Logistics / Courier",
+          "pincode": "680121",
+          "locality": "Irinjalakuda",
+          "latitude": 10.3410,
+          "longitude": 76.2195
+        },
+        {
+          "company_name": "Irinjalakuda Nidhi Limited",
+          "type": "Financial Services",
+          "pincode": "680121",
+          "locality": "Irinjalakuda",
+          "latitude": 10.3395,
+          "longitude": 76.2215
+        }
+      ]
+    },
+    "Porathissery": {
+      "pincode": "680125",
+      "locality": "Porathissery",
+      "center": {
+        "lat": 10.3541,
+        "lon": 76.2125
+      },
+      "companies": [
+        {
+          "company_name": "K.L.F. Nirmal Industries",
+          "type": "Manufacturing (Coconut Oil)",
+          "pincode": "680125",
+          "locality": "Porathissery",
+          "latitude": 10.3541,
+          "longitude": 76.2125
+        },
+        {
+          "company_name": "Christ College of Engineering",
+          "type": "Educational Institution",
+          "pincode": "680125",
+          "locality": "Porathissery",
+          "latitude": 10.3498,
+          "longitude": 76.2142
+        },
+        {
+          "company_name": "Foodmark Private Limited",
+          "type": "Food Processing",
+          "pincode": "680125",
+          "locality": "Porathissery",
+          "latitude": 10.3582,
+          "longitude": 76.2098
+        },
+        {
+          "company_name": "Shadowfax Courier Center",
+          "type": "Logistics / Courier",
+          "pincode": "680125",
+          "locality": "Porathissery",
+          "latitude": 10.3515,
+          "longitude": 76.2103
+        },
+        {
+          "company_name": "Irinjalakuda Nidhi Limited",
+          "type": "Financial Services",
+          "pincode": "680125",
+          "locality": "Porathissery",
+          "latitude": 10.3485,
+          "longitude": 76.2155
+        }
+      ]
+    }
+  }
+}

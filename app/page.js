@@ -5,7 +5,7 @@ export default function Home() {
   return (
     <div className="flex h-screen overflow-hidden bg-gray-100 dark:bg-black">
       {/* Sidebar - Left Side */}
-      <Sidebar />
+      <Sidebar activeItem="jobs-near-you" />
 
       {/* Map Component - Right Side (Main Content) */}
       <Map />

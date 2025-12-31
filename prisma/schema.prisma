@@ -18,6 +18,8 @@ model Pincode {
   localityName String   @map("locality_name") @db.VarChar(255)
   district     String   @db.VarChar(100)
   state        String   @db.VarChar(100)
+  latitude     Float?
+  longitude    Float?
   createdAt    DateTime @default(now()) @map("created_at")
   updatedAt    DateTime @updatedAt @map("updated_at")
 

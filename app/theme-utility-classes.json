@@ -2,7 +2,8 @@
   "_comments": {
     "brand-stroke-strong": "Use for: icons, input borders, sidebar borders - Color: #575757",
     "brand-stroke-weak": "Use for: dividers only - Color: #F5F5F5",
-    "brand-stroke-border": "Use for: sidebar right border, logo section border - Color: #E5E5E5"
+    "brand-stroke-border": "Use for: sidebar right border, logo section border - Color: #E5E5E5",
+    "brand-text-tertiary": "Use for: placeholder text, disabled text - Color: #A5A5A5"
   },
   "brand": {
     "color": {
@@ -12,7 +13,8 @@
     },
     "text": {
       "strong": "text-brand-text-strong",
-      "weak": "text-brand-text-weak"
+      "weak": "text-brand-text-weak",
+      "tertiary": "text-[#A5A5A5]"
     },
     "background": {
       "fill": "bg-brand-bg-fill",
@@ -49,6 +51,33 @@
       "user-button-expanded": "pt-1 pr-2 pb-1 pl-2",
       "user-button-collapsed": "p-2"
     },
+    "searchBar": {
+      "container": "absolute left-1/2 transform -translate-x-1/2 z-[1000] flex items-center top-4",
+      "container-width": "w-[90%] max-w-[800px]",
+      "card": "bg-brand-bg-white rounded-xl border border-brand-stroke-border shadow-lg px-4 py-2 w-full",
+      "inner-flex": "flex items-center gap-3",
+      "view-selector-button": "flex items-center gap-2 px-3 py-1 rounded-lg text-sm font-medium transition-all bg-transparent border-0",
+      "view-selector-text-default": "text-[#A5A5A5]",
+      "view-selector-text-hover": "hover:text-brand-text-weak hover:bg-brand-stroke-weak",
+      "view-icon": "text-brand",
+      "search-input": "flex-1 min-w-0 bg-brand-bg-white rounded-lg px-3 py-2 border border-brand-stroke-border text-sm transition-all",
+      "search-input-focus": "focus:outline-none focus:border-brand focus:shadow-[0_1px_6px_rgba(32,33,36,0.15),0_0_0_3px_rgba(124,0,255,0.2)]",
+      "search-input-hover": "hover:bg-brand-stroke-weak",
+      "search-input-text": "text-brand-text-weak",
+      "search-input-placeholder": "placeholder:text-[#A5A5A5]",
+      "search-button": "flex items-center justify-center p-2 rounded-lg transition-colors hover:bg-brand-stroke-weak flex-shrink-0",
+      "search-button-icon-active": "text-brand",
+      "search-button-icon-disabled": "text-[#A5A5A5]",
+      "filter-button": "flex items-center gap-2 px-3 py-1 rounded-lg text-xs font-medium transition-all bg-transparent border-0",
+      "filter-button-text-default": "text-[#A5A5A5]",
+      "filter-button-text-hover": "hover:text-brand-text-weak hover:bg-brand-stroke-weak",
+      "return-button": "flex items-center justify-center p-2 rounded-lg transition-colors hover:bg-brand-stroke-weak flex-shrink-0",
+      "return-button-icon": "text-brand-stroke-strong",
+      "distance-button": "flex items-center gap-2 px-4 rounded-xl text-sm font-medium transition-all shadow-lg border bg-brand-bg-white text-brand-text-weak hover:bg-brand-stroke-weak border-brand-stroke-border",
+      "distance-button-active": "bg-brand-stroke-weak",
+      "distance-button-height": "h-14",
+      "distance-button-nowrap": "whitespace-nowrap"
+    },
     "button": {
       "primary": "bg-brand text-white hover:opacity-90",
       "secondary": "bg-brand-bg-fill text-brand-text-strong border border-brand-stroke-weak",
@@ -66,6 +95,61 @@
     "icon": {
       "border": "border-brand-stroke-strong",
       "color": "text-brand-stroke-strong"
+    },
+    "markers": {
+      "home": {
+        "background": "bg-brand-bg-white",
+        "border": "border-[3px] border-brand-stroke-border",
+        "size": "w-10 h-10",
+        "shadow": "shadow-[0_2px_8px_rgba(0,0,0,0.3)]"
+      },
+      "company": {
+        "background": "bg-brand-bg-white",
+        "border": "border-2 border-[#87CEEB]",
+        "size": "w-[50px] h-[50px]",
+        "shadow": "shadow-[0_2px_8px_rgba(0,0,0,0.12),0_1px_3px_rgba(0,0,0,0.08)]"
+      },
+      "distance-badge": {
+        "background": "bg-brand-text-strong",
+        "text": "text-white",
+        "padding": "px-[6px] py-[2px]",
+        "shadow": "shadow-[0_2px_4px_rgba(0,0,0,0.3)]"
+      },
+      "tooltip": {
+        "background": "bg-brand-bg-white",
+        "border": "border border-brand-stroke-border",
+        "shadow": "shadow-[0_4px_12px_rgba(0,0,0,0.15)]",
+        "padding": "p-3"
+      },
+      "line": {
+        "color": "text-brand-text-strong",
+        "opacity": "opacity-60"
+      }
+    },
+    "filterDropdown": {
+      "container": "absolute bg-brand-bg-white rounded-lg border border-brand-stroke-border z-50 flex flex-col",
+      "container-padding": "p-2",
+      "container-gap": "gap-2",
+      "container-shadow": "shadow-[0px_10px_10px_-5px_rgba(0,0,0,0.04),0px_20px_25px_-5px_rgba(0,0,0,0.1)]",
+      "container-max-height": "max-h-[400px]",
+      "country-button": "w-full flex items-center justify-between px-3 py-2 border border-brand-stroke-border rounded-lg hover:bg-brand-stroke-weak transition-colors",
+      "country-button-text": "text-sm font-medium text-brand-text-weak",
+      "country-button-flag": "text-[18px]",
+      "country-button-icon": "text-brand-stroke-strong",
+      "country-dropdown": "absolute bottom-full left-0 right-0 mb-1 bg-brand-bg-white border border-brand-stroke-border rounded-lg shadow-lg z-[60]",
+      "country-dropdown-max-height": "max-h-[200px]",
+      "country-item": "w-full flex items-center gap-2 px-3 py-2 hover:bg-brand-stroke-weak transition-colors text-left",
+      "country-item-text": "text-sm font-medium text-brand-text-weak",
+      "search-container": "relative",
+      "search-icon": "absolute left-3 top-1/2 transform -translate-y-1/2 text-brand-text-tertiary",
+      "search-input": "w-full pl-10 pr-3 py-2 border border-brand-stroke-border rounded-lg focus:outline-none focus:border-brand text-sm",
+      "search-input-text": "text-brand-text-weak",
+      "search-input-placeholder": "placeholder:text-brand-text-tertiary",
+      "states-list": "flex-1 overflow-y-auto",
+      "states-list-max-height": "max-h-[250px]",
+      "state-item": "w-full flex items-center gap-3 px-3 py-2 rounded-md transition-colors hover:bg-brand-stroke-weak text-left",
+      "state-item-text": "text-sm font-medium text-brand-text-weak",
+      "empty-state": "px-3 py-2 text-sm text-brand-stroke-strong"
     }
   }
 }
