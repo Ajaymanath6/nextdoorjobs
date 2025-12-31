@@ -40,24 +40,57 @@ export async function GET(request) {
 
     // Split multi-part locality names (e.g., "Puthur / Kuttanellur / Mannamangalam")
     const searchTerms = normalizedQuery.split('/').map(s => s.trim()).filter(Boolean);
+    
+    // For multi-word searches like "Medical College", create phrase and word terms
+    // This helps match "Medical College / Chalakkuzhi" when searching for "Medical College"
+    const wordTerms = normalizedQuery.split(/\s+/).filter(term => term.length > 2); // Only words longer than 2 chars
+    
     console.log(`   Search terms: [${searchTerms.join(', ')}]`);
+    if (wordTerms.length > 1) {
+      console.log(`   Word terms: [${wordTerms.join(', ')}]`);
+    }
 
     let pincodeData = null;
 
     try {
       // Single optimized query with OR conditions
-      // Build OR conditions for all search terms
+      // Build OR conditions prioritizing exact matches first
       const orConditions = [
         // Exact match (highest priority)
         { localityName: { equals: localityName.trim(), mode: "insensitive" } },
-        // Contains match for full query
+        // Contains match for full normalized query (second priority)
         { localityName: { contains: normalizedQuery, mode: "insensitive" } }
       ];
       
-      // Add conditions for each part of multi-part names
+      // Add conditions for each part of multi-part names (split by "/")
+      // This handles cases like searching "Puthur" to find "Puthur / Kuttanellur / Mannamangalam"
       searchTerms.forEach(term => {
         if (term && term.length > 0) {
-          orConditions.push({ localityName: { contains: term, mode: "insensitive" } });
+          orConditions.push({ localityName: { contains: term.trim(), mode: "insensitive" } });
+        }
+      });
+      
+      // For multi-word searches (like "Medical College"), also search for the phrase
+      // This ensures "Medical College" matches "Medical College / Chalakkuzhi"
+      if (wordTerms.length > 1 && searchTerms.length === 1) {
+        // Only add phrase search if it's a multi-word query without "/"
+        const phrase = wordTerms.join(' ');
+        if (!orConditions.some(cond => 
+          cond.localityName?.contains === phrase || 
+          cond.localityName?.equals === phrase
+        )) {
+          orConditions.push({ localityName: { contains: phrase, mode: "insensitive" } });
+        }
+      }
+      
+      // Add individual word matches as fallback (lower priority)
+      // Only add words that aren't already covered by searchTerms
+      wordTerms.forEach(word => {
+        if (word && word.length > 2) {
+          const isAlreadyCovered = searchTerms.some(term => term.includes(word));
+          if (!isAlreadyCovered) {
+            orConditions.push({ localityName: { contains: word, mode: "insensitive" } });
+          }
         }
       });
       
@@ -66,7 +99,6 @@ export async function GET(request) {
           where: {
             AND: [
               { OR: orConditions },
-              { district: "Thrissur" },
               { state: "Kerala" }
             ]
           },
@@ -102,7 +134,6 @@ export async function GET(request) {
                       localityName: { contains: term, mode: "insensitive" }
                     }))
                   },
-                  { district: "Thrissur" },
                   { state: "Kerala" }
                 ]
               }
