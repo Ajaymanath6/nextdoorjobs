@@ -1,6 +1,18 @@
 import { NextResponse } from "next/server";
 import { prisma } from "../../../lib/prisma";
 
+// Simple in-memory cache for search results
+const searchCache = new Map();
+const CACHE_TTL = 5 * 60 * 1000; // 5 minutes
+
+// Query with timeout helper
+const queryWithTimeout = async (queryFn, timeoutMs = 12000) => {
+  const timeoutPromise = new Promise((_, reject) => 
+    setTimeout(() => reject(new Error('Query timeout')), timeoutMs)
+  );
+  return Promise.race([queryFn(), timeoutPromise]);
+};
+
 export async function GET(request) {
   try {
     const { searchParams } = new URL(request.url);
@@ -15,52 +27,59 @@ export async function GET(request) {
 
     // Normalize the search query
     const normalizedQuery = localityName.trim().toLowerCase();
+    
+    // Check cache first
+    const cacheKey = normalizedQuery;
+    const cached = searchCache.get(cacheKey);
+    if (cached && Date.now() - cached.timestamp < CACHE_TTL) {
+      console.log(`✅ Cache hit for: "${localityName}"`);
+      return NextResponse.json(cached.data);
+    }
 
     console.log(`🔍 Searching for locality: "${localityName}" (normalized: "${normalizedQuery}")`);
+
+    // Split multi-part locality names (e.g., "Puthur / Kuttanellur / Mannamangalam")
+    const searchTerms = normalizedQuery.split('/').map(s => s.trim()).filter(Boolean);
+    console.log(`   Search terms: [${searchTerms.join(', ')}]`);
 
     let pincodeData = null;
 
     try {
-      // Search for locality in database (case-insensitive)
-      // Try exact match first
-      pincodeData = await prisma.pincode.findFirst({
-        where: {
-          localityName: {
-            equals: localityName.trim(),
-            mode: "insensitive",
+      // Single optimized query with OR conditions
+      // Build OR conditions for all search terms
+      const orConditions = [
+        // Exact match (highest priority)
+        { localityName: { equals: localityName.trim(), mode: "insensitive" } },
+        // Contains match for full query
+        { localityName: { contains: normalizedQuery, mode: "insensitive" } }
+      ];
+      
+      // Add conditions for each part of multi-part names
+      searchTerms.forEach(term => {
+        if (term && term.length > 0) {
+          orConditions.push({ localityName: { contains: term, mode: "insensitive" } });
+        }
+      });
+      
+      pincodeData = await queryWithTimeout(async () => {
+        return await prisma.pincode.findFirst({
+          where: {
+            AND: [
+              { OR: orConditions },
+              { district: "Thrissur" },
+              { state: "Kerala" }
+            ]
           },
-        },
+          orderBy: [
+            { localityName: 'asc' }
+          ]
+        });
       });
 
-      console.log(`   Exact match result: ${pincodeData ? `Found: ${pincodeData.localityName}` : "Not found"}`);
-
-      // If not found, try contains search
-      if (!pincodeData) {
-        pincodeData = await prisma.pincode.findFirst({
-          where: {
-            localityName: {
-              contains: normalizedQuery,
-              mode: "insensitive",
-            },
-          },
-        });
-        console.log(`   Contains match result: ${pincodeData ? `Found: ${pincodeData.localityName}` : "Not found"}`);
-      }
-
-      // If still not found, try searching for the query as a substring in any part of the locality name
-      if (!pincodeData) {
-        const allPincodes = await prisma.pincode.findMany({
-          where: {
-            district: "Thrissur",
-            state: "Kerala",
-          },
-        });
-
-        // Manual search for better matching
-        pincodeData = allPincodes.find((p) =>
-          p.localityName.toLowerCase().includes(normalizedQuery)
-        ) || null;
-        console.log(`   Manual search result: ${pincodeData ? `Found: ${pincodeData.localityName}` : "Not found"}`);
+      if (pincodeData) {
+        console.log(`✅ Found: ${pincodeData.localityName} (${pincodeData.pincode}) - ${pincodeData.district}, ${pincodeData.state}`);
+      } else {
+        console.log(`   No match found for: "${localityName}"`);
       }
     } catch (dbError) {
       console.error("❌ Database query error:", dbError);
@@ -69,13 +88,49 @@ export async function GET(request) {
         code: dbError.code,
         name: dbError.name,
       });
-      return NextResponse.json(
-        { 
-          error: "Database query failed", 
-          details: process.env.NODE_ENV === "development" ? dbError.message : undefined 
-        },
-        { status: 500 }
-      );
+      
+      // Retry once on timeout
+      if (dbError.message === 'Query timeout') {
+        console.log("   Retrying query...");
+        try {
+          pincodeData = await queryWithTimeout(async () => {
+            return await prisma.pincode.findFirst({
+              where: {
+                AND: [
+                  {
+                    OR: searchTerms.map(term => ({
+                      localityName: { contains: term, mode: "insensitive" }
+                    }))
+                  },
+                  { district: "Thrissur" },
+                  { state: "Kerala" }
+                ]
+              }
+            });
+          }, 15000); // Longer timeout for retry
+          
+          if (pincodeData) {
+            console.log(`✅ Retry successful: ${pincodeData.localityName}`);
+          }
+        } catch (retryError) {
+          console.error("❌ Retry failed:", retryError.message);
+          return NextResponse.json(
+            { 
+              error: "Database query timeout", 
+              details: "The database is taking too long to respond. Please try again." 
+            },
+            { status: 500 }
+          );
+        }
+      } else {
+        return NextResponse.json(
+          { 
+            error: "Database query failed", 
+            details: process.env.NODE_ENV === "development" ? dbError.message : undefined 
+          },
+          { status: 500 }
+        );
+      }
     }
 
     if (!pincodeData) {
@@ -86,16 +141,28 @@ export async function GET(request) {
       );
     }
 
-    console.log(`✅ Found: ${pincodeData.localityName} (${pincodeData.pincode}) - ${pincodeData.district}, ${pincodeData.state}`);
-
-    return NextResponse.json({
+    const responseData = {
       pincode: pincodeData.pincode,
       localityName: pincodeData.localityName,
       district: pincodeData.district,
       state: pincodeData.state,
       latitude: pincodeData.latitude,
       longitude: pincodeData.longitude,
+    };
+
+    // Cache the result
+    searchCache.set(cacheKey, {
+      data: responseData,
+      timestamp: Date.now()
     });
+
+    // Clean old cache entries (simple cleanup)
+    if (searchCache.size > 100) {
+      const oldestKey = searchCache.keys().next().value;
+      searchCache.delete(oldestKey);
+    }
+
+    return NextResponse.json(responseData);
   } catch (error) {
     console.error("❌ Error searching locality:", error);
     console.error("   Error details:", {

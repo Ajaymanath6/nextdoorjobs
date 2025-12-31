@@ -225,10 +225,6 @@ const MapComponent = () => {
 
   // Perform district-level zoom (state → district, stops at district)
   const performDistrictZoom = (dbData, showNoCompaniesMessage = false) => {
-    // #region agent log
-    fetch('http://127.0.0.1:7244/ingest/f2d2fb18-25f0-4f18-a513-0d2323a91392',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'Map.js:performDistrictZoom:entry',message:'District zoom called',data:{dbData,showNoCompaniesMessage,hasMap:!!mapInstanceRef.current,hasL:!!window.L},timestamp:Date.now(),sessionId:'debug-session',hypothesisId:'H4'})}).catch(()=>{});
-    // #endregion
-    
     if (!mapInstanceRef.current || !window.L) return;
 
     const L = window.L;
@@ -240,10 +236,6 @@ const MapComponent = () => {
     const districtCenter = hasCoordinates 
       ? [dbData.latitude, dbData.longitude]
       : [10.5276, 76.2144]; // Default Thrissur center
-
-    // #region agent log
-    fetch('http://127.0.0.1:7244/ingest/f2d2fb18-25f0-4f18-a513-0d2323a91392',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'Map.js:performDistrictZoom:coordinates',message:'Coordinates calculated',data:{hasCoordinates,districtCenter,latitude:dbData.latitude,longitude:dbData.longitude},timestamp:Date.now(),sessionId:'debug-session',hypothesisId:'H4'})}).catch(()=>{});
-    // #endregion
 
     // Calculate state center (Kerala center - Thrissur area)
     const stateCenter = [10.5276, 76.2144]; // Kerala center (Thrissur area)
@@ -622,10 +614,6 @@ const MapComponent = () => {
 
   // Parse locality from search query
   const parseLocalityFromQuery = (query) => {
-    // #region agent log
-    fetch('http://127.0.0.1:7244/ingest/f2d2fb18-25f0-4f18-a513-0d2323a91392',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'Map.js:parseLocalityFromQuery:entry',message:'Parse function called',data:{query,queryType:typeof query},timestamp:Date.now(),sessionId:'debug-session',hypothesisId:'H1'})}).catch(()=>{});
-    // #endregion
-    
     if (!query || !query.trim()) return null;
 
     const normalizedQuery = query.toLowerCase().trim();
@@ -634,21 +622,13 @@ const MapComponent = () => {
     const pattern1 = /companies\s+in\s+(.+)/i;
     const match1 = normalizedQuery.match(pattern1);
     if (match1) {
-      const result = match1[1].trim();
-      // #region agent log
-      fetch('http://127.0.0.1:7244/ingest/f2d2fb18-25f0-4f18-a513-0d2323a91392',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'Map.js:parseLocalityFromQuery:pattern1',message:'Pattern 1 matched',data:{result},timestamp:Date.now(),sessionId:'debug-session',hypothesisId:'H1'})}).catch(()=>{});
-      // #endregion
-      return result;
+      return match1[1].trim();
     }
 
     // Pattern 2: Just the locality name - return the query itself
     // The database API will handle the search matching
     // This allows searching for any locality, not just those in locations.json
-    const result = query.trim();
-    // #region agent log
-    fetch('http://127.0.0.1:7244/ingest/f2d2fb18-25f0-4f18-a513-0d2323a91392',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'Map.js:parseLocalityFromQuery:pattern2',message:'Pattern 2 - returning query',data:{result},timestamp:Date.now(),sessionId:'debug-session',hypothesisId:'H1'})}).catch(()=>{});
-    // #endregion
-    return result;
+    return query.trim();
   };
 
   // Get locality data from locations.json by pincode or locality name
@@ -672,38 +652,20 @@ const MapComponent = () => {
 
   const handleSearch = async () => {
     if (searchQuery.trim()) {
-      // #region agent log
-      fetch('http://127.0.0.1:7244/ingest/f2d2fb18-25f0-4f18-a513-0d2323a91392',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'Map.js:handleSearch:entry',message:'Search initiated',data:{searchQuery},timestamp:Date.now(),sessionId:'debug-session',hypothesisId:'H2'})}).catch(()=>{});
-      // #endregion
-      
       setHasSearched(true);
       
       // Parse locality from search query
       const localityName = parseLocalityFromQuery(searchQuery);
       
-      // #region agent log
-      fetch('http://127.0.0.1:7244/ingest/f2d2fb18-25f0-4f18-a513-0d2323a91392',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'Map.js:handleSearch:afterParse',message:'After parsing locality',data:{localityName,isNull:localityName===null},timestamp:Date.now(),sessionId:'debug-session',hypothesisId:'H1'})}).catch(()=>{});
-      // #endregion
-      
       if (localityName) {
         try {
           // Step 1: Query database to find locality, pincode, district, state
-          const apiUrl = `/api/search-locality?locality=${encodeURIComponent(localityName)}`;
-          // #region agent log
-          fetch('http://127.0.0.1:7244/ingest/f2d2fb18-25f0-4f18-a513-0d2323a91392',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'Map.js:handleSearch:beforeFetch',message:'About to fetch API',data:{apiUrl,localityName},timestamp:Date.now(),sessionId:'debug-session',hypothesisId:'H2'})}).catch(()=>{});
-          // #endregion
-          
-          const response = await fetch(apiUrl);
-          
-          // #region agent log
-          fetch('http://127.0.0.1:7244/ingest/f2d2fb18-25f0-4f18-a513-0d2323a91392',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'Map.js:handleSearch:afterFetch',message:'API response received',data:{ok:response.ok,status:response.status,statusText:response.statusText},timestamp:Date.now(),sessionId:'debug-session',hypothesisId:'H2'})}).catch(()=>{});
-          // #endregion
+          const response = await fetch(
+            `/api/search-locality?locality=${encodeURIComponent(localityName)}`
+          );
           
           if (!response.ok) {
             const errorData = await response.json().catch(() => ({}));
-            // #region agent log
-            fetch('http://127.0.0.1:7244/ingest/f2d2fb18-25f0-4f18-a513-0d2323a91392',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'Map.js:handleSearch:responseNotOk',message:'Response not OK',data:{errorData,status:response.status},timestamp:Date.now(),sessionId:'debug-session',hypothesisId:'H5'})}).catch(()=>{});
-            // #endregion
             console.error("Locality not found in database:", errorData.error || "Unknown error");
             // Show user-friendly error message
             alert(`Locality "${localityName}" not found. Please try searching with the full locality name.`);
@@ -711,9 +673,6 @@ const MapComponent = () => {
           }
 
           const dbData = await response.json();
-          // #region agent log
-          fetch('http://127.0.0.1:7244/ingest/f2d2fb18-25f0-4f18-a513-0d2323a91392',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'Map.js:handleSearch:dbDataParsed',message:'DB data parsed',data:{dbData,hasLatitude:!!dbData.latitude,hasLongitude:!!dbData.longitude},timestamp:Date.now(),sessionId:'debug-session',hypothesisId:'H3'})}).catch(()=>{});
-          // #endregion
           console.log("Found locality in database:", dbData);
 
           // Step 2: Get company data from locations.json using pincode/locality
@@ -722,15 +681,8 @@ const MapComponent = () => {
             dbData.localityName
           );
           
-          // #region agent log
-          fetch('http://127.0.0.1:7244/ingest/f2d2fb18-25f0-4f18-a513-0d2323a91392',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'Map.js:handleSearch:afterGetLocality',message:'After getting locality data',data:{hasLocalityData:!!localityData,localityDataType:typeof localityData},timestamp:Date.now(),sessionId:'debug-session',hypothesisId:'H3'})}).catch(()=>{});
-          // #endregion
-          
           if (!localityData) {
             console.log(`No company data found for locality: ${dbData.localityName} (pincode: ${dbData.pincode})`);
-            // #region agent log
-            fetch('http://127.0.0.1:7244/ingest/f2d2fb18-25f0-4f18-a513-0d2323a91392',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'Map.js:handleSearch:beforeDistrictZoom',message:'Calling performDistrictZoom',data:{dbData,hasMap:!!mapInstanceRef.current},timestamp:Date.now(),sessionId:'debug-session',hypothesisId:'H4'})}).catch(()=>{});
-            // #endregion
             // Still zoom to district level and show "No companies found" message
             performDistrictZoom(dbData, true);
             return;
@@ -745,9 +697,6 @@ const MapComponent = () => {
             performDistrictZoom(dbData, true);
           }
         } catch (error) {
-          // #region agent log
-          fetch('http://127.0.0.1:7244/ingest/f2d2fb18-25f0-4f18-a513-0d2323a91392',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'Map.js:handleSearch:catchError',message:'Caught error',data:{errorMessage:error.message,errorStack:error.stack},timestamp:Date.now(),sessionId:'debug-session',hypothesisId:'H2'})}).catch(()=>{});
-          // #endregion
           console.error("Error searching locality:", error);
           alert("An error occurred while searching. Please try again.");
         }
