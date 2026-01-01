@@ -788,6 +788,8 @@ const MapComponent = () => {
     if (navigator.geolocation) {
       try {
         console.log('🔍 Requesting browser geolocation with HIGH ACCURACY...');
+        console.log('💡 TIP: If using USB tethering/hotspot, open this site on your PHONE for accurate GPS location');
+        
         const browserLocation = await new Promise((resolve, reject) => {
           navigator.geolocation.getCurrentPosition(
             (position) => {
@@ -802,16 +804,35 @@ const MapComponent = () => {
               console.log('✅ Browser geolocation successful:', {
                 ...location,
                 accuracyMeters: `${Math.round(position.coords.accuracy)}m`,
-                method: position.coords.accuracy < 100 ? 'GPS' : 'WiFi/Cell'
+                method: position.coords.accuracy < 100 ? 'GPS' : position.coords.accuracy < 1000 ? 'WiFi/Cell' : 'WiFi (Inaccurate)'
               });
               
-              // Warn if accuracy is poor (> 1km)
+              // Warn if accuracy is poor (> 1km) - likely WiFi positioning
               if (position.coords.accuracy > 1000) {
-                console.warn('⚠️ Location accuracy is poor (>1km). This might be WiFi-based positioning.');
-                console.warn('⚠️ For better accuracy, try:');
-                console.warn('   1. Enable GPS/Location Services on your device');
-                console.warn('   2. Use mobile device instead of desktop');
-                console.warn('   3. Go outdoors for better GPS signal');
+                console.warn('⚠️ Location accuracy is POOR (>1km). This is WiFi-based positioning.');
+                console.warn('⚠️ Your WiFi network is registered at the wrong location in Google/Mozilla databases.');
+                console.warn('⚠️ SOLUTIONS:');
+                console.warn('   1. 📱 BEST: Open this site on your MOBILE PHONE (has GPS)');
+                console.warn('   2. 🔌 If using USB tethering: Open on the PHONE, not laptop');
+                console.warn('   3. 🔍 Or search for your city/area manually instead');
+                
+                // Show user-friendly warning
+                const userConfirm = confirm(
+                  `⚠️ Location detected but accuracy is poor (${Math.round(position.coords.accuracy)}m).\n\n` +
+                  `This is likely because:\n` +
+                  `• You're on a laptop/desktop (no GPS)\n` +
+                  `• Your WiFi is registered at wrong location\n` +
+                  `• You're using USB tethering/hotspot\n\n` +
+                  `SOLUTIONS:\n` +
+                  `1. Open this site on your MOBILE PHONE for accurate GPS\n` +
+                  `2. Or search for your city manually\n\n` +
+                  `Use this inaccurate location anyway?`
+                );
+                
+                if (!userConfirm) {
+                  reject(new Error('User rejected inaccurate location'));
+                  return;
+                }
               }
               
               resolve(location);
@@ -839,7 +860,10 @@ const MapComponent = () => {
           return browserLocation;
         }
       } catch (browserError) {
-        console.log('⚠️ Browser geolocation failed, trying Leaflet locate...');
+        console.log('⚠️ Browser geolocation failed or rejected');
+        setIsDetectingLocation(false);
+        setLocationError('Location detection failed. Please search for your city manually.');
+        return null;
       }
     }
 
@@ -931,18 +955,21 @@ const MapComponent = () => {
         const stored = sessionStorage.getItem('userCurrentLocation');
         if (stored) {
           const locationData = JSON.parse(stored);
-          // Check if location is less than 1 hour old AND is from browser (not IP)
-          // Don't use cached IP location - it's inaccurate
-          const oneHour = 60 * 60 * 1000;
-          const isRecent = Date.now() - locationData.timestamp < oneHour;
+          // Check if location is less than 10 minutes old (shorter cache for mobile users)
+          const tenMinutes = 10 * 60 * 1000;
+          const isRecent = Date.now() - locationData.timestamp < tenMinutes;
           const isAccurate = locationData.source === 'browser' && !locationData.approximate;
           
           if (isRecent && isAccurate) {
             console.log('✅ Using cached browser location from sessionStorage');
+            console.log('💡 TIP: If location is wrong, clear cache and open on mobile phone');
             return locationData;
           } else if (isRecent && !isAccurate) {
-            console.log('⚠️ Cached location is approximate (IP-based), fetching fresh location...');
-            return null; // Force fresh location if cached is IP-based
+            console.log('⚠️ Cached location is approximate, fetching fresh location...');
+            return null; // Force fresh location if cached is inaccurate
+          } else {
+            console.log('⏰ Cached location expired, fetching fresh location...');
+            return null;
           }
         }
       } catch (error) {
