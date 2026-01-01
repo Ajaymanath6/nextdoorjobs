@@ -775,7 +775,7 @@ const MapComponent = () => {
   };
 
   // Detect user location using browser geolocation with IP fallback
-  const detectUserLocation = async () => {
+  const detectUserLocation = async (forceRefresh = false) => {
     if (!mapInstanceRef.current) {
       console.error('Map instance not available');
       return null;
@@ -787,30 +787,54 @@ const MapComponent = () => {
     // First, try native browser geolocation API directly (more accurate)
     if (navigator.geolocation) {
       try {
+        console.log('🔍 Requesting browser geolocation with HIGH ACCURACY...');
         const browserLocation = await new Promise((resolve, reject) => {
           navigator.geolocation.getCurrentPosition(
             (position) => {
-              resolve({
+              const location = {
                 lat: position.coords.latitude,
                 lng: position.coords.longitude,
                 accuracy: position.coords.accuracy,
-                source: 'browser'
+                source: 'browser',
+                timestamp: position.timestamp
+              };
+              
+              console.log('✅ Browser geolocation successful:', {
+                ...location,
+                accuracyMeters: `${Math.round(position.coords.accuracy)}m`,
+                method: position.coords.accuracy < 100 ? 'GPS' : 'WiFi/Cell'
               });
+              
+              // Warn if accuracy is poor (> 1km)
+              if (position.coords.accuracy > 1000) {
+                console.warn('⚠️ Location accuracy is poor (>1km). This might be WiFi-based positioning.');
+                console.warn('⚠️ For better accuracy, try:');
+                console.warn('   1. Enable GPS/Location Services on your device');
+                console.warn('   2. Use mobile device instead of desktop');
+                console.warn('   3. Go outdoors for better GPS signal');
+              }
+              
+              resolve(location);
             },
             (error) => {
-              console.log('⚠️ Browser geolocation error:', error.message);
+              console.error('❌ Browser geolocation error:', {
+                code: error.code,
+                message: error.message,
+                PERMISSION_DENIED: error.code === 1,
+                POSITION_UNAVAILABLE: error.code === 2,
+                TIMEOUT: error.code === 3
+              });
               reject(error);
             },
             {
-              enableHighAccuracy: true,
-              timeout: 15000, // 15 seconds
-              maximumAge: 0, // Don't use cached location - force fresh location
+              enableHighAccuracy: true, // Use GPS if available
+              timeout: 20000, // 20 seconds - longer for GPS
+              maximumAge: forceRefresh ? 0 : 5000, // Force fresh if requested, otherwise allow 5s cache
             }
           );
         });
 
         if (browserLocation) {
-          console.log('✅ Browser geolocation successful:', browserLocation);
           setIsDetectingLocation(false);
           return browserLocation;
         }
@@ -853,31 +877,31 @@ const MapComponent = () => {
         resolve({ lat, lng, accuracy, source: 'browser' });
       };
 
-      // Handle location error (fallback to IP with warning)
+      // Handle location error (show error, don't use IP fallback)
       const handleLocationError = async (e) => {
-        console.log('⚠️ Browser geolocation failed, trying IP fallback...');
-        console.log('⚠️ Note: IP geolocation shows ISP location, not your exact location');
+        console.error('❌ All geolocation methods failed');
         
         // Remove event listeners
         mapInstanceRef.current.off('locationfound', handleLocationFound);
         mapInstanceRef.current.off('locationerror', handleLocationError);
         
-        // Try IP-based geolocation (less accurate - shows ISP location)
-        const ipLocation = await fetchLocationByIP();
+        setIsDetectingLocation(false);
         
-        if (ipLocation) {
-          console.log('⚠️ IP geolocation (ISP location):', ipLocation);
-          console.log('⚠️ This may not be your exact location. Please allow browser location access for accurate results.');
-          setIsDetectingLocation(false);
-          // Show warning to user
-          alert('Using approximate location based on IP address. For accurate location, please allow browser location access.');
-          resolve({ ...ipLocation, source: 'ip', approximate: true });
+        // Show detailed error message
+        let errorMessage = 'Unable to detect your location. ';
+        if (e.code === 1) {
+          errorMessage += 'Location permission denied. Please allow location access in your browser settings.';
+        } else if (e.code === 2) {
+          errorMessage += 'Location unavailable. Please check your device location settings.';
+        } else if (e.code === 3) {
+          errorMessage += 'Location request timed out. Please try again.';
         } else {
-          console.error('❌ Both geolocation methods failed');
-          setIsDetectingLocation(false);
-          setLocationError('Unable to detect your location. Please allow location access or search for a specific locality.');
-          resolve(null);
+          errorMessage += 'Please search for a specific locality instead.';
         }
+        
+        setLocationError(errorMessage);
+        alert(errorMessage);
+        resolve(null);
       };
 
       // Attach event listeners
@@ -958,7 +982,17 @@ const MapComponent = () => {
       interactive: true,
     }).addTo(mapInstanceRef.current);
 
-    marker.bindTooltip('Your current location', {
+    // Add accuracy info to tooltip if available
+    const accuracyText = location.accuracy 
+      ? ` (±${Math.round(location.accuracy)}m)` 
+      : '';
+    const methodText = location.accuracy && location.accuracy < 100 
+      ? ' [GPS]' 
+      : location.accuracy && location.accuracy < 1000 
+        ? ' [WiFi]' 
+        : '';
+    
+    marker.bindTooltip(`Your current location${accuracyText}${methodText}`, {
       permanent: false,
       direction: 'top',
       className: 'user-location-tooltip',
