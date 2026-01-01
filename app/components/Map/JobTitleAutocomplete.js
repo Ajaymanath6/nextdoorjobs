@@ -1,7 +1,6 @@
 "use client";
 
 import { useState, useRef, useEffect } from "react";
-import Fuse from "fuse.js";
 import themeClasses from "../../theme-utility-classes.json";
 
 export default function JobTitleAutocomplete({
@@ -22,22 +21,8 @@ export default function JobTitleAutocomplete({
   const filterClasses = themeClasses.components.filterDropdown;
   const [suggestions, setSuggestions] = useState([]);
   const [selectedIndex, setSelectedIndex] = useState(-1);
-  const fuseRef = useRef(null);
   const suggestionsListRef = useRef(null);
   const itemRefs = useRef([]);
-
-  // Initialize Fuse.js for fuzzy search
-  useEffect(() => {
-    if (jobTitles.length > 0) {
-      fuseRef.current = new Fuse(jobTitles, {
-        keys: ["title", "category"],
-        threshold: 0.3, // Lower = more strict matching
-        distance: 100,
-        minMatchCharLength: 2,
-        includeScore: true,
-      });
-    }
-  }, [jobTitles]);
 
   // Update suggestions when search query changes
   useEffect(() => {
@@ -47,27 +32,22 @@ export default function JobTitleAutocomplete({
       return;
     }
 
-    // Initialize Fuse if not already initialized and jobTitles are available
-    if (!fuseRef.current && jobTitles.length > 0) {
-      fuseRef.current = new Fuse(jobTitles, {
-        keys: ["title", "category"],
-        threshold: 0.3,
-        distance: 100,
-        minMatchCharLength: 2,
-        includeScore: true,
-      });
-    }
-
-    if (fuseRef.current && jobTitles.length > 0) {
-      const results = fuseRef.current.search(searchQuery);
+    if (jobTitles.length > 0) {
+      // Simple filter - no need for Fuse.js
+      const normalizedQuery = searchQuery.toLowerCase().trim();
+      const filtered = jobTitles.filter(job => 
+        job.title.toLowerCase().includes(normalizedQuery) ||
+        job.category.toLowerCase().includes(normalizedQuery)
+      );
+      
       // Get top 8 results
-      const topResults = results.slice(0, 8).map((result) => result.item);
+      const topResults = filtered.slice(0, 8);
       console.log("💼 Job autocomplete suggestions:", { query: searchQuery, count: topResults.length, suggestions: topResults });
       setSuggestions(topResults);
-      setSelectedIndex(-1); // Reset selection when suggestions change
+      setSelectedIndex(-1);
       itemRefs.current = [];
     } else {
-      console.log("⚠️ Job autocomplete: Fuse not initialized or no job titles", { hasFuse: !!fuseRef.current, jobTitlesCount: jobTitles.length });
+      console.log("⚠️ Job autocomplete: No job titles available", { jobTitlesCount: jobTitles.length });
       setSuggestions([]);
     }
   }, [searchQuery, jobTitles]);
