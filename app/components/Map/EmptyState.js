@@ -4,6 +4,9 @@ import { Query } from "@carbon/icons-react";
 import themeClasses from "../../theme-utility-classes.json";
 
 export default function EmptyState({ isOpen, onClose, query = "" }) {
+  // Debug logging
+  console.log("🔍 EmptyState render:", { isOpen, query });
+  
   if (!isOpen) return null;
 
   const brand = themeClasses.brand;
