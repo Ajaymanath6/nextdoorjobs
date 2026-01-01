@@ -36,6 +36,8 @@ const MapComponent = () => {
   const [showAutocomplete, setShowAutocomplete] = useState(false);
   const [localities, setLocalities] = useState([]);
   const [homeLocation, setHomeLocation] = useState("");
+  const [isMapLoading, setIsMapLoading] = useState(false);
+  const [isFindingJobs, setIsFindingJobs] = useState(false);
   const autocompleteRef = useRef(null);
   const searchInputRef = useRef(null);
 
@@ -305,6 +307,12 @@ const MapComponent = () => {
               }
             }, 5000);
           }
+          
+          // Hide loading after zoom completes
+          setTimeout(() => {
+            setIsFindingJobs(false);
+            setIsMapLoading(false);
+          }, 300);
         });
       }, 500); // Small delay between stages
     });
@@ -357,6 +365,12 @@ const MapComponent = () => {
           // After final zoom, render company markers
           mapInstanceRef.current.once("moveend", () => {
             renderCompanyMarkers(companies);
+            
+            // Hide loading after markers are added
+            setTimeout(() => {
+              setIsFindingJobs(false);
+              setIsMapLoading(false);
+            }, 300); // Small delay to ensure markers are visible
           });
         });
       }, 500); // Small delay between stages
@@ -673,7 +687,10 @@ const MapComponent = () => {
 
   const handleSearch = async (overrideQuery = null) => {
     const queryToSearch = overrideQuery || searchQuery;
+    console.log("🔍 handleSearch called:", { queryToSearch, searchQuery, overrideQuery });
     if (queryToSearch.trim()) {
+      console.log("✅ Setting loading states");
+      setIsMapLoading(true);  // Show "Loading map..." immediately
       setHasSearched(true);
       
       // Parse locality from search query
@@ -687,6 +704,8 @@ const MapComponent = () => {
           );
           
           if (!response.ok) {
+            setIsMapLoading(false);
+            setIsFindingJobs(false);
             const errorData = await response.json().catch(() => ({}));
             console.error("Locality not found in database:", errorData.error || "Unknown error");
             // Show user-friendly error message
@@ -705,20 +724,28 @@ const MapComponent = () => {
           
           if (!localityData) {
             console.log(`No company data found for locality: ${dbData.localityName} (pincode: ${dbData.pincode})`);
+            setIsMapLoading(false);
+            setIsFindingJobs(true);  // Change to "Finding jobs..." before zoom
             // Still zoom to district level and show "No companies found" message
             performDistrictZoom(dbData, true);
             return;
           }
 
           if (localityData.companies && localityData.companies.length > 0) {
+            setIsMapLoading(false);
+            setIsFindingJobs(true);  // Change to "Finding jobs..." before zoom
             // Step 3: Perform multi-stage zoom with database info and show companies
             performLocalitySearchWithDBData(dbData, localityData);
           } else {
             console.log(`No companies found for locality: ${dbData.localityName}`);
+            setIsMapLoading(false);
+            setIsFindingJobs(true);  // Change to "Finding jobs..." before zoom
             // Still zoom to district level and show "No companies found" message
             performDistrictZoom(dbData, true);
           }
         } catch (error) {
+          setIsMapLoading(false);
+          setIsFindingJobs(false);
           console.error("Error searching locality:", error);
           alert("An error occurred while searching. Please try again.");
         }
@@ -885,13 +912,16 @@ const MapComponent = () => {
 
   // Handle locality selection from autocomplete
   const handleLocalitySelect = (locality) => {
-    setSearchQuery(locality.localityName);
+    const selectedLocalityName = locality.localityName;
+    console.log("📍 Locality selected:", selectedLocalityName);
+    setSearchQuery(selectedLocalityName);
     setShowAutocomplete(false);
     
     // Automatically trigger search with the selected locality
+    // Use setTimeout to ensure state update is reflected in UI
     setTimeout(() => {
-      handleSearch(locality.localityName);
-    }, 100);
+      handleSearch(selectedLocalityName);
+    }, 200);
   };
 
   if (!isClient) {
@@ -986,9 +1016,17 @@ const MapComponent = () => {
                   value={searchQuery}
                   onChange={handleSearchInputChange}
                   onKeyDown={(e) => {
+                    // Don't handle arrow keys here - let autocomplete handle them
+                    if (e.key === "ArrowDown" || e.key === "ArrowUp") {
+                      // Let autocomplete handle these - don't prevent default
+                      return;
+                    }
                     if (e.key === "Enter" && searchQuery.trim()) {
-                      setShowAutocomplete(false);
-                      handleSearch();
+                      // Only search if autocomplete is closed or no item is selected
+                      if (!showAutocomplete) {
+                        setShowAutocomplete(false);
+                        handleSearch();
+                      }
                     } else if (e.key === "Escape") {
                       setShowAutocomplete(false);
                     }
@@ -1012,10 +1050,10 @@ const MapComponent = () => {
                 
                 {/* Send Button - Right side inside input */}
                 <button
-                  onClick={handleSearch}
-                  disabled={!searchQuery.trim()}
+                  onClick={() => handleSearch()}
+                  disabled={!searchQuery || !searchQuery.trim()}
                   className={`absolute right-2 top-1/2 transform -translate-y-1/2 flex items-center justify-center p-1.5 rounded transition-colors ${
-                    !searchQuery.trim() 
+                    !searchQuery || !searchQuery.trim() 
                       ? "opacity-50 cursor-not-allowed" 
                       : "hover:bg-brand-stroke-weak cursor-pointer"
                   }`}
@@ -1027,7 +1065,7 @@ const MapComponent = () => {
                   <SendFilled
                     size={18}
                     style={{
-                      color: searchQuery.trim() 
+                      color: (searchQuery && searchQuery.trim()) 
                         ? "var(--brand)" 
                         : "var(--brand-text-tertiary)",
                     }}
@@ -1203,6 +1241,55 @@ const MapComponent = () => {
                 )}
               </div>
             )}
+          </div>
+        </div>
+      )}
+
+      {/* Loading Overlay */}
+      {(isMapLoading || isFindingJobs) && (
+        <div
+          className="absolute inset-0 flex items-center justify-center"
+          style={{
+            position: 'absolute',
+            top: 0,
+            left: 0,
+            right: 0,
+            bottom: 0,
+            width: '100%',
+            height: '100%',
+            zIndex: 999,
+            backgroundColor: isFindingJobs 
+              ? 'rgba(255, 255, 255, 0.85)' 
+              : 'rgba(255, 255, 255, 0.5)',
+            backdropFilter: isFindingJobs ? 'blur(2px)' : 'none',
+            pointerEvents: 'auto'
+          }}
+        >
+          <div className="text-center">
+            {/* Spinner */}
+            <div 
+              className="w-12 h-12 border-4 rounded-full loading-spinner mx-auto mb-4"
+              style={{
+                width: '48px',
+                height: '48px',
+                border: '4px solid #E9D5FF',
+                borderTop: '4px solid #9333EA',
+                borderRadius: '50%',
+                animation: 'spin 1s linear infinite'
+              }}
+            />
+            {/* Loading Text */}
+            <p 
+              className="text-base font-medium"
+              style={{ 
+                fontFamily: 'Open Sans',
+                fontSize: '16px',
+                fontWeight: 500,
+                color: '#1A1A1A'
+              }}
+            >
+              {isFindingJobs ? 'Finding jobs...' : 'Loading map...'}
+            </p>
           </div>
         </div>
       )}

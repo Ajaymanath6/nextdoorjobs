@@ -137,3 +137,42 @@ body {
   border-color: var(--brand-stroke-strong) !important;
   outline: none !important;
 }
+
+/* Loading Spinner Animation */
+@keyframes spin {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+.loading-spinner {
+  animation: spin 1s linear infinite;
+}
+
+/* Modern Lean Scrollbar for Autocomplete */
+.autocomplete-suggestions-list::-webkit-scrollbar {
+  width: 6px;
+}
+
+.autocomplete-suggestions-list::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.autocomplete-suggestions-list::-webkit-scrollbar-thumb {
+  background: rgba(0, 0, 0, 0.2);
+  border-radius: 3px;
+  transition: background 0.2s ease;
+}
+
+.autocomplete-suggestions-list::-webkit-scrollbar-thumb:hover {
+  background: rgba(0, 0, 0, 0.3);
+}
+
+/* Firefox scrollbar */
+.autocomplete-suggestions-list {
+  scrollbar-width: thin;
+  scrollbar-color: rgba(0, 0, 0, 0.2) transparent;
+}

@@ -22,7 +22,10 @@ export default function LocalityAutocomplete({
   const filterClasses = themeClasses.components.filterDropdown;
   const brand = themeClasses.brand;
   const [suggestions, setSuggestions] = useState([]);
+  const [selectedIndex, setSelectedIndex] = useState(-1);
   const fuseRef = useRef(null);
+  const suggestionsListRef = useRef(null);
+  const itemRefs = useRef([]);
 
   // Initialize Fuse.js for fuzzy search
   useEffect(() => {
@@ -41,6 +44,7 @@ export default function LocalityAutocomplete({
   useEffect(() => {
     if (!searchQuery || searchQuery.trim().length < 2) {
       setSuggestions([]);
+      setSelectedIndex(-1);
       return;
     }
 
@@ -49,8 +53,70 @@ export default function LocalityAutocomplete({
       // Get top 8 results
       const topResults = results.slice(0, 8).map((result) => result.item);
       setSuggestions(topResults);
+      setSelectedIndex(-1); // Reset selection when suggestions change
+      itemRefs.current = [];
     }
   }, [searchQuery]);
+
+  // Handle keyboard navigation
+  useEffect(() => {
+    if (!isOpen || suggestions.length === 0) {
+      setSelectedIndex(-1);
+      return;
+    }
+
+    const handleKeyDown = (e) => {
+      // Only handle arrow keys and enter when autocomplete is open
+      // Don't interfere with typing in the input
+      if (e.key === "ArrowDown") {
+        e.preventDefault();
+        e.stopPropagation();
+        setSelectedIndex((prev) => {
+          const nextIndex = prev < suggestions.length - 1 ? prev + 1 : 0;
+          // Scroll into view
+          setTimeout(() => {
+            if (itemRefs.current[nextIndex] && suggestionsListRef.current) {
+              itemRefs.current[nextIndex].scrollIntoView({
+                behavior: "smooth",
+                block: "nearest",
+              });
+            }
+          }, 0);
+          return nextIndex;
+        });
+      } else if (e.key === "ArrowUp") {
+        e.preventDefault();
+        e.stopPropagation();
+        setSelectedIndex((prev) => {
+          const nextIndex = prev > 0 ? prev - 1 : suggestions.length - 1;
+          // Scroll into view
+          setTimeout(() => {
+            if (itemRefs.current[nextIndex] && suggestionsListRef.current) {
+              itemRefs.current[nextIndex].scrollIntoView({
+                behavior: "smooth",
+                block: "nearest",
+              });
+            }
+          }, 0);
+          return nextIndex;
+        });
+      } else if (e.key === "Enter" && selectedIndex >= 0 && selectedIndex < suggestions.length) {
+        e.preventDefault();
+        e.stopPropagation();
+        handleSelect(suggestions[selectedIndex]);
+      } else if (e.key === "Escape") {
+        e.preventDefault();
+        e.stopPropagation();
+        onClose();
+      }
+    };
+
+    // Add event listener with capture to catch events before they reach input
+    document.addEventListener("keydown", handleKeyDown, true);
+    return () => {
+      document.removeEventListener("keydown", handleKeyDown, true);
+    };
+  }, [isOpen, suggestions, selectedIndex, onSelect, onClose]);
 
   const handleSelect = (locality) => {
     if (onSelect) {
@@ -82,6 +148,8 @@ export default function LocalityAutocomplete({
     >
       {/* Suggestions List */}
       <div
+        ref={suggestionsListRef}
+        className="autocomplete-suggestions-list"
         style={{
           overflowY: "auto",
           display: "flex",
@@ -91,6 +159,9 @@ export default function LocalityAutocomplete({
         {suggestions.map((locality, index) => (
           <button
             key={`${locality.pincode}-${index}`}
+            ref={(el) => {
+              if (el) itemRefs.current[index] = el;
+            }}
             onClick={() => handleSelect(locality)}
             className="hover:bg-brand-stroke-weak transition-colors duration-150"
             style={{
@@ -98,7 +169,7 @@ export default function LocalityAutocomplete({
               padding: "10px 16px",
               textAlign: "left",
               border: "none",
-              background: "transparent",
+              background: selectedIndex === index ? "var(--brand-stroke-weak)" : "transparent",
               cursor: "pointer",
               display: "flex",
               flexDirection: "column",
