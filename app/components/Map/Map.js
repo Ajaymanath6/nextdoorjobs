@@ -1095,15 +1095,21 @@ const MapComponent = () => {
           );
           
           if (!response.ok) {
+            // Clear all loading states first
             setIsMapLoading(false);
             setIsFindingJobs(false);
+            setIsDetectingLocation(false);
+            
             const errorData = await response.json().catch(() => ({}));
             console.error("Locality not found in database:", errorData.error || "Unknown error");
             console.log("🔍 Showing empty state for:", localityName);
-            // Show empty state instead of alert
-            setEmptyStateQuery(localityName);
-            setShowEmptyState(true);
-            console.log("✅ Empty state should be visible now");
+            
+            // Small delay to ensure loading overlay is gone
+            setTimeout(() => {
+              setEmptyStateQuery(localityName);
+              setShowEmptyState(true);
+              console.log("✅ Empty state should be visible now, showEmptyState:", true);
+            }, 100);
             return;
           }
 
