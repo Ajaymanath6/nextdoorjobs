@@ -38,8 +38,12 @@ const MapComponent = () => {
   const [homeLocation, setHomeLocation] = useState("");
   const [isMapLoading, setIsMapLoading] = useState(false);
   const [isFindingJobs, setIsFindingJobs] = useState(false);
+  const [userLocation, setUserLocation] = useState(null);
+  const [isDetectingLocation, setIsDetectingLocation] = useState(false);
+  const [locationError, setLocationError] = useState(null);
   const autocompleteRef = useRef(null);
   const searchInputRef = useRef(null);
+  const userLocationMarkerRef = useRef(null);
 
   const searchBar = themeClasses.components.searchBar;
   const brand = themeClasses.brand;
@@ -89,6 +93,10 @@ const MapComponent = () => {
         // Remove home marker
         if (homeMarkerRef.current) {
           mapInstanceRef.current.removeLayer(homeMarkerRef.current);
+        }
+        // Remove user location marker
+        if (userLocationMarkerRef.current) {
+          mapInstanceRef.current.removeLayer(userLocationMarkerRef.current);
         }
         // Remove company markers
         if (clusterGroupRef.current) {
@@ -647,6 +655,26 @@ const MapComponent = () => {
     addMarkersToMap();
   }, [locationsData, isClient]);
 
+  // Check if search query contains job-related keywords
+  const isJobSearchQuery = (query) => {
+    if (!query || !query.trim()) return false;
+    
+    const normalizedQuery = query.toLowerCase().trim();
+    const keywords = ['jobs', 'job', 'product', 'design'];
+    
+    // Check for whole word matches (to avoid matching "job" in "jobless" etc.)
+    const words = normalizedQuery.split(/\s+/);
+    
+    return keywords.some(keyword => {
+      // For "job", check if it's a whole word (not part of "jobs")
+      if (keyword === 'job') {
+        return words.includes('job') || normalizedQuery === 'job';
+      }
+      // For other keywords, check if they appear in the query
+      return normalizedQuery.includes(keyword);
+    });
+  };
+
   // Parse locality from search query
   const parseLocalityFromQuery = (query) => {
     if (!query || !query.trim()) return null;
@@ -685,6 +713,172 @@ const MapComponent = () => {
     return null;
   };
 
+  // Fetch location using IP-based geolocation (fallback)
+  const fetchLocationByIP = async () => {
+    try {
+      const response = await fetch('https://ip-api.com/json/');
+      const data = await response.json();
+      
+      if (data.status === 'success' && data.lat && data.lon) {
+        return { lat: data.lat, lng: data.lon };
+      }
+      return null;
+    } catch (error) {
+      console.error('Error fetching location by IP:', error);
+      return null;
+    }
+  };
+
+  // Detect user location using browser geolocation with IP fallback
+  const detectUserLocation = async () => {
+    if (!mapInstanceRef.current) {
+      console.error('Map instance not available');
+      return null;
+    }
+
+    setIsDetectingLocation(true);
+    setLocationError(null);
+
+    return new Promise((resolve) => {
+      const L = window.L;
+      if (!L) {
+        setIsDetectingLocation(false);
+        resolve(null);
+        return;
+      }
+
+      // Try browser geolocation first
+      mapInstanceRef.current.locate({
+        setView: false, // We'll handle zoom manually
+        maxZoom: 16,
+        timeout: 10000,
+        enableHighAccuracy: true,
+      });
+
+      // Handle successful location detection
+      const handleLocationFound = (e) => {
+        const lat = e.latlng.lat;
+        const lng = e.latlng.lng;
+        
+        console.log('✅ Browser geolocation successful:', { lat, lng });
+        
+        // Remove event listeners
+        mapInstanceRef.current.off('locationfound', handleLocationFound);
+        mapInstanceRef.current.off('locationerror', handleLocationError);
+        
+        setIsDetectingLocation(false);
+        resolve({ lat, lng, source: 'browser' });
+      };
+
+      // Handle location error (fallback to IP)
+      const handleLocationError = async (e) => {
+        console.log('⚠️ Browser geolocation failed, trying IP fallback...');
+        
+        // Remove event listeners
+        mapInstanceRef.current.off('locationfound', handleLocationFound);
+        mapInstanceRef.current.off('locationerror', handleLocationError);
+        
+        // Try IP-based geolocation
+        const ipLocation = await fetchLocationByIP();
+        
+        if (ipLocation) {
+          console.log('✅ IP geolocation successful:', ipLocation);
+          setIsDetectingLocation(false);
+          resolve({ ...ipLocation, source: 'ip' });
+        } else {
+          console.error('❌ Both geolocation methods failed');
+          setIsDetectingLocation(false);
+          setLocationError('Unable to detect your location');
+          resolve(null);
+        }
+      };
+
+      // Attach event listeners
+      mapInstanceRef.current.on('locationfound', handleLocationFound);
+      mapInstanceRef.current.on('locationerror', handleLocationError);
+    });
+  };
+
+  // Store location in sessionStorage
+  const storeLocationInSession = (location) => {
+    if (typeof window !== 'undefined' && location) {
+      const locationData = {
+        lat: location.lat,
+        lng: location.lng,
+        source: location.source || 'unknown',
+        timestamp: Date.now(),
+      };
+      sessionStorage.setItem('userCurrentLocation', JSON.stringify(locationData));
+      console.log('💾 Location stored in sessionStorage:', locationData);
+    }
+  };
+
+  // Get location from sessionStorage
+  const getLocationFromSession = () => {
+    if (typeof window !== 'undefined') {
+      try {
+        const stored = sessionStorage.getItem('userCurrentLocation');
+        if (stored) {
+          const locationData = JSON.parse(stored);
+          // Check if location is less than 1 hour old
+          const oneHour = 60 * 60 * 1000;
+          if (Date.now() - locationData.timestamp < oneHour) {
+            return locationData;
+          }
+        }
+      } catch (error) {
+        console.error('Error reading location from sessionStorage:', error);
+      }
+    }
+    return null;
+  };
+
+  // Zoom map to user location and add marker
+  const zoomToUserLocation = (location) => {
+    if (!mapInstanceRef.current || !location) return;
+
+    const L = window.L;
+    if (!L) return;
+
+    const { lat, lng } = location;
+
+    // Remove existing user location marker if any
+    if (userLocationMarkerRef.current) {
+      mapInstanceRef.current.removeLayer(userLocationMarkerRef.current);
+      userLocationMarkerRef.current = null;
+    }
+
+    // Create user location marker (distinct from home marker)
+    const userLocationIcon = L.divIcon({
+      html: `<div style="background-color:#9333EA;border-radius:50%;width:40px;height:40px;display:flex;align-items:center;justify-content:center;font-size:20px;border:3px solid #FFFFFF;box-shadow:0 2px 8px rgba(147,51,234,0.4);">📍</div>`,
+      className: 'user-location-marker',
+      iconSize: [40, 40],
+      iconAnchor: [20, 20],
+    });
+
+    // Add marker to map
+    const marker = L.marker([lat, lng], {
+      icon: userLocationIcon,
+      zIndexOffset: 2500, // Higher than home marker (2000)
+      interactive: true,
+    }).addTo(mapInstanceRef.current);
+
+    marker.bindTooltip('Your current location', {
+      permanent: false,
+      direction: 'top',
+      className: 'user-location-tooltip',
+    });
+
+    userLocationMarkerRef.current = marker;
+
+    // Zoom to location with smooth animation
+    mapInstanceRef.current.flyTo([lat, lng], 14, {
+      duration: 1.5,
+    });
+
+    console.log('📍 Zoomed to user location:', { lat, lng });
+  };
+
   const handleSearch = async (overrideQuery = null) => {
     const queryToSearch = overrideQuery || searchQuery;
     console.log("🔍 handleSearch called:", { queryToSearch, searchQuery, overrideQuery });
@@ -692,6 +886,44 @@ const MapComponent = () => {
       console.log("✅ Setting loading states");
       setIsMapLoading(true);  // Show "Loading map..." immediately
       setHasSearched(true);
+      
+      // Check if this is a job search query
+      if (isJobSearchQuery(queryToSearch)) {
+        console.log("🔍 Job search detected, triggering location detection...");
+        
+        // Check sessionStorage first
+        const cachedLocation = getLocationFromSession();
+        if (cachedLocation) {
+          console.log("✅ Using cached location from sessionStorage");
+          setUserLocation(cachedLocation);
+          storeLocationInSession(cachedLocation);
+          zoomToUserLocation(cachedLocation);
+          setIsMapLoading(false);
+          setIsFindingJobs(false);
+          return;
+        }
+
+        // Detect user location
+        const location = await detectUserLocation();
+        
+        if (location) {
+          setUserLocation(location);
+          storeLocationInSession(location);
+          zoomToUserLocation(location);
+          setIsMapLoading(false);
+          setIsFindingJobs(false);
+        } else {
+          // Location detection failed
+          setIsMapLoading(false);
+          setIsFindingJobs(false);
+          if (locationError) {
+            alert(locationError);
+          } else {
+            alert("Unable to detect your location. Please try again or search for a specific locality.");
+          }
+        }
+        return;
+      }
       
       // Parse locality from search query
       const localityName = parseLocalityFromQuery(queryToSearch);
@@ -1246,7 +1478,7 @@ const MapComponent = () => {
       )}
 
       {/* Loading Overlay */}
-      {(isMapLoading || isFindingJobs) && (
+      {(isMapLoading || isFindingJobs || isDetectingLocation) && (
         <div
           className="absolute inset-0 flex items-center justify-center"
           style={{
@@ -1288,7 +1520,11 @@ const MapComponent = () => {
                 color: '#1A1A1A'
               }}
             >
-              {isFindingJobs ? 'Finding jobs...' : 'Loading map...'}
+              {isDetectingLocation 
+                ? 'Detecting your location...' 
+                : isFindingJobs 
+                  ? 'Finding jobs...' 
+                  : 'Loading map...'}
             </p>
           </div>
         </div>
