@@ -16,6 +16,9 @@
     "db:seed": "node scripts/seed-pincodes.js",
     "db:seed-tvm": "node scripts/seed-thiruvananthapuram.js",
     "db:seed-ernakulam": "node scripts/seed-ernakulam.js",
+    "db:seed-kozhikode": "node scripts/seed-kozhikode.js",
+    "db:seed-palakkad": "node scripts/seed-palakkad.js",
+    "db:seed-kollam": "node scripts/seed-kollam.js",
     "db:fix-sequence": "node scripts/fix-sequence.js",
     "db:update-irinj": "node scripts/update-irinjlakuda.js",
     "db:update-coordinates": "node scripts/update-pincode-coordinates.js"

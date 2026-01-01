@@ -7,9 +7,15 @@ import { Pool } from "pg";
 config({ path: ".env.local", override: true });
 config({ path: ".env" });
 
-// Initialize Prisma Client
+// Initialize Prisma Client with increased timeout settings
 const connectionString = process.env.DATABASE_URL;
-const pool = new Pool({ connectionString });
+const pool = new Pool({ 
+  connectionString,
+  max: 20, // Increased pool size for better concurrency
+  idleTimeoutMillis: 30000, // 30 seconds
+  connectionTimeoutMillis: 15000, // Increased to 15 seconds
+  statement_timeout: 15000, // 15 second query timeout
+});
 const adapter = new PrismaPg(pool);
 const prisma = new PrismaClient({
   adapter,
