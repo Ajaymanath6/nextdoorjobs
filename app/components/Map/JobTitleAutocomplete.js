@@ -47,15 +47,30 @@ export default function JobTitleAutocomplete({
       return;
     }
 
-    if (fuseRef.current) {
+    // Initialize Fuse if not already initialized and jobTitles are available
+    if (!fuseRef.current && jobTitles.length > 0) {
+      fuseRef.current = new Fuse(jobTitles, {
+        keys: ["title", "category"],
+        threshold: 0.3,
+        distance: 100,
+        minMatchCharLength: 2,
+        includeScore: true,
+      });
+    }
+
+    if (fuseRef.current && jobTitles.length > 0) {
       const results = fuseRef.current.search(searchQuery);
       // Get top 8 results
       const topResults = results.slice(0, 8).map((result) => result.item);
+      console.log("💼 Job autocomplete suggestions:", { query: searchQuery, count: topResults.length, suggestions: topResults });
       setSuggestions(topResults);
       setSelectedIndex(-1); // Reset selection when suggestions change
       itemRefs.current = [];
+    } else {
+      console.log("⚠️ Job autocomplete: Fuse not initialized or no job titles", { hasFuse: !!fuseRef.current, jobTitlesCount: jobTitles.length });
+      setSuggestions([]);
     }
-  }, [searchQuery]);
+  }, [searchQuery, jobTitles]);
 
   // Handle keyboard navigation
   useEffect(() => {
@@ -123,6 +138,18 @@ export default function JobTitleAutocomplete({
     onClose();
   };
 
+  // Debug logging
+  useEffect(() => {
+    if (isOpen) {
+      console.log("💼 JobTitleAutocomplete render:", { 
+        isOpen, 
+        suggestionsCount: suggestions.length, 
+        jobTitlesCount: jobTitles.length,
+        searchQuery 
+      });
+    }
+  }, [isOpen, suggestions.length, jobTitles.length, searchQuery]);
+
   if (!isOpen || suggestions.length === 0) return null;
 
   return (
@@ -130,6 +157,7 @@ export default function JobTitleAutocomplete({
       ref={dropdownRef}
       className={`${filterClasses.container} ${filterClasses["container-shadow"]}`}
       style={{
+        position: "absolute",
         width: width,
         top: position.top,
         bottom: position.bottom,
@@ -142,6 +170,8 @@ export default function JobTitleAutocomplete({
         flexDirection: "column",
         maxHeight: "320px",
         padding: "8px 0",
+        zIndex: 1000,
+        backgroundColor: "white",
       }}
     >
       {/* Suggestions List */}

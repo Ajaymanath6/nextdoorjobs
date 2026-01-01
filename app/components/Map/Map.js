@@ -706,12 +706,17 @@ const MapComponent = () => {
       'scientist', 'researcher', 'chemist', 'biologist', 'physicist',
     ];
     
-    // Check for whole word matches
-    const words = normalizedQuery.split(/\s+/);
-    
+    // Check if query contains any job keyword (exact or partial match)
     return jobKeywords.some(keyword => {
-      // Check if any word starts with the keyword (for partial matches like "eng" matching "engineer")
-      return words.some(word => word.startsWith(keyword.substring(0, 3)) && keyword.startsWith(word));
+      // Check if keyword is in the query (for exact matches like "designer")
+      if (normalizedQuery.includes(keyword)) {
+        return true;
+      }
+      // Check if query is a partial match of keyword (for "des" matching "designer")
+      if (keyword.includes(normalizedQuery) && normalizedQuery.length >= 3) {
+        return true;
+      }
+      return false;
     });
   };
 
@@ -1186,10 +1191,15 @@ const MapComponent = () => {
     // Show autocomplete if query is at least 2 characters
     if (value.trim().length >= 2) {
       // Check if this is a job-related query
-      if (isJobSearchQuery(value)) {
+      const isJobQuery = isJobSearchQuery(value);
+      console.log("🔍 Search input change:", { value, isJobQuery, jobTitlesCount: jobTitles.length });
+      
+      if (isJobQuery) {
+        console.log("✅ Showing job autocomplete");
         setShowJobAutocomplete(true);
         setShowAutocomplete(false);
       } else {
+        console.log("✅ Showing locality autocomplete");
         setShowAutocomplete(true);
         setShowJobAutocomplete(false);
       }
