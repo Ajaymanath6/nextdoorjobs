@@ -15,6 +15,7 @@ import { RiArrowDownSLine, RiSearchLine } from "@remixicon/react";
 import FilterDropdown from "./FilterDropdown";
 import LocalityAutocomplete from "./LocalityAutocomplete";
 import JobTitleAutocomplete from "./JobTitleAutocomplete";
+import EmptyState from "./EmptyState";
 
 // Import CSS files (Next.js handles these)
 import "leaflet/dist/leaflet.css";
@@ -44,6 +45,8 @@ const MapComponent = () => {
   const [userLocation, setUserLocation] = useState(null);
   const [isDetectingLocation, setIsDetectingLocation] = useState(false);
   const [locationError, setLocationError] = useState(null);
+  const [showEmptyState, setShowEmptyState] = useState(false);
+  const [emptyStateQuery, setEmptyStateQuery] = useState("");
   const autocompleteRef = useRef(null);
   const jobAutocompleteRef = useRef(null);
   const searchInputRef = useRef(null);
@@ -1096,8 +1099,9 @@ const MapComponent = () => {
             setIsFindingJobs(false);
             const errorData = await response.json().catch(() => ({}));
             console.error("Locality not found in database:", errorData.error || "Unknown error");
-            // Show user-friendly error message
-            alert(`Locality "${localityName}" not found. Please try searching with the full locality name.`);
+            // Show empty state instead of alert
+            setEmptyStateQuery(localityName);
+            setShowEmptyState(true);
             return;
           }
 
@@ -1298,6 +1302,12 @@ const MapComponent = () => {
   const handleSearchInputChange = (e) => {
     const value = e.target.value;
     setSearchQuery(value);
+    
+    // Hide empty state when user starts typing
+    if (showEmptyState) {
+      setShowEmptyState(false);
+      setEmptyStateQuery("");
+    }
     
     // Show autocomplete if query is at least 2 characters
     if (value.trim().length >= 2) {
@@ -1722,6 +1732,16 @@ const MapComponent = () => {
           </div>
         </div>
       )}
+
+      {/* Empty State Overlay */}
+      <EmptyState
+        isOpen={showEmptyState}
+        onClose={() => {
+          setShowEmptyState(false);
+          setEmptyStateQuery("");
+        }}
+        query={emptyStateQuery}
+      />
 
       {/* Loading Overlay */}
       {(isMapLoading || isFindingJobs || isDetectingLocation) && (
