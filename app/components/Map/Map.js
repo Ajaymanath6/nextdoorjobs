@@ -784,6 +784,42 @@ const MapComponent = () => {
     setIsDetectingLocation(true);
     setLocationError(null);
 
+    // First, try native browser geolocation API directly (more accurate)
+    if (navigator.geolocation) {
+      try {
+        const browserLocation = await new Promise((resolve, reject) => {
+          navigator.geolocation.getCurrentPosition(
+            (position) => {
+              resolve({
+                lat: position.coords.latitude,
+                lng: position.coords.longitude,
+                accuracy: position.coords.accuracy,
+                source: 'browser'
+              });
+            },
+            (error) => {
+              console.log('⚠️ Browser geolocation error:', error.message);
+              reject(error);
+            },
+            {
+              enableHighAccuracy: true,
+              timeout: 15000, // 15 seconds
+              maximumAge: 0, // Don't use cached location - force fresh location
+            }
+          );
+        });
+
+        if (browserLocation) {
+          console.log('✅ Browser geolocation successful:', browserLocation);
+          setIsDetectingLocation(false);
+          return browserLocation;
+        }
+      } catch (browserError) {
+        console.log('⚠️ Browser geolocation failed, trying Leaflet locate...');
+      }
+    }
+
+    // Fallback to Leaflet's locate method
     return new Promise((resolve) => {
       const L = window.L;
       if (!L) {
@@ -792,48 +828,54 @@ const MapComponent = () => {
         return;
       }
 
-      // Try browser geolocation first
+      // Try browser geolocation via Leaflet
       mapInstanceRef.current.locate({
         setView: false, // We'll handle zoom manually
         maxZoom: 16,
-        timeout: 10000,
+        timeout: 15000, // Increased timeout
         enableHighAccuracy: true,
+        watch: false, // Don't watch, just get once
       });
 
       // Handle successful location detection
       const handleLocationFound = (e) => {
         const lat = e.latlng.lat;
         const lng = e.latlng.lng;
+        const accuracy = e.accuracy || null;
         
-        console.log('✅ Browser geolocation successful:', { lat, lng });
+        console.log('✅ Leaflet geolocation successful:', { lat, lng, accuracy });
         
         // Remove event listeners
         mapInstanceRef.current.off('locationfound', handleLocationFound);
         mapInstanceRef.current.off('locationerror', handleLocationError);
         
         setIsDetectingLocation(false);
-        resolve({ lat, lng, source: 'browser' });
+        resolve({ lat, lng, accuracy, source: 'browser' });
       };
 
-      // Handle location error (fallback to IP)
+      // Handle location error (fallback to IP with warning)
       const handleLocationError = async (e) => {
         console.log('⚠️ Browser geolocation failed, trying IP fallback...');
+        console.log('⚠️ Note: IP geolocation shows ISP location, not your exact location');
         
         // Remove event listeners
         mapInstanceRef.current.off('locationfound', handleLocationFound);
         mapInstanceRef.current.off('locationerror', handleLocationError);
         
-        // Try IP-based geolocation
+        // Try IP-based geolocation (less accurate - shows ISP location)
         const ipLocation = await fetchLocationByIP();
         
         if (ipLocation) {
-          console.log('✅ IP geolocation successful:', ipLocation);
+          console.log('⚠️ IP geolocation (ISP location):', ipLocation);
+          console.log('⚠️ This may not be your exact location. Please allow browser location access for accurate results.');
           setIsDetectingLocation(false);
-          resolve({ ...ipLocation, source: 'ip' });
+          // Show warning to user
+          alert('Using approximate location based on IP address. For accurate location, please allow browser location access.');
+          resolve({ ...ipLocation, source: 'ip', approximate: true });
         } else {
           console.error('❌ Both geolocation methods failed');
           setIsDetectingLocation(false);
-          setLocationError('Unable to detect your location');
+          setLocationError('Unable to detect your location. Please allow location access or search for a specific locality.');
           resolve(null);
         }
       };
@@ -865,10 +907,18 @@ const MapComponent = () => {
         const stored = sessionStorage.getItem('userCurrentLocation');
         if (stored) {
           const locationData = JSON.parse(stored);
-          // Check if location is less than 1 hour old
+          // Check if location is less than 1 hour old AND is from browser (not IP)
+          // Don't use cached IP location - it's inaccurate
           const oneHour = 60 * 60 * 1000;
-          if (Date.now() - locationData.timestamp < oneHour) {
+          const isRecent = Date.now() - locationData.timestamp < oneHour;
+          const isAccurate = locationData.source === 'browser' && !locationData.approximate;
+          
+          if (isRecent && isAccurate) {
+            console.log('✅ Using cached browser location from sessionStorage');
             return locationData;
+          } else if (isRecent && !isAccurate) {
+            console.log('⚠️ Cached location is approximate (IP-based), fetching fresh location...');
+            return null; // Force fresh location if cached is IP-based
           }
         }
       } catch (error) {
