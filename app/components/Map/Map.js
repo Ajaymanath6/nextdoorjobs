@@ -9,9 +9,11 @@ import {
   Filter,
   Return,
   SendFilled,
+  IbmWatsonDiscovery,
 } from "@carbon/icons-react";
 import { RiArrowDownSLine, RiSearchLine } from "@remixicon/react";
 import FilterDropdown from "./FilterDropdown";
+import LocalityAutocomplete from "./LocalityAutocomplete";
 
 // Import CSS files (Next.js handles these)
 import "leaflet/dist/leaflet.css";
@@ -31,7 +33,11 @@ const MapComponent = () => {
   const [showViewDropdown, setShowViewDropdown] = useState(false);
   const [showFilterDropdown, setShowFilterDropdown] = useState(false);
   const [showHomeLocationDropdown, setShowHomeLocationDropdown] = useState(false);
+  const [showAutocomplete, setShowAutocomplete] = useState(false);
+  const [localities, setLocalities] = useState([]);
   const [homeLocation, setHomeLocation] = useState("");
+  const autocompleteRef = useRef(null);
+  const searchInputRef = useRef(null);
 
   const searchBar = themeClasses.components.searchBar;
   const brand = themeClasses.brand;
@@ -55,6 +61,21 @@ const MapComponent = () => {
         })
         .catch((error) => {
           console.error("Error loading locations data:", error);
+        });
+    }
+  }, []);
+
+  // Load localities for autocomplete
+  useEffect(() => {
+    if (typeof window !== "undefined") {
+      fetch("/api/localities")
+        .then((response) => response.json())
+        .then((data) => {
+          setLocalities(data);
+          console.log(`✅ Loaded ${data.length} localities for autocomplete`);
+        })
+        .catch((error) => {
+          console.error("Error loading localities:", error);
         });
     }
   }, []);
@@ -650,12 +671,13 @@ const MapComponent = () => {
     return null;
   };
 
-  const handleSearch = async () => {
-    if (searchQuery.trim()) {
+  const handleSearch = async (overrideQuery = null) => {
+    const queryToSearch = overrideQuery || searchQuery;
+    if (queryToSearch.trim()) {
       setHasSearched(true);
       
       // Parse locality from search query
-      const localityName = parseLocalityFromQuery(searchQuery);
+      const localityName = parseLocalityFromQuery(queryToSearch);
       
       if (localityName) {
         try {
@@ -826,6 +848,52 @@ const MapComponent = () => {
     };
   }, [showFilterDropdown]);
 
+  // Close autocomplete when clicking outside
+  useEffect(() => {
+    const handleClickOutside = (event) => {
+      if (
+        autocompleteRef.current &&
+        !autocompleteRef.current.contains(event.target) &&
+        searchInputRef.current &&
+        !searchInputRef.current.contains(event.target)
+      ) {
+        setShowAutocomplete(false);
+      }
+    };
+
+    if (showAutocomplete) {
+      document.addEventListener("mousedown", handleClickOutside);
+    }
+
+    return () => {
+      document.removeEventListener("mousedown", handleClickOutside);
+    };
+  }, [showAutocomplete]);
+
+  // Show autocomplete when user types
+  const handleSearchInputChange = (e) => {
+    const value = e.target.value;
+    setSearchQuery(value);
+    
+    // Show autocomplete if query is at least 2 characters
+    if (value.trim().length >= 2) {
+      setShowAutocomplete(true);
+    } else {
+      setShowAutocomplete(false);
+    }
+  };
+
+  // Handle locality selection from autocomplete
+  const handleLocalitySelect = (locality) => {
+    setSearchQuery(locality.localityName);
+    setShowAutocomplete(false);
+    
+    // Automatically trigger search with the selected locality
+    setTimeout(() => {
+      handleSearch(locality.localityName);
+    }, 100);
+  };
+
   if (!isClient) {
     return (
       <div className="flex-1 h-screen bg-gray-50 dark:bg-gray-950 relative flex items-center justify-center">
@@ -851,8 +919,8 @@ const MapComponent = () => {
           {/* Search Bar Card */}
           <div className={searchBar.card}>
             <div className={searchBar["inner-flex"]}>
-              {/* View Selector Button */}
-              <div className="relative flex-shrink-0">
+              {/* View Selector Button - Hidden for now, will add in later stages */}
+              {/* <div className="relative flex-shrink-0">
                 <button
                   className={`${searchBar["view-selector-button"]} ${searchBar["view-selector-text-default"]} ${searchBar["view-selector-text-hover"]}`}
                   onClick={() => setShowViewDropdown(!showViewDropdown)}
@@ -897,44 +965,92 @@ const MapComponent = () => {
                     </button>
                   </div>
                 )}
-              </div>
+              </div> */}
 
-              {/* Search Input */}
-              <input
-                type="text"
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                onKeyDown={(e) => {
-                  if (e.key === "Enter" && searchQuery.trim()) {
-                    handleSearch();
-                  }
-                }}
-                className={`${searchBar["search-input"]} ${searchBar["search-input-focus"]} ${searchBar["search-input-hover"]} ${searchBar["search-input-text"]} ${searchBar["search-input-placeholder"]}`}
-                style={{
-                  fontFamily: "Open Sans",
-                  fontSize: "14px",
-                  boxShadow: "0 1px 6px rgba(32,33,36,0.08)",
-                }}
-                placeholder="Search for keywords, product design, frontend developer..."
-              />
-
-              {/* Search Button */}
-              <button
-                onClick={handleSearch}
-                disabled={!searchQuery.trim()}
-                className={`${searchBar["search-button"]} ${
-                  !searchQuery.trim() ? "opacity-50 cursor-not-allowed" : ""
-                }`}
-              >
-                <SendFilled
-                  size={20}
-                  className={
-                    searchQuery.trim()
-                      ? searchBar["search-button-icon-active"]
-                      : searchBar["search-button-icon-disabled"]
-                  }
+              {/* Search Input with Autocomplete - Expanded width */}
+              <div className="relative flex-1" style={{ minWidth: 0 }}>
+                {/* Search Icon - Left side inside input */}
+                <IbmWatsonDiscovery
+                  size={18}
+                  className="absolute left-3 top-1/2 transform -translate-y-1/2 z-10"
+                  style={{
+                    color: "var(--brand-stroke-strong)",
+                    pointerEvents: "none",
+                  }}
                 />
-              </button>
+                
+                {/* Search Input */}
+                <input
+                  ref={searchInputRef}
+                  type="text"
+                  value={searchQuery}
+                  onChange={handleSearchInputChange}
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter" && searchQuery.trim()) {
+                      setShowAutocomplete(false);
+                      handleSearch();
+                    } else if (e.key === "Escape") {
+                      setShowAutocomplete(false);
+                    }
+                  }}
+                  onFocus={(e) => {
+                    if (searchQuery.trim().length >= 2) {
+                      setShowAutocomplete(true);
+                    }
+                  }}
+                  className={`${searchBar["search-input"]} ${searchBar["search-input-hover"]} ${searchBar["search-input-text"]} ${searchBar["search-input-placeholder"]} search-input-focus-active`}
+                  style={{
+                    fontFamily: "Open Sans",
+                    fontSize: "14px",
+                    boxShadow: "0 1px 6px rgba(32,33,36,0.08)",
+                    width: "100%",
+                    paddingLeft: "44px", // Space for search icon
+                    paddingRight: "44px", // Space for send button
+                  }}
+                  placeholder="Search for locality, pincode, job"
+                />
+                
+                {/* Send Button - Right side inside input */}
+                <button
+                  onClick={handleSearch}
+                  disabled={!searchQuery.trim()}
+                  className={`absolute right-2 top-1/2 transform -translate-y-1/2 flex items-center justify-center p-1.5 rounded transition-colors ${
+                    !searchQuery.trim() 
+                      ? "opacity-50 cursor-not-allowed" 
+                      : "hover:bg-brand-stroke-weak cursor-pointer"
+                  }`}
+                  style={{
+                    border: "none",
+                    background: "transparent",
+                  }}
+                >
+                  <SendFilled
+                    size={18}
+                    style={{
+                      color: searchQuery.trim() 
+                        ? "var(--brand)" 
+                        : "var(--brand-text-tertiary)",
+                    }}
+                  />
+                </button>
+                
+                {/* Autocomplete Dropdown */}
+                <LocalityAutocomplete
+                  isOpen={showAutocomplete}
+                  onClose={() => setShowAutocomplete(false)}
+                  dropdownRef={autocompleteRef}
+                  position={{
+                    top: "100%",
+                    left: "0",
+                    right: "auto",
+                    marginTop: "8px",
+                  }}
+                  width="100%"
+                  localities={localities}
+                  searchQuery={searchQuery}
+                  onSelect={handleLocalitySelect}
+                />
+              </div>
 
               {/* Filter Button */}
               <div className="relative flex-shrink-0">
@@ -989,13 +1105,13 @@ const MapComponent = () => {
                 />
               </div>
 
-              {/* Return Button */}
-              <button
+              {/* Return Button - Hidden for now, will add in later stages */}
+              {/* <button
                 onClick={handleReturn}
                 className={searchBar["return-button"]}
               >
                 <Return size={20} className={searchBar["return-button-icon"]} />
-              </button>
+              </button> */}
             </div>
           </div>
 

@@ -131,3 +131,9 @@ body {
   padding: 12px !important;
   font-family: "Open Sans", sans-serif !important;
 }
+
+/* Search Input Focus State - Stroke Strong Border */
+.search-input-focus-active:focus {
+  border-color: var(--brand-stroke-strong) !important;
+  outline: none !important;
+}
