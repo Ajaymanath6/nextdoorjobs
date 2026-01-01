@@ -14,6 +14,7 @@ import {
 import { RiArrowDownSLine, RiSearchLine } from "@remixicon/react";
 import FilterDropdown from "./FilterDropdown";
 import LocalityAutocomplete from "./LocalityAutocomplete";
+import JobTitleAutocomplete from "./JobTitleAutocomplete";
 
 // Import CSS files (Next.js handles these)
 import "leaflet/dist/leaflet.css";
@@ -34,7 +35,9 @@ const MapComponent = () => {
   const [showFilterDropdown, setShowFilterDropdown] = useState(false);
   const [showHomeLocationDropdown, setShowHomeLocationDropdown] = useState(false);
   const [showAutocomplete, setShowAutocomplete] = useState(false);
+  const [showJobAutocomplete, setShowJobAutocomplete] = useState(false);
   const [localities, setLocalities] = useState([]);
+  const [jobTitles, setJobTitles] = useState([]);
   const [homeLocation, setHomeLocation] = useState("");
   const [isMapLoading, setIsMapLoading] = useState(false);
   const [isFindingJobs, setIsFindingJobs] = useState(false);
@@ -42,6 +45,7 @@ const MapComponent = () => {
   const [isDetectingLocation, setIsDetectingLocation] = useState(false);
   const [locationError, setLocationError] = useState(null);
   const autocompleteRef = useRef(null);
+  const jobAutocompleteRef = useRef(null);
   const searchInputRef = useRef(null);
   const userLocationMarkerRef = useRef(null);
 
@@ -82,6 +86,21 @@ const MapComponent = () => {
         })
         .catch((error) => {
           console.error("Error loading localities:", error);
+        });
+    }
+  }, []);
+
+  // Load job titles for autocomplete
+  useEffect(() => {
+    if (typeof window !== "undefined") {
+      fetch("/api/job-titles")
+        .then((response) => response.json())
+        .then((data) => {
+          setJobTitles(data);
+          console.log(`✅ Loaded ${data.length} job titles for autocomplete`);
+        })
+        .catch((error) => {
+          console.error("Error loading job titles:", error);
         });
     }
   }, []);
@@ -660,18 +679,39 @@ const MapComponent = () => {
     if (!query || !query.trim()) return false;
     
     const normalizedQuery = query.toLowerCase().trim();
-    const keywords = ['jobs', 'job', 'product', 'design'];
     
-    // Check for whole word matches (to avoid matching "job" in "jobless" etc.)
+    // Phrases that indicate job search
+    const jobPhrases = [
+      'near me',
+      'companies near me',
+      'jobs near me',
+      'hiring near me',
+    ];
+    
+    // Check for exact phrases
+    if (jobPhrases.some(phrase => normalizedQuery.includes(phrase))) {
+      return true;
+    }
+    
+    // Job-related keywords
+    const jobKeywords = [
+      'jobs', 'job', 'hiring', 'vacancy', 'vacancies', 'opening', 'openings',
+      'engineer', 'developer', 'designer', 'analyst', 'manager', 'consultant',
+      'specialist', 'coordinator', 'administrator', 'technician', 'assistant',
+      'director', 'executive', 'officer', 'lead', 'senior', 'junior',
+      'teacher', 'professor', 'tutor', 'lecturer', 'instructor',
+      'doctor', 'nurse', 'pharmacist', 'therapist',
+      'accountant', 'auditor', 'advisor',
+      'architect', 'chef', 'lawyer', 'journalist', 'writer',
+      'scientist', 'researcher', 'chemist', 'biologist', 'physicist',
+    ];
+    
+    // Check for whole word matches
     const words = normalizedQuery.split(/\s+/);
     
-    return keywords.some(keyword => {
-      // For "job", check if it's a whole word (not part of "jobs")
-      if (keyword === 'job') {
-        return words.includes('job') || normalizedQuery === 'job';
-      }
-      // For other keywords, check if they appear in the query
-      return normalizedQuery.includes(keyword);
+    return jobKeywords.some(keyword => {
+      // Check if any word starts with the keyword (for partial matches like "eng" matching "engineer")
+      return words.some(word => word.startsWith(keyword.substring(0, 3)) && keyword.startsWith(word));
     });
   };
 
@@ -1118,16 +1158,25 @@ const MapComponent = () => {
       ) {
         setShowAutocomplete(false);
       }
+      
+      if (
+        jobAutocompleteRef.current &&
+        !jobAutocompleteRef.current.contains(event.target) &&
+        searchInputRef.current &&
+        !searchInputRef.current.contains(event.target)
+      ) {
+        setShowJobAutocomplete(false);
+      }
     };
 
-    if (showAutocomplete) {
+    if (showAutocomplete || showJobAutocomplete) {
       document.addEventListener("mousedown", handleClickOutside);
     }
 
     return () => {
       document.removeEventListener("mousedown", handleClickOutside);
     };
-  }, [showAutocomplete]);
+  }, [showAutocomplete, showJobAutocomplete]);
 
   // Show autocomplete when user types
   const handleSearchInputChange = (e) => {
@@ -1136,9 +1185,17 @@ const MapComponent = () => {
     
     // Show autocomplete if query is at least 2 characters
     if (value.trim().length >= 2) {
-      setShowAutocomplete(true);
+      // Check if this is a job-related query
+      if (isJobSearchQuery(value)) {
+        setShowJobAutocomplete(true);
+        setShowAutocomplete(false);
+      } else {
+        setShowAutocomplete(true);
+        setShowJobAutocomplete(false);
+      }
     } else {
       setShowAutocomplete(false);
+      setShowJobAutocomplete(false);
     }
   };
 
@@ -1154,6 +1211,50 @@ const MapComponent = () => {
     setTimeout(() => {
       handleSearch(selectedLocalityName);
     }, 200);
+  };
+
+  // Handle job title selection from autocomplete
+  const handleJobTitleSelect = async (jobTitle) => {
+    const selectedJobTitle = `${jobTitle.title} near me`;
+    console.log("💼 Job title selected:", selectedJobTitle);
+    setSearchQuery(selectedJobTitle);
+    setShowJobAutocomplete(false);
+    
+    // Trigger location detection
+    setIsMapLoading(true);
+    setHasSearched(true);
+    
+    // Check sessionStorage first
+    const cachedLocation = getLocationFromSession();
+    if (cachedLocation) {
+      console.log("✅ Using cached location from sessionStorage");
+      setUserLocation(cachedLocation);
+      storeLocationInSession(cachedLocation);
+      zoomToUserLocation(cachedLocation);
+      setIsMapLoading(false);
+      setIsFindingJobs(false);
+      return;
+    }
+
+    // Detect user location
+    const location = await detectUserLocation();
+    
+    if (location) {
+      setUserLocation(location);
+      storeLocationInSession(location);
+      zoomToUserLocation(location);
+      setIsMapLoading(false);
+      setIsFindingJobs(false);
+    } else {
+      // Location detection failed
+      setIsMapLoading(false);
+      setIsFindingJobs(false);
+      if (locationError) {
+        alert(locationError);
+      } else {
+        alert("Unable to detect your location. Please try again or search for a specific locality.");
+      }
+    }
   };
 
   if (!isClient) {
@@ -1255,17 +1356,24 @@ const MapComponent = () => {
                     }
                     if (e.key === "Enter" && searchQuery.trim()) {
                       // Only search if autocomplete is closed or no item is selected
-                      if (!showAutocomplete) {
+                      if (!showAutocomplete && !showJobAutocomplete) {
                         setShowAutocomplete(false);
+                        setShowJobAutocomplete(false);
                         handleSearch();
                       }
                     } else if (e.key === "Escape") {
                       setShowAutocomplete(false);
+                      setShowJobAutocomplete(false);
                     }
                   }}
                   onFocus={(e) => {
                     if (searchQuery.trim().length >= 2) {
-                      setShowAutocomplete(true);
+                      // Check if this is a job-related query
+                      if (isJobSearchQuery(searchQuery)) {
+                        setShowJobAutocomplete(true);
+                      } else {
+                        setShowAutocomplete(true);
+                      }
                     }
                   }}
                   className={`${searchBar["search-input"]} ${searchBar["search-input-hover"]} ${searchBar["search-input-text"]} ${searchBar["search-input-placeholder"]} search-input-focus-active`}
@@ -1298,7 +1406,7 @@ const MapComponent = () => {
                     size={18}
                     style={{
                       color: (searchQuery && searchQuery.trim()) 
-                        ? "var(--brand)" 
+                        ? "#7c00ff" 
                         : "var(--brand-text-tertiary)",
                     }}
                   />
@@ -1319,6 +1427,23 @@ const MapComponent = () => {
                   localities={localities}
                   searchQuery={searchQuery}
                   onSelect={handleLocalitySelect}
+                />
+                
+                {/* Job Title Autocomplete Dropdown */}
+                <JobTitleAutocomplete
+                  isOpen={showJobAutocomplete}
+                  onClose={() => setShowJobAutocomplete(false)}
+                  dropdownRef={jobAutocompleteRef}
+                  position={{
+                    top: "100%",
+                    left: "0",
+                    right: "auto",
+                    marginTop: "8px",
+                  }}
+                  width="100%"
+                  jobTitles={jobTitles}
+                  searchQuery={searchQuery}
+                  onSelect={handleJobTitleSelect}
                 />
               </div>
 

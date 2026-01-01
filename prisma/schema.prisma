@@ -28,3 +28,13 @@ model Pincode {
   @@index([district])
   @@map("pincodes")
 }
+
+model JobTitle {
+  id        Int      @id @default(autoincrement())
+  title     String   @unique @db.VarChar(100)
+  category  String   @db.VarChar(50)
+  createdAt DateTime @default(now()) @map("created_at")
+
+  @@index([category])
+  @@map("job_titles")
+}
