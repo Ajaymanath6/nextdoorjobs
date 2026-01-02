@@ -777,6 +777,90 @@ const MapComponent = () => {
     }
   };
 
+  // Request location permission from browser
+  const requestLocationPermission = async () => {
+    if (!navigator.geolocation) {
+      console.error('❌ Geolocation is not supported by this browser');
+      setLocationError('Geolocation is not supported by your browser. Please search for a specific locality.');
+      return { granted: false, location: null };
+    }
+
+    // Check if permission is already granted
+    try {
+      // Try to get permission status (if supported)
+      if (navigator.permissions && navigator.permissions.query) {
+        const permissionStatus = await navigator.permissions.query({ name: 'geolocation' });
+        console.log('📍 Location permission status:', permissionStatus.state);
+        
+        if (permissionStatus.state === 'granted') {
+          console.log('✅ Location permission already granted');
+          return { granted: true, location: null }; // Will fetch location separately
+        }
+        
+        if (permissionStatus.state === 'denied') {
+          console.error('❌ Location permission denied');
+          setLocationError('Location permission denied. Please allow location access in your browser settings.');
+          alert('Location permission denied. Please allow location access in your browser settings to use "near me" features.');
+          return { granted: false, location: null };
+        }
+      }
+    } catch (error) {
+      console.log('⚠️ Permission query not supported, will request permission directly');
+    }
+
+    // Request permission by attempting to get location (browser will prompt)
+    // Note: This will also fetch location, but we'll use detectUserLocation for the actual location fetch
+    return new Promise((resolve) => {
+      console.log('🔍 Requesting location permission from browser...');
+      setIsDetectingLocation(true);
+      
+      navigator.geolocation.getCurrentPosition(
+        (position) => {
+          console.log('✅ Location permission granted');
+          setIsDetectingLocation(false);
+          resolve({ granted: true, location: null }); // Permission granted, will fetch location separately
+        },
+        (error) => {
+          console.error('❌ Location permission error:', {
+            code: error.code,
+            message: error.message,
+            PERMISSION_DENIED: error.code === 1,
+            POSITION_UNAVAILABLE: error.code === 2,
+            TIMEOUT: error.code === 3
+          });
+          
+          setIsDetectingLocation(false);
+          
+          let errorMessage = 'Unable to access your location. ';
+          if (error.code === 1) {
+            errorMessage = 'Location permission denied. Please allow location access in your browser settings to use "near me" features.';
+            setLocationError(errorMessage);
+            alert(errorMessage);
+          } else if (error.code === 2) {
+            errorMessage = 'Location unavailable. Please check your device location settings.';
+            setLocationError(errorMessage);
+            alert(errorMessage);
+          } else if (error.code === 3) {
+            errorMessage = 'Location request timed out. Please try again.';
+            setLocationError(errorMessage);
+            alert(errorMessage);
+          } else {
+            errorMessage = 'Unable to detect your location. Please try again or search for a specific locality.';
+            setLocationError(errorMessage);
+            alert(errorMessage);
+          }
+          
+          resolve({ granted: false, location: null });
+        },
+        {
+          enableHighAccuracy: true,
+          timeout: 10000, // 10 seconds for permission request
+          maximumAge: 0, // Force fresh request
+        }
+      );
+    });
+  };
+
   // Detect user location using browser geolocation with IP fallback
   const detectUserLocation = async (forceRefresh = false) => {
     if (!mapInstanceRef.current) {
@@ -1359,11 +1443,12 @@ const MapComponent = () => {
     setSearchQuery(selectedJobTitle);
     setShowJobAutocomplete(false);
     
-    // Trigger location detection
+    // Set loading state
     setIsMapLoading(true);
     setHasSearched(true);
+    setIsDetectingLocation(true);
     
-    // Check sessionStorage first
+    // Step 1: Check sessionStorage first (skip permission if we have cached location)
     const cachedLocation = getLocationFromSession();
     if (cachedLocation) {
       console.log("✅ Using cached location from sessionStorage");
@@ -1372,11 +1457,25 @@ const MapComponent = () => {
       zoomToUserLocation(cachedLocation);
       setIsMapLoading(false);
       setIsFindingJobs(false);
+      setIsDetectingLocation(false);
       return;
     }
 
-    // Detect user location
-    const location = await detectUserLocation();
+    // Step 2: Request location permission from browser
+    console.log("🔍 Requesting location permission...");
+    const permissionResult = await requestLocationPermission();
+    
+    if (!permissionResult.granted) {
+      // Permission denied or failed
+      setIsMapLoading(false);
+      setIsFindingJobs(false);
+      setIsDetectingLocation(false);
+      return;
+    }
+
+    // Step 3: Permission granted, now fetch location
+    console.log("✅ Permission granted, fetching location...");
+    const location = await detectUserLocation(true); // Force fresh location
     
     if (location) {
       setUserLocation(location);
@@ -1384,10 +1483,12 @@ const MapComponent = () => {
       zoomToUserLocation(location);
       setIsMapLoading(false);
       setIsFindingJobs(false);
+      setIsDetectingLocation(false);
     } else {
       // Location detection failed
       setIsMapLoading(false);
       setIsFindingJobs(false);
+      setIsDetectingLocation(false);
       if (locationError) {
         alert(locationError);
       } else {
