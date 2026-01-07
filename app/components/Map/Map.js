@@ -741,29 +741,33 @@ const MapComponent = () => {
   const createCustomTeardropIcon = (L, logoUrl = null, size = 50, distanceKm = null) => {
     const boxSize = size;
     const lightBlueBorder = "#87CEEB";
+    const badgeHeight = 20; // Height of the badge including padding
 
-    // Distance badge HTML
+    // Distance badge HTML - positioned at the bottom of the pindrop
     const badgeHtml =
       distanceKm !== null
-        ? `<div style="position:absolute;bottom:-8px;left:50%;transform:translateX(-50%);background-color:#0A0A0A;color:white;border-radius:4px;padding:2px 6px;font-size:11px;font-weight:600;white-space:nowrap;box-shadow:0 2px 4px rgba(0,0,0,0.3);pointer-events:none;z-index:1000;">${distanceKm} km</div>`
+        ? `<div style="position:absolute;bottom:-${badgeHeight}px;left:50%;transform:translateX(-50%);background-color:#0A0A0A;color:white;border-radius:4px;padding:3px 8px;font-size:11px;font-weight:600;white-space:nowrap;box-shadow:0 2px 6px rgba(0,0,0,0.4);pointer-events:none;z-index:1000;font-family:'Open Sans',sans-serif;line-height:1.2;">${distanceKm} km</div>`
         : "";
 
-    // Main marker HTML
+    // Main marker HTML - container must allow overflow for badge visibility
     const html = `<div class="company-marker" style="position:relative;width:${boxSize}px;height:${boxSize}px;background-color:#FFFFFF;border-radius:8px;display:flex;align-items:center;justify-content:center;padding:0;box-shadow:0 2px 8px rgba(0,0,0,0.12),0 1px 3px rgba(0,0,0,0.08);border:2px solid ${lightBlueBorder};cursor:pointer;transition:transform 0.2s ease,box-shadow 0.2s ease;overflow:visible;">${
       logoUrl
         ? `<img src="${logoUrl}" alt="Logo" style="width:100%;height:100%;object-fit:cover;border-radius:6px;" />`
         : `<div style="width:100%;height:100%;background:#7c00ff;border-radius:6px;"></div>`
     }${badgeHtml}</div>`;
 
+    // Calculate total icon size including badge
+    const totalHeight = boxSize + (distanceKm !== null ? badgeHeight : 0);
+
     return L.divIcon({
       html: html,
       className: "custom-pindrop-marker",
-      iconSize: [boxSize, boxSize + (distanceKm !== null ? 20 : 0)],
+      iconSize: [boxSize, totalHeight],
       iconAnchor: [
         boxSize / 2,
-        (boxSize + (distanceKm !== null ? 20 : 0)) / 2,
+        totalHeight, // Anchor at the bottom of the total height (including badge)
       ],
-      popupAnchor: [0, -(boxSize + (distanceKm !== null ? 20 : 0)) - 10],
+      popupAnchor: [0, -totalHeight - 10],
     });
   };
 
