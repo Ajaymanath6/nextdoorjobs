@@ -57,24 +57,85 @@ async function main() {
 
     for (const update of collegeUpdates) {
       try {
-        const result = await prisma.college.updateMany({
-          where: {
-            name: update.name,
-          },
-          data: {
-            locality: update.locality,
-          },
-        });
+        // First, find the college by name
+        const college = await Promise.race([
+          prisma.college.findUnique({
+            where: { name: update.name },
+            select: { id: true, name: true, locality: true }
+          }),
+          new Promise((_, reject) => 
+            setTimeout(() => reject(new Error('Find timeout')), 15000)
+          )
+        ]);
 
-        if (result.count > 0) {
-          updatedCount++;
-          console.log(`✅ Updated: ${update.name} → ${update.locality}`);
-        } else {
+        if (!college) {
           notFoundCount++;
           console.log(`⚠️  Not found: ${update.name}`);
+          continue;
         }
+
+        // Skip if already has the correct locality
+        if (college.locality === update.locality) {
+          updatedCount++;
+          console.log(`ℹ️  Already updated: ${update.name} → ${update.locality}`);
+          continue;
+        }
+
+        // Update using the ID (more reliable than updateMany)
+        await Promise.race([
+          prisma.college.update({
+            where: { id: college.id },
+            data: {
+              locality: update.locality,
+            },
+          }),
+          new Promise((_, reject) => 
+            setTimeout(() => reject(new Error('Update timeout')), 20000)
+          )
+        ]);
+
+        updatedCount++;
+        console.log(`✅ Updated: ${update.name} → ${update.locality}`);
+        
+        // Small delay between updates to avoid overwhelming the database
+        await new Promise(resolve => setTimeout(resolve, 500));
       } catch (error) {
-        console.error(`❌ Error updating ${update.name}:`, error.message);
+        if (error.message === 'Update timeout' || error.message === 'Find timeout') {
+          console.error(`⏱️  Timeout updating ${update.name} - will retry...`);
+          // Retry once with longer timeout
+          try {
+            const retryCollege = await Promise.race([
+              prisma.college.findUnique({
+                where: { name: update.name },
+                select: { id: true }
+              }),
+              new Promise((_, reject) => 
+                setTimeout(() => reject(new Error('Retry find timeout')), 20000)
+              )
+            ]);
+            
+            if (retryCollege) {
+              await Promise.race([
+                prisma.college.update({
+                  where: { id: retryCollege.id },
+                  data: { locality: update.locality },
+                }),
+                new Promise((_, reject) => 
+                  setTimeout(() => reject(new Error('Retry update timeout')), 30000)
+                )
+              ]);
+              updatedCount++;
+              console.log(`✅ Updated (retry): ${update.name} → ${update.locality}`);
+            } else {
+              notFoundCount++;
+              console.log(`⚠️  Not found (retry): ${update.name}`);
+            }
+          } catch (retryError) {
+            console.error(`❌ Failed to update ${update.name} after retry:`, retryError.message);
+          }
+        } else {
+          console.error(`❌ Error updating ${update.name}:`, error.message);
+        }
       }
     }
 
