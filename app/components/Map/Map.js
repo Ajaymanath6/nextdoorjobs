@@ -17,6 +17,7 @@ import { RiArrowDownSLine, RiSearchLine } from "@remixicon/react";
 import FilterDropdown from "./FilterDropdown";
 import LocalityAutocomplete from "./LocalityAutocomplete";
 import JobTitleAutocomplete from "./JobTitleAutocomplete";
+import CollegeAutocomplete from "./CollegeAutocomplete";
 import EmptyState from "./EmptyState";
 
 // Import CSS files (Next.js handles these)
@@ -39,8 +40,10 @@ const MapComponent = () => {
   const [showHomeLocationDropdown, setShowHomeLocationDropdown] = useState(false);
   const [showAutocomplete, setShowAutocomplete] = useState(false);
   const [showJobAutocomplete, setShowJobAutocomplete] = useState(false);
+  const [showCollegeAutocomplete, setShowCollegeAutocomplete] = useState(false);
   const [localities, setLocalities] = useState([]);
   const [jobTitles, setJobTitles] = useState([]);
+  const [colleges, setColleges] = useState([]);
   const [homeLocation, setHomeLocation] = useState("");
   const [isMapLoading, setIsMapLoading] = useState(false);
   const [isFindingJobs, setIsFindingJobs] = useState(false);
@@ -51,6 +54,7 @@ const MapComponent = () => {
   const [emptyStateQuery, setEmptyStateQuery] = useState("");
   const autocompleteRef = useRef(null);
   const jobAutocompleteRef = useRef(null);
+  const collegeAutocompleteRef = useRef(null);
   const searchInputRef = useRef(null);
   const userLocationMarkerRef = useRef(null);
 
@@ -106,6 +110,21 @@ const MapComponent = () => {
         })
         .catch((error) => {
           console.error("Error loading job titles:", error);
+        });
+    }
+  }, []);
+
+  // Load colleges for autocomplete
+  useEffect(() => {
+    if (typeof window !== "undefined") {
+      fetch("/api/colleges")
+        .then((response) => response.json())
+        .then((data) => {
+          setColleges(data);
+          console.log(`✅ Loaded ${data.length} colleges for autocomplete`);
+        })
+        .catch((error) => {
+          console.error("Error loading colleges:", error);
         });
     }
   }, []);
@@ -409,6 +428,97 @@ const MapComponent = () => {
     });
   };
 
+  // Perform college search - zoom to college location and show nearby companies
+  const performCollegeSearch = (collegeData) => {
+    if (!mapInstanceRef.current || !window.L) return;
+
+    const L = window.L;
+
+    // Use college coordinates
+    const hasCoordinates = collegeData.latitude && collegeData.longitude;
+    if (!hasCoordinates) {
+      console.error("College coordinates not available", collegeData);
+      setIsMapLoading(false);
+      setIsFindingJobs(false);
+      return;
+    }
+
+    // Debug: Log the college data to verify coordinates
+    console.log("🏫 Performing college search:", {
+      name: collegeData.name,
+      latitude: collegeData.latitude,
+      longitude: collegeData.longitude,
+      pincode: collegeData.pincode
+    });
+
+    const collegeCenter = [collegeData.latitude, collegeData.longitude];
+    const stateCenter = [10.5276, 76.2144]; // Kerala center
+    
+    console.log("📍 College center coordinates:", collegeCenter);
+
+    // Get company data from locations.json using pincode
+    const localityData = getLocalityDataByPincode(
+      collegeData.pincode,
+      null
+    );
+
+    // Stage 1: Fly to State (zoom 8)
+    mapInstanceRef.current.flyTo(stateCenter, 8, {
+      duration: 1.5,
+      easeLinearity: 0.25,
+    });
+
+    // Stage 2: After Stage 1 completes, fly to College location (zoom 15)
+    mapInstanceRef.current.once("moveend", () => {
+      setTimeout(() => {
+        mapInstanceRef.current.flyTo(collegeCenter, 15, {
+          duration: 1.5,
+          easeLinearity: 0.25,
+        });
+
+        // After final zoom, render company markers if available
+        mapInstanceRef.current.once("moveend", () => {
+          if (localityData && localityData.companies && localityData.companies.length > 0) {
+            renderCompanyMarkers(localityData.companies);
+          } else {
+            // Show "No companies found" message
+            const noCompaniesMessage = L.popup({
+              className: "no-companies-message",
+              closeButton: true,
+              autoClose: false,
+              closeOnClick: false,
+            })
+              .setLatLng(collegeCenter)
+              .setContent(`
+                <div style="font-family: 'Open Sans', sans-serif; padding: 12px; text-align: center;">
+                  <div style="font-weight: 600; font-size: 16px; color: #0A0A0A; margin-bottom: 8px;">
+                    No Companies Found
+                  </div>
+                  <div style="font-size: 14px; color: #1A1A1A;">
+                    No companies available near ${collegeData.name} at this time.
+                  </div>
+                </div>
+              `)
+              .openOn(mapInstanceRef.current);
+
+            // Auto-close after 5 seconds
+            setTimeout(() => {
+              if (noCompaniesMessage && mapInstanceRef.current) {
+                mapInstanceRef.current.closePopup(noCompaniesMessage);
+              }
+            }, 5000);
+          }
+          
+          // Hide loading after zoom completes
+          setTimeout(() => {
+            setIsFindingJobs(false);
+            setIsMapLoading(false);
+          }, 300);
+        });
+      }, 500);
+    });
+  };
+
   // Create company marker icon function
   const createCustomTeardropIcon = (L, logoUrl = null, size = 50, distanceKm = null) => {
     const boxSize = size;
@@ -679,6 +789,40 @@ const MapComponent = () => {
     addMarkersToMap();
   }, [locationsData, isClient]);
 
+  // Check if search query is a college search
+  const isCollegeSearchQuery = (query) => {
+    if (!query || !query.trim() || colleges.length === 0) return false;
+    
+    const normalizedQuery = query.toLowerCase().trim();
+    
+    // College-related keywords
+    const collegeKeywords = [
+      'college', 'university', 'institute', 'school', 'academy',
+      'gec', 'mti', 'pmgc', 'government college', 'govt college',
+      'engineering college', 'arts college', 'science college',
+      'polytechnic', 'law college', 'fine arts'
+    ];
+    
+    // Check if query contains any college keyword
+    if (collegeKeywords.some(keyword => normalizedQuery.includes(keyword))) {
+      return true;
+    }
+    
+    // Also check if query matches any college name (for autocomplete)
+    // This allows showing college autocomplete even without typing "college"
+    if (colleges.length > 0 && normalizedQuery.length >= 3) {
+      const matchesCollege = colleges.some(college => 
+        college.name.toLowerCase().includes(normalizedQuery) ||
+        normalizedQuery.includes(college.name.toLowerCase().substring(0, normalizedQuery.length))
+      );
+      if (matchesCollege) {
+        return true;
+      }
+    }
+    
+    return false;
+  };
+
   // Check if search query contains job-related keywords
   const isJobSearchQuery = (query) => {
     if (!query || !query.trim()) return false;
@@ -723,6 +867,23 @@ const MapComponent = () => {
       }
       return false;
     });
+  };
+
+  // Parse college from search query
+  const parseCollegeFromQuery = (query) => {
+    if (!query || !query.trim()) return null;
+
+    const normalizedQuery = query.toLowerCase().trim();
+    
+    // Pattern 1: "jobs near [College]" or "companies near [College]"
+    const pattern1 = /(?:jobs|companies|internships)\s+near\s+(.+)/i;
+    const match1 = normalizedQuery.match(pattern1);
+    if (match1) {
+      return match1[1].trim();
+    }
+
+    // Pattern 2: Just the college name - return the query itself
+    return query.trim();
   };
 
   // Parse locality from search query
@@ -1169,6 +1330,103 @@ const MapComponent = () => {
         }
         return;
       }
+
+      // Check if this is a college search query
+      if (isCollegeSearchQuery(queryToSearch)) {
+        console.log("🔍 College search detected...");
+        
+        // Parse college from search query
+        const collegeName = parseCollegeFromQuery(queryToSearch);
+        
+        if (collegeName) {
+          try {
+            // Search for college in database
+            const response = await fetch(
+              `/api/search-college?college=${encodeURIComponent(collegeName)}`
+            );
+            
+            if (!response.ok) {
+              setIsMapLoading(false);
+              setIsFindingJobs(false);
+              
+              const errorData = await response.json().catch(() => ({}));
+              const errorMessage = errorData.error || "Unknown error";
+              const errorDetails = errorData.details || "";
+              console.error("College search error:", errorMessage, errorDetails);
+              
+              // Check if it's a server error (like prisma.college undefined)
+              if (response.status === 503 || (errorDetails && errorDetails.includes("restart"))) {
+                alert("College search is not available yet. Please restart the development server:\n\n1. Stop the server (Ctrl+C)\n2. Run: npm run dev\n\nThis will load the College model.");
+                return;
+              }
+              
+              // Only show empty state if college truly not found (404)
+              if (response.status === 404) {
+                console.log("🔍 Showing empty state for college:", collegeName);
+                setTimeout(() => {
+                  setEmptyStateQuery(collegeName);
+                  setShowEmptyState(true);
+                }, 100);
+              } else {
+                // For other errors, show alert with details
+                const fullMessage = errorDetails 
+                  ? `${errorMessage}\n\n${errorDetails}`
+                  : errorMessage;
+                alert(`Error searching for college: ${fullMessage}`);
+              }
+              return;
+            }
+
+            const collegeData = await response.json();
+            console.log("✅ Found college in database:", {
+              name: collegeData.name,
+              latitude: collegeData.latitude,
+              longitude: collegeData.longitude,
+              pincode: collegeData.pincode,
+              category: collegeData.category
+            });
+
+            // Verify college data has required fields
+            if (!collegeData || !collegeData.name) {
+              console.error("Invalid college data received:", collegeData);
+              setIsMapLoading(false);
+              setIsFindingJobs(false);
+              alert("Invalid college data received. Please try again.");
+              return;
+            }
+
+            // Verify coordinates are available
+            if (!collegeData.latitude || !collegeData.longitude) {
+              console.error("College coordinates not available:", collegeData);
+              setIsMapLoading(false);
+              setIsFindingJobs(false);
+              alert(`College "${collegeData.name}" found but coordinates are not available.`);
+              return;
+            }
+            
+            // Debug: Verify coordinates are numbers
+            if (typeof collegeData.latitude !== 'number' || typeof collegeData.longitude !== 'number') {
+              console.warn("⚠️ College coordinates are not numbers:", {
+                latitude: collegeData.latitude,
+                latitudeType: typeof collegeData.latitude,
+                longitude: collegeData.longitude,
+                longitudeType: typeof collegeData.longitude
+              });
+            }
+
+            setIsMapLoading(false);
+            setIsFindingJobs(true);
+            // Perform college search and zoom - this will always zoom to college even if no companies
+            performCollegeSearch(collegeData);
+          } catch (error) {
+            setIsMapLoading(false);
+            setIsFindingJobs(false);
+            console.error("Error searching college:", error);
+            alert("An error occurred while searching. Please try again.");
+          }
+        }
+        return;
+      }
       
       // Parse locality from search query
       const localityName = parseLocalityFromQuery(queryToSearch);
@@ -1187,15 +1445,31 @@ const MapComponent = () => {
             setIsDetectingLocation(false);
             
             const errorData = await response.json().catch(() => ({}));
-            console.error("Locality not found in database:", errorData.error || "Unknown error");
-            console.log("🔍 Showing empty state for:", localityName);
+            const errorMessage = errorData.error || "Unknown error";
+            const errorDetails = errorData.details || "";
+            console.error("Locality search error:", errorMessage, errorDetails);
             
-            // Small delay to ensure loading overlay is gone
-            setTimeout(() => {
-              setEmptyStateQuery(localityName);
-              setShowEmptyState(true);
-              console.log("✅ Empty state should be visible now, showEmptyState:", true);
-            }, 100);
+            // Check if it's a server error (like prisma.pincode undefined)
+            if (response.status === 503 || (errorDetails && errorDetails.includes("restart"))) {
+              alert("Locality search is not available. Please restart the development server:\n\n1. Stop the server (Ctrl+C)\n2. Run: npm run dev\n\nThis will load the database models.");
+              return;
+            }
+            
+            // Only show empty state if locality truly not found (404)
+            if (response.status === 404) {
+              console.log("🔍 Showing empty state for:", localityName);
+              setTimeout(() => {
+                setEmptyStateQuery(localityName);
+                setShowEmptyState(true);
+                console.log("✅ Empty state should be visible now, showEmptyState:", true);
+              }, 100);
+            } else {
+              // For other errors, show alert
+              const fullMessage = errorDetails 
+                ? `${errorMessage}\n\n${errorDetails}`
+                : errorMessage;
+              alert(`Error searching for locality: ${fullMessage}`);
+            }
             return;
           }
 
@@ -1381,16 +1655,25 @@ const MapComponent = () => {
       ) {
         setShowJobAutocomplete(false);
       }
+      
+      if (
+        collegeAutocompleteRef.current &&
+        !collegeAutocompleteRef.current.contains(event.target) &&
+        searchInputRef.current &&
+        !searchInputRef.current.contains(event.target)
+      ) {
+        setShowCollegeAutocomplete(false);
+      }
     };
 
-    if (showAutocomplete || showJobAutocomplete) {
+    if (showAutocomplete || showJobAutocomplete || showCollegeAutocomplete) {
       document.addEventListener("mousedown", handleClickOutside);
     }
 
     return () => {
       document.removeEventListener("mousedown", handleClickOutside);
     };
-  }, [showAutocomplete, showJobAutocomplete]);
+  }, [showAutocomplete, showJobAutocomplete, showCollegeAutocomplete]);
 
   // Show autocomplete when user types
   const handleSearchInputChange = (e) => {
@@ -1405,22 +1688,32 @@ const MapComponent = () => {
     
     // Show autocomplete if query is at least 2 characters
     if (value.trim().length >= 2) {
-      // Check if this is a job-related query
+      // Check query type in priority order: job > college > locality
       const isJobQuery = isJobSearchQuery(value);
-      console.log("🔍 Search input change:", { value, isJobQuery, jobTitlesCount: jobTitles.length });
+      const isCollegeQuery = isCollegeSearchQuery(value);
+      
+      console.log("🔍 Search input change:", { value, isJobQuery, isCollegeQuery, jobTitlesCount: jobTitles.length, collegesCount: colleges.length });
       
       if (isJobQuery) {
         console.log("✅ Showing job autocomplete");
         setShowJobAutocomplete(true);
         setShowAutocomplete(false);
+        setShowCollegeAutocomplete(false);
+      } else if (isCollegeQuery) {
+        console.log("✅ Showing college autocomplete");
+        setShowCollegeAutocomplete(true);
+        setShowAutocomplete(false);
+        setShowJobAutocomplete(false);
       } else {
         console.log("✅ Showing locality autocomplete");
         setShowAutocomplete(true);
         setShowJobAutocomplete(false);
+        setShowCollegeAutocomplete(false);
       }
     } else {
       setShowAutocomplete(false);
       setShowJobAutocomplete(false);
+      setShowCollegeAutocomplete(false);
     }
   };
 
@@ -1436,6 +1729,75 @@ const MapComponent = () => {
     setTimeout(() => {
       handleSearch(selectedLocalityName);
     }, 200);
+  };
+
+  // Handle college selection from autocomplete
+  const handleCollegeSelect = async (college) => {
+    const selectedCollegeName = college.name;
+    console.log("🏫 College selected:", selectedCollegeName);
+    setSearchQuery(selectedCollegeName);
+    setShowCollegeAutocomplete(false);
+    
+    // Set loading state
+    setIsMapLoading(true);
+    setHasSearched(true);
+    
+    try {
+      // Search for college in database
+      const response = await fetch(
+        `/api/search-college?college=${encodeURIComponent(selectedCollegeName)}`
+      );
+      
+      if (!response.ok) {
+        setIsMapLoading(false);
+        setIsFindingJobs(false);
+        
+        const errorData = await response.json().catch(() => ({}));
+        const errorMessage = errorData.error || "Unknown error";
+        const errorDetails = errorData.details || "";
+        console.error("College search error:", errorMessage, errorDetails);
+        
+        // Check if it's a server error (like prisma.college undefined)
+        if (response.status === 503 || (errorDetails && errorDetails.includes("restart"))) {
+          alert("College search is not available yet. Please restart the development server:\n\n1. Stop the server (Ctrl+C)\n2. Run: npm run dev\n\nThis will load the College model.");
+          return;
+        }
+        
+        // Only show empty state if college truly not found (404)
+        if (response.status === 404) {
+          setTimeout(() => {
+            setEmptyStateQuery(selectedCollegeName);
+            setShowEmptyState(true);
+          }, 100);
+        } else {
+          // For other errors, show alert
+          const fullMessage = errorDetails 
+            ? `${errorMessage}\n\n${errorDetails}`
+            : errorMessage;
+          alert(`Error searching for college: ${fullMessage}`);
+        }
+        return;
+      }
+
+      const collegeData = await response.json();
+      console.log("✅ Found college:", {
+        name: collegeData.name,
+        latitude: collegeData.latitude,
+        longitude: collegeData.longitude,
+        pincode: collegeData.pincode,
+        category: collegeData.category
+      });
+
+      setIsMapLoading(false);
+      setIsFindingJobs(true);
+      // Perform college search and zoom
+      performCollegeSearch(collegeData);
+    } catch (error) {
+      setIsMapLoading(false);
+      setIsFindingJobs(false);
+      console.error("Error searching college:", error);
+      alert("An error occurred while searching. Please try again.");
+    }
   };
 
   // Handle job title selection from autocomplete
@@ -1598,23 +1960,33 @@ const MapComponent = () => {
                     }
                     if (e.key === "Enter" && searchQuery.trim()) {
                       // Only search if autocomplete is closed or no item is selected
-                      if (!showAutocomplete && !showJobAutocomplete) {
+                      if (!showAutocomplete && !showJobAutocomplete && !showCollegeAutocomplete) {
                         setShowAutocomplete(false);
                         setShowJobAutocomplete(false);
+                        setShowCollegeAutocomplete(false);
                         handleSearch();
                       }
                     } else if (e.key === "Escape") {
                       setShowAutocomplete(false);
                       setShowJobAutocomplete(false);
+                      setShowCollegeAutocomplete(false);
                     }
                   }}
                   onFocus={(e) => {
                     if (searchQuery.trim().length >= 2) {
-                      // Check if this is a job-related query
+                      // Check query type in priority order: job > college > locality
                       if (isJobSearchQuery(searchQuery)) {
                         setShowJobAutocomplete(true);
+                        setShowCollegeAutocomplete(false);
+                        setShowAutocomplete(false);
+                      } else if (isCollegeSearchQuery(searchQuery)) {
+                        setShowCollegeAutocomplete(true);
+                        setShowJobAutocomplete(false);
+                        setShowAutocomplete(false);
                       } else {
                         setShowAutocomplete(true);
+                        setShowJobAutocomplete(false);
+                        setShowCollegeAutocomplete(false);
                       }
                     }
                   }}
@@ -1686,6 +2058,23 @@ const MapComponent = () => {
                   jobTitles={jobTitles}
                   searchQuery={searchQuery}
                   onSelect={handleJobTitleSelect}
+                />
+                
+                {/* College Autocomplete Dropdown */}
+                <CollegeAutocomplete
+                  isOpen={showCollegeAutocomplete}
+                  onClose={() => setShowCollegeAutocomplete(false)}
+                  dropdownRef={collegeAutocompleteRef}
+                  position={{
+                    top: "100%",
+                    left: "0",
+                    right: "auto",
+                    marginTop: "8px",
+                  }}
+                  width="100%"
+                  colleges={colleges}
+                  searchQuery={searchQuery}
+                  onSelect={handleCollegeSelect}
                 />
               </div>
 

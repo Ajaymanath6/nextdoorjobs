@@ -28,6 +28,8 @@
     "db:seed-kasaragod": "node scripts/seed-kasaragod.js",
     "db:seed-pathanamthitta": "node scripts/seed-pathanamthitta.js",
     "db:seed-jobs": "node scripts/seed-job-titles.js",
+    "db:seed-colleges": "node scripts/seed-colleges.js",
+    "db:update-colleges-locality": "node scripts/update-colleges-locality.js",
     "db:fix-sequence": "node scripts/fix-sequence.js",
     "db:update-irinj": "node scripts/update-irinjlakuda.js",
     "db:update-coordinates": "node scripts/update-pincode-coordinates.js"

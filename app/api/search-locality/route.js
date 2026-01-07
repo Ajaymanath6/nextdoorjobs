@@ -254,13 +254,27 @@ const searchByPincode = async (pincode) => {
 
   console.log(`🔍 Searching for PIN: "${pincode}"`);
 
-  // First, try to find in database
-  try {
-    const pincodeData = await queryWithTimeout(async () => {
-      return await prisma.pincode.findUnique({
-        where: { pincode: pincode }
+    // First, try to find in database
+    try {
+      const pincodeData = await queryWithTimeout(async () => {
+        try {
+          // Check if prisma.pincode is available
+          if (!prisma.pincode) {
+            console.error("❌ prisma.pincode is not available. Prisma client needs regeneration and server restart.");
+            throw new Error("Pincode model not available. Please restart the development server.");
+          }
+          return await prisma.pincode.findUnique({
+            where: { pincode: pincode }
+          });
+        } catch (prismaError) {
+          // Check if it's because pincode model doesn't exist
+          if (prismaError.message && prismaError.message.includes("Pincode model not available")) {
+            throw prismaError;
+          }
+          // Re-throw other errors
+          throw prismaError;
+        }
       });
-    });
 
     if (pincodeData) {
       console.log(`✅ Found PIN in DB: ${pincodeData.localityName} (${pincodeData.pincode})`);
@@ -456,17 +470,31 @@ const searchByLocality = async (localityName) => {
     });
     
     pincodeData = await queryWithTimeout(async () => {
-      return await prisma.pincode.findFirst({
-        where: {
-          AND: [
-            { OR: orConditions },
-            { state: "Kerala" }
+      try {
+        // Check if prisma.pincode is available
+        if (!prisma.pincode) {
+          console.error("❌ prisma.pincode is not available. Prisma client needs regeneration and server restart.");
+          throw new Error("Pincode model not available. Please restart the development server.");
+        }
+        return await prisma.pincode.findFirst({
+          where: {
+            AND: [
+              { OR: orConditions },
+              { state: "Kerala" }
+            ]
+          },
+          orderBy: [
+            { localityName: 'asc' }
           ]
-        },
-        orderBy: [
-          { localityName: 'asc' }
-        ]
-      });
+        });
+      } catch (prismaError) {
+        // Check if it's because pincode model doesn't exist
+        if (prismaError.message && prismaError.message.includes("Pincode model not available")) {
+          throw prismaError;
+        }
+        // Re-throw other errors
+        throw prismaError;
+      }
     });
 
     // If exact match found, return it
@@ -683,17 +711,27 @@ export async function GET(request) {
       } catch (error) {
         console.error("❌ Error searching locality:", error);
         
-        if (error.message === "Database query timeout") {
-          return NextResponse.json(
-            { 
-              error: "Database query timeout", 
-              details: "The database is taking too long to respond. Please try again." 
-            },
-            { status: 500 }
-          );
-        }
-        
-        throw error;
+      if (error.message === "Database query timeout") {
+        return NextResponse.json(
+          { 
+            error: "Database query timeout", 
+            details: "The database is taking too long to respond. Please try again." 
+          },
+          { status: 500 }
+        );
+      }
+      
+      if (error.message && error.message.includes("Pincode model not available")) {
+        return NextResponse.json(
+          { 
+            error: "Locality search is not available", 
+            details: "Please restart the development server to load the Pincode model. Run: npm run dev"
+          },
+          { status: 503 }
+        );
+      }
+      
+      throw error;
       }
     }
 

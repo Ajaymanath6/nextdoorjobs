@@ -38,3 +38,20 @@ model JobTitle {
   @@index([category])
   @@map("job_titles")
 }
+
+model College {
+  id        Int      @id @default(autoincrement())
+  name      String   @unique @db.VarChar(255)
+  category  String   @db.VarChar(50)
+  pincode   String   @db.VarChar(10)
+  locality  String?  @db.VarChar(255)
+  latitude  Float?
+  longitude Float?
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  @@index([name])
+  @@index([pincode])
+  @@index([locality])
+  @@map("colleges")
+}

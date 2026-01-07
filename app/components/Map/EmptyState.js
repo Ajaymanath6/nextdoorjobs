@@ -58,7 +58,9 @@ export default function EmptyState({ isOpen, onClose, query = "" }) {
             marginBottom: "8px",
           }}
         >
-          We haven't reached the locality you're searching for
+          {query && (query.toLowerCase().includes('college') || query.toLowerCase().includes('university') || query.toLowerCase().includes('institute'))
+            ? "We haven't reached the college you're searching for"
+            : "We haven't reached the locality you're searching for"}
         </h2>
 
         {query && (
