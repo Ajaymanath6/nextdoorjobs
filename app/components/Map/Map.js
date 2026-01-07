@@ -69,6 +69,13 @@ const MapComponent = () => {
   const filterButtonRef = useRef(null);
   const [locationsData, setLocationsData] = useState(null);
   const [companyDistances, setCompanyDistances] = useState({});
+  
+  // College distance feature state
+  const [selectedCollege, setSelectedCollege] = useState(null);
+  const [isCollegeFilterActive, setIsCollegeFilterActive] = useState(false);
+  const collegeMarkerRef = useRef(null);
+  const [collegeDistances, setCollegeDistances] = useState({});
+  const collegeLinesRef = useRef([]);
 
   // Load locations data (client-side only)
   useEffect(() => {
@@ -217,11 +224,56 @@ const MapComponent = () => {
     return distances;
   };
 
+  // Calculate distances from college to companies
+  const calculateCollegeDistances = async (collegeLoc, companies, map) => {
+    if (!collegeLoc || !collegeLoc.latitude || !collegeLoc.longitude || !map) return {};
+
+    const distances = {};
+    const collegeCoords = [collegeLoc.latitude, collegeLoc.longitude];
+
+    await Promise.all(
+      companies.map(async (company) => {
+        // Handle both company.lat/lon and company.latitude/longitude formats
+        const companyLat = company.latitude || company.lat;
+        const companyLon = company.longitude || company.lon;
+        
+        if (!companyLat || !companyLon) return;
+        
+        const companyCoords = [companyLat, companyLon];
+        const roadDistanceMeters = await fetchRoadDistance(
+          collegeCoords,
+          companyCoords
+        );
+
+        const companyName = company.company_name || company.name;
+        if (roadDistanceMeters !== null) {
+          distances[companyName] = (roadDistanceMeters / 1000).toFixed(1);
+        } else {
+          // Fallback to straight-line distance
+          const straightDistance = map.distance(collegeCoords, companyCoords);
+          distances[companyName] = (straightDistance / 1000).toFixed(1);
+        }
+      })
+    );
+
+    return distances;
+  };
+
   // Create home icon function
   const createHomeIcon = (L) => {
     return L.divIcon({
       html: `<div style="background-color:#FFFFFF;border-radius:50%;width:40px;height:40px;display:flex;align-items:center;justify-content:center;font-size:20px;border:3px solid #E5E5E5;box-shadow:0 2px 8px rgba(0,0,0,0.3);">🏠</div>`,
       className: "home-marker",
+      iconSize: [40, 40],
+      iconAnchor: [20, 20],
+    });
+  };
+
+  // Create college icon function
+  const createCollegeIcon = (L) => {
+    return L.divIcon({
+      html: `<div style="background-color:#FFFFFF;border-radius:50%;width:40px;height:40px;display:flex;align-items:center;justify-content:center;font-size:20px;border:3px solid #E5E5E5;box-shadow:0 2px 8px rgba(0,0,0,0.3);">🏫</div>`,
+      className: "college-marker",
       iconSize: [40, 40],
       iconAnchor: [20, 20],
     });
@@ -262,7 +314,14 @@ const MapComponent = () => {
     // Create markers for each company
     companies.forEach((company, index) => {
       const logoUrl = company.logoUrl || null;
-      const customIcon = createCustomTeardropIcon(L, logoUrl, 50, null);
+      
+      // Get distance from college if available for badge
+      const companyName = company.company_name || company.name;
+      const distanceKm = selectedCollege && collegeDistances[companyName] 
+        ? collegeDistances[companyName]
+        : null;
+      
+      const customIcon = createCustomTeardropIcon(L, logoUrl, 50, distanceKm);
 
       const marker = L.marker([company.latitude, company.longitude], {
         icon: customIcon,
@@ -273,6 +332,11 @@ const MapComponent = () => {
       // Store company data on marker
       marker.companyData = company;
 
+      // Get distance text for popup
+      const collegeDistanceText = selectedCollege && collegeDistances[companyName] 
+        ? `${collegeDistances[companyName]} km from ${selectedCollege.name}`
+        : null;
+
       // Create popup content
       const popupContent = `
         <div style="font-family: 'Open Sans', sans-serif; padding: 4px;">
@@ -282,6 +346,11 @@ const MapComponent = () => {
           <div style="font-size: 12px; color: #1A1A1A;">
             ${company.type}
           </div>
+          ${collegeDistanceText ? `
+            <div style="font-size: 11px; color: #575757; margin-top: 4px;">
+              ${collegeDistanceText}
+            </div>
+          ` : ''}
         </div>
       `;
 
@@ -486,6 +555,33 @@ const MapComponent = () => {
       lonType: typeof collegeLongitude
     });
 
+    // Store college data in state
+    setSelectedCollege({
+      name: collegeName,
+      latitude: lat,
+      longitude: lon,
+      pincode: collegePincode,
+      locality: collegeData.locality || null,
+      category: collegeData.category || null,
+    });
+
+    // Clear home filter if active
+    if (isHomeFilterActive) {
+      setIsHomeFilterActive(false);
+    }
+
+    // Remove existing home marker if present
+    if (homeMarkerRef.current) {
+      mapInstanceRef.current.removeLayer(homeMarkerRef.current);
+      homeMarkerRef.current = null;
+    }
+
+    // Remove existing college marker if present
+    if (collegeMarkerRef.current) {
+      mapInstanceRef.current.removeLayer(collegeMarkerRef.current);
+      collegeMarkerRef.current = null;
+    }
+
     // Get company data from locations.json using pincode
     const localityData = getLocalityDataByPincode(
       collegePincode,
@@ -534,12 +630,69 @@ const MapComponent = () => {
           easeLinearity: 0.25,
         });
 
-        // After final zoom, render company markers if available
+        // After final zoom, add college marker and render company markers if available
         const handleStage2Complete = () => {
           // Remove this handler to prevent it from being called again
           mapInstanceRef.current.off("moveend", handleStage2Complete);
+          
+          // Create and add college marker
+          const collegeIcon = createCollegeIcon(L);
+          const collegeMarker = L.marker([finalLat, finalLon], {
+            icon: collegeIcon,
+            zIndexOffset: 2000,
+            interactive: true,
+          }).addTo(mapInstanceRef.current);
+
+          collegeMarkerRef.current = collegeMarker;
+
+          // Add tooltip for college marker
+          collegeMarker.bindTooltip(
+            `<div style="font-weight:bold;color:#1A1A1A;font-size:14px;">${collegeName}</div>`,
+            {
+              permanent: false,
+              direction: "right",
+              offset: [10, 0],
+              className: "college-panel-tooltip",
+              interactive: true,
+            }
+          );
+
+          // Click handler for college marker
+          collegeMarker.on("click", function () {
+            if (collegeMarker.isTooltipOpen()) {
+              collegeMarker.closeTooltip();
+            } else {
+              collegeMarker.openTooltip();
+            }
+          });
+
+          // Filter companies within 3km radius
+          let filteredCompanies = [];
           if (localityData && localityData.companies && localityData.companies.length > 0) {
-            renderCompanyMarkers(localityData.companies);
+            filteredCompanies = localityData.companies.filter((company) => {
+              if (!company.latitude || !company.longitude) return false;
+              const companyCoords = [company.latitude, company.longitude];
+              const distanceMeters = mapInstanceRef.current.distance(
+                [finalLat, finalLon],
+                companyCoords
+              );
+              return distanceMeters <= 3000; // 3km = 3000 meters
+            });
+            
+            console.log(`📍 Filtered companies within 3km: ${filteredCompanies.length} out of ${localityData.companies.length}`);
+          }
+
+          if (filteredCompanies.length > 0) {
+            // Calculate distances from college to companies
+            calculateCollegeDistances(
+              { latitude: finalLat, longitude: finalLon },
+              filteredCompanies,
+              mapInstanceRef.current
+            ).then((distances) => {
+              setCollegeDistances(distances);
+            });
+            
+            renderCompanyMarkers(filteredCompanies);
           } else {
             // Show "No companies found" message
             // Use captured collegeName constant instead of collegeData.name
@@ -1678,6 +1831,82 @@ const MapComponent = () => {
     }
   }, [isHomeFilterActive, locationsData]);
 
+  // Handle connecting lines from college to companies when college distance toggle is active
+  useEffect(() => {
+    if (!mapInstanceRef.current || !selectedCollege || !companyMarkersRef.current) {
+      // Remove college lines if map is not ready
+      if (collegeLinesRef.current.length > 0 && mapInstanceRef.current) {
+        collegeLinesRef.current.forEach((line) => {
+          mapInstanceRef.current.removeLayer(line);
+        });
+        collegeLinesRef.current = [];
+      }
+      return;
+    }
+
+    const L = window.L;
+    if (!L) return;
+
+    // Remove existing college lines
+    collegeLinesRef.current.forEach((line) => {
+      mapInstanceRef.current.removeLayer(line);
+    });
+    collegeLinesRef.current = [];
+
+    // Only create lines if college distance toggle is active and college marker exists
+    if (isCollegeFilterActive && collegeMarkerRef.current && companyMarkersRef.current.length > 0) {
+      const collegeCoords = [selectedCollege.latitude, selectedCollege.longitude];
+
+      // Create lines from college to each company
+      companyMarkersRef.current.forEach(async (marker) => {
+        if (!marker.companyData) return;
+
+        // Handle both company.lat/lon and company.latitude/longitude formats
+        const companyLat = marker.companyData.latitude || marker.companyData.lat;
+        const companyLon = marker.companyData.longitude || marker.companyData.lon;
+
+        if (!companyLat || !companyLon) return;
+
+        const companyCoords = [companyLat, companyLon];
+
+        // Create dashed line
+        const collegeLine = L.polyline([collegeCoords, companyCoords], {
+          color: "#0A0A0A",
+          weight: 2,
+          opacity: 0.6,
+          dashArray: "5, 5",
+          interactive: true,
+        }).addTo(mapInstanceRef.current);
+
+        // Add hover handler to show road distance
+        collegeLine.on("mouseover", async function () {
+          const roadDistanceMeters = await fetchRoadDistance(
+            collegeCoords,
+            companyCoords
+          );
+
+          if (roadDistanceMeters !== null) {
+            const distanceKm = (roadDistanceMeters / 1000).toFixed(1);
+            collegeLine.bindTooltip(
+              `<div style="font-weight:bold;color:#1A1A1A;font-size:12px;">${distanceKm} km</div>`,
+              {
+                permanent: false,
+                direction: "center",
+                className: "distance-tooltip",
+              }
+            ).openTooltip();
+          }
+        });
+
+        collegeLine.on("mouseout", function () {
+          collegeLine.closeTooltip();
+        });
+
+        collegeLinesRef.current.push(collegeLine);
+      });
+    }
+  }, [isCollegeFilterActive, selectedCollege]);
+
   // Handle click outside filter dropdown
   useEffect(() => {
     const handleClickOutside = (event) => {
@@ -1789,6 +2018,15 @@ const MapComponent = () => {
     setSearchQuery(selectedLocalityName);
     setShowAutocomplete(false);
     
+    // Clear college selection when locality is selected
+    setSelectedCollege(null);
+    setIsCollegeFilterActive(false);
+    setCollegeDistances({});
+    if (collegeMarkerRef.current) {
+      mapInstanceRef.current?.removeLayer(collegeMarkerRef.current);
+      collegeMarkerRef.current = null;
+    }
+    
     // Automatically trigger search with the selected locality
     // Use setTimeout to ensure state update is reflected in UI
     setTimeout(() => {
@@ -1806,6 +2044,36 @@ const MapComponent = () => {
       latitude: college.latitude,
       longitude: college.longitude
     });
+    
+    // Clean up previous college state
+    if (collegeMarkerRef.current) {
+      mapInstanceRef.current?.removeLayer(collegeMarkerRef.current);
+      collegeMarkerRef.current = null;
+    }
+    
+    // Remove previous college lines
+    if (collegeLinesRef.current.length > 0 && mapInstanceRef.current) {
+      collegeLinesRef.current.forEach((line) => {
+        mapInstanceRef.current.removeLayer(line);
+      });
+      collegeLinesRef.current = [];
+    }
+    
+    // Reset college filter state
+    setIsCollegeFilterActive(false);
+    setCollegeDistances({});
+    
+    // Clear home filter if active
+    if (isHomeFilterActive) {
+      setIsHomeFilterActive(false);
+    }
+    
+    // Remove home marker if present
+    if (homeMarkerRef.current) {
+      mapInstanceRef.current?.removeLayer(homeMarkerRef.current);
+      homeMarkerRef.current = null;
+    }
+    
     setSearchQuery(selectedCollegeName);
     setShowCollegeAutocomplete(false);
     
@@ -1913,6 +2181,15 @@ const MapComponent = () => {
     console.log("💼 Job title selected:", selectedJobTitle);
     setSearchQuery(selectedJobTitle);
     setShowJobAutocomplete(false);
+    
+    // Clear college selection when job title is selected
+    setSelectedCollege(null);
+    setIsCollegeFilterActive(false);
+    setCollegeDistances({});
+    if (collegeMarkerRef.current) {
+      mapInstanceRef.current?.removeLayer(collegeMarkerRef.current);
+      collegeMarkerRef.current = null;
+    }
     
     // Set loading state
     setIsMapLoading(true);
@@ -2248,21 +2525,37 @@ const MapComponent = () => {
             </div>
           </div>
 
-          {/* Distance Button */}
+          {/* Distance Button - Show only one at a time */}
           <div className="relative">
-            <button
-              className={`${searchBar["distance-button"]} ${searchBar["distance-button-height"]} ${searchBar["distance-button-nowrap"]} ${
-                isHomeFilterActive ? searchBar["distance-button-active"] : ""
-              }`}
-              onClick={handleDistanceToggle}
-              onContextMenu={handleHomeLocationRightClick}
-              style={{ fontFamily: "Open Sans", fontSize: "14px" }}
-            >
-              <span style={{ fontSize: "16px" }}>🏠</span>
-              <span style={{ fontFamily: "Open Sans", fontSize: "14px" }}>
-                {isHomeFilterActive ? "Hide Distance" : "Show Distance"}
-              </span>
-            </button>
+            {/* Show college distance button if college is selected, otherwise show home distance button */}
+            {selectedCollege ? (
+              <button
+                className={`${searchBar["distance-button"]} ${searchBar["distance-button-height"]} ${searchBar["distance-button-nowrap"]} ${
+                  isCollegeFilterActive ? searchBar["distance-button-active"] : ""
+                }`}
+                onClick={() => setIsCollegeFilterActive(!isCollegeFilterActive)}
+                style={{ fontFamily: "Open Sans", fontSize: "14px" }}
+              >
+                <span style={{ fontSize: "16px" }}>🏫</span>
+                <span style={{ fontFamily: "Open Sans", fontSize: "14px" }}>
+                  {isCollegeFilterActive ? "Hide Distance" : "Show Distance"}
+                </span>
+              </button>
+            ) : (
+              <button
+                className={`${searchBar["distance-button"]} ${searchBar["distance-button-height"]} ${searchBar["distance-button-nowrap"]} ${
+                  isHomeFilterActive ? searchBar["distance-button-active"] : ""
+                }`}
+                onClick={handleDistanceToggle}
+                onContextMenu={handleHomeLocationRightClick}
+                style={{ fontFamily: "Open Sans", fontSize: "14px" }}
+              >
+                <span style={{ fontSize: "16px" }}>🏠</span>
+                <span style={{ fontFamily: "Open Sans", fontSize: "14px" }}>
+                  {isHomeFilterActive ? "Hide Distance" : "Show Distance"}
+                </span>
+              </button>
+            )}
 
             {/* Home Location Dropdown */}
             {showHomeLocationDropdown && (

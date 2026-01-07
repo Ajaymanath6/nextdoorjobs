@@ -136,6 +136,40 @@
           "longitude": 76.2155
         }
       ]
+    },
+    "Ayyanthole": {
+      "pincode": "680003",
+      "locality": "Ayyanthole",
+      "center": {
+        "lat": 10.5284,
+        "lon": 76.1953
+      },
+      "companies": [
+        {
+          "company_name": "District Court Complex, Thrissur",
+          "type": "Government / Legal Services",
+          "pincode": "680003",
+          "locality": "Ayyanthole",
+          "latitude": 10.5285,
+          "longitude": 76.1912
+        },
+        {
+          "company_name": "Collectorate (Civil Station), Thrissur",
+          "type": "Government / Administrative",
+          "pincode": "680003",
+          "locality": "Ayyanthole",
+          "latitude": 10.5318,
+          "longitude": 76.1925
+        },
+        {
+          "company_name": "Vadakkunnathan Temple (Swaraj Round)",
+          "type": "Tourism / Heritage",
+          "pincode": "680003",
+          "locality": "Ayyanthole",
+          "latitude": 10.5244,
+          "longitude": 76.2141
+        }
+      ]
     }
   }
 }
