@@ -19,12 +19,20 @@ const searchByCollegeName = async (collegeName) => {
   // Normalize the search query
   const normalizedQuery = collegeName.trim().toLowerCase();
   
-  // Check cache first
-  const cacheKey = `college:${normalizedQuery}`;
-  const cached = searchCache.get(cacheKey);
+  // Check cache first (use exact query to avoid cache collisions)
+  const exactName = collegeName.trim();
+  const exactCacheKey = `college:exact:${exactName}`;
+  const cached = searchCache.get(exactCacheKey);
   if (cached && Date.now() - cached.timestamp < CACHE_TTL) {
     console.log(`✅ Cache hit for college: "${collegeName}"`);
-    return cached.data;
+    console.log(`📦 Cached data:`, cached.data);
+    // Verify cached data matches the search query
+    if (cached.data.name.toLowerCase() !== exactName.toLowerCase()) {
+      console.warn(`⚠️  Cache mismatch! Searched: "${exactName}", Cached: "${cached.data.name}"`);
+      // Don't return mismatched cache
+    } else {
+      return cached.data;
+    }
   }
 
   console.log(`🔍 Searching for college: "${collegeName}" (normalized: "${normalizedQuery}")`);
@@ -32,29 +40,60 @@ const searchByCollegeName = async (collegeName) => {
   let collegeData = null;
 
   try {
-    // First, try exact/contains match (faster)
-    const orConditions = [
-      { name: { equals: collegeName.trim(), mode: "insensitive" } },
-      { name: { contains: normalizedQuery, mode: "insensitive" } }
-    ];
-    
-    // Add word-based searches
-    const words = normalizedQuery.split(/\s+/).filter(word => word.length > 2);
-    words.forEach(word => {
-      orConditions.push({ name: { contains: word, mode: "insensitive" } });
-    });
-    
+    // CRITICAL: Try exact match first (case-insensitive)
+    // This ensures we get the correct college when user selects from autocomplete
     collegeData = await queryWithTimeout(async () => {
       try {
-        // Try to access prisma.college - if it doesn't exist, this will throw
-        return await prisma.college.findFirst({
+        // First, try exact match (most important for autocomplete selections)
+        const exactMatch = await prisma.college.findFirst({
           where: {
-            OR: orConditions
+            name: { equals: collegeName.trim(), mode: "insensitive" }
+          }
+        });
+        
+        if (exactMatch) {
+          console.log(`✅ Found exact match: ${exactMatch.name}`);
+          return exactMatch;
+        }
+        
+        // If no exact match, try contains match
+        const containsMatch = await prisma.college.findFirst({
+          where: {
+            name: { contains: normalizedQuery, mode: "insensitive" }
           },
           orderBy: [
             { name: 'asc' }
           ]
         });
+        
+        if (containsMatch) {
+          console.log(`✅ Found contains match: ${containsMatch.name}`);
+          return containsMatch;
+        }
+        
+        // If still no match, try word-based search
+        const words = normalizedQuery.split(/\s+/).filter(word => word.length > 2);
+        if (words.length > 0) {
+          const wordConditions = words.map(word => ({
+            name: { contains: word, mode: "insensitive" }
+          }));
+          
+          const wordMatch = await prisma.college.findFirst({
+            where: {
+              OR: wordConditions
+            },
+            orderBy: [
+              { name: 'asc' }
+            ]
+          });
+          
+          if (wordMatch) {
+            console.log(`✅ Found word match: ${wordMatch.name}`);
+            return wordMatch;
+          }
+        }
+        
+        return null;
       } catch (prismaError) {
         // Check if it's because college model doesn't exist
         if (prismaError.message && prismaError.message.includes('college')) {
@@ -193,16 +232,35 @@ const searchByCollegeName = async (collegeName) => {
     longitude: collegeData.longitude ? parseFloat(collegeData.longitude) : null,
   };
   
-  // Debug: Log the response data
+  // Debug: Log the response data with full details
   console.log("📤 Returning college data:", {
-    name: responseData.name,
+    searchedFor: collegeName,
+    found: responseData.name,
     latitude: responseData.latitude,
     longitude: responseData.longitude,
-    pincode: responseData.pincode
+    pincode: responseData.pincode,
+    locality: responseData.locality,
+    latType: typeof responseData.latitude,
+    lonType: typeof responseData.longitude,
+    latValue: responseData.latitude,
+    lonValue: responseData.longitude
   });
+  
+  // Verify we found the correct college
+  if (responseData.name.toLowerCase() !== exactName.toLowerCase()) {
+    console.warn(`⚠️  College name mismatch! Searched for: "${collegeName}", Found: "${responseData.name}"`);
+  }
 
-  // Cache the result
-  searchCache.set(cacheKey, {
+  // Cache the result with exact name as key to avoid collisions
+  const exactCacheKey = `college:exact:${exactName}`;
+  searchCache.set(exactCacheKey, {
+    data: responseData,
+    timestamp: Date.now()
+  });
+  
+  // Also cache with normalized query for fuzzy searches
+  const normalizedCacheKey = `college:${normalizedQuery}`;
+  searchCache.set(normalizedCacheKey, {
     data: responseData,
     timestamp: Date.now()
   });

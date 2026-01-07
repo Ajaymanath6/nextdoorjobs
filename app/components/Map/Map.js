@@ -443,25 +443,59 @@ const MapComponent = () => {
       return;
     }
 
+    // CRITICAL: Capture all values in local constants to avoid closure issues
+    // If user searches multiple colleges quickly, collegeData gets overwritten
+    // but these constants preserve the correct values for this search
+    const collegeName = collegeData.name;
+    const collegeLatitude = collegeData.latitude;
+    const collegeLongitude = collegeData.longitude;
+    const collegePincode = collegeData.pincode;
+
     // Debug: Log the college data to verify coordinates
     console.log("🏫 Performing college search:", {
-      name: collegeData.name,
-      latitude: collegeData.latitude,
-      longitude: collegeData.longitude,
-      pincode: collegeData.pincode
+      name: collegeName,
+      latitude: collegeLatitude,
+      longitude: collegeLongitude,
+      pincode: collegePincode
     });
 
-    const collegeCenter = [collegeData.latitude, collegeData.longitude];
+    // Ensure coordinates are numbers, not strings
+    const lat = typeof collegeLatitude === 'number' ? collegeLatitude : parseFloat(collegeLatitude);
+    const lon = typeof collegeLongitude === 'number' ? collegeLongitude : parseFloat(collegeLongitude);
+    
+    // Validate coordinates
+    if (isNaN(lat) || isNaN(lon)) {
+      console.error("❌ Invalid coordinates:", { lat, lon, collegeName });
+      setIsMapLoading(false);
+      setIsFindingJobs(false);
+      alert(`Invalid coordinates for ${collegeName}. Please check the database.`);
+      return;
+    }
+    
+    const collegeCenter = [lat, lon];
     const stateCenter = [10.5276, 76.2144]; // Kerala center
     
     console.log("📍 College center coordinates:", collegeCenter);
+    console.log("📍 Raw values:", { 
+      collegeName, 
+      rawLat: collegeLatitude, 
+      rawLon: collegeLongitude,
+      parsedLat: lat, 
+      parsedLon: lon,
+      latType: typeof collegeLatitude,
+      lonType: typeof collegeLongitude
+    });
 
     // Get company data from locations.json using pincode
     const localityData = getLocalityDataByPincode(
-      collegeData.pincode,
+      collegePincode,
       null
     );
 
+    // CRITICAL: Remove any existing "moveend" listeners to prevent conflicts
+    // when user searches multiple colleges quickly
+    mapInstanceRef.current.off("moveend");
+    
     // Stage 1: Fly to State (zoom 8)
     mapInstanceRef.current.flyTo(stateCenter, 8, {
       duration: 1.5,
@@ -469,33 +503,60 @@ const MapComponent = () => {
     });
 
     // Stage 2: After Stage 1 completes, fly to College location (zoom 15)
-    mapInstanceRef.current.once("moveend", () => {
+    // Use a unique handler function to avoid conflicts
+    const handleStage1Complete = () => {
+      // Remove this handler to prevent it from being called again
+      mapInstanceRef.current.off("moveend", handleStage1Complete);
+      
       setTimeout(() => {
-        mapInstanceRef.current.flyTo(collegeCenter, 15, {
+        // Double-check coordinates are correct before zooming
+        // Re-validate to ensure we're using the right values
+        const finalLat = typeof collegeLatitude === 'number' ? collegeLatitude : parseFloat(collegeLatitude);
+        const finalLon = typeof collegeLongitude === 'number' ? collegeLongitude : parseFloat(collegeLongitude);
+        const finalCollegeCenter = [finalLat, finalLon];
+        
+        // Log before zooming to verify correct coordinates
+        console.log(`🗺️ Zooming to ${collegeName}:`);
+        console.log(`   Expected coordinates: [${finalLat}, ${finalLon}]`);
+        console.log(`   College center array:`, finalCollegeCenter);
+        console.log(`   Original values: lat=${collegeLatitude} (${typeof collegeLatitude}), lon=${collegeLongitude} (${typeof collegeLongitude})`);
+        
+        // Verify coordinates are valid before zooming
+        if (isNaN(finalLat) || isNaN(finalLon)) {
+          console.error(`❌ Invalid coordinates for ${collegeName}:`, { finalLat, finalLon });
+          setIsFindingJobs(false);
+          setIsMapLoading(false);
+          return;
+        }
+        
+        mapInstanceRef.current.flyTo(finalCollegeCenter, 15, {
           duration: 1.5,
           easeLinearity: 0.25,
         });
 
         // After final zoom, render company markers if available
-        mapInstanceRef.current.once("moveend", () => {
+        const handleStage2Complete = () => {
+          // Remove this handler to prevent it from being called again
+          mapInstanceRef.current.off("moveend", handleStage2Complete);
           if (localityData && localityData.companies && localityData.companies.length > 0) {
             renderCompanyMarkers(localityData.companies);
           } else {
             // Show "No companies found" message
+            // Use captured collegeName constant instead of collegeData.name
             const noCompaniesMessage = L.popup({
               className: "no-companies-message",
               closeButton: true,
               autoClose: false,
               closeOnClick: false,
             })
-              .setLatLng(collegeCenter)
+              .setLatLng([lat, lon])
               .setContent(`
                 <div style="font-family: 'Open Sans', sans-serif; padding: 12px; text-align: center;">
                   <div style="font-weight: 600; font-size: 16px; color: #0A0A0A; margin-bottom: 8px;">
                     No Companies Found
                   </div>
                   <div style="font-size: 14px; color: #1A1A1A;">
-                    No companies available near ${collegeData.name} at this time.
+                    No companies available near ${collegeName} at this time.
                   </div>
                 </div>
               `)
@@ -514,9 +575,13 @@ const MapComponent = () => {
             setIsFindingJobs(false);
             setIsMapLoading(false);
           }, 300);
-        });
+        };
+        
+        mapInstanceRef.current.once("moveend", handleStage2Complete);
       }, 500);
-    });
+    };
+    
+    mapInstanceRef.current.once("moveend", handleStage1Complete);
   };
 
   // Create company marker icon function
@@ -1734,7 +1799,13 @@ const MapComponent = () => {
   // Handle college selection from autocomplete
   const handleCollegeSelect = async (college) => {
     const selectedCollegeName = college.name;
-    console.log("🏫 College selected:", selectedCollegeName);
+    console.log("🏫 College selected:", {
+      name: selectedCollegeName,
+      fullObject: college,
+      pincode: college.pincode,
+      latitude: college.latitude,
+      longitude: college.longitude
+    });
     setSearchQuery(selectedCollegeName);
     setShowCollegeAutocomplete(false);
     
@@ -1742,61 +1813,97 @@ const MapComponent = () => {
     setIsMapLoading(true);
     setHasSearched(true);
     
-    try {
-      // Search for college in database
-      const response = await fetch(
-        `/api/search-college?college=${encodeURIComponent(selectedCollegeName)}`
-      );
-      
-      if (!response.ok) {
-        setIsMapLoading(false);
-        setIsFindingJobs(false);
-        
-        const errorData = await response.json().catch(() => ({}));
-        const errorMessage = errorData.error || "Unknown error";
-        const errorDetails = errorData.details || "";
-        console.error("College search error:", errorMessage, errorDetails);
-        
-        // Check if it's a server error (like prisma.college undefined)
-        if (response.status === 503 || (errorDetails && errorDetails.includes("restart"))) {
-          alert("College search is not available yet. Please restart the development server:\n\n1. Stop the server (Ctrl+C)\n2. Run: npm run dev\n\nThis will load the College model.");
-          return;
-        }
-        
-        // Only show empty state if college truly not found (404)
-        if (response.status === 404) {
-          setTimeout(() => {
-            setEmptyStateQuery(selectedCollegeName);
-            setShowEmptyState(true);
-          }, 100);
-        } else {
-          // For other errors, show alert
-          const fullMessage = errorDetails 
-            ? `${errorMessage}\n\n${errorDetails}`
-            : errorMessage;
-          alert(`Error searching for college: ${fullMessage}`);
-        }
-        return;
-      }
-
-      const collegeData = await response.json();
-      console.log("✅ Found college:", {
-        name: collegeData.name,
-        latitude: collegeData.latitude,
-        longitude: collegeData.longitude,
-        pincode: collegeData.pincode,
-        category: collegeData.category
+    // CRITICAL: Use the college data directly from autocomplete instead of API call
+    // This avoids any search mismatches since we already have the correct data
+    if (college.latitude && college.longitude) {
+      console.log("✅ Using college data directly from autocomplete:", {
+        name: college.name,
+        latitude: college.latitude,
+        longitude: college.longitude,
+        pincode: college.pincode
       });
-
+      
+      // Format the college data to match what performCollegeSearch expects
+      const collegeData = {
+        name: college.name,
+        category: college.category,
+        pincode: college.pincode,
+        locality: college.locality || null,
+        latitude: typeof college.latitude === 'number' ? college.latitude : parseFloat(college.latitude),
+        longitude: typeof college.longitude === 'number' ? college.longitude : parseFloat(college.longitude),
+      };
+      
       setIsMapLoading(false);
       setIsFindingJobs(true);
-      // Perform college search and zoom
+      // Perform college search and zoom directly
       performCollegeSearch(collegeData);
-    } catch (error) {
-      setIsMapLoading(false);
-      setIsFindingJobs(false);
-      console.error("Error searching college:", error);
-      alert("An error occurred while searching. Please try again.");
+    } else {
+      // Fallback: If autocomplete data is incomplete, use API
+      try {
+        const searchUrl = `/api/search-college?college=${encodeURIComponent(selectedCollegeName)}`;
+        console.log("🔍 Searching college API (fallback):", searchUrl);
+        const response = await fetch(searchUrl);
+        
+        if (!response.ok) {
+          setIsMapLoading(false);
+          setIsFindingJobs(false);
+          
+          const errorData = await response.json().catch(() => ({}));
+          const errorMessage = errorData.error || "Unknown error";
+          const errorDetails = errorData.details || "";
+          console.error("College search error:", errorMessage, errorDetails);
+          
+          // Check if it's a server error (like prisma.college undefined)
+          if (response.status === 503 || (errorDetails && errorDetails.includes("restart"))) {
+            alert("College search is not available yet. Please restart the development server:\n\n1. Stop the server (Ctrl+C)\n2. Run: npm run dev\n\nThis will load the College model.");
+            return;
+          }
+          
+          // Only show empty state if college truly not found (404)
+          if (response.status === 404) {
+            setTimeout(() => {
+              setEmptyStateQuery(selectedCollegeName);
+              setShowEmptyState(true);
+            }, 100);
+          } else {
+            // For other errors, show alert
+            const fullMessage = errorDetails 
+              ? `${errorMessage}\n\n${errorDetails}`
+              : errorMessage;
+            alert(`Error searching for college: ${fullMessage}`);
+          }
+          return;
+        }
+
+        const collegeData = await response.json();
+        console.log("✅ Found college via API:", {
+          searchedFor: selectedCollegeName,
+          found: collegeData.name,
+          latitude: collegeData.latitude,
+          longitude: collegeData.longitude,
+          pincode: collegeData.pincode,
+          category: collegeData.category
+        });
+        
+        // CRITICAL: Verify the returned college matches what we searched for
+        if (collegeData.name.toLowerCase() !== selectedCollegeName.toLowerCase()) {
+          console.error(`❌ College mismatch! Searched for: "${selectedCollegeName}", Got: "${collegeData.name}"`);
+          alert(`Error: The search returned a different college (${collegeData.name}) than what you selected (${selectedCollegeName}). Please try again.`);
+          setIsMapLoading(false);
+          setIsFindingJobs(false);
+          return;
+        }
+
+        setIsMapLoading(false);
+        setIsFindingJobs(true);
+        // Perform college search and zoom
+        performCollegeSearch(collegeData);
+      } catch (error) {
+        setIsMapLoading(false);
+        setIsFindingJobs(false);
+        console.error("Error searching college:", error);
+        alert("An error occurred while searching. Please try again.");
+      }
     }
   };
 
