@@ -10,6 +10,8 @@ import {
   Return,
   SendFilled,
   IbmWatsonDiscovery,
+  Enterprise,
+  Portfolio,
 } from "@carbon/icons-react";
 import { RiArrowDownSLine, RiSearchLine } from "@remixicon/react";
 import FilterDropdown from "./FilterDropdown";
@@ -1904,6 +1906,91 @@ const MapComponent = () => {
           </div>
         </div>
       )}
+
+      {/* Statistics Badges - Bottom Left */}
+      <div
+        className="absolute bottom-4 left-4 flex flex-col gap-2 z-[1000]"
+        style={{
+          pointerEvents: 'none'
+        }}
+      >
+        {/* Total Jobs Badge */}
+        <div
+          className="bg-white border border-brand-stroke-border rounded-lg shadow-lg px-3 py-2 flex items-center gap-2"
+          style={{
+            fontFamily: 'Open Sans',
+            pointerEvents: 'auto'
+          }}
+        >
+          <Portfolio size={18} style={{ color: '#7c00ff' }} />
+          <div className="flex flex-col">
+            <span
+              style={{
+                fontSize: '12px',
+                color: '#575757',
+                fontWeight: 400,
+                lineHeight: '1.2'
+              }}
+            >
+              Total Jobs
+            </span>
+            <span
+              style={{
+                fontSize: '16px',
+                color: '#1A1A1A',
+                fontWeight: 600,
+                lineHeight: '1.2'
+              }}
+            >
+              {jobTitles.length.toLocaleString()}
+            </span>
+          </div>
+        </div>
+
+        {/* Total Companies Badge */}
+        <div
+          className="bg-white border border-brand-stroke-border rounded-lg shadow-lg px-3 py-2 flex items-center gap-2"
+          style={{
+            fontFamily: 'Open Sans',
+            pointerEvents: 'auto'
+          }}
+        >
+          <Enterprise size={18} style={{ color: '#7c00ff' }} />
+          <div className="flex flex-col">
+            <span
+              style={{
+                fontSize: '12px',
+                color: '#575757',
+                fontWeight: 400,
+                lineHeight: '1.2'
+              }}
+            >
+              Total Companies
+            </span>
+            <span
+              style={{
+                fontSize: '16px',
+                color: '#1A1A1A',
+                fontWeight: 600,
+                lineHeight: '1.2'
+              }}
+            >
+              {locationsData
+                ? (() => {
+                    const mainCompanies = locationsData.companies?.length || 0;
+                    const localityCompanies = locationsData.localities
+                      ? Object.values(locationsData.localities).reduce(
+                          (sum, locality) => sum + (locality.companies?.length || 0),
+                          0
+                        )
+                      : 0;
+                    return (mainCompanies + localityCompanies).toLocaleString();
+                  })()
+                : '0'}
+            </span>
+          </div>
+        </div>
+      </div>
     </div>
   );
 };
