@@ -30,6 +30,7 @@
     "db:seed-jobs": "node scripts/seed-job-titles.js",
     "db:seed-colleges": "node scripts/seed-colleges.js",
     "db:update-colleges-locality": "node scripts/update-colleges-locality.js",
+    "db:update-colleges-district": "node scripts/update-colleges-district.js",
     "db:fix-sequence": "node scripts/fix-sequence.js",
     "db:update-irinj": "node scripts/update-irinjlakuda.js",
     "db:update-coordinates": "node scripts/update-pincode-coordinates.js"

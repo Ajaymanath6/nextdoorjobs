@@ -121,6 +121,7 @@ const searchByCollegeName = async (collegeName) => {
               category: true,
               pincode: true,
               locality: true,
+              district: true,
               latitude: true,
               longitude: true,
             },
@@ -228,6 +229,7 @@ const searchByCollegeName = async (collegeName) => {
     category: collegeData.category,
     pincode: collegeData.pincode,
     locality: collegeData.locality || null,
+    district: collegeData.district || null,
     latitude: collegeData.latitude ? parseFloat(collegeData.latitude) : null,
     longitude: collegeData.longitude ? parseFloat(collegeData.longitude) : null,
   };
@@ -252,7 +254,7 @@ const searchByCollegeName = async (collegeName) => {
   }
 
   // Cache the result with exact name as key to avoid collisions
-  const exactCacheKey = `college:exact:${exactName}`;
+  // Reuse exactCacheKey that was already defined at the top of the function
   searchCache.set(exactCacheKey, {
     data: responseData,
     timestamp: Date.now()

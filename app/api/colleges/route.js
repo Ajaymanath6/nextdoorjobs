@@ -37,6 +37,7 @@ export async function GET(request) {
         category: true,
         pincode: true,
         locality: true,
+        district: true,
         latitude: true,
         longitude: true,
       },

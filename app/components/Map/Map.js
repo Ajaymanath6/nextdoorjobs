@@ -2438,7 +2438,7 @@ const MapComponent = () => {
                 lineHeight: '1.2'
               }}
             >
-              {jobTitles.length.toLocaleString()}
+              {(jobTitles?.length || 0).toLocaleString()}
             </span>
           </div>
         </div>

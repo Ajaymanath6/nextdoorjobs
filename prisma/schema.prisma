@@ -45,6 +45,7 @@ model College {
   category  String   @db.VarChar(50)
   pincode   String   @db.VarChar(10)
   locality  String?  @db.VarChar(255)
+  district  String?  @db.VarChar(100)
   latitude  Float?
   longitude Float?
   createdAt DateTime @default(now()) @map("created_at")
@@ -53,5 +54,6 @@ model College {
   @@index([name])
   @@index([pincode])
   @@index([locality])
+  @@index([district])
   @@map("colleges")
 }
