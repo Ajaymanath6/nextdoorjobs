@@ -16,6 +16,7 @@ import {
   Bullhorn,
   UserAvatar,
   EarthFilled,
+  IbmLpa,
 } from "@carbon/icons-react";
 
 export default function Sidebar({ activeItem = "jobs-near-you", onToggle, isOpen: externalIsOpen }) {
@@ -168,8 +169,26 @@ export default function Sidebar({ activeItem = "jobs-near-you", onToggle, isOpen
         </ul>
       </nav>
 
+      {/* Onboarding Section */}
+      <div className="p-2 pb-1">
+        <button
+          onClick={() => handleNavigation("/onboarding")}
+          className={`${sidebar["nav-button"]} ${
+            isOpen ? sidebar["nav-button-expanded"] : sidebar["nav-button-collapsed"]
+          } ${sidebar["nav-button-hover"]}`}
+        >
+          <div className={sidebar["nav-icon-container"]}>
+            <IbmLpa
+              size={24}
+              style={{ color: "rgba(87, 87, 87, 1)" }}
+            />
+          </div>
+          {isOpen && <span className={sidebar["nav-text"]}>Onboarding</span>}
+        </button>
+      </div>
+
       {/* What's New Section */}
-      <div className={sidebar["whats-new-section"]}>
+      <div className="p-2 pt-1 pb-1">
         <button
           className={`${sidebar["nav-button"]} ${
             isOpen ? sidebar["nav-button-expanded"] : sidebar["nav-button-collapsed"]
@@ -186,7 +205,7 @@ export default function Sidebar({ activeItem = "jobs-near-you", onToggle, isOpen
       </div>
 
       {/* User Profile Section */}
-      <div className={`${sidebar["user-section"]} relative`} ref={userDropdownRef}>
+      <div className={`p-2 pt-1 relative`} ref={userDropdownRef}>
         {isOpen ? (
           <button
             onClick={handleUserClick}
