@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { JOB_CATEGORIES } from "../../../lib/constants/jobCategories";
+import InputField from "../InputField";
 
 export default function JobPositionForm({ onSubmit, initialData = {} }) {
   // Ensure initialData is always an object, never null
@@ -63,24 +64,16 @@ export default function JobPositionForm({ onSubmit, initialData = {} }) {
 
   return (
     <form onSubmit={handleSubmit} className="space-y-6">
-      <div>
-        <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-          Job Title <span className="text-red-500">*</span>
-        </label>
-        <input
-          type="text"
-          name="title"
-          value={formData.title}
-          onChange={handleChange}
-          className={`w-full px-4 py-2 border-brand-stroke-border rounded-lg focus:outline-none focus:border-brand-text-strong hover:bg-brand-bg-fill ${
-            errors.title ? "border-red-500" : ""
-          } bg-brand-bg-white text-gray-900 dark:text-gray-100`}
-          style={{ borderWidth: "1px" }}
-          style={{ fontFamily: "Open Sans, sans-serif" }}
-          placeholder="e.g., Senior Software Engineer"
-        />
-        {errors.title && <p className="mt-1 text-sm text-red-500">{errors.title}</p>}
-      </div>
+      <InputField
+        type="text"
+        name="title"
+        value={formData.title}
+        onChange={handleChange}
+        label="Job Title"
+        placeholder="e.g., Senior Software Engineer"
+        error={errors.title}
+        required
+      />
 
       <div>
         <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
@@ -90,11 +83,10 @@ export default function JobPositionForm({ onSubmit, initialData = {} }) {
           name="category"
           value={formData.category}
           onChange={handleChange}
-          className={`w-full px-4 py-2 border-brand-stroke-border rounded-lg focus:outline-none focus:border-brand-text-strong hover:bg-brand-bg-fill ${
+          className={`w-full px-4 py-2 border-brand-stroke-weak shadow-md rounded-lg focus:outline-none focus:border-brand-text-strong hover:bg-brand-bg-fill ${
             errors.category ? "border-red-500" : ""
           } bg-brand-bg-white text-gray-900 dark:text-gray-100`}
-          style={{ borderWidth: "1px" }}
-          style={{ fontFamily: "Open Sans, sans-serif" }}
+          style={{ fontFamily: "Open Sans, sans-serif", borderWidth: "1px" }}
         >
           <option value="">Select category</option>
           {JOB_CATEGORIES.map((cat) => (
@@ -106,86 +98,54 @@ export default function JobPositionForm({ onSubmit, initialData = {} }) {
         {errors.category && <p className="mt-1 text-sm text-red-500">{errors.category}</p>}
       </div>
 
-      <div>
-        <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-          Years of Experience Required <span className="text-red-500">*</span>
-        </label>
-        <input
-          type="number"
-          name="yearsRequired"
-          value={formData.yearsRequired}
-          onChange={handleChange}
-          step="0.5"
-          min="0"
-          className={`w-full px-4 py-2 border-brand-stroke-border rounded-lg focus:outline-none focus:border-brand-text-strong hover:bg-brand-bg-fill ${
-            errors.yearsRequired ? "border-red-500" : ""
-          } bg-brand-bg-white text-gray-900 dark:text-gray-100`}
-          style={{ borderWidth: "1px" }}
-          style={{ fontFamily: "Open Sans, sans-serif" }}
-          placeholder="e.g., 2.5"
-        />
-        {errors.yearsRequired && <p className="mt-1 text-sm text-red-500">{errors.yearsRequired}</p>}
-      </div>
+      <InputField
+        type="number"
+        name="yearsRequired"
+        value={formData.yearsRequired}
+        onChange={handleChange}
+        step="0.5"
+        min="0"
+        label="Years of Experience Required"
+        placeholder="e.g., 2.5"
+        error={errors.yearsRequired}
+        required
+      />
 
       <div className="grid grid-cols-2 gap-4">
-        <div>
-          <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-            Minimum Salary (INR)
-          </label>
-          <input
-            type="number"
-            name="salaryMin"
-            value={formData.salaryMin}
-            onChange={handleChange}
-            min="0"
-            className={`w-full px-4 py-2 border-brand-stroke-border rounded-lg focus:outline-none focus:border-brand-text-strong hover:bg-brand-bg-fill ${
-              errors.salaryMin ? "border-red-500" : ""
-            } bg-brand-bg-white text-gray-900 dark:text-gray-100`}
-            style={{ borderWidth: "1px" }}
-            style={{ fontFamily: "Open Sans, sans-serif" }}
-            placeholder="e.g., 500000"
-          />
-          {errors.salaryMin && <p className="mt-1 text-sm text-red-500">{errors.salaryMin}</p>}
-        </div>
-        <div>
-          <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-            Maximum Salary (INR)
-          </label>
-          <input
-            type="number"
-            name="salaryMax"
-            value={formData.salaryMax}
-            onChange={handleChange}
-            min="0"
-            className={`w-full px-4 py-2 border-brand-stroke-border rounded-lg focus:outline-none focus:border-brand-text-strong hover:bg-brand-bg-fill ${
-              errors.salaryMax ? "border-red-500" : ""
-            } bg-brand-bg-white text-gray-900 dark:text-gray-100`}
-            style={{ borderWidth: "1px" }}
-            style={{ fontFamily: "Open Sans, sans-serif" }}
-            placeholder="e.g., 1000000"
-          />
-          {errors.salaryMax && <p className="mt-1 text-sm text-red-500">{errors.salaryMax}</p>}
-        </div>
+        <InputField
+          type="number"
+          name="salaryMin"
+          value={formData.salaryMin}
+          onChange={handleChange}
+          min="0"
+          label="Minimum Salary (INR)"
+          placeholder="e.g., 500000"
+          error={errors.salaryMin}
+        />
+        <InputField
+          type="number"
+          name="salaryMax"
+          value={formData.salaryMax}
+          onChange={handleChange}
+          min="0"
+          label="Maximum Salary (INR)"
+          placeholder="e.g., 1000000"
+          error={errors.salaryMax}
+        />
       </div>
 
-      <div>
-        <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-          Job Description <span className="text-red-500">*</span>
-        </label>
-        <textarea
-          name="jobDescription"
-          value={formData.jobDescription}
-          onChange={handleChange}
-          rows={8}
-          className={`w-full px-4 py-2 border-brand-stroke-border rounded-lg focus:outline-none focus:border-brand-text-strong hover:bg-brand-bg-fill ${
-            errors.jobDescription ? "border-red-500" : ""
-          } bg-brand-bg-white text-gray-900 dark:text-gray-100 resize-none`}
-          style={{ borderWidth: "1px" }}
-          style={{ fontFamily: "Open Sans, sans-serif" }}
-          placeholder="Describe the role, responsibilities, requirements, etc."
-        />
-        {errors.jobDescription && <p className="mt-1 text-sm text-red-500">{errors.jobDescription}</p>}
-      </div>
+      <InputField
+        type="textarea"
+        name="jobDescription"
+        value={formData.jobDescription}
+        onChange={handleChange}
+        rows={8}
+        label="Job Description"
+        placeholder="Describe the role, responsibilities, requirements, etc."
+        error={errors.jobDescription}
+        required
+        className="resize-none"
+      />
 
       <button
         type="submit"

@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { FUNDING_SERIES } from "../../../lib/constants/jobCategories";
+import InputField from "../InputField";
 
 export default function CompanyForm({ onSubmit, initialData = {} }) {
   // Ensure initialData is always an object, never null
@@ -97,27 +98,19 @@ export default function CompanyForm({ onSubmit, initialData = {} }) {
 
   return (
     <form onSubmit={handleSubmit} className="space-y-6">
-      <div>
-        <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-          Company Name <span className="text-red-500">*</span>
-        </label>
-        <input
-          type="text"
-          name="name"
-          value={formData.name}
-          onChange={handleChange}
-          className={`w-full px-4 py-2 border-brand-stroke-border rounded-lg focus:outline-none focus:border-brand-text-strong hover:bg-brand-bg-fill ${
-            errors.name ? "border-red-500" : ""
-          } bg-brand-bg-white text-gray-900 dark:text-gray-100`}
-          style={{ borderWidth: "1px" }}
-          style={{ fontFamily: "Open Sans, sans-serif" }}
-          placeholder="Enter company name"
-        />
-        {errors.name && <p className="mt-1 text-sm text-red-500">{errors.name}</p>}
-      </div>
+      <InputField
+        type="text"
+        name="name"
+        value={formData.name}
+        onChange={handleChange}
+        label="Company Name"
+        placeholder="Enter company name"
+        error={errors.name}
+        required
+      />
 
       <div>
-        <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+        <label className="block text-sm font-medium text-brand-text-strong mb-2">
           Company Logo
         </label>
         <div className="flex items-center gap-4">
@@ -125,52 +118,45 @@ export default function CompanyForm({ onSubmit, initialData = {} }) {
             <img
               src={formData.logoPreview}
               alt="Logo preview"
-              className="w-20 h-20 object-cover rounded-lg border border-gray-300 dark:border-gray-700"
+              className="w-20 h-20 object-cover rounded-lg border border-brand-stroke-weak"
             />
           )}
           <input
             type="file"
             accept="image/jpeg,image/jpg,image/png,image/webp,image/gif"
             onChange={handleFileChange}
-            className="text-sm text-gray-700 dark:text-gray-300"
+            className="text-sm text-brand-text-strong"
           />
         </div>
         {errors.logo && <p className="mt-1 text-sm text-red-500">{errors.logo}</p>}
-        <p className="mt-1 text-xs text-gray-500">Max size: 5MB. Formats: JPEG, PNG, WebP, GIF</p>
+        <p className="mt-1 text-xs text-brand-text-weak">Max size: 5MB. Formats: JPEG, PNG, WebP, GIF</p>
       </div>
 
       <div>
-        <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-          Company Website URL
-        </label>
-        <input
+        <InputField
           type="url"
           name="websiteUrl"
           value={formData.websiteUrl}
           onChange={handleChange}
-          className={`w-full px-4 py-2 border-brand-stroke-border rounded-lg focus:outline-none focus:border-brand-text-strong hover:bg-brand-bg-fill ${
-            errors.websiteUrl ? "border-red-500" : ""
-          } bg-brand-bg-white text-gray-900 dark:text-gray-100`}
-          style={{ borderWidth: "1px" }}
-          style={{ fontFamily: "Open Sans, sans-serif" }}
+          label="Company Website URL"
           placeholder="https://example.com or example.com"
+          error={errors.websiteUrl}
         />
-        {errors.websiteUrl && <p className="mt-1 text-sm text-red-500">{errors.websiteUrl}</p>}
-        <p className="mt-1 text-xs text-gray-500">Enter your company website URL (optional)</p>
+        <p className="mt-1 text-xs text-brand-text-weak">Enter your company website URL (optional)</p>
       </div>
 
       <div>
-        <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+        <label className="block text-sm font-medium text-brand-text-strong mb-2">
           Funding Series
         </label>
         <select
           name="fundingSeries"
           value={formData.fundingSeries}
           onChange={handleChange}
-          className="w-full px-4 py-2 border-brand-stroke-border rounded-lg focus:outline-none focus:border-brand-text-strong hover:bg-brand-bg-fill bg-brand-bg-white text-gray-900 dark:text-gray-100"
+          className="w-full px-4 py-2 border-brand-stroke-weak shadow-md rounded-lg focus:outline-none focus:border-brand-text-strong hover:bg-brand-bg-fill bg-brand-bg-white text-brand-text-strong placeholder:text-brand-text-placeholder"
           style={{ fontFamily: "Open Sans, sans-serif", borderWidth: "1px" }}
         >
-          <option value="">Select funding series</option>
+          <option value="" className="text-brand-text-placeholder">Select funding series</option>
           {FUNDING_SERIES.map((series) => (
             <option key={series.value} value={series.value}>
               {series.label}
@@ -180,97 +166,58 @@ export default function CompanyForm({ onSubmit, initialData = {} }) {
       </div>
 
       <div className="grid grid-cols-2 gap-4">
-        <div>
-          <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-            Latitude
-          </label>
-          <input
-            type="number"
-            name="latitude"
-            value={formData.latitude}
-            onChange={handleChange}
-            step="any"
-            className={`w-full px-4 py-2 border-brand-stroke-border rounded-lg focus:outline-none focus:border-brand-text-strong hover:bg-brand-bg-fill ${
-              errors.latitude ? "border-red-500" : ""
-            } bg-brand-bg-white text-gray-900 dark:text-gray-100`}
-            style={{ borderWidth: "1px" }}
-            style={{ fontFamily: "Open Sans, sans-serif" }}
-            placeholder="e.g., 10.5276"
-          />
-          {errors.latitude && <p className="mt-1 text-sm text-red-500">{errors.latitude}</p>}
-        </div>
-        <div>
-          <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-            Longitude
-          </label>
-          <input
-            type="number"
-            name="longitude"
-            value={formData.longitude}
-            onChange={handleChange}
-            step="any"
-            className={`w-full px-4 py-2 border-brand-stroke-border rounded-lg focus:outline-none focus:border-brand-text-strong hover:bg-brand-bg-fill ${
-              errors.longitude ? "border-red-500" : ""
-            } bg-brand-bg-white text-gray-900 dark:text-gray-100`}
-            style={{ borderWidth: "1px" }}
-            style={{ fontFamily: "Open Sans, sans-serif" }}
-            placeholder="e.g., 76.2144"
-          />
-          {errors.longitude && <p className="mt-1 text-sm text-red-500">{errors.longitude}</p>}
-        </div>
-      </div>
-
-      <div>
-        <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-          State <span className="text-red-500">*</span>
-        </label>
-        <input
-          type="text"
-          name="state"
-          value={formData.state}
+        <InputField
+          type="number"
+          name="latitude"
+          value={formData.latitude}
           onChange={handleChange}
-          className={`w-full px-4 py-2 border-brand-stroke-border rounded-lg focus:outline-none focus:border-brand-text-strong hover:bg-brand-bg-fill ${
-            errors.state ? "border-red-500" : ""
-          } bg-brand-bg-white text-gray-900 dark:text-gray-100`}
-          style={{ borderWidth: "1px" }}
-          style={{ fontFamily: "Open Sans, sans-serif" }}
-          placeholder="e.g., Kerala"
+          step="any"
+          label="Latitude"
+          placeholder="e.g., 10.5276"
+          error={errors.latitude}
         />
-        {errors.state && <p className="mt-1 text-sm text-red-500">{errors.state}</p>}
-      </div>
-
-      <div>
-        <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-          District <span className="text-red-500">*</span>
-        </label>
-        <input
-          type="text"
-          name="district"
-          value={formData.district}
+        <InputField
+          type="number"
+          name="longitude"
+          value={formData.longitude}
           onChange={handleChange}
-          className={`w-full px-4 py-2 border-brand-stroke-border rounded-lg focus:outline-none focus:border-brand-text-strong hover:bg-brand-bg-fill ${
-            errors.district ? "border-red-500" : ""
-          } bg-brand-bg-white text-gray-900 dark:text-gray-100`}
-          style={{ fontFamily: "Open Sans, sans-serif", borderWidth: "1px" }}
-          placeholder="e.g., Thrissur"
-        />
-        {errors.district && <p className="mt-1 text-sm text-red-500">{errors.district}</p>}
-      </div>
-
-      <div>
-        <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-          Pincode
-        </label>
-        <input
-          type="text"
-          name="pincode"
-          value={formData.pincode}
-          onChange={handleChange}
-          className="w-full px-4 py-2 border-brand-stroke-border rounded-lg focus:outline-none focus:border-brand-text-strong hover:bg-brand-bg-fill bg-brand-bg-white text-gray-900 dark:text-gray-100"
-          style={{ fontFamily: "Open Sans, sans-serif", borderWidth: "1px" }}
-          placeholder="e.g., 680001"
+          step="any"
+          label="Longitude"
+          placeholder="e.g., 76.2144"
+          error={errors.longitude}
         />
       </div>
+
+      <InputField
+        type="text"
+        name="state"
+        value={formData.state}
+        onChange={handleChange}
+        label="State"
+        placeholder="e.g., Kerala"
+        error={errors.state}
+        required
+      />
+
+      <InputField
+        type="text"
+        name="district"
+        value={formData.district}
+        onChange={handleChange}
+        label="District"
+        placeholder="e.g., Thrissur"
+        error={errors.district}
+        required
+      />
+
+      <InputField
+        type="text"
+        name="pincode"
+        value={formData.pincode}
+        onChange={handleChange}
+        label="Pincode"
+        placeholder="e.g., 680001"
+      />
 
       <button
         type="submit"

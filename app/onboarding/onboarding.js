@@ -5,23 +5,31 @@ import { useRouter } from "next/navigation";
 import { WatsonHealthRotate_360 } from "@carbon/icons-react";
 import ChatInterface from "../components/Onboarding/ChatInterface";
 import EmailAuthForm from "../components/Onboarding/EmailAuthForm";
-import CompanyForm from "../components/Onboarding/CompanyForm";
-import JobPositionForm from "../components/Onboarding/JobPositionForm";
-import ReviewStep from "../components/Onboarding/ReviewStep";
+import StateDistrictSelector from "../components/Onboarding/StateDistrictSelector";
+import UrlInput from "../components/Onboarding/UrlInput";
 
-const STEPS = {
-  CHAT: "chat",
-  USER_INFO: "user_info",
-  COMPANY: "company",
-  JOB: "job",
-  REVIEW: "review",
-  SUCCESS: "success",
+// Field collection states
+const COMPANY_FIELDS = {
+  NAME: "company_name",
+  STATE: "company_state",
+  DISTRICT: "company_district",
+  WEBSITE: "company_website",
+  FUNDING: "company_funding",
+  LOCATION: "company_location",
+  PINCODE: "company_pincode",
+};
+
+const JOB_FIELDS = {
+  TITLE: "job_title",
+  CATEGORY: "job_category",
+  YEARS: "job_years",
+  SALARY: "job_salary",
+  DESCRIPTION: "job_description",
 };
 
 export default function OnboardingPage() {
   const router = useRouter();
   const [showAuth, setShowAuth] = useState(true);
-  const [currentStep, setCurrentStep] = useState(STEPS.CHAT);
   const [selectedLanguage, setSelectedLanguage] = useState("English");
   const [showLanguageDropdown, setShowLanguageDropdown] = useState(false);
   const languageDropdownRef = useRef(null);
@@ -47,6 +55,11 @@ export default function OnboardingPage() {
   const [userData, setUserData] = useState(null);
   const [companyData, setCompanyData] = useState(null);
   const [jobData, setJobData] = useState(null);
+  const [currentField, setCurrentField] = useState(COMPANY_FIELDS.NAME);
+  const [collectingCompany, setCollectingCompany] = useState(true);
+  const [inlineComponent, setInlineComponent] = useState(null);
+  const [typingText, setTypingText] = useState("");
+  const [isTyping, setIsTyping] = useState(false);
 
   // Handle email authentication
   const handleEmailAuth = async ({ email, name, password }) => {
@@ -69,7 +82,6 @@ export default function OnboardingPage() {
           },
         ]);
         setShowAuth(false);
-        setCurrentStep(STEPS.CHAT);
       } else {
         alert(result.error || "Failed to authenticate. Please try again.");
       }
@@ -95,88 +107,238 @@ export default function OnboardingPage() {
     }
     setCompanyData(null);
     setJobData(null);
-    setCurrentStep(STEPS.CHAT);
+    setCurrentField(COMPANY_FIELDS.NAME);
+    setCollectingCompany(true);
   };
 
-  // Handle chat messages
+  // Extract value from message
+  const extractValue = (message, fieldType) => {
+    const trimmed = message.trim();
+    // Remove quotes if present
+    return trimmed.replace(/^["']|["']$/g, "");
+  };
+
+  // Add AI message with typing animation
+  const addAIMessage = async (text) => {
+    setIsTyping(true);
+    setTypingText("");
+    for (let i = 0; i < text.length; i++) {
+      setTypingText(text.slice(0, i + 1));
+      await new Promise(resolve => setTimeout(resolve, 20)); // 20ms per character
+    }
+    setIsTyping(false);
+    setChatMessages((prev) => [
+      ...prev,
+      { type: "ai", text },
+    ]);
+    setTypingText("");
+  };
+
+  // Handle chat messages - conversational form collection
   const handleChatMessage = async (message) => {
     const userMessage = { type: "user", text: message };
     setChatMessages((prev) => [...prev, userMessage]);
     setIsLoading(true);
 
-    // Simple response and transition to company form
-    if (currentStep === STEPS.CHAT) {
-      // Try to extract company name from the message
-      // Look for patterns like "my company is X", "company name is X", "X is my company", etc.
-      let extractedCompanyName = "";
-      const messageLower = message.toLowerCase().trim();
-      
-      // Patterns to extract company name
-      const patterns = [
-        /(?:my\s+)?company\s+(?:name\s+)?(?:is\s+)?(?:called\s+)?["']?([^"']+)["']?/i,
-        /(?:company\s+)?(?:name\s+)?(?:is\s+)?["']?([^"']+)["']?/i,
-        /^["']?([^"']+)["']?$/i, // If message is just a name in quotes or plain text
-      ];
+    setTimeout(async () => {
+      if (collectingCompany) {
+        // Collecting company information
+        const value = extractValue(message);
 
-      for (const pattern of patterns) {
-        const match = message.match(pattern);
-        if (match && match[1]) {
-          extractedCompanyName = match[1].trim();
-          // Remove common words that might be captured
-          extractedCompanyName = extractedCompanyName.replace(/^(my|the|a|an)\s+/i, "").trim();
-          if (extractedCompanyName.length > 2) {
+        switch (currentField) {
+          case COMPANY_FIELDS.NAME:
+            setCompanyData((prev) => ({ ...prev, name: value }));
+            await addAIMessage(`Got it! Your company name is "${value}". What state is your company located in?`);
+            setCurrentField(COMPANY_FIELDS.STATE);
+            setInlineComponent(
+              <StateDistrictSelector
+                onStateSelect={(state) => {
+                  setCompanyData((prev) => ({ ...prev, state }));
+                  setInlineComponent(null);
+                  handleStateSelected(state);
+                }}
+                selectedState={companyData?.state}
+              />
+            );
             break;
-          }
+
+          case COMPANY_FIELDS.STATE:
+            // This case is handled by StateDistrictSelector callback
+            break;
+
+          case COMPANY_FIELDS.DISTRICT:
+            setCompanyData((prev) => ({ ...prev, district: value }));
+            await addAIMessage(`Great! District: ${value}. Do you have a company website URL?`);
+            setCurrentField(COMPANY_FIELDS.WEBSITE);
+            setInlineComponent(
+              <UrlInput
+                onUrlSubmit={(url) => {
+                  setCompanyData((prev) => ({ ...prev, websiteUrl: url }));
+                  setInlineComponent(null);
+                  handleWebsiteSubmitted(url);
+                }}
+                placeholder="Enter website URL or click skip..."
+              />
+            );
+            break;
+
+          case COMPANY_FIELDS.WEBSITE:
+            // This case is handled by UrlInput callback
+            break;
+
+          case COMPANY_FIELDS.FUNDING:
+            if (value.toLowerCase() !== "skip" && value) {
+              setCompanyData((prev) => ({ ...prev, fundingSeries: value }));
+              await addAIMessage(`Funding series: ${value}. Do you have latitude and longitude coordinates? (Type "skip" if not)`);
+            } else {
+              await addAIMessage(`No problem! Do you have latitude and longitude coordinates? (Type "skip" if not)`);
+            }
+            setCurrentField(COMPANY_FIELDS.LOCATION);
+            break;
+
+          case COMPANY_FIELDS.LOCATION:
+            if (value.toLowerCase() !== "skip" && value) {
+              // Try to parse lat,lon or lat lon
+              const coords = value.split(/[,\s]+/).map(v => v.trim()).filter(v => v);
+              if (coords.length >= 2) {
+                setCompanyData((prev) => ({
+                  ...prev,
+                  latitude: coords[0],
+                  longitude: coords[1],
+                }));
+                await addAIMessage(`Coordinates saved! What's the pincode? (Type "skip" if not available)`);
+              } else {
+                await addAIMessage(`Please provide both latitude and longitude separated by comma (e.g., 10.5276, 76.2144) or type "skip"`);
+                setIsLoading(false);
+                return;
+              }
+            } else {
+              await addAIMessage(`No problem! What's the pincode? (Type "skip" if not available)`);
+            }
+            setCurrentField(COMPANY_FIELDS.PINCODE);
+            break;
+
+          case COMPANY_FIELDS.PINCODE:
+            if (value.toLowerCase() !== "skip" && value) {
+              setCompanyData((prev) => ({ ...prev, pincode: value }));
+            }
+            // Move to job fields
+            setCollectingCompany(false);
+            setCurrentField(JOB_FIELDS.TITLE);
+            await addAIMessage(`Excellent! Company information collected. Now let's add the job position details. What's the job title?`);
+            break;
+        }
+      } else {
+        // Collecting job information
+        const value = extractValue(message);
+
+        switch (currentField) {
+          case JOB_FIELDS.TITLE:
+            setJobData((prev) => ({ ...prev, title: value }));
+            await addAIMessage(`Job title: ${value}. What category does this job belong to?`);
+            setCurrentField(JOB_FIELDS.CATEGORY);
+            break;
+
+          case JOB_FIELDS.CATEGORY:
+            setJobData((prev) => ({ ...prev, category: value }));
+            await addAIMessage(`Category: ${value}. How many years of experience are required? (Enter a number)`);
+            setCurrentField(JOB_FIELDS.YEARS);
+            break;
+
+          case JOB_FIELDS.YEARS:
+            const years = parseFloat(value) || 0;
+            setJobData((prev) => ({ ...prev, yearsRequired: years }));
+            await addAIMessage(`Experience required: ${years} years. What's the salary range? (e.g., "50000-100000" or "skip")`);
+            setCurrentField(JOB_FIELDS.SALARY);
+            break;
+
+          case JOB_FIELDS.SALARY:
+            if (value.toLowerCase() !== "skip" && value) {
+              const salaryMatch = value.match(/(\d+)\s*-\s*(\d+)/i) || value.match(/(\d+)\s*to\s*(\d+)/i);
+              if (salaryMatch) {
+                setJobData((prev) => ({
+                  ...prev,
+                  salaryMin: salaryMatch[1],
+                  salaryMax: salaryMatch[2],
+                }));
+              } else {
+                await addAIMessage(`Please provide salary range as "min-max" (e.g., 50000-100000) or type "skip"`);
+                setIsLoading(false);
+                return;
+              }
+            }
+            await addAIMessage(`Great! Now, please provide a detailed job description.`);
+            setCurrentField(JOB_FIELDS.DESCRIPTION);
+            break;
+
+          case JOB_FIELDS.DESCRIPTION:
+            setJobData((prev) => ({ ...prev, jobDescription: value }));
+            await addAIMessage(`Perfect! I have all the information. Let me submit your job posting...`);
+            // Submit everything
+            await handleFinalSubmit();
+            break;
         }
       }
 
-      // If no pattern matched but message is short and looks like a company name, use it
-      if (!extractedCompanyName && message.trim().length > 2 && message.trim().length < 100 && !message.includes("?") && !message.includes("how")) {
-        extractedCompanyName = message.trim();
-      }
+      setIsLoading(false);
+    }, 500);
+  };
 
-      // Pre-fill company data if we extracted a name
-      if (extractedCompanyName) {
-        setCompanyData((prev) => {
-          // Ensure prev is an object, not null
-          const prevData = prev || {};
-          return {
-            ...prevData,
-            name: extractedCompanyName,
-          };
-        });
-      }
-
-      setTimeout(() => {
-        setChatMessages((prev) => [
-          ...prev,
-          {
-            type: "ai",
-            text: extractedCompanyName
-              ? `Great! I've noted your company name as "${extractedCompanyName}". Let's continue by adding your company information. I'll show you a form to fill out.`
-              : "Great! Let's start by adding your company information. I'll show you a form to fill out.",
-          },
-        ]);
-        setTimeout(() => {
-          setCurrentStep(STEPS.COMPANY);
-        }, 1000);
-      }, 500);
-    }
-
+  // Handle state selection
+  const handleStateSelected = async (state) => {
+    setIsLoading(true);
+    await addAIMessage(`Perfect! State: ${state}. Which district?`);
+    setCurrentField(COMPANY_FIELDS.DISTRICT);
+    setInlineComponent(
+      <StateDistrictSelector
+        onDistrictSelect={(district) => {
+          setCompanyData((prev) => ({ ...prev, district }));
+          setInlineComponent(null);
+          handleDistrictSelected(district);
+        }}
+        selectedDistrict={companyData?.district}
+        showDistrict={true}
+      />
+    );
     setIsLoading(false);
   };
 
-  // Handle company form submission
-  const handleCompanySubmit = (data) => {
-    setCompanyData(data);
-    setCurrentStep(STEPS.JOB);
+  // Handle district selection
+  const handleDistrictSelected = async (district) => {
+    setIsLoading(true);
+    await addAIMessage(`Great! District: ${district}. Do you have a company website URL?`);
+    setCurrentField(COMPANY_FIELDS.WEBSITE);
+            setInlineComponent(
+              <UrlInput
+                onUrlSubmit={(url) => {
+                  if (url.toLowerCase() !== "skip") {
+                    setCompanyData((prev) => ({ ...prev, websiteUrl: url }));
+                  }
+                  setInlineComponent(null);
+                  handleWebsiteSubmitted(url);
+                }}
+                onSkip={() => {
+                  setInlineComponent(null);
+                  handleWebsiteSubmitted("skip");
+                }}
+                placeholder="Enter website URL..."
+              />
+            );
+    setIsLoading(false);
   };
 
-  // Handle job form submission
-  const handleJobSubmit = (data) => {
-    setJobData(data);
-    setCurrentStep(STEPS.REVIEW);
+  // Handle website submission
+  const handleWebsiteSubmitted = async (url) => {
+    setIsLoading(true);
+    if (url.toLowerCase() !== "skip") {
+      await addAIMessage(`Website noted: ${url}. What's your funding series? (Type "skip" if not applicable)`);
+    } else {
+      await addAIMessage(`No problem! What's your funding series? (Type "skip" if not applicable)`);
+    }
+    setCurrentField(COMPANY_FIELDS.FUNDING);
+    setIsLoading(false);
   };
+
 
   // Handle final submission
   const handleFinalSubmit = async () => {
@@ -255,7 +417,16 @@ export default function OnboardingPage() {
       }
 
       // Success!
-      setCurrentStep(STEPS.SUCCESS);
+      setChatMessages((prev) => [
+        ...prev,
+        {
+          type: "ai",
+          text: `🎉 Success! Your job posting has been submitted successfully. You can now view it on the home page.`,
+        },
+      ]);
+      setTimeout(() => {
+        router.push("/");
+      }, 2000);
     } catch (error) {
       console.error("Submission error:", error);
       alert(`Error submitting: ${error.message}. Please try again.`);
@@ -264,13 +435,6 @@ export default function OnboardingPage() {
     }
   };
 
-  const handleBack = () => {
-    if (currentStep === STEPS.REVIEW) {
-      setCurrentStep(STEPS.JOB);
-    } else if (currentStep === STEPS.JOB) {
-      setCurrentStep(STEPS.COMPANY);
-    }
-  };
 
   // Show email authentication overlay
   if (showAuth) {
@@ -385,88 +549,15 @@ export default function OnboardingPage() {
             </div>
           </div>
 
-          {/* Content */}
-          <div className="p-6 pb-0 min-h-[500px]">
-            {currentStep === STEPS.CHAT && (
-              <div className="h-[calc(100vh-200px)]">
-                <ChatInterface
-                  messages={chatMessages}
-                  onSendMessage={handleChatMessage}
-                  isLoading={isLoading}
-                />
-              </div>
-            )}
-
-            {currentStep === STEPS.COMPANY && (
-              <div>
-                <h2 className="text-xl font-semibold text-gray-900 mb-4" style={{ fontFamily: "Open Sans, sans-serif" }}>
-                  Company Information
-                </h2>
-                <CompanyForm onSubmit={handleCompanySubmit} initialData={companyData || {}} />
-              </div>
-            )}
-
-            {currentStep === STEPS.JOB && (
-              <div>
-                <h2 className="text-xl font-semibold text-gray-900 mb-4" style={{ fontFamily: "Open Sans, sans-serif" }}>
-                  Job Position Details
-                </h2>
-                <JobPositionForm onSubmit={handleJobSubmit} initialData={jobData || {}} />
-              </div>
-            )}
-
-            {currentStep === STEPS.REVIEW && (
-              <ReviewStep
-                companyData={companyData}
-                jobData={jobData}
-                onSubmit={handleFinalSubmit}
-                onBack={handleBack}
-              />
-            )}
-
-            {currentStep === STEPS.SUCCESS && (
-              <div className="text-center py-12">
-                <div className="w-16 h-16 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-4">
-                  <svg
-                    className="w-8 h-8 text-green-600"
-                    fill="none"
-                    stroke="currentColor"
-                    viewBox="0 0 24 24"
-                  >
-                    <path
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                      strokeWidth={2}
-                      d="M5 13l4 4L19 7"
-                    />
-                  </svg>
-                </div>
-                <h2 className="text-2xl font-semibold text-gray-900 mb-2" style={{ fontFamily: "Open Sans, sans-serif" }}>
-                  Success!
-                </h2>
-                <p className="text-gray-600 mb-6" style={{ fontFamily: "Open Sans, sans-serif" }}>
-                  Your job posting has been submitted successfully.
-                </p>
-                <button
-                  onClick={() => router.push("/")}
-                  className="px-6 py-3 bg-[#F84416] text-white rounded-lg hover:bg-[#EA4C00] transition-colors"
-                  style={{ fontFamily: "Open Sans, sans-serif", fontSize: "14px", fontWeight: 600 }}
-                >
-                  Go to Home
-                </button>
-              </div>
-            )}
-
-            {isLoading && currentStep !== STEPS.CHAT && (
-              <div className="absolute inset-0 bg-white bg-opacity-75 flex items-center justify-center">
-                <div className="text-center">
-                  <div className="w-12 h-12 border-4 border-[#F84416] border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
-                  <p className="text-gray-600" style={{ fontFamily: "Open Sans, sans-serif" }}>
-                    Submitting...
-                  </p>
-                </div>
-              </div>
-            )}
+          {/* Content - Always show chat interface */}
+          <div className="h-[calc(100vh-200px)]">
+            <ChatInterface
+              messages={chatMessages}
+              onSendMessage={handleChatMessage}
+              isLoading={isLoading}
+              inlineComponent={inlineComponent}
+              typingText={isTyping ? typingText : null}
+            />
           </div>
         </div>
       </div>

@@ -3,8 +3,9 @@
 import { useEffect, useRef, useState } from "react";
 import Image from "next/image";
 import { At, Screen } from "@carbon/icons-react";
+import TypingAnimation from "./TypingAnimation";
 
-export default function ChatInterface({ messages = [], onSendMessage, isLoading = false }) {
+export default function ChatInterface({ messages = [], onSendMessage, isLoading = false, inlineComponent = null, typingText = null }) {
   const messagesEndRef = useRef(null);
   const inputRef = useRef(null);
   const [uploadedFiles, setUploadedFiles] = useState([]);
@@ -30,10 +31,9 @@ export default function ChatInterface({ messages = [], onSendMessage, isLoading 
 
   return (
     <div className="flex flex-col h-full bg-white rounded-lg">
-      {/* Messages Container */}
-      <div className="flex-1 overflow-y-auto px-4 pt-4 space-y-4">
-        {/* Logo - Left Side */}
-        <div className="flex items-center justify-start mb-4">
+      {/* Logo - Sticky at Top */}
+      <div className="sticky top-0 z-10 bg-white px-4 py-3">
+        <div className="flex items-center justify-start">
           <div className="h-8 flex items-center justify-center">
             <Image
               src="/logo.svg"
@@ -44,6 +44,10 @@ export default function ChatInterface({ messages = [], onSendMessage, isLoading 
             />
           </div>
         </div>
+      </div>
+
+      {/* Messages Container */}
+      <div className="flex-1 overflow-y-auto px-4 pt-4 space-y-4 chat-scrollable">
 
         {messages.map((message, index) => (
           <div
@@ -57,8 +61,8 @@ export default function ChatInterface({ messages = [], onSendMessage, isLoading 
                 message.type === "user"
                   ? "bg-[#F84416] text-white"
                   : index === 0 && message.type === "ai"
-                  ? "bg-white text-gray-900"
-                  : "bg-gray-100 text-gray-900"
+                  ? "bg-white text-brand-text-strong"
+                  : "bg-brand-bg-fill text-brand-text-strong"
               }`}
               style={{
                 fontFamily: "Open Sans, sans-serif",
@@ -71,17 +75,22 @@ export default function ChatInterface({ messages = [], onSendMessage, isLoading 
             </div>
           </div>
         ))}
-        {isLoading && (
+        {typingText && (
           <div className="flex justify-start">
-            <div className="bg-gray-100 rounded-lg px-4 py-2">
-              <div className="flex space-x-1">
-                <div className="w-2 h-2 bg-gray-400 rounded-full animate-bounce" style={{ animationDelay: "0ms" }}></div>
-                <div className="w-2 h-2 bg-gray-400 rounded-full animate-bounce" style={{ animationDelay: "150ms" }}></div>
-                <div className="w-2 h-2 bg-gray-400 rounded-full animate-bounce" style={{ animationDelay: "300ms" }}></div>
-              </div>
+            <div className="max-w-[80%] rounded-lg px-4 py-2 bg-brand-bg-fill text-brand-text-strong">
+              {typingText}
+              <span className="animate-pulse">|</span>
             </div>
           </div>
         )}
+        {inlineComponent && (
+          <div className="flex justify-start">
+            <div className="max-w-[80%] w-full">
+              {inlineComponent}
+            </div>
+          </div>
+        )}
+        {isLoading && !typingText && <TypingAnimation />}
         <div ref={messagesEndRef} />
       </div>
 
@@ -115,7 +124,7 @@ export default function ChatInterface({ messages = [], onSendMessage, isLoading 
           <textarea
             ref={inputRef}
             placeholder="Type your message..."
-            className="w-full min-h-[140px] pl-2 pr-2 py-4 bg-brand-bg-white border border-brand-stroke-border rounded-lg focus:outline-none focus:border-brand-text-strong hover:bg-brand-bg-fill resize-none text-base m-0 placeholder:text-brand-text-placeholder text-brand-text-strong"
+            className="w-full min-h-[140px] pl-2 pr-2 py-4 bg-brand-bg-white border border-brand-stroke-weak shadow-sm rounded-lg focus:outline-none focus:border-brand-text-strong hover:bg-brand-bg-fill resize-none text-base m-0 placeholder:text-brand-text-placeholder text-brand-text-strong"
             style={{ fontFamily: "Open Sans, sans-serif", borderWidth: "1px" }}
             disabled={isLoading}
             onKeyDown={(e) => {

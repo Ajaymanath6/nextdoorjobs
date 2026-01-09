@@ -1,6 +1,7 @@
 "use client";
 
 import Sidebar from "../components/Sidebar/Sidebar";
+import InputField from "../components/InputField";
 
 export default function RoadmapPage() {
   return (
@@ -23,6 +24,15 @@ export default function RoadmapPage() {
               <p className="text-brand-text-weak text-base mb-4">
                 Card subtitle or description text goes here
               </p>
+              
+              {/* Input Field */}
+              <div className="mb-4">
+                <InputField
+                  type="text"
+                  label="Input Label"
+                  placeholder="Enter text here"
+                />
+              </div>
               
               {/* Divider */}
               <div className="border-t border-brand-stroke-weak my-4"></div>

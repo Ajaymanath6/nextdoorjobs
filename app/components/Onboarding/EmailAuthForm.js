@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import Image from "next/image";
+import InputField from "../InputField";
 
 export default function EmailAuthForm({ onSubmit, isLoading = false }) {
   const [email, setEmail] = useState("");
@@ -140,71 +141,50 @@ export default function EmailAuthForm({ onSubmit, isLoading = false }) {
 
         {/* Email and Password Form */}
         <form onSubmit={handleSubmit} className="space-y-4">
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2" style={{ fontFamily: "Open Sans, sans-serif" }}>
-              Name
-            </label>
-            <input
-              type="text"
-              value={name}
-              onChange={(e) => {
-                setName(e.target.value);
-                if (errors.name) setErrors({ ...errors, name: "" });
-              }}
-              className={`w-full px-4 py-3 border-brand-stroke-border rounded-lg focus:outline-none focus:border-brand-text-strong hover:bg-brand-bg-fill ${
-                errors.name ? "border-red-500" : ""
-              } bg-brand-bg-white text-gray-900`}
-              style={{ borderWidth: "1px" }}
-              style={{ fontFamily: "Open Sans, sans-serif", fontSize: "14px" }}
-              placeholder="Enter your name"
-              disabled={isLoading}
-            />
-            {errors.name && <p className="mt-1 text-sm text-red-500">{errors.name}</p>}
-          </div>
+          <InputField
+            type="text"
+            value={name}
+            onChange={(e) => {
+              setName(e.target.value);
+              if (errors.name) setErrors({ ...errors, name: "" });
+            }}
+            label="Name"
+            placeholder="Enter your name"
+            error={errors.name}
+            disabled={isLoading}
+            className="py-3"
+            style={{ fontSize: "14px" }}
+          />
 
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2" style={{ fontFamily: "Open Sans, sans-serif" }}>
-              Email address
-            </label>
-            <input
-              type="email"
-              value={email}
-              onChange={(e) => {
-                setEmail(e.target.value);
-                if (errors.email) setErrors({ ...errors, email: "" });
-              }}
-              className={`w-full px-4 py-3 border-brand-stroke-border rounded-lg focus:outline-none focus:border-brand-text-strong hover:bg-brand-bg-fill ${
-                errors.email ? "border-red-500" : ""
-              } bg-brand-bg-white text-gray-900`}
-              style={{ borderWidth: "1px" }}
-              style={{ fontFamily: "Open Sans, sans-serif", fontSize: "14px" }}
-              placeholder="Enter your email address"
-              disabled={isLoading}
-            />
-            {errors.email && <p className="mt-1 text-sm text-red-500">{errors.email}</p>}
-          </div>
+          <InputField
+            type="email"
+            value={email}
+            onChange={(e) => {
+              setEmail(e.target.value);
+              if (errors.email) setErrors({ ...errors, email: "" });
+            }}
+            label="Email address"
+            placeholder="Enter your email address"
+            error={errors.email}
+            disabled={isLoading}
+            className="py-3"
+            style={{ fontSize: "14px" }}
+          />
 
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2" style={{ fontFamily: "Open Sans, sans-serif" }}>
-              Password
-            </label>
-            <input
-              type="password"
-              value={password}
-              onChange={(e) => {
-                setPassword(e.target.value);
-                if (errors.password) setErrors({ ...errors, password: "" });
-              }}
-              className={`w-full px-4 py-3 border-brand-stroke-border rounded-lg focus:outline-none focus:border-brand-text-strong hover:bg-brand-bg-fill ${
-                errors.password ? "border-red-500" : ""
-              } bg-brand-bg-white text-gray-900`}
-              style={{ borderWidth: "1px" }}
-              style={{ fontFamily: "Open Sans, sans-serif", fontSize: "14px" }}
-              placeholder="Enter your password"
-              disabled={isLoading}
-            />
-            {errors.password && <p className="mt-1 text-sm text-red-500">{errors.password}</p>}
-          </div>
+          <InputField
+            type="password"
+            value={password}
+            onChange={(e) => {
+              setPassword(e.target.value);
+              if (errors.password) setErrors({ ...errors, password: "" });
+            }}
+            label="Password"
+            placeholder="Enter your password"
+            error={errors.password}
+            disabled={isLoading}
+            className="py-3"
+            style={{ fontSize: "14px" }}
+          />
 
           <button
             type="submit"
