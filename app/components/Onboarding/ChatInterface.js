@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
+import Image from "next/image";
 import { Screen, Document, Enterprise } from "@carbon/icons-react";
 import TypingAnimation from "./TypingAnimation";
 

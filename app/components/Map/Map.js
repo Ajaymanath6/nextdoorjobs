@@ -815,18 +815,6 @@ const MapComponent = () => {
     // Only run on client side
     if (!isClient || !mapRef.current || mapInstanceRef.current) return;
 
-    // Polyfill for Image constructor if needed
-    if (typeof window !== 'undefined' && typeof Image === 'function') {
-      const OriginalImage = window.Image;
-      window.Image = function(...args) {
-        if (new.target) {
-          return new OriginalImage(...args);
-        }
-        return new OriginalImage(...args);
-      };
-      window.Image.prototype = OriginalImage.prototype;
-    }
-
     // Dynamic import of Leaflet to avoid SSR issues
     import("leaflet").then((LModule) => {
       try {
