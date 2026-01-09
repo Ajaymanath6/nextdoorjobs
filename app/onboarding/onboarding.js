@@ -407,7 +407,7 @@ export default function OnboardingPage() {
   const handleCategorySelected = async (category) => {
     setIsLoading(true);
     // Import JOB_CATEGORIES
-    const { JOB_CATEGORIES } = await import("../lib/constants/jobCategories");
+    const { JOB_CATEGORIES } = await import("../../lib/constants/jobCategories");
     const categoryLabel = JOB_CATEGORIES.find(c => c.value === category)?.label || category;
     await addAIMessage(`Category: ${categoryLabel}. How many years of experience are required? (Enter a number)`);
     setCurrentField(JOB_FIELDS.YEARS);
