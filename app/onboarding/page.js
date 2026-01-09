@@ -49,7 +49,7 @@ export default function OnboardingPage() {
   const [jobData, setJobData] = useState(null);
 
   // Handle email authentication
-  const handleEmailAuth = async ({ email, name, isRegister }) => {
+  const handleEmailAuth = async ({ email, name, password }) => {
     setIsLoading(true);
     try {
       const response = await fetch("/api/onboarding/user", {

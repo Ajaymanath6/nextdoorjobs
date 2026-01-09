@@ -33,20 +33,15 @@ export default function Home() {
   }, []);
 
   // Handle email authentication
-  const handleEmailAuth = async ({ email, password, name, isRegister }) => {
+  const handleEmailAuth = async ({ email, password, name }) => {
     setIsLoading(true);
     try {
-      const endpoint = isRegister ? "/api/auth/register" : "/api/auth/login";
-      const body = isRegister
-        ? { email, password, name: name || email.split("@")[0] } // Use provided name or email prefix
-        : { email, password };
-
-      const response = await fetch(endpoint, {
+      const response = await fetch("/api/auth/signin", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
         },
-        body: JSON.stringify(body),
+        body: JSON.stringify({ email, password, name }),
       });
 
       const data = await response.json();

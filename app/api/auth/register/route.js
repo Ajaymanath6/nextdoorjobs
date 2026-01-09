@@ -39,9 +39,17 @@ export async function POST(request) {
     }
 
     // Check if user already exists
-    const existingUser = await prisma.user.findUnique({
-      where: { email: email.toLowerCase().trim() },
-    });
+    let existingUser;
+    try {
+      existingUser = await prisma.user.findUnique({
+        where: { email: email.toLowerCase().trim() },
+      });
+    } catch (dbError) {
+      console.error("Database error in findUnique:", dbError);
+      console.error("Prisma client type:", typeof prisma);
+      console.error("Prisma user model type:", typeof prisma?.user);
+      throw new Error(`Database connection error: ${dbError.message}`);
+    }
 
     if (existingUser) {
       return NextResponse.json(

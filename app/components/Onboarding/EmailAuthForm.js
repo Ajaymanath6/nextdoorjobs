@@ -7,7 +7,6 @@ export default function EmailAuthForm({ onSubmit, isLoading = false }) {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [name, setName] = useState("");
-  const [isRegister, setIsRegister] = useState(false);
   const [errors, setErrors] = useState({});
 
   const validateEmail = (email) => {
@@ -31,8 +30,8 @@ export default function EmailAuthForm({ onSubmit, isLoading = false }) {
       newErrors.password = "Password must be at least 6 characters";
     }
 
-    if (isRegister && !name.trim()) {
-      newErrors.name = "Name is required for registration";
+    if (!name.trim()) {
+      newErrors.name = "Name is required";
     }
 
     if (Object.keys(newErrors).length > 0) {
@@ -43,8 +42,7 @@ export default function EmailAuthForm({ onSubmit, isLoading = false }) {
     onSubmit({ 
       email: email.trim(), 
       password: password.trim(), 
-      name: name.trim(),
-      isRegister 
+      name: name.trim()
     });
   };
 
@@ -73,20 +71,20 @@ export default function EmailAuthForm({ onSubmit, isLoading = false }) {
             />
           </div>
           <h1 className="text-xl font-semibold text-gray-900" style={{ fontFamily: "Open Sans, sans-serif" }}>
-            {isRegister ? "Sign up to JobsonMap" : "Sign in to JobsonMap"}
+            Sign in to JobsonMap
           </h1>
           <p className="text-sm text-gray-600 mt-2" style={{ fontFamily: "Open Sans, sans-serif" }}>
-            {isRegister ? "Create an account to get started" : "Welcome back! Please sign in to continue"}
+            Enter your details to continue
           </p>
         </div>
 
         {/* Social Sign-in Buttons */}
-        <div className={isRegister ? "flex gap-3 mb-6" : "space-y-3 mb-6"}>
+        <div className="space-y-3 mb-6">
           <button
             type="button"
             onClick={handleGoogleAuth}
             disabled={isLoading}
-            className={`${isRegister ? "flex-1" : "w-full"} flex items-center justify-center gap-3 px-4 py-3 border border-gray-300 rounded-lg bg-white text-gray-700 hover:bg-gray-50 transition-colors disabled:opacity-50 disabled:cursor-not-allowed`}
+            className="w-full flex items-center justify-center gap-3 px-4 py-3 border border-gray-300 rounded-lg bg-white text-gray-700 hover:bg-gray-50 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
             style={{ fontFamily: "Open Sans, sans-serif", fontSize: "14px" }}
           >
             <svg className="w-5 h-5" viewBox="0 0 24 24">
@@ -107,14 +105,14 @@ export default function EmailAuthForm({ onSubmit, isLoading = false }) {
                 d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"
               />
             </svg>
-            {!isRegister && <span>Continue with Google</span>}
+            <span>Continue with Google</span>
           </button>
 
           <button
             type="button"
             onClick={handleGitHubAuth}
             disabled={isLoading}
-            className={`${isRegister ? "flex-1" : "w-full"} flex items-center justify-center gap-3 px-4 py-3 border border-gray-300 rounded-lg bg-white text-gray-700 hover:bg-gray-50 transition-colors disabled:opacity-50 disabled:cursor-not-allowed`}
+            className="w-full flex items-center justify-center gap-3 px-4 py-3 border border-gray-300 rounded-lg bg-white text-gray-700 hover:bg-gray-50 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
             style={{ fontFamily: "Open Sans, sans-serif", fontSize: "14px" }}
           >
             <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 24 24">
@@ -124,7 +122,7 @@ export default function EmailAuthForm({ onSubmit, isLoading = false }) {
                 clipRule="evenodd"
               />
             </svg>
-            {!isRegister && <span>Continue with GitHub</span>}
+            <span>Continue with GitHub</span>
           </button>
         </div>
 
@@ -142,28 +140,26 @@ export default function EmailAuthForm({ onSubmit, isLoading = false }) {
 
         {/* Email and Password Form */}
         <form onSubmit={handleSubmit} className="space-y-4">
-          {isRegister && (
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2" style={{ fontFamily: "Open Sans, sans-serif" }}>
-                Name
-              </label>
-              <input
-                type="text"
-                value={name}
-                onChange={(e) => {
-                  setName(e.target.value);
-                  if (errors.name) setErrors({ ...errors, name: "" });
-                }}
-                className={`w-full px-4 py-3 border rounded-lg focus:outline-none focus:ring-2 ${
-                  errors.name ? "border-red-500 focus:ring-red-500" : "border-gray-300 focus:ring-[#F84416]"
-                } bg-white text-gray-900`}
-                style={{ fontFamily: "Open Sans, sans-serif", fontSize: "14px" }}
-                placeholder="Enter your name"
-                disabled={isLoading}
-              />
-              {errors.name && <p className="mt-1 text-sm text-red-500">{errors.name}</p>}
-            </div>
-          )}
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-2" style={{ fontFamily: "Open Sans, sans-serif" }}>
+              Name
+            </label>
+            <input
+              type="text"
+              value={name}
+              onChange={(e) => {
+                setName(e.target.value);
+                if (errors.name) setErrors({ ...errors, name: "" });
+              }}
+              className={`w-full px-4 py-3 border rounded-lg focus:outline-none focus:ring-2 ${
+                errors.name ? "border-red-500 focus:ring-red-500" : "border-gray-300 focus:ring-[#F84416]"
+              } bg-white text-gray-900`}
+              style={{ fontFamily: "Open Sans, sans-serif", fontSize: "14px" }}
+              placeholder="Enter your name"
+              disabled={isLoading}
+            />
+            {errors.name && <p className="mt-1 text-sm text-red-500">{errors.name}</p>}
+          </div>
 
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-2" style={{ fontFamily: "Open Sans, sans-serif" }}>
@@ -226,26 +222,6 @@ export default function EmailAuthForm({ onSubmit, isLoading = false }) {
           </button>
         </form>
 
-        {/* Sign up / Sign in toggle */}
-        <div className="mt-6 text-center">
-          <p className="text-sm text-gray-600" style={{ fontFamily: "Open Sans, sans-serif" }}>
-            {isRegister ? "Already have an account? " : "Don't have an account? "}
-            <button
-              type="button"
-              onClick={() => {
-                setIsRegister(!isRegister);
-                setErrors({});
-                setEmail("");
-                setPassword("");
-                setName("");
-              }}
-              className="hover:underline font-medium"
-              style={{ color: "#F84416", fontFamily: "Open Sans, sans-serif" }}
-            >
-              {isRegister ? "Sign in" : "Sign up"}
-            </button>
-          </p>
-        </div>
       </div>
     </div>
   );
