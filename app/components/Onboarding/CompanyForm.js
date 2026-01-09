@@ -4,16 +4,20 @@ import { useState } from "react";
 import { FUNDING_SERIES } from "../../../lib/constants/jobCategories";
 
 export default function CompanyForm({ onSubmit, initialData = {} }) {
+  // Ensure initialData is always an object, never null
+  const safeInitialData = initialData || {};
+  
   const [formData, setFormData] = useState({
-    name: initialData.name || "",
+    name: safeInitialData.name || "",
     logo: null,
-    logoPreview: initialData.logoPath || null,
-    fundingSeries: initialData.fundingSeries || "",
-    latitude: initialData.latitude || "",
-    longitude: initialData.longitude || "",
-    state: initialData.state || "",
-    district: initialData.district || "",
-    pincode: initialData.pincode || "",
+    logoPreview: safeInitialData.logoPath || null,
+    websiteUrl: safeInitialData.websiteUrl || "",
+    fundingSeries: safeInitialData.fundingSeries || "",
+    latitude: safeInitialData.latitude || "",
+    longitude: safeInitialData.longitude || "",
+    state: safeInitialData.state || "",
+    district: safeInitialData.district || "",
+    pincode: safeInitialData.pincode || "",
   });
 
   const [errors, setErrors] = useState({});
@@ -132,6 +136,25 @@ export default function CompanyForm({ onSubmit, initialData = {} }) {
         </div>
         {errors.logo && <p className="mt-1 text-sm text-red-500">{errors.logo}</p>}
         <p className="mt-1 text-xs text-gray-500">Max size: 5MB. Formats: JPEG, PNG, WebP, GIF</p>
+      </div>
+
+      <div>
+        <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+          Company Website URL
+        </label>
+        <input
+          type="url"
+          name="websiteUrl"
+          value={formData.websiteUrl}
+          onChange={handleChange}
+          className={`w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-[#F84416] ${
+            errors.websiteUrl ? "border-red-500" : "border-gray-300 dark:border-gray-700"
+          } bg-white dark:bg-gray-900 text-gray-900 dark:text-gray-100`}
+          style={{ fontFamily: "Open Sans, sans-serif" }}
+          placeholder="https://example.com or example.com"
+        />
+        {errors.websiteUrl && <p className="mt-1 text-sm text-red-500">{errors.websiteUrl}</p>}
+        <p className="mt-1 text-xs text-gray-500">Enter your company website URL (optional)</p>
       </div>
 
       <div>

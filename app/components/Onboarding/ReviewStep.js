@@ -3,6 +3,17 @@
 import { JOB_CATEGORIES, FUNDING_SERIES } from "../../../lib/constants/jobCategories";
 
 export default function ReviewStep({ companyData, jobData, onSubmit, onBack }) {
+  // Add null checks to prevent errors
+  if (!companyData || !jobData) {
+    return (
+      <div className="space-y-6">
+        <div className="bg-red-50 border border-red-200 rounded-lg p-4">
+          <p className="text-red-800">Missing required data. Please go back and complete all steps.</p>
+        </div>
+      </div>
+    );
+  }
+
   const getCategoryLabel = (value) => {
     const category = JOB_CATEGORIES.find((cat) => cat.value === value);
     return category ? category.label : value;
@@ -41,9 +52,9 @@ export default function ReviewStep({ companyData, jobData, onSubmit, onBack }) {
         <div className="space-y-3">
           <div>
             <span className="text-sm font-medium text-gray-600 dark:text-gray-400">Name:</span>
-            <p className="text-gray-900 dark:text-gray-100">{companyData.name}</p>
+            <p className="text-gray-900 dark:text-gray-100">{companyData?.name || "Not provided"}</p>
           </div>
-          {companyData.logoPreview && (
+          {companyData?.logoPreview && (
             <div>
               <span className="text-sm font-medium text-gray-600 dark:text-gray-400">Logo:</span>
               <div className="mt-2">
@@ -55,22 +66,37 @@ export default function ReviewStep({ companyData, jobData, onSubmit, onBack }) {
               </div>
             </div>
           )}
+          {companyData?.websiteUrl && (
+            <div>
+              <span className="text-sm font-medium text-gray-600 dark:text-gray-400">Website:</span>
+              <p className="text-gray-900 dark:text-gray-100">
+                <a
+                  href={companyData.websiteUrl}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="text-[#F84416] hover:underline"
+                >
+                  {companyData.websiteUrl}
+                </a>
+              </p>
+            </div>
+          )}
           <div>
             <span className="text-sm font-medium text-gray-600 dark:text-gray-400">Funding Series:</span>
-            <p className="text-gray-900 dark:text-gray-100">{getFundingSeriesLabel(companyData.fundingSeries)}</p>
+            <p className="text-gray-900 dark:text-gray-100">{getFundingSeriesLabel(companyData?.fundingSeries)}</p>
           </div>
           <div>
             <span className="text-sm font-medium text-gray-600 dark:text-gray-400">Location:</span>
             <p className="text-gray-900 dark:text-gray-100">
-              {companyData.district}, {companyData.state}
-              {companyData.pincode && ` - ${companyData.pincode}`}
+              {companyData?.district || "Not provided"}, {companyData?.state || "Not provided"}
+              {companyData?.pincode && ` - ${companyData.pincode}`}
             </p>
           </div>
-          {(companyData.latitude || companyData.longitude) && (
+          {(companyData?.latitude || companyData?.longitude) && (
             <div>
               <span className="text-sm font-medium text-gray-600 dark:text-gray-400">Coordinates:</span>
               <p className="text-gray-900 dark:text-gray-100">
-                {companyData.latitude}, {companyData.longitude}
+                {companyData?.latitude || "N/A"}, {companyData?.longitude || "N/A"}
               </p>
             </div>
           )}
@@ -85,25 +111,25 @@ export default function ReviewStep({ companyData, jobData, onSubmit, onBack }) {
         <div className="space-y-3">
           <div>
             <span className="text-sm font-medium text-gray-600 dark:text-gray-400">Title:</span>
-            <p className="text-gray-900 dark:text-gray-100">{jobData.title}</p>
+            <p className="text-gray-900 dark:text-gray-100">{jobData?.title || "Not provided"}</p>
           </div>
           <div>
             <span className="text-sm font-medium text-gray-600 dark:text-gray-400">Category:</span>
-            <p className="text-gray-900 dark:text-gray-100">{getCategoryLabel(jobData.category)}</p>
+            <p className="text-gray-900 dark:text-gray-100">{getCategoryLabel(jobData?.category)}</p>
           </div>
           <div>
             <span className="text-sm font-medium text-gray-600 dark:text-gray-400">Years Required:</span>
-            <p className="text-gray-900 dark:text-gray-100">{jobData.yearsRequired} years</p>
+            <p className="text-gray-900 dark:text-gray-100">{jobData?.yearsRequired || 0} years</p>
           </div>
           <div>
             <span className="text-sm font-medium text-gray-600 dark:text-gray-400">Salary Range:</span>
             <p className="text-gray-900 dark:text-gray-100">
-              {formatSalary(jobData.salaryMin)} - {formatSalary(jobData.salaryMax)}
+              {formatSalary(jobData?.salaryMin)} - {formatSalary(jobData?.salaryMax)}
             </p>
           </div>
           <div>
             <span className="text-sm font-medium text-gray-600 dark:text-gray-400">Job Description:</span>
-            <p className="text-gray-900 dark:text-gray-100 mt-2 whitespace-pre-wrap">{jobData.jobDescription}</p>
+            <p className="text-gray-900 dark:text-gray-100 mt-2 whitespace-pre-wrap">{jobData?.jobDescription || "Not provided"}</p>
           </div>
         </div>
       </div>

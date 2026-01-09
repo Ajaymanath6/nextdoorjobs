@@ -109,6 +109,7 @@ model Company {
   id           Int            @id @default(autoincrement())
   name         String         @db.VarChar(255)
   logoPath     String?        @db.VarChar(500)
+  websiteUrl   String?        @map("website_url") @db.VarChar(500)
   fundingSeries FundingSeries?
   latitude     Float?
   longitude    Float?

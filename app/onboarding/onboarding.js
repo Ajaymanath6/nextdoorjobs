@@ -55,7 +55,7 @@ export default function OnboardingPage() {
       const response = await fetch("/api/onboarding/user", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ email, name }),
+        body: JSON.stringify({ email, name, password }),
       });
 
       const result = await response.json();
@@ -106,12 +106,55 @@ export default function OnboardingPage() {
 
     // Simple response and transition to company form
     if (currentStep === STEPS.CHAT) {
+      // Try to extract company name from the message
+      // Look for patterns like "my company is X", "company name is X", "X is my company", etc.
+      let extractedCompanyName = "";
+      const messageLower = message.toLowerCase().trim();
+      
+      // Patterns to extract company name
+      const patterns = [
+        /(?:my\s+)?company\s+(?:name\s+)?(?:is\s+)?(?:called\s+)?["']?([^"']+)["']?/i,
+        /(?:company\s+)?(?:name\s+)?(?:is\s+)?["']?([^"']+)["']?/i,
+        /^["']?([^"']+)["']?$/i, // If message is just a name in quotes or plain text
+      ];
+
+      for (const pattern of patterns) {
+        const match = message.match(pattern);
+        if (match && match[1]) {
+          extractedCompanyName = match[1].trim();
+          // Remove common words that might be captured
+          extractedCompanyName = extractedCompanyName.replace(/^(my|the|a|an)\s+/i, "").trim();
+          if (extractedCompanyName.length > 2) {
+            break;
+          }
+        }
+      }
+
+      // If no pattern matched but message is short and looks like a company name, use it
+      if (!extractedCompanyName && message.trim().length > 2 && message.trim().length < 100 && !message.includes("?") && !message.includes("how")) {
+        extractedCompanyName = message.trim();
+      }
+
+      // Pre-fill company data if we extracted a name
+      if (extractedCompanyName) {
+        setCompanyData((prev) => {
+          // Ensure prev is an object, not null
+          const prevData = prev || {};
+          return {
+            ...prevData,
+            name: extractedCompanyName,
+          };
+        });
+      }
+
       setTimeout(() => {
         setChatMessages((prev) => [
           ...prev,
           {
             type: "ai",
-            text: "Great! Let's start by adding your company information. I'll show you a form to fill out.",
+            text: extractedCompanyName
+              ? `Great! I've noted your company name as "${extractedCompanyName}". Let's continue by adding your company information. I'll show you a form to fill out.`
+              : "Great! Let's start by adding your company information. I'll show you a form to fill out.",
           },
         ]);
         setTimeout(() => {
@@ -142,14 +185,28 @@ export default function OnboardingPage() {
       return;
     }
 
+    // Additional null checks for required fields
+    if (!companyData.name || !companyData.state || !companyData.district) {
+      alert("Please complete all required company information.");
+      return;
+    }
+
+    if (!jobData.title || !jobData.category || !jobData.jobDescription) {
+      alert("Please complete all required job position information.");
+      return;
+    }
+
     setIsLoading(true);
 
     try {
       // Submit company first
       const companyFormData = new FormData();
-      companyFormData.append("name", companyData.name);
+      companyFormData.append("name", companyData.name || "");
       if (companyData.logo) {
         companyFormData.append("logo", companyData.logo);
+      }
+      if (companyData.websiteUrl) {
+        companyFormData.append("websiteUrl", companyData.websiteUrl);
       }
       if (companyData.fundingSeries) {
         companyFormData.append("fundingSeries", companyData.fundingSeries);
@@ -160,8 +217,8 @@ export default function OnboardingPage() {
       if (companyData.longitude) {
         companyFormData.append("longitude", companyData.longitude);
       }
-      companyFormData.append("state", companyData.state);
-      companyFormData.append("district", companyData.district);
+      companyFormData.append("state", companyData.state || "");
+      companyFormData.append("district", companyData.district || "");
       if (companyData.pincode) {
         companyFormData.append("pincode", companyData.pincode);
       }
@@ -182,12 +239,12 @@ export default function OnboardingPage() {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          title: jobData.title,
-          category: jobData.category,
-          yearsRequired: parseFloat(jobData.yearsRequired),
+          title: jobData.title || "",
+          category: jobData.category || "",
+          yearsRequired: parseFloat(jobData.yearsRequired || 0),
           salaryMin: jobData.salaryMin ? parseInt(jobData.salaryMin) : null,
           salaryMax: jobData.salaryMax ? parseInt(jobData.salaryMax) : null,
-          jobDescription: jobData.jobDescription,
+          jobDescription: jobData.jobDescription || "",
           companyId: companyResult.company.id,
         }),
       });
@@ -345,7 +402,7 @@ export default function OnboardingPage() {
                 <h2 className="text-xl font-semibold text-gray-900 mb-4" style={{ fontFamily: "Open Sans, sans-serif" }}>
                   Company Information
                 </h2>
-                <CompanyForm onSubmit={handleCompanySubmit} initialData={companyData} />
+                <CompanyForm onSubmit={handleCompanySubmit} initialData={companyData || {}} />
               </div>
             )}
 
@@ -354,7 +411,7 @@ export default function OnboardingPage() {
                 <h2 className="text-xl font-semibold text-gray-900 mb-4" style={{ fontFamily: "Open Sans, sans-serif" }}>
                   Job Position Details
                 </h2>
-                <JobPositionForm onSubmit={handleJobSubmit} initialData={jobData} />
+                <JobPositionForm onSubmit={handleJobSubmit} initialData={jobData || {}} />
               </div>
             )}
 

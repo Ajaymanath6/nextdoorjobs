@@ -8,6 +8,7 @@ import { handleFileUpload } from "../../../../lib/fileUpload";
  * Body: FormData with:
  *   - name: string
  *   - logo: File (optional)
+ *   - websiteUrl: string (optional)
  *   - fundingSeries: string (optional)
  *   - latitude: number
  *   - longitude: number
@@ -22,6 +23,7 @@ export async function POST(request) {
 
     // Extract form fields
     const name = formData.get("name");
+    const websiteUrl = formData.get("websiteUrl");
     const fundingSeries = formData.get("fundingSeries");
     const latitude = formData.get("latitude");
     const longitude = formData.get("longitude");
@@ -96,11 +98,32 @@ export async function POST(request) {
         ? fundingSeries
         : null;
 
+    // Validate website URL format if provided
+    let websiteUrlValue = null;
+    if (websiteUrl && websiteUrl.toString().trim()) {
+      const urlString = websiteUrl.toString().trim();
+      // Basic URL validation
+      try {
+        // Add protocol if missing
+        const urlWithProtocol = urlString.startsWith("http://") || urlString.startsWith("https://")
+          ? urlString
+          : `https://${urlString}`;
+        new URL(urlWithProtocol);
+        websiteUrlValue = urlWithProtocol;
+      } catch (urlError) {
+        return NextResponse.json(
+          { error: "Invalid website URL format" },
+          { status: 400 }
+        );
+      }
+    }
+
     // Create company
     const company = await prisma.company.create({
       data: {
         name: name.toString(),
         logoPath,
+        websiteUrl: websiteUrlValue,
         fundingSeries: fundingSeriesValue,
         latitude: lat,
         longitude: lon,
@@ -117,6 +140,7 @@ export async function POST(request) {
         id: company.id,
         name: company.name,
         logoPath: company.logoPath,
+        websiteUrl: company.websiteUrl,
         fundingSeries: company.fundingSeries,
         latitude: company.latitude,
         longitude: company.longitude,

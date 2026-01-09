@@ -2382,6 +2382,7 @@ const MapComponent = () => {
                   style={{
                     fontFamily: "Open Sans",
                     fontSize: "14px",
+                    fontWeight: 600,
                     boxShadow: "0 1px 6px rgba(32,33,36,0.08)",
                     width: "100%",
                     paddingLeft: "44px", // Space for search icon

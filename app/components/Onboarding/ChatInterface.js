@@ -34,13 +34,13 @@ export default function ChatInterface({ messages = [], onSendMessage, isLoading 
       <div className="flex-1 overflow-y-auto px-4 pt-4 space-y-4">
         {/* Logo - Left Side */}
         <div className="flex items-center justify-start mb-4">
-          <div className="h-36 flex items-center justify-center">
+          <div className="h-24 flex items-center justify-center">
             <Image
               src="/logo.svg"
               alt="JobsonMap"
               width={0}
-              height={144}
-              className="h-36 w-auto"
+              height={96}
+              className="h-24 w-auto"
             />
           </div>
         </div>

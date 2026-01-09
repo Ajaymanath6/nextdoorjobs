@@ -1,15 +1,16 @@
 import { NextResponse } from "next/server";
 import { prisma } from "../../../../lib/prisma";
+import bcrypt from "bcryptjs";
 
 /**
  * POST /api/onboarding/user
  * Create or retrieve a user by email
- * Body: { email: string, name: string, phone?: string }
+ * Body: { email: string, name: string, password: string, phone?: string }
  */
 export async function POST(request) {
   try {
     const body = await request.json();
-    const { email, name, phone } = body;
+    const { email, name, password, phone } = body;
 
     // Validation
     if (!email || !name) {
@@ -28,22 +29,42 @@ export async function POST(request) {
       );
     }
 
+    // Validate password if provided
+    if (password && password.length < 6) {
+      return NextResponse.json(
+        { error: "Password must be at least 6 characters long" },
+        { status: 400 }
+      );
+    }
+
     // Check if user exists
     let user = await prisma.user.findUnique({
       where: { email },
     });
 
     if (user) {
-      // Update user if name or phone changed
-      if (name !== user.name || phone !== user.phone) {
+      // Prepare update data
+      const updateData = {};
+      if (name !== user.name) {
+        updateData.name = name;
+      }
+      if (phone !== user.phone) {
+        updateData.phone = phone || null;
+      }
+      // Update password if provided
+      if (password) {
+        const saltRounds = 10;
+        updateData.passwordHash = await bcrypt.hash(password, saltRounds);
+      }
+
+      // Update user if there are changes
+      if (Object.keys(updateData).length > 0) {
         user = await prisma.user.update({
           where: { email },
-          data: {
-            name,
-            phone: phone || null,
-          },
+          data: updateData,
         });
       }
+
       return NextResponse.json({
         success: true,
         user: {
@@ -57,12 +78,20 @@ export async function POST(request) {
     }
 
     // Create new user
+    const userData = {
+      email,
+      name,
+      phone: phone || null,
+    };
+
+    // Hash password if provided
+    if (password) {
+      const saltRounds = 10;
+      userData.passwordHash = await bcrypt.hash(password, saltRounds);
+    }
+
     user = await prisma.user.create({
-      data: {
-        email,
-        name,
-        phone: phone || null,
-      },
+      data: userData,
     });
 
     return NextResponse.json({

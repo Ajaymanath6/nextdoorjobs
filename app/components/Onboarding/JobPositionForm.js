@@ -4,13 +4,16 @@ import { useState } from "react";
 import { JOB_CATEGORIES } from "../../../lib/constants/jobCategories";
 
 export default function JobPositionForm({ onSubmit, initialData = {} }) {
+  // Ensure initialData is always an object, never null
+  const safeInitialData = initialData || {};
+  
   const [formData, setFormData] = useState({
-    title: initialData.title || "",
-    category: initialData.category || "",
-    yearsRequired: initialData.yearsRequired || "",
-    salaryMin: initialData.salaryMin || "",
-    salaryMax: initialData.salaryMax || "",
-    jobDescription: initialData.jobDescription || "",
+    title: safeInitialData.title || "",
+    category: safeInitialData.category || "",
+    yearsRequired: safeInitialData.yearsRequired || "",
+    salaryMin: safeInitialData.salaryMin || "",
+    salaryMax: safeInitialData.salaryMax || "",
+    jobDescription: safeInitialData.jobDescription || "",
   });
 
   const [errors, setErrors] = useState({});

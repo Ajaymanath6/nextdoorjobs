@@ -116,6 +116,7 @@ export default function FilterDropdown({
           className={`${filterClasses["search-input"]} ${filterClasses["search-input-text"]} ${filterClasses["search-input-placeholder"]}`}
           style={{
             fontFamily: "Open Sans",
+            fontWeight: 600,
           }}
         />
       </div>
