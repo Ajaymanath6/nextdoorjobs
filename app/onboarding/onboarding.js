@@ -9,6 +9,8 @@ import StateDistrictSelector from "../components/Onboarding/StateDistrictSelecto
 import UrlInput from "../components/Onboarding/UrlInput";
 import FundingSeriesBadges from "../components/Onboarding/FundingSeriesBadges";
 import SalaryRangeBadges from "../components/Onboarding/SalaryRangeBadges";
+import GetCoordinatesButton from "../components/Onboarding/GetCoordinatesButton";
+import BackgroundMap from "../components/Onboarding/BackgroundMap";
 
 // Field collection states
 const COMPANY_FIELDS = {
@@ -193,6 +195,8 @@ export default function OnboardingPage() {
             break;
 
           case COMPANY_FIELDS.LOCATION:
+            // This case is handled by GetCoordinatesButton callback
+            // But also allow manual input
             if (value.toLowerCase() !== "skip" && value) {
               // Try to parse lat,lon or lat lon
               const coords = value.split(/[,\s]+/).map(v => v.trim()).filter(v => v);
@@ -203,15 +207,16 @@ export default function OnboardingPage() {
                   longitude: coords[1],
                 }));
                 await addAIMessage(`Coordinates saved! What's the pincode? (Type "skip" if not available)`);
+                setCurrentField(COMPANY_FIELDS.PINCODE);
               } else {
-                await addAIMessage(`Please provide both latitude and longitude separated by comma (e.g., 10.5276, 76.2144) or type "skip"`);
+                await addAIMessage(`Please provide both latitude and longitude separated by comma (e.g., 10.5276, 76.2144) or use the button above`);
                 setIsLoading(false);
                 return;
               }
             } else {
               await addAIMessage(`No problem! What's the pincode? (Type "skip" if not available)`);
+              setCurrentField(COMPANY_FIELDS.PINCODE);
             }
-            setCurrentField(COMPANY_FIELDS.PINCODE);
             break;
 
           case COMPANY_FIELDS.PINCODE:
@@ -352,11 +357,40 @@ export default function OnboardingPage() {
   const handleFundingSelected = async (series) => {
     setIsLoading(true);
     if (series.toLowerCase() !== "skip") {
-      await addAIMessage(`Funding series: ${series}. Do you have latitude and longitude coordinates? (Type "skip" if not)`);
+      await addAIMessage(`Funding series: ${series}. Do you have latitude and longitude coordinates?`);
     } else {
-      await addAIMessage(`No problem! Do you have latitude and longitude coordinates? (Type "skip" if not)`);
+      await addAIMessage(`No problem! Do you have latitude and longitude coordinates?`);
     }
     setCurrentField(COMPANY_FIELDS.LOCATION);
+    setInlineComponent(
+      <GetCoordinatesButton
+        onCoordinatesReceived={(lat, lon) => {
+          setCompanyData((prev) => ({
+            ...prev,
+            latitude: lat,
+            longitude: lon,
+          }));
+          setInlineComponent(null);
+          handleCoordinatesReceived(lat, lon);
+        }}
+        onSkip={() => {
+          setInlineComponent(null);
+          handleCoordinatesReceived(null, null);
+        }}
+      />
+    );
+    setIsLoading(false);
+  };
+
+  // Handle coordinates received
+  const handleCoordinatesReceived = async (lat, lon) => {
+    setIsLoading(true);
+    if (lat && lon) {
+      await addAIMessage(`Coordinates saved! What's the pincode? (Type "skip" if not available)`);
+    } else {
+      await addAIMessage(`No problem! What's the pincode? (Type "skip" if not available)`);
+    }
+    setCurrentField(COMPANY_FIELDS.PINCODE);
     setIsLoading(false);
   };
 
@@ -515,24 +549,9 @@ export default function OnboardingPage() {
 
   return (
     <div className="min-h-screen relative overflow-hidden">
-      {/* Map Background - 70% opacity */}
-      <div
-        className="absolute inset-0 z-0"
-        style={{
-          background: "linear-gradient(135deg, #e0f2fe 0%, #bae6fd 25%, #7dd3fc 50%, #38bdf8 75%, #0ea5e9 100%)",
-          opacity: 0.7,
-        }}
-      >
-        {/* Map-like grid pattern */}
-        <div
-          className="w-full h-full"
-          style={{
-            backgroundImage: `
-              repeating-linear-gradient(0deg, transparent, transparent 2px, rgba(0,0,0,0.05) 2px, rgba(0,0,0,0.05) 4px),
-              repeating-linear-gradient(90deg, transparent, transparent 2px, rgba(0,0,0,0.05) 2px, rgba(0,0,0,0.05) 4px)
-            `,
-          }}
-        ></div>
+      {/* Leaflet Map Background - 70% opacity */}
+      <div className="absolute inset-0 z-0" style={{ opacity: 0.7 }}>
+        <BackgroundMap />
       </div>
       
       <div className="relative z-10 max-w-4xl mx-auto px-4 pt-8">

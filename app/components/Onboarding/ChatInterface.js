@@ -31,28 +31,8 @@ export default function ChatInterface({ messages = [], onSendMessage, isLoading 
 
   return (
     <div className="flex flex-col h-full bg-white rounded-lg relative overflow-hidden">
-      {/* Map Background - 80% opacity */}
-      <div
-        className="absolute inset-0 z-0"
-        style={{
-          background: "linear-gradient(135deg, #e0f2fe 0%, #bae6fd 25%, #7dd3fc 50%, #38bdf8 75%, #0ea5e9 100%)",
-          opacity: 0.8,
-        }}
-      >
-        {/* Map-like grid pattern */}
-        <div
-          className="w-full h-full"
-          style={{
-            backgroundImage: `
-              repeating-linear-gradient(0deg, transparent, transparent 2px, rgba(0,0,0,0.05) 2px, rgba(0,0,0,0.05) 4px),
-              repeating-linear-gradient(90deg, transparent, transparent 2px, rgba(0,0,0,0.05) 2px, rgba(0,0,0,0.05) 4px)
-            `,
-          }}
-        ></div>
-      </div>
-      
       {/* Logo - Sticky at Top */}
-      <div className="sticky top-0 z-10 bg-white px-4 py-3 relative">
+      <div className="sticky top-0 z-10 bg-white px-4 py-3 border-b border-brand-stroke-weak">
         <div className="flex items-center justify-start">
           <div className="h-8 flex items-center justify-center">
             <Image
@@ -67,12 +47,12 @@ export default function ChatInterface({ messages = [], onSendMessage, isLoading 
       </div>
 
       {/* Messages Container */}
-      <div className="flex-1 overflow-y-auto px-4 pt-4 space-y-4 chat-scrollable relative z-10">
+      <div className="flex-1 overflow-y-auto px-4 pt-4 space-y-4 chat-scrollable bg-white">
 
         {messages.map((message, index) => (
           <div
             key={index}
-            className={`flex relative z-10 ${
+            className={`flex ${
               message.type === "user" ? "justify-end" : "justify-start"
             }`}
           >
@@ -96,7 +76,7 @@ export default function ChatInterface({ messages = [], onSendMessage, isLoading 
           </div>
         ))}
         {typingText && (
-          <div className="flex justify-start relative z-10">
+          <div className="flex justify-start">
             <div className="max-w-[80%] rounded-lg px-4 py-2 bg-brand-bg-fill text-brand-text-strong">
               {typingText}
               <span className="animate-pulse">|</span>
@@ -104,17 +84,13 @@ export default function ChatInterface({ messages = [], onSendMessage, isLoading 
           </div>
         )}
         {inlineComponent && (
-          <div className="flex justify-start relative z-10">
+          <div className="flex justify-start">
             <div className="max-w-[80%] w-full">
               {inlineComponent}
             </div>
           </div>
         )}
-        {isLoading && !typingText && (
-          <div className="relative z-10">
-            <TypingAnimation />
-          </div>
-        )}
+        {isLoading && !typingText && <TypingAnimation />}
         <div ref={messagesEndRef} />
       </div>
 
@@ -143,7 +119,7 @@ export default function ChatInterface({ messages = [], onSendMessage, isLoading 
       )}
 
       {/* Input Area - Inside chat area at bottom */}
-      <div className="border-t border-[#E5E5E5] px-4 py-4 bg-white relative z-10">
+      <div className="border-t border-[#E5E5E5] px-4 py-4 bg-white">
         <form onSubmit={handleSubmit} className="relative">
           <textarea
             ref={inputRef}
