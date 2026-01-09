@@ -75,6 +75,42 @@ const MapComponent = () => {
   const [isCollegeFilterActive, setIsCollegeFilterActive] = useState(false);
   const collegeMarkerRef = useRef(null);
   const [collegeDistances, setCollegeDistances] = useState({});
+  const [showSavedFilesDropdown, setShowSavedFilesDropdown] = useState(false);
+  const [savedFiles, setSavedFiles] = useState([]);
+  const savedFilesDropdownRef = useRef(null);
+
+  // Close saved files dropdown when clicking outside
+  useEffect(() => {
+    const handleClickOutside = (event) => {
+      if (savedFilesDropdownRef.current && !savedFilesDropdownRef.current.contains(event.target)) {
+        setShowSavedFilesDropdown(false);
+      }
+    };
+
+    if (showSavedFilesDropdown) {
+      document.addEventListener("mousedown", handleClickOutside);
+    }
+
+    return () => {
+      document.removeEventListener("mousedown", handleClickOutside);
+    };
+  }, [showSavedFilesDropdown]);
+
+  // Fetch saved files (placeholder - can be connected to API later)
+  useEffect(() => {
+    // TODO: Replace with actual API call to fetch saved files
+    const fetchSavedFiles = async () => {
+      try {
+        // const response = await fetch('/api/saved-files');
+        // const data = await response.json();
+        // setSavedFiles(data.files || []);
+        setSavedFiles([]); // Placeholder
+      } catch (error) {
+        console.error("Error fetching saved files:", error);
+      }
+    };
+    fetchSavedFiles();
+  }, []);
   const collegeLinesRef = useRef([]);
 
   // Load locations data (client-side only)
@@ -2321,6 +2357,47 @@ const MapComponent = () => {
                   </div>
                 )}
               </div> */}
+
+              {/* @ Icon for Saved Files - Before search input */}
+              <div className="relative flex-shrink-0" ref={savedFilesDropdownRef}>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setShowSavedFilesDropdown(!showSavedFilesDropdown);
+                  }}
+                  className="p-2 rounded-lg hover:bg-brand-stroke-weak transition-colors"
+                  title="Show saved files"
+                >
+                  <span className="text-brand-stroke-strong text-lg font-semibold">@</span>
+                </button>
+                {showSavedFilesDropdown && (
+                  <div className="absolute bottom-full left-0 mb-2 w-64 bg-brand-bg-white border border-brand-stroke-weak rounded-lg shadow-lg z-50 max-h-60 overflow-y-auto">
+                    {savedFiles.length > 0 ? (
+                      <div className="py-2">
+                        {savedFiles.map((file, index) => (
+                          <button
+                            key={index}
+                            type="button"
+                            onClick={() => {
+                              console.log("Selected file:", file);
+                              setShowSavedFilesDropdown(false);
+                              // TODO: Handle file selection
+                            }}
+                            className="w-full text-left px-4 py-2 text-sm text-brand-text-strong hover:bg-brand-bg-fill transition-colors flex items-center gap-2"
+                            style={{ fontFamily: "Open Sans, sans-serif" }}
+                          >
+                            <span className="truncate">{file.name || file}</span>
+                          </button>
+                        ))}
+                      </div>
+                    ) : (
+                      <div className="px-4 py-3 text-sm text-brand-text-weak text-center" style={{ fontFamily: "Open Sans, sans-serif" }}>
+                        No saved files
+                      </div>
+                    )}
+                  </div>
+                )}
+              </div>
 
               {/* Search Input with Autocomplete - Expanded width */}
               <div className="relative flex-1" style={{ minWidth: 0 }}>

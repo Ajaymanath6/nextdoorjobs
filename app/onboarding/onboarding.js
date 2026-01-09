@@ -413,12 +413,17 @@ export default function OnboardingPage() {
   // Handle category selection
   const handleCategorySelected = async (category) => {
     setIsLoading(true);
-    // Import JOB_CATEGORIES
-    const { JOB_CATEGORIES } = await import("../../lib/constants/jobCategories");
-    const categoryLabel = JOB_CATEGORIES.find(c => c.value === category)?.label || category;
-    await addAIMessage(`Category: ${categoryLabel}. How many years of experience are required? (Enter a number)`);
-    setCurrentField(JOB_FIELDS.YEARS);
-    setIsLoading(false);
+    try {
+      // Import JOB_CATEGORIES
+      const { JOB_CATEGORIES } = await import("../../lib/constants/jobCategories");
+      const categoryLabel = JOB_CATEGORIES.find(c => c.value === category)?.label || category;
+      await addAIMessage(`Category: ${categoryLabel}. How many years of experience are required? (Enter a number)`);
+      setCurrentField(JOB_FIELDS.YEARS);
+    } catch (error) {
+      console.error("Error in handleCategorySelected:", error);
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   // Handle salary selection
@@ -591,14 +596,34 @@ export default function OnboardingPage() {
           <div className="bg-white/95 backdrop-blur-sm px-6 py-4 flex items-center justify-between border-b border-[#E5E5E5] relative z-10">
             <div className="flex items-center gap-3">
               <button
+                onClick={() => router.push("/")}
+                className="p-2 rounded-lg hover:bg-gray-100 transition-colors"
+                title="Back to home"
+              >
+                <svg
+                  width="20"
+                  height="20"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth="2"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  style={{ color: "#575757" }}
+                >
+                  <path d="M19 12H5M12 19l-7-7 7-7" />
+                </svg>
+              </button>
+            </div>
+            <div className="flex items-center gap-3">
+              <button
                 onClick={handleResetChat}
                 className="p-2 rounded-lg hover:bg-gray-100 transition-colors"
                 title="Restart chat"
               >
                 <WatsonHealthRotate_360 size={20} style={{ color: "#575757" }} />
               </button>
-            </div>
-            <div className="relative" ref={languageDropdownRef}>
+              <div className="relative" ref={languageDropdownRef}>
               <button
                 onClick={() => setShowLanguageDropdown(!showLanguageDropdown)}
                 className="px-4 py-2 border border-brand-stroke-weak rounded-lg text-sm font-medium transition-colors bg-white text-brand-text-placeholder hover:bg-gray-50 flex items-center gap-2"
@@ -654,6 +679,7 @@ export default function OnboardingPage() {
                   </button>
                 </div>
               )}
+              </div>
             </div>
           </div>
 
