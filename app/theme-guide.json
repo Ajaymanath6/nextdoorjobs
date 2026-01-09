@@ -108,6 +108,29 @@
         "Description: text-brand-text-weak"
       ]
     },
+    "brandcolor-textplaceholder": {
+      "hex": "#A5A5A5",
+      "usage": "ALWAYS use for placeholder text in input fields, textarea fields, forms, and anywhere placeholder text is needed",
+      "utilityClasses": {
+        "text": "text-brand-text-placeholder",
+        "placeholder": "placeholder:text-brand-text-placeholder"
+      },
+      "whenToUse": [
+        "Input field placeholder text (ALWAYS use this)",
+        "Textarea placeholder text (ALWAYS use this)",
+        "Form placeholder text (ALWAYS use this)",
+        "Search input placeholders",
+        "Any input placeholder text",
+        "Disabled text",
+        "Tertiary text that needs to be less prominent"
+      ],
+      "examples": [
+        "Input placeholder: placeholder:text-brand-text-placeholder",
+        "Textarea placeholder: placeholder:text-brand-text-placeholder",
+        "Disabled text: text-brand-text-placeholder"
+      ],
+      "importantNote": "ALWAYS use text-brand-text-placeholder for ALL placeholder text in input fields, textarea fields, and forms. This is a mandatory rule."
+    },
     "brandcolor-strokestrong": {
       "hex": "#767676",
       "usage": "ALWAYS use for: Sidebar borders, input field borders, button borders, icons",
@@ -265,14 +288,20 @@
     },
     "input": {
       "description": "Input fields with proper borders - MUST override browser defaults",
-      "classes": "border-brand-stroke-strong focus:border-brand-text-strong focus:outline-none focus:ring-0 text-brand-text-strong",
-      "logic": "Strong stroke border by default, changes to text-strong color on focus. No extra border/ring on focus. Text color is always text-strong. CRITICAL: Must use focus:ring-0 to prevent default ring styles. Must use focus:outline-none to prevent browser default outline.",
+      "classes": "border-brand-stroke-strong focus:border-brand-text-strong focus:outline-none focus:ring-0 text-brand-text-strong placeholder:text-brand-text-placeholder",
+      "logic": "Strong stroke border by default, changes to text-strong color on focus. No extra border/ring on focus. Text color is always text-strong. Placeholder text MUST use brand-text-placeholder color (#A5A5A5). CRITICAL: Must use focus:ring-0 to prevent default ring styles. Must use focus:outline-none to prevent browser default outline.",
       "criticalRules": [
         "ALWAYS include focus:ring-0 to override default focus ring",
         "ALWAYS include focus:outline-none to override browser default outline",
+        "ALWAYS include placeholder:text-brand-text-placeholder for placeholder text",
         "NEVER allow browser default focus styles",
         "Focus border MUST be brand-text-strong, NEVER brand-secondary or any other color",
+        "Placeholder text MUST be brand-text-placeholder (#A5A5A5), NEVER any other color",
         "No box-shadow on focus - use focus:ring-0"
+      ],
+      "examples": [
+        "Input field: border-brand-stroke-strong focus:border-brand-text-strong focus:outline-none focus:ring-0 text-brand-text-strong placeholder:text-brand-text-placeholder",
+        "Textarea: border-brand-stroke-strong focus:border-brand-text-strong focus:outline-none focus:ring-0 text-brand-text-strong placeholder:text-brand-text-placeholder"
       ]
     },
     "heading": {
@@ -345,6 +374,7 @@
       "Only Outline button has border (border-[1.5px] border-brand-stroke-weak)",
       "Headings: Always use text-brand-text-strong",
       "Body text: Use text-brand-text-weak",
+      "Placeholder text: ALWAYS use placeholder:text-brand-text-placeholder (#A5A5A5) for input fields, textarea fields, and forms",
       "Sidebar borders: ALWAYS use border-brand-stroke-strong",
       "Input field borders: ALWAYS use border-brand-stroke-strong",
       "Card borders: ALWAYS use border-brand-stroke-weak",

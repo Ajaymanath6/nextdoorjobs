@@ -272,10 +272,10 @@ export default function OnboardingPage() {
             <div className="relative" ref={languageDropdownRef}>
               <button
                 onClick={() => setShowLanguageDropdown(!showLanguageDropdown)}
-                className="px-4 py-2 border border-gray-300 rounded-lg text-sm font-medium transition-colors bg-white text-gray-700 hover:bg-gray-50 flex items-center gap-2"
+                className="px-4 py-2 border border-brand-stroke-weak rounded-lg text-sm font-medium transition-colors bg-white text-brand-text-placeholder hover:bg-gray-50 flex items-center gap-2"
                 style={{ fontFamily: "Open Sans, sans-serif" }}
               >
-                <span>{selectedLanguage}</span>
+                <span className="text-brand-text-strong">{selectedLanguage}</span>
                 <svg
                   className={`w-4 h-4 transition-transform ${showLanguageDropdown ? "rotate-180" : ""}`}
                   fill="none"
@@ -286,13 +286,13 @@ export default function OnboardingPage() {
                 </svg>
               </button>
               {showLanguageDropdown && (
-                <div className="absolute right-0 mt-2 w-40 bg-white border border-gray-300 rounded-lg shadow-lg z-50">
+                <div className="absolute right-0 mt-2 w-40 bg-white border border-brand-stroke-weak rounded-lg shadow-lg z-50">
                   <button
                     onClick={() => {
                       setSelectedLanguage("English");
                       setShowLanguageDropdown(false);
                     }}
-                    className={`w-full text-left px-4 py-2 text-sm hover:bg-gray-100 transition-colors ${
+                    className={`w-full text-left px-4 py-2 text-sm text-brand-text-strong hover:bg-gray-100 transition-colors ${
                       selectedLanguage === "English" ? "bg-gray-50 font-medium" : ""
                     }`}
                     style={{ fontFamily: "Open Sans, sans-serif" }}
@@ -304,7 +304,7 @@ export default function OnboardingPage() {
                       setSelectedLanguage("Malayalam");
                       setShowLanguageDropdown(false);
                     }}
-                    className={`w-full text-left px-4 py-2 text-sm hover:bg-gray-100 transition-colors ${
+                    className={`w-full text-left px-4 py-2 text-sm text-brand-text-strong hover:bg-gray-100 transition-colors ${
                       selectedLanguage === "Malayalam" ? "bg-gray-50 font-medium" : ""
                     }`}
                     style={{ fontFamily: "Open Sans, sans-serif" }}
@@ -316,7 +316,7 @@ export default function OnboardingPage() {
                       setSelectedLanguage("Hindi");
                       setShowLanguageDropdown(false);
                     }}
-                    className={`w-full text-left px-4 py-2 text-sm hover:bg-gray-100 transition-colors ${
+                    className={`w-full text-left px-4 py-2 text-sm text-brand-text-strong hover:bg-gray-100 transition-colors ${
                       selectedLanguage === "Hindi" ? "bg-gray-50 font-medium" : ""
                     }`}
                     style={{ fontFamily: "Open Sans, sans-serif" }}

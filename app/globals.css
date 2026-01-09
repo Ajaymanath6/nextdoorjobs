@@ -11,6 +11,7 @@
   --brand-color-secondary-hover: #292929;
   --brand-text-strong: #1A1A1A;
   --brand-text-weak: #575757;
+  --brand-text-placeholder: #A5A5A5;
   --brand-stroke-strong: #767676;
   --brand-stroke-weak: #E5E5E5;
   --brand-stroke-border: #E5E5E5;
@@ -32,6 +33,7 @@
   --color-brand-secondary-hover: var(--brand-color-secondary-hover);
   --color-brand-text-strong: var(--brand-text-strong);
   --color-brand-text-weak: var(--brand-text-weak);
+  --color-brand-text-placeholder: var(--brand-text-placeholder);
   --color-brand-stroke-strong: var(--brand-stroke-strong);
   --color-brand-stroke-weak: var(--brand-stroke-weak);
   --color-brand-stroke-border: var(--brand-stroke-border);

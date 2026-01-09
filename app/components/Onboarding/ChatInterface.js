@@ -1,11 +1,15 @@
 "use client";
 
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, useState } from "react";
 import Image from "next/image";
+import { At, Screen } from "@carbon/icons-react";
 
 export default function ChatInterface({ messages = [], onSendMessage, isLoading = false }) {
   const messagesEndRef = useRef(null);
   const inputRef = useRef(null);
+  const [uploadedFiles, setUploadedFiles] = useState([]);
+  const [showScreenshotTooltip, setShowScreenshotTooltip] = useState(false);
+  const [showClipTooltip, setShowClipTooltip] = useState(false);
 
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
@@ -28,20 +32,17 @@ export default function ChatInterface({ messages = [], onSendMessage, isLoading 
     <div className="flex flex-col h-full bg-white rounded-lg">
       {/* Messages Container */}
       <div className="flex-1 overflow-y-auto px-4 pt-4 space-y-4">
-        {/* Logo and Company Name */}
-        <div className="flex items-center gap-3 mb-4">
-          <div className="w-6 h-6 flex items-center justify-center">
+        {/* Logo - Left Side */}
+        <div className="flex items-center justify-start mb-4">
+          <div className="h-36 flex items-center justify-center">
             <Image
               src="/logo.svg"
               alt="JobsonMap"
-              width={24}
-              height={24}
-              className="w-6 h-6"
+              width={0}
+              height={144}
+              className="h-36 w-auto"
             />
           </div>
-          <h2 className="text-base font-medium text-gray-700" style={{ fontFamily: "Open Sans, sans-serif" }}>
-            JobsonMap
-          </h2>
         </div>
 
         {messages.map((message, index) => (
@@ -84,13 +85,37 @@ export default function ChatInterface({ messages = [], onSendMessage, isLoading 
         <div ref={messagesEndRef} />
       </div>
 
+      {/* Uploaded Files List */}
+      {uploadedFiles.length > 0 && (
+        <div className="px-4 py-2 border-t border-[#E5E5E5] bg-gray-50">
+          <div className="flex flex-wrap gap-2">
+            {uploadedFiles.map((file, index) => (
+              <div
+                key={index}
+                className="flex items-center gap-2 px-3 py-1 bg-white border border-brand-stroke-weak rounded-md text-sm text-brand-text-strong"
+              >
+                <span>{file.name}</span>
+                <button
+                  onClick={() => {
+                    setUploadedFiles(uploadedFiles.filter((_, i) => i !== index));
+                  }}
+                  className="text-brand-text-weak hover:text-brand-text-strong"
+                >
+                  ×
+                </button>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
       {/* Input Area - Inside chat area at bottom */}
       <div className="border-t border-[#E5E5E5] px-4 py-4 bg-white relative">
         <form onSubmit={handleSubmit} className="relative">
           <textarea
             ref={inputRef}
             placeholder="Type your message..."
-            className="w-full min-h-[140px] px-6 py-4 pr-16 bg-white border rounded-lg focus:outline-none resize-none text-base m-0"
+            className="w-full min-h-[140px] pl-16 pr-16 py-4 bg-white border rounded-lg focus:outline-none resize-none text-base m-0 placeholder:text-brand-text-placeholder"
             style={{ fontFamily: "Open Sans, sans-serif" }}
             disabled={isLoading}
             onKeyDown={(e) => {
@@ -100,6 +125,79 @@ export default function ChatInterface({ messages = [], onSendMessage, isLoading 
               }
             }}
           />
+          
+          {/* Icons at Left Bottom */}
+          <div className="absolute bottom-4 left-4 flex items-center gap-3 z-10">
+            {/* @ Icon - Left of Screenshot */}
+            <div className="relative">
+              <button
+                type="button"
+                onClick={() => {
+                  // Handle @ mention functionality
+                  console.log("@ clicked");
+                }}
+                className="p-2 rounded-md hover:bg-brand-bg-fill transition-colors"
+                disabled={isLoading}
+              >
+                <At size={20} className="text-brand-stroke-strong" />
+              </button>
+            </div>
+
+            {/* Screenshot Icon */}
+            <div className="relative">
+              <button
+                type="button"
+                onClick={() => {
+                  // Handle screenshot functionality
+                  console.log("Screenshot clicked");
+                }}
+                onMouseEnter={() => setShowScreenshotTooltip(true)}
+                onMouseLeave={() => setShowScreenshotTooltip(false)}
+                className="p-2 rounded-md hover:bg-brand-bg-fill transition-colors"
+                disabled={isLoading}
+              >
+                <Screen size={20} className="text-brand-stroke-strong" />
+              </button>
+              {showScreenshotTooltip && (
+                <div className="absolute bottom-full left-0 mb-2 px-3 py-2 bg-brand-text-strong text-brand-bg-white text-xs rounded-md whitespace-nowrap z-50">
+                  Take screenshot and paste
+                  <div className="absolute top-full left-4 w-0 h-0 border-l-4 border-r-4 border-t-4 border-transparent border-t-brand-text-strong"></div>
+                </div>
+              )}
+            </div>
+
+            {/* Attachment Icon */}
+            <div className="relative">
+              <button
+                type="button"
+                onClick={() => {
+                  // Handle file attachment
+                  const input = document.createElement("input");
+                  input.type = "file";
+                  input.multiple = true;
+                  input.onchange = (e) => {
+                    const files = Array.from(e.target.files);
+                    setUploadedFiles([...uploadedFiles, ...files.map(f => ({ name: f.name, file: f }))]);
+                  };
+                  input.click();
+                }}
+                onMouseEnter={() => setShowClipTooltip(true)}
+                onMouseLeave={() => setShowClipTooltip(false)}
+                className="p-2 rounded-md hover:bg-brand-bg-fill transition-colors"
+                disabled={isLoading}
+              >
+                <At size={20} className="text-brand-stroke-strong" />
+              </button>
+              {showClipTooltip && (
+                <div className="absolute bottom-full left-0 mb-2 px-3 py-2 bg-brand-text-strong text-brand-bg-white text-xs rounded-md whitespace-nowrap z-50">
+                  Attach documents or files
+                  <div className="absolute top-full left-4 w-0 h-0 border-l-4 border-r-4 border-t-4 border-transparent border-t-brand-text-strong"></div>
+                </div>
+              )}
+            </div>
+          </div>
+
+          {/* Submit Button */}
           <button
             type="submit"
             disabled={isLoading}
