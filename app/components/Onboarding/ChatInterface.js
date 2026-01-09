@@ -2,10 +2,10 @@
 
 import { useEffect, useRef, useState } from "react";
 import Image from "next/image";
-import { Screen, Document, Enterprise } from "@carbon/icons-react";
+import { Screen, Document, Enterprise, Save, Location, Add } from "@carbon/icons-react";
 import TypingAnimation from "./TypingAnimation";
 
-export default function ChatInterface({ messages = [], onSendMessage, isLoading = false, inlineComponent = null, typingText = null, onScrollRequest }) {
+export default function ChatInterface({ messages = [], onSendMessage, isLoading = false, inlineComponent = null, typingText = null, onScrollRequest, onSave, onViewOnMap, onStartNext }) {
   const messagesEndRef = useRef(null);
   const inputRef = useRef(null);
   const messagesContainerRef = useRef(null);
@@ -110,43 +110,87 @@ export default function ChatInterface({ messages = [], onSendMessage, isLoading 
       <div ref={messagesContainerRef} className="flex-1 overflow-y-auto px-4 pt-4 space-y-4 chat-scrollable bg-white">
 
         {messages.map((message, index) => (
-          <div
-            key={index}
-            className={`flex items-start gap-2 ${
-              message.type === "user" ? "justify-end" : "justify-start"
-            }`}
-          >
-            {message.type === "user" ? (
-              <div className="flex-shrink-0 mt-1 flex items-center justify-center">
-                <Enterprise size={20} className="text-brand-stroke-strong" />
-              </div>
-            ) : (
-              <div className="flex-shrink-0 mt-1 flex items-center justify-center">
-                <Image
-                  src="/onlylogo.svg"
-                  alt="Logo"
-                  width={20}
-                  height={20}
-                  className="w-5 h-5"
-                />
-              </div>
-            )}
+          <div key={index} className="w-full">
             <div
-              className={`max-w-[80%] rounded-lg px-4 py-2 ${
-                message.type === "user"
-                  ? "bg-brand-bg-fill text-brand-text-strong"
-                  : index === 0 && message.type === "ai"
-                  ? "bg-white text-brand-text-strong"
-                  : "bg-brand-bg-fill text-brand-text-strong"
+              className={`flex items-start gap-2 ${
+                message.type === "user" ? "justify-end" : "justify-start"
               }`}
-              style={{
-                fontFamily: "Open Sans, sans-serif",
-                fontSize: index === 0 && message.type === "ai" ? "15px" : "14px",
-                lineHeight: "1.5",
-                fontWeight: index === 0 && message.type === "ai" ? 500 : 400,
-              }}
             >
-              {message.text}
+              {message.type === "user" ? (
+                <div className="flex-shrink-0 mt-1 flex items-center justify-center">
+                  <Enterprise size={28} className="text-brand-stroke-strong" />
+                </div>
+              ) : (
+                <div className="flex-shrink-0 mt-1 flex items-center justify-center">
+                  <Image
+                    src="/onlylogo.svg"
+                    alt="Logo"
+                    width={28}
+                    height={28}
+                    className="w-7 h-7"
+                  />
+                </div>
+              )}
+              <div className="flex flex-col gap-2 max-w-[80%]">
+                <div
+                  className={`rounded-lg px-4 py-2 ${
+                    message.type === "user"
+                      ? "bg-brand-bg-fill text-brand-text-strong"
+                      : index === 0 && message.type === "ai"
+                      ? "bg-white text-brand-text-strong"
+                      : "bg-brand-bg-fill text-brand-text-strong"
+                  }`}
+                  style={{
+                    fontFamily: "Open Sans, sans-serif",
+                    fontSize: index === 0 && message.type === "ai" ? "15px" : "14px",
+                    lineHeight: "1.5",
+                    fontWeight: index === 0 && message.type === "ai" ? 500 : 400,
+                  }}
+                >
+                  {message.text}
+                </div>
+                {/* Action buttons for AI messages */}
+                {message.type === "ai" && (
+                  <div className="flex items-center gap-2 flex-wrap">
+                    {/* Save button - show for all AI messages except the first welcome message and final success message */}
+                    {onSave && !message.isFinalMessage && index !== 0 && (
+                      <button
+                        onClick={() => onSave(index)}
+                        className="flex items-center gap-1.5 px-2 py-1 bg-brand-bg-white text-brand-text-strong hover:bg-brand-bg-fill rounded-md text-xs transition-colors border border-brand-stroke-weak"
+                        style={{ fontFamily: "Open Sans, sans-serif" }}
+                      >
+                        <Save size={14} className="text-brand-stroke-strong" />
+                        <span>Save</span>
+                      </button>
+                    )}
+                    {/* Final message action buttons */}
+                    {message.isFinalMessage && (
+                      <>
+                        {onViewOnMap && (
+                          <button
+                            onClick={onViewOnMap}
+                            className="flex items-center gap-2 px-4 py-2 bg-brand text-brand-bg-white hover:bg-brand-hover rounded-md text-sm font-medium transition-colors"
+                            style={{ fontFamily: "Open Sans, sans-serif" }}
+                          >
+                            <Location size={16} />
+                            <span>See your posting on the map</span>
+                          </button>
+                        )}
+                        {onStartNext && (
+                          <button
+                            onClick={onStartNext}
+                            className="flex items-center gap-2 px-4 py-2 bg-brand-bg-white text-brand-text-strong hover:bg-brand-bg-fill rounded-md text-sm font-medium transition-colors border border-brand-stroke-weak"
+                            style={{ fontFamily: "Open Sans, sans-serif" }}
+                          >
+                            <Add size={16} className="text-brand-stroke-strong" />
+                            <span>Start next job post</span>
+                          </button>
+                        )}
+                      </>
+                    )}
+                  </div>
+                )}
+              </div>
             </div>
           </div>
         ))}

@@ -268,8 +268,17 @@ export default function OnboardingPage() {
           case JOB_FIELDS.DESCRIPTION:
             setJobData((prev) => ({ ...prev, jobDescription: value }));
             await addAIMessage(`Perfect! I have all the information. Let me submit your job posting...`);
-            // Submit everything
-            await handleFinalSubmit();
+            // Mark this message as final to show action buttons
+            setChatMessages((prev) => {
+              const updated = [...prev];
+              if (updated.length > 0 && updated[updated.length - 1].type === "ai") {
+                updated[updated.length - 1] = {
+                  ...updated[updated.length - 1],
+                  isFinalMessage: true,
+                };
+              }
+              return updated;
+            });
             break;
         }
       }
@@ -406,6 +415,102 @@ export default function OnboardingPage() {
   };
 
 
+  // Handle save partial data
+  const handleSave = async (messageIndex) => {
+    if (!userData) {
+      alert("Please authenticate first.");
+      return;
+    }
+
+    setIsLoading(true);
+    try {
+      // Save company data if available
+      if (collectingCompany && companyData && companyData.name) {
+        const companyFormData = new FormData();
+        companyFormData.append("name", companyData.name || "");
+        if (companyData.logo) {
+          companyFormData.append("logo", companyData.logo);
+        }
+        if (companyData.websiteUrl) {
+          companyFormData.append("websiteUrl", companyData.websiteUrl);
+        }
+        if (companyData.fundingSeries) {
+          companyFormData.append("fundingSeries", companyData.fundingSeries);
+        }
+        if (companyData.latitude) {
+          companyFormData.append("latitude", companyData.latitude);
+        }
+        if (companyData.longitude) {
+          companyFormData.append("longitude", companyData.longitude);
+        }
+        companyFormData.append("state", companyData.state || "");
+        companyFormData.append("district", companyData.district || "");
+        if (companyData.pincode) {
+          companyFormData.append("pincode", companyData.pincode);
+        }
+        companyFormData.append("userId", userData.id.toString());
+
+        const companyResponse = await fetch("/api/onboarding/company", {
+          method: "POST",
+          body: companyFormData,
+        });
+
+        const companyResult = await companyResponse.json();
+        if (companyResult.success) {
+          setCompanyData((prev) => ({ ...prev, id: companyResult.company.id }));
+          await addAIMessage("✅ Company information saved successfully!");
+        } else {
+          alert(companyResult.error || "Failed to save company information.");
+        }
+      } else if (!collectingCompany && jobData && jobData.title && companyData?.id) {
+        // Save job data if company is already saved
+        const jobResponse = await fetch("/api/onboarding/job-position", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            title: jobData.title || "",
+            category: "EngineeringSoftwareQA",
+            yearsRequired: parseFloat(jobData.yearsRequired || 0),
+            salaryMin: jobData.salaryMin ? parseInt(jobData.salaryMin) : null,
+            salaryMax: jobData.salaryMax ? parseInt(jobData.salaryMax) : null,
+            jobDescription: jobData.jobDescription || "",
+            companyId: companyData.id,
+          }),
+        });
+
+        const jobResult = await jobResponse.json();
+        if (jobResult.success) {
+          setJobData((prev) => ({ ...prev, id: jobResult.jobPosition.id }));
+          await addAIMessage("✅ Job position information saved successfully!");
+        } else {
+          alert(jobResult.error || "Failed to save job position information.");
+        }
+      } else {
+        alert("Not enough information to save yet. Please continue filling the form.");
+      }
+    } catch (error) {
+      console.error("Save error:", error);
+      alert(`Error saving: ${error.message}. Please try again.`);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  // Handle view on map - submit first, then navigate
+  const handleViewOnMap = async () => {
+    // Submit if not already submitted
+    if (!jobData?.id || !companyData?.id) {
+      await handleFinalSubmit();
+    }
+    // Navigate to home page
+    router.push("/");
+  };
+
+  // Handle start next job post
+  const handleStartNext = () => {
+    handleResetChat();
+  };
+
   // Handle final submission
   const handleFinalSubmit = async () => {
     if (!userData || !companyData || !jobData) {
@@ -487,12 +592,10 @@ export default function OnboardingPage() {
         ...prev,
         {
           type: "ai",
-          text: `🎉 Success! Your job posting has been submitted successfully. You can now view it on the home page.`,
+          text: `🎉 Success! Your job posting has been submitted successfully.`,
+          isFinalMessage: true,
         },
       ]);
-      setTimeout(() => {
-        router.push("/");
-      }, 2000);
     } catch (error) {
       console.error("Submission error:", error);
       alert(`Error submitting: ${error.message}. Please try again.`);
@@ -530,22 +633,60 @@ export default function OnboardingPage() {
 
   return (
     <div 
-      className="min-h-screen relative overflow-hidden"
-      style={{
-        backgroundImage: 'url(/back.png)',
-        backgroundSize: 'cover',
-        backgroundPosition: 'center',
-        backgroundRepeat: 'no-repeat',
-        backgroundColor: '#f5f5f5', // Fallback color
+      className="fixed inset-0 overflow-hidden" 
+      style={{ 
+        top: 0,
+        left: 0,
+        right: 0,
+        bottom: 0,
+        height: '100vh',
+        width: '100vw',
+        margin: 0,
+        padding: 0,
       }}
     >
-      {/* Overlay for better readability */}
-      <div className="absolute inset-0 bg-white/30 backdrop-blur-[1px] z-0"></div>
+      {/* Blurred background image layer */}
+      <div 
+        className="fixed z-0"
+        style={{
+          backgroundImage: 'url(/back.png)',
+          backgroundSize: 'cover',
+          backgroundPosition: 'center',
+          backgroundRepeat: 'no-repeat',
+          filter: 'blur(8px)',
+          transform: 'scale(1.1)', // Scale up to avoid blur edges
+          top: 0,
+          left: 0,
+          right: 0,
+          bottom: 0,
+          height: '100vh',
+          width: '100vw',
+          margin: 0,
+          padding: 0,
+        }}
+      ></div>
       
-      <div className="relative z-10 max-w-4xl mx-auto px-4 pt-8">
-        <div className="bg-white/95 backdrop-blur-sm rounded-lg overflow-hidden border border-[#E5E5E5] shadow-lg relative">
+      {/* Overlay for better readability */}
+      <div 
+        className="fixed z-0" 
+        style={{ 
+          top: 0,
+          left: 0,
+          right: 0,
+          bottom: 0,
+          height: '100vh',
+          width: '100vw',
+          margin: 0,
+          padding: 0,
+          backgroundColor: 'rgba(255, 255, 255, 0.3)',
+          backdropFilter: 'blur(1px)',
+        }}
+      ></div>
+      
+      <div className="relative z-10 flex justify-center px-4" style={{ height: '100vh', width: '100vw', margin: 0, padding: 0 }}>
+        <div className="bg-white/95 backdrop-blur-sm rounded-lg overflow-hidden border border-[#E5E5E5] shadow-lg relative w-full max-w-4xl flex flex-col" style={{ height: '100%', margin: 0, padding: 0 }}>
           {/* Header */}
-          <div className="bg-white/95 backdrop-blur-sm px-6 py-4 flex items-center justify-between border-b border-[#E5E5E5] relative z-10">
+          <div className="bg-white/95 backdrop-blur-sm px-6 py-4 flex items-center justify-between border-b border-[#E5E5E5] relative z-10 flex-shrink-0">
             <div className="flex items-center gap-3">
               <button
                 onClick={() => router.push("/")}
@@ -636,7 +777,7 @@ export default function OnboardingPage() {
           </div>
 
           {/* Content - Always show chat interface */}
-          <div className="h-[calc(100vh-200px)] relative z-10">
+          <div className="flex-1 relative z-10 overflow-hidden">
             <ChatInterface
               messages={chatMessages}
               onSendMessage={handleChatMessage}
@@ -646,6 +787,9 @@ export default function OnboardingPage() {
               onScrollRequest={(scrollFn) => {
                 scrollToInlineRef.current = scrollFn;
               }}
+              onSave={handleSave}
+              onViewOnMap={handleViewOnMap}
+              onStartNext={handleStartNext}
             />
           </div>
         </div>
