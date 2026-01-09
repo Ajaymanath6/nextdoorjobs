@@ -242,6 +242,7 @@ export default function Sidebar({ activeItem = "jobs-near-you", onToggle, isOpen
       {/* What's New Section */}
       <div className="p-2 pt-1 pb-1">
         <button
+          onClick={() => handleNavigation("/roadmap")}
           className={`${sidebar["nav-button"]} ${
             isOpen ? sidebar["nav-button-expanded"] : sidebar["nav-button-collapsed"]
           } ${sidebar["nav-button-hover"]}`}

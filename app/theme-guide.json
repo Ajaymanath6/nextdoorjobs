@@ -191,39 +191,76 @@
       "cornerRadius": {
         "value": "6px",
         "tailwindClass": "rounded-md",
-        "description": "ALL buttons (primary and secondary) MUST have 6px corner radius. Use rounded-md utility class."
-      },
-      "secondaryBorderWidth": {
-        "value": "1.5px",
-        "tailwindClass": "border-[1.5px]",
-        "description": "ALL secondary buttons (both types) MUST have 1.5px border width. Use border-[1.5px] utility class."
+        "description": "ALL buttons (all 4 types) MUST have 6px corner radius. Use rounded-md utility class."
       },
       "primary": {
-        "description": "Main CTA button with primary brand color",
+        "description": "Primary button with brand color background",
         "classes": "bg-brand text-brand-bg-white hover:bg-brand-hover rounded-md",
-        "logic": "Uses primary brand color as background with white text. On hover, background changes to brand-hover which is a darker shade of primary for better visual feedback. ALWAYS includes rounded-md (6px corner radius).",
-        "requiredClasses": ["bg-brand", "text-brand-bg-white", "hover:bg-brand-hover", "rounded-md"]
+        "logic": "Uses primary brand color (#F84416) as background with white text. On hover, background changes to brand-hover (#EA4C00). NO border. ALWAYS includes rounded-md (6px corner radius).",
+        "whenToUse": [
+          "Main CTA buttons",
+          "Primary actions",
+          "Submit buttons",
+          "Most important actions"
+        ],
+        "requiredClasses": ["bg-brand", "text-brand-bg-white", "hover:bg-brand-hover", "rounded-md"],
+        "examples": [
+          "Primary CTA: bg-brand text-brand-bg-white hover:bg-brand-hover rounded-md px-4 py-2"
+        ]
       },
       "secondary": {
-        "description": "Secondary button WITH brand secondary color (Type 1)",
-        "classes": "border-[1.5px] border-brand-stroke-weak text-brand-secondary bg-transparent hover:bg-brand-secondary-hover rounded-md",
-        "logic": "Transparent background with brand-stroke-weak border at 1.5px width and brand-secondary text. On hover, background fills with brand-secondary-hover. IMPORTANT: Border is ALWAYS brand-stroke-weak at 1.5px width, NOT brand-secondary. ALWAYS includes rounded-md (6px corner radius).",
-        "whenToUse": "Use when you want the button to have the secondary brand color as text",
-        "requiredClasses": ["border-[1.5px]", "border-brand-stroke-weak", "text-brand-secondary", "bg-transparent", "hover:bg-brand-secondary-hover", "rounded-md"]
+        "description": "Secondary button with brand secondary color background",
+        "classes": "bg-brand-secondary text-brand-bg-white hover:bg-brand-secondary-hover rounded-md",
+        "logic": "Uses brand secondary color (#0A0A0A) as background with white text. On hover, background changes to #292929. NO border. ALWAYS includes rounded-md (6px corner radius).",
+        "whenToUse": [
+          "Secondary actions",
+          "Alternative to primary button",
+          "When you need a dark button style"
+        ],
+        "requiredClasses": ["bg-brand-secondary", "text-brand-bg-white", "hover:bg-brand-secondary-hover", "rounded-md"],
+        "examples": [
+          "Secondary action: bg-brand-secondary text-brand-bg-white hover:bg-brand-secondary-hover rounded-md px-4 py-2"
+        ]
       },
-      "secondary-outline": {
-        "description": "Secondary button WITHOUT brand secondary color (Type 2)",
-        "classes": "border-[1.5px] border-brand-stroke-weak text-brand-text-strong bg-transparent hover:bg-brand-secondary-hover rounded-md",
-        "logic": "Transparent background with brand-stroke-weak border at 1.5px width and brand-text-strong text. On hover, background fills with brand-secondary-hover. IMPORTANT: Border is ALWAYS brand-stroke-weak at 1.5px width, text is strong text color. ALWAYS includes rounded-md (6px corner radius).",
-        "whenToUse": "Use when you want a secondary button style but with strong text color instead of secondary brand color",
-        "requiredClasses": ["border-[1.5px]", "border-brand-stroke-weak", "text-brand-text-strong", "bg-transparent", "hover:bg-brand-secondary-hover", "rounded-md"]
+      "outline": {
+        "description": "Outline button with white background and border",
+        "classes": "bg-brand-bg-white border-[1.5px] border-brand-stroke-weak text-brand-text-strong hover:bg-brand-bg-fill rounded-md",
+        "logic": "White background with brand-stroke-weak border (#E5E5E5) at 1.5px width and brand-text-strong text. On hover, background fills with brand-bg-fill (#F5F5F5). ALWAYS includes border-[1.5px] and rounded-md (6px corner radius).",
+        "whenToUse": [
+          "When you want a bordered button style",
+          "Secondary actions with border",
+          "Cancel or alternative actions"
+        ],
+        "requiredClasses": ["bg-brand-bg-white", "border-[1.5px]", "border-brand-stroke-weak", "text-brand-text-strong", "hover:bg-brand-bg-fill", "rounded-md"],
+        "examples": [
+          "Outline button: bg-brand-bg-white border-[1.5px] border-brand-stroke-weak text-brand-text-strong hover:bg-brand-bg-fill rounded-md px-4 py-2"
+        ]
+      },
+      "ghost": {
+        "description": "Ghost button with white background, no border",
+        "classes": "bg-brand-bg-white text-brand-text-strong hover:bg-brand-bg-fill rounded-md",
+        "logic": "White background with brand-text-strong text. NO border. On hover, background fills with brand-bg-fill (#F5F5F5). ALWAYS includes rounded-md (6px corner radius).",
+        "whenToUse": [
+          "Subtle actions",
+          "Tertiary buttons",
+          "When you want minimal visual weight",
+          "Icon buttons",
+          "Text-only actions"
+        ],
+        "requiredClasses": ["bg-brand-bg-white", "text-brand-text-strong", "hover:bg-brand-bg-fill", "rounded-md"],
+        "examples": [
+          "Ghost button: bg-brand-bg-white text-brand-text-strong hover:bg-brand-bg-fill rounded-md px-4 py-2"
+        ],
+        "importantNote": "Ghost buttons have NO border - this is different from outline buttons"
       },
       "criticalRules": [
-        "ALL buttons MUST have rounded-md (6px corner radius) - NO EXCEPTIONS",
-        "ALL secondary buttons (both types) MUST have border-[1.5px] (1.5px border width) - NO EXCEPTIONS",
-        "Primary buttons do NOT have borders, only secondary buttons have borders",
+        "ALL buttons (all 4 types) MUST have rounded-md (6px corner radius) - NO EXCEPTIONS",
+        "Primary and Secondary buttons have NO borders",
+        "Outline button MUST have border-[1.5px] border-brand-stroke-weak",
+        "Ghost button has NO border (this is the key difference from outline)",
         "Never use rounded-lg, rounded-xl, or any other border radius for buttons - ALWAYS use rounded-md",
-        "Never use border, border-2, or any other border width for secondary buttons - ALWAYS use border-[1.5px]"
+        "Never use border, border-2, or any other border width for outline buttons - ALWAYS use border-[1.5px]",
+        "Button types: primary (bg-brand), secondary (bg-brand-secondary), outline (border + white bg), ghost (white bg, no border)"
       ]
     },
     "input": {
@@ -272,7 +309,7 @@
     "workflow": [
       "1. BEFORE creating ANY component or making ANY styling changes, ALWAYS read this theme-guide.json file first",
       "2. Check componentGuidelines section for specific component rules (buttons, inputs, headings, etc.)",
-      "3. Verify button specifications: rounded-md (6px) for all buttons, border-[1.5px] for secondary buttons",
+      "3. Verify button specifications: rounded-md (6px) for all buttons, understand the 4 button types (primary, secondary, outline, ghost)",
       "4. When creating components, follow the guidelines in componentGuidelines",
       "5. Always use theme colors from globals.css, never hardcode hex values",
       "6. Follow the logic explained in each component guideline",
@@ -299,8 +336,13 @@
       "CRITICAL: NEVER hardcode hex colors (#F84416, #0A0A0A, etc.) - ALWAYS use Tailwind utility classes",
       "CRITICAL: NEVER use inline styles (style='...') for colors - ALWAYS use utility classes",
       "ONLY use utility classes from theme-guide.json and globals.css",
-      "Primary buttons: bg-brand + text-brand-bg-white + hover:bg-brand-hover",
-      "Secondary buttons: border-[1.5px] border-brand-stroke-weak + text-brand-secondary + hover:bg-brand-secondary-hover",
+      "Button Types - There are 4 button types:",
+      "  1. Primary: bg-brand + text-brand-bg-white + hover:bg-brand-hover (NO border)",
+      "  2. Secondary: bg-brand-secondary + text-brand-bg-white + hover:bg-brand-secondary-hover (NO border)",
+      "  3. Outline: bg-brand-bg-white + border-[1.5px] border-brand-stroke-weak + text-brand-text-strong + hover:bg-brand-bg-fill",
+      "  4. Ghost: bg-brand-bg-white + text-brand-text-strong + hover:bg-brand-bg-fill (NO border)",
+      "ALL buttons MUST have rounded-md (6px corner radius)",
+      "Only Outline button has border (border-[1.5px] border-brand-stroke-weak)",
       "Headings: Always use text-brand-text-strong",
       "Body text: Use text-brand-text-weak",
       "Sidebar borders: ALWAYS use border-brand-stroke-strong",
