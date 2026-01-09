@@ -10,7 +10,6 @@ import UrlInput from "../components/Onboarding/UrlInput";
 import FundingSeriesBadges from "../components/Onboarding/FundingSeriesBadges";
 import SalaryRangeBadges from "../components/Onboarding/SalaryRangeBadges";
 import GetCoordinatesButton from "../components/Onboarding/GetCoordinatesButton";
-import BackgroundMap from "../components/Onboarding/BackgroundMap";
 import JobCategorySelector from "../components/Onboarding/JobCategorySelector";
 
 // Field collection states
@@ -578,18 +577,9 @@ export default function OnboardingPage() {
   }
 
   return (
-    <div className="min-h-screen relative overflow-hidden">
-      {/* Leaflet Map Background - Full visibility */}
-      <div className="absolute inset-0 z-0 w-full h-full">
-        <BackgroundMap />
-      </div>
-      
+    <div className="min-h-screen relative overflow-hidden bg-white">
       <div className="relative z-10 max-w-4xl mx-auto px-4 pt-8">
-        <div className="bg-white/90 backdrop-blur-sm rounded-lg overflow-hidden border border-[#E5E5E5] shadow-lg relative">
-          {/* Map Background for Form - visible through semi-transparent card */}
-          <div className="absolute inset-0 z-0 pointer-events-none">
-            <BackgroundMap />
-          </div>
+        <div className="bg-white rounded-lg overflow-hidden border border-[#E5E5E5] shadow-lg relative">
           {/* Header */}
           <div className="bg-white/95 backdrop-blur-sm px-6 py-4 flex items-center justify-between border-b border-[#E5E5E5] relative z-10">
             <div className="flex items-center gap-3">

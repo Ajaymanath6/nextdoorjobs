@@ -19,22 +19,40 @@ const BackgroundMapComponent = () => {
     // Only run on client side
     if (!isClient || !mapRef.current || mapInstanceRef.current) return;
 
-    // Polyfill for Image constructor if needed
-    if (typeof window !== 'undefined' && typeof Image === 'function') {
-      const OriginalImage = window.Image;
-      window.Image = function(...args) {
-        if (new.target) {
-          return new OriginalImage(...args);
-        }
-        return new OriginalImage(...args);
-      };
-      window.Image.prototype = OriginalImage.prototype;
-    }
-
     // Dynamic import of Leaflet to avoid SSR issues
     import("leaflet").then((LModule) => {
       try {
         const L = LModule.default;
+        
+        // Polyfill Image constructor for Leaflet if needed (only in Leaflet's context)
+        if (typeof window !== 'undefined' && L && L.Browser) {
+          // Store original Image if not already stored
+          if (!window._originalImage) {
+            window._originalImage = window.Image;
+          }
+          
+          // Override Image constructor only if called without 'new'
+          const OriginalImage = window._originalImage;
+          const ImagePolyfill = function(...args) {
+            // Always use 'new' operator
+            return new OriginalImage(...args);
+          };
+          
+          // Copy prototype
+          ImagePolyfill.prototype = OriginalImage.prototype;
+          Object.setPrototypeOf(ImagePolyfill, OriginalImage);
+          
+          // Temporarily override for Leaflet initialization
+          const originalImage = window.Image;
+          window.Image = ImagePolyfill;
+          
+          // Restore after a short delay to avoid breaking other code
+          setTimeout(() => {
+            if (window._originalImage) {
+              window.Image = window._originalImage;
+            }
+          }, 100);
+        }
 
         // Fix for default marker icon issue in React
         delete L.Icon.Default.prototype._getIconUrl;
