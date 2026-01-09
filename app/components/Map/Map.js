@@ -815,25 +815,38 @@ const MapComponent = () => {
     // Only run on client side
     if (!isClient || !mapRef.current || mapInstanceRef.current) return;
 
+    // Polyfill for Image constructor if needed
+    if (typeof window !== 'undefined' && typeof Image === 'function') {
+      const OriginalImage = window.Image;
+      window.Image = function(...args) {
+        if (new.target) {
+          return new OriginalImage(...args);
+        }
+        return new OriginalImage(...args);
+      };
+      window.Image.prototype = OriginalImage.prototype;
+    }
+
     // Dynamic import of Leaflet to avoid SSR issues
     import("leaflet").then((LModule) => {
-      const L = LModule.default;
-      
-      // Make L available globally for markercluster
-      window.L = L;
+      try {
+        const L = LModule.default;
+        
+        // Make L available globally for markercluster
+        window.L = L;
 
-      // Import markercluster after L is available
-      return import("leaflet.markercluster").then(() => {
-        // Fix for default marker icon issue in React
-        delete L.Icon.Default.prototype._getIconUrl;
-        L.Icon.Default.mergeOptions({
-          iconRetinaUrl:
-            "https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/images/marker-icon-2x.png",
-          iconUrl:
-            "https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/images/marker-icon.png",
-          shadowUrl:
-            "https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/images/marker-shadow.png",
-        });
+        // Import markercluster after L is available
+        return import("leaflet.markercluster").then(() => {
+          // Fix for default marker icon issue in React
+          delete L.Icon.Default.prototype._getIconUrl;
+          L.Icon.Default.mergeOptions({
+            iconRetinaUrl:
+              "https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/images/marker-icon-2x.png",
+            iconUrl:
+              "https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/images/marker-icon.png",
+            shadowUrl:
+              "https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/images/marker-shadow.png",
+          });
 
         // Set initial view to home location (Thrissur, Kerala)
         // Will be adjusted by fitBounds when markers are added
@@ -849,15 +862,22 @@ const MapComponent = () => {
           zoomAnimationThreshold: 4,
         }).setView([initialLat, initialLon], zoom);
 
-        // Tile layer with OpenStreetMap
-        L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
-          attribution:
-            '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors',
-          maxZoom: 19,
-        }).addTo(map);
+          // Tile layer with OpenStreetMap
+          L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
+            attribution:
+              '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors',
+            maxZoom: 19,
+          }).addTo(map);
 
-        mapInstanceRef.current = map;
-      });
+          mapInstanceRef.current = map;
+        }).catch((error) => {
+          console.error("Error loading markercluster:", error);
+        });
+      } catch (error) {
+        console.error("Error initializing map:", error);
+      }
+    }).catch((error) => {
+      console.error("Error loading Leaflet:", error);
     });
 
     // Cleanup function
