@@ -412,17 +412,15 @@ export default function OnboardingPage() {
 
   // Handle category selection
   const handleCategorySelected = async (category) => {
-    setIsLoading(true);
     try {
       // Import JOB_CATEGORIES
       const { JOB_CATEGORIES } = await import("../../lib/constants/jobCategories");
       const categoryLabel = JOB_CATEGORIES.find(c => c.value === category)?.label || category;
-      await addAIMessage(`Category: ${categoryLabel}. How many years of experience are required? (Enter a number)`);
       setCurrentField(JOB_FIELDS.YEARS);
+      await addAIMessage(`Category: ${categoryLabel}. How many years of experience are required? (Enter a number)`);
     } catch (error) {
       console.error("Error in handleCategorySelected:", error);
-    } finally {
-      setIsLoading(false);
+      await addAIMessage(`Sorry, there was an error. Please try again.`);
     }
   };
 
@@ -581,15 +579,15 @@ export default function OnboardingPage() {
 
   return (
     <div className="min-h-screen relative overflow-hidden">
-      {/* Leaflet Map Background - 30% opacity */}
-      <div className="absolute inset-0 z-0" style={{ opacity: 0.3 }}>
+      {/* Leaflet Map Background - 100% opacity */}
+      <div className="absolute inset-0 z-0" style={{ opacity: 1.0 }}>
         <BackgroundMap />
       </div>
       
       <div className="relative z-10 max-w-4xl mx-auto px-4 pt-8">
         <div className="bg-white rounded-lg overflow-hidden border border-[#E5E5E5] shadow-lg relative">
-          {/* Map Background for Form - 30% opacity */}
-          <div className="absolute inset-0 z-0 pointer-events-none" style={{ opacity: 0.3 }}>
+          {/* Map Background for Form - 100% opacity */}
+          <div className="absolute inset-0 z-0 pointer-events-none" style={{ opacity: 1.0 }}>
             <BackgroundMap />
           </div>
           {/* Header */}

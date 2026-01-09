@@ -1,8 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import Image from "next/image";
-import { Screen, Document } from "@carbon/icons-react";
+import { Screen, Document, Enterprise } from "@carbon/icons-react";
 import TypingAnimation from "./TypingAnimation";
 
 export default function ChatInterface({ messages = [], onSendMessage, isLoading = false, inlineComponent = null, typingText = null, onScrollRequest }) {
@@ -12,6 +11,9 @@ export default function ChatInterface({ messages = [], onSendMessage, isLoading 
   const [uploadedFiles, setUploadedFiles] = useState([]);
   const [showScreenshotTooltip, setShowScreenshotTooltip] = useState(false);
   const [showClipTooltip, setShowClipTooltip] = useState(false);
+  const [showSavedFilesDropdown, setShowSavedFilesDropdown] = useState(false);
+  const [savedFiles, setSavedFiles] = useState([]);
+  const savedFilesDropdownRef = useRef(null);
 
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
@@ -44,6 +46,38 @@ export default function ChatInterface({ messages = [], onSendMessage, isLoading 
   useEffect(() => {
     scrollToBottom();
   }, [messages]);
+
+  // Close saved files dropdown when clicking outside
+  useEffect(() => {
+    const handleClickOutside = (event) => {
+      if (savedFilesDropdownRef.current && !savedFilesDropdownRef.current.contains(event.target)) {
+        setShowSavedFilesDropdown(false);
+      }
+    };
+
+    if (showSavedFilesDropdown) {
+      document.addEventListener("mousedown", handleClickOutside);
+    }
+
+    return () => {
+      document.removeEventListener("mousedown", handleClickOutside);
+    };
+  }, [showSavedFilesDropdown]);
+
+  // Fetch saved files (placeholder - can be connected to API later)
+  useEffect(() => {
+    const fetchSavedFiles = async () => {
+      try {
+        // const response = await fetch('/api/saved-files');
+        // const data = await response.json();
+        // setSavedFiles(data.files || []);
+        setSavedFiles([]); // Placeholder
+      } catch (error) {
+        console.error("Error fetching saved files:", error);
+      }
+    };
+    fetchSavedFiles();
+  }, []);
 
   const handleSubmit = (e) => {
     e.preventDefault();
@@ -81,15 +115,13 @@ export default function ChatInterface({ messages = [], onSendMessage, isLoading 
               message.type === "user" ? "justify-end" : "justify-start"
             }`}
           >
-            {message.type === "user" && (
-              <div className="flex-shrink-0 w-6 h-6 mt-1">
-                <Image
-                  src="/onlylogo.svg"
-                  alt="Logo"
-                  width={24}
-                  height={24}
-                  className="w-6 h-6"
-                />
+            {message.type === "user" ? (
+              <div className="flex-shrink-0 w-6 h-6 mt-1 flex items-center justify-center">
+                <Enterprise size={20} className="text-brand-stroke-strong" />
+              </div>
+            ) : (
+              <div className="flex-shrink-0 w-6 h-6 mt-1 flex items-center justify-center">
+                <Enterprise size={20} className="text-brand-stroke-strong" />
               </div>
             )}
             <div
@@ -173,6 +205,49 @@ export default function ChatInterface({ messages = [], onSendMessage, isLoading 
           
           {/* Icons at Left Bottom */}
           <div className="absolute bottom-4 left-2 flex items-center gap-2 z-10">
+            {/* @ Icon for Saved Files - FIRST */}
+            <div className="relative" ref={savedFilesDropdownRef}>
+              <button
+                type="button"
+                onClick={() => {
+                  setShowSavedFilesDropdown(!showSavedFilesDropdown);
+                }}
+                className="p-2 rounded-md hover:bg-brand-bg-fill transition-colors"
+                disabled={isLoading}
+                title="Show saved files"
+              >
+                <span className="text-brand-stroke-strong text-lg font-semibold">@</span>
+              </button>
+              {showSavedFilesDropdown && (
+                <div className="absolute bottom-full left-0 mb-2 w-64 bg-brand-bg-white border border-brand-stroke-weak rounded-lg shadow-lg z-50 max-h-60 overflow-y-auto">
+                  {savedFiles.length > 0 ? (
+                    <div className="py-2">
+                      {savedFiles.map((file, index) => (
+                        <button
+                          key={index}
+                          type="button"
+                          onClick={() => {
+                            console.log("Selected file:", file);
+                            setShowSavedFilesDropdown(false);
+                            // TODO: Add file to input or handle selection
+                          }}
+                          className="w-full text-left px-4 py-2 text-sm text-brand-text-strong hover:bg-brand-bg-fill transition-colors flex items-center gap-2"
+                          style={{ fontFamily: "Open Sans, sans-serif" }}
+                        >
+                          <Document size={16} className="text-brand-stroke-strong" />
+                          <span className="truncate">{file.name || file}</span>
+                        </button>
+                      ))}
+                    </div>
+                  ) : (
+                    <div className="px-4 py-3 text-sm text-brand-text-weak text-center" style={{ fontFamily: "Open Sans, sans-serif" }}>
+                      No saved files
+                    </div>
+                  )}
+                </div>
+              )}
+            </div>
+
             {/* Screenshot Icon */}
             <div className="relative">
               <button
