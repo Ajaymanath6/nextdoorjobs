@@ -434,40 +434,25 @@ const searchByLocality = async (localityName) => {
 
   let pincodeData = null;
 
+  // Prepare search terms outside try block so they're available in catch block
+  const searchTerms = normalizedQuery.split('/').map(s => s.trim()).filter(Boolean);
+  const wordTerms = normalizedQuery.split(/\s+/).filter(term => term.length > 2);
+
   try {
-    // First, try exact/contains match (faster)
-    const searchTerms = normalizedQuery.split('/').map(s => s.trim()).filter(Boolean);
-    const wordTerms = normalizedQuery.split(/\s+/).filter(term => term.length > 2);
-    
+    // First, try exact/contains match (faster) - simplified query for better performance
     const orConditions = [
       { localityName: { equals: localityName.trim(), mode: "insensitive" } },
       { localityName: { contains: normalizedQuery, mode: "insensitive" } }
     ];
     
-    searchTerms.forEach(term => {
-      if (term && term.length > 0) {
-        orConditions.push({ localityName: { contains: term.trim(), mode: "insensitive" } });
-      }
-    });
-    
-    if (wordTerms.length > 1 && searchTerms.length === 1) {
-      const phrase = wordTerms.join(' ');
-      if (!orConditions.some(cond => 
-        cond.localityName?.contains === phrase || 
-        cond.localityName?.equals === phrase
-      )) {
-        orConditions.push({ localityName: { contains: phrase, mode: "insensitive" } });
-      }
-    }
-    
-    wordTerms.forEach(word => {
-      if (word && word.length > 2) {
-        const isAlreadyCovered = searchTerms.some(term => term.includes(word));
-        if (!isAlreadyCovered) {
-          orConditions.push({ localityName: { contains: word, mode: "insensitive" } });
+    // Only add additional conditions if the query is short (to avoid too many OR conditions)
+    if (normalizedQuery.length <= 20) {
+      searchTerms.forEach(term => {
+        if (term && term.length > 2) {
+          orConditions.push({ localityName: { contains: term.trim(), mode: "insensitive" } });
         }
-      }
-    });
+      });
+    }
     
     pincodeData = await queryWithTimeout(async () => {
       try {
@@ -476,16 +461,18 @@ const searchByLocality = async (localityName) => {
           console.error("❌ prisma.pincode is not available. Prisma client needs regeneration and server restart.");
           throw new Error("Pincode model not available. Please restart the development server.");
         }
+        // Use a simpler, faster query - limit OR conditions and add take limit
         return await prisma.pincode.findFirst({
           where: {
             AND: [
-              { OR: orConditions },
+              { OR: orConditions.slice(0, 5) }, // Limit to first 5 conditions for performance
               { state: "Kerala" }
             ]
           },
           orderBy: [
             { localityName: 'asc' }
-          ]
+          ],
+          take: 1 // Only need first result
         });
       } catch (prismaError) {
         // Check if it's because pincode model doesn't exist
@@ -495,104 +482,110 @@ const searchByLocality = async (localityName) => {
         // Re-throw other errors
         throw prismaError;
       }
-    });
+    }, 8000); // Reduced timeout to 8 seconds
 
     // If exact match found, return it
     if (pincodeData) {
       console.log(`✅ Found exact match: ${pincodeData.localityName} (${pincodeData.pincode})`);
     } else {
-      // Try fuzzy search with fuse.js
-      console.log(`   No exact match found. Trying fuzzy search...`);
-      
-      // Fetch Kerala pincodes for fuzzy search (limit to reasonable number)
-      const keralaPincodes = await queryWithTimeout(async () => {
-        return await prisma.pincode.findMany({
-          where: { state: "Kerala" },
-          select: {
-            id: true,
-            pincode: true,
-            localityName: true,
-            district: true,
-            state: true,
-            latitude: true,
-            longitude: true,
-          },
-          take: 5000 // Limit to prevent memory issues
-        });
-      });
-
-      if (keralaPincodes.length > 0) {
-        // Configure fuse.js for fuzzy matching - stricter settings
-        const fuse = new Fuse(keralaPincodes, {
-          keys: ['localityName'],
-          threshold: 0.3, // Stricter: 0.3 instead of 0.4
-          includeScore: true,
-          minMatchCharLength: 3,
-          ignoreLocation: false, // Consider position of match
-          findAllMatches: true, // Get multiple results to choose best
-          shouldSort: true,
-        });
-
-        const results = fuse.search(localityName.trim());
+      // Try fuzzy search with fuse.js - but only if query is reasonable length
+      if (normalizedQuery.length > 3 && normalizedQuery.length < 50) {
+        console.log(`   No exact match found. Trying fuzzy search...`);
         
-        if (results.length > 0) {
-          // Score and rank results with better heuristics
-          const scoredResults = results
-            .filter(r => r.score < 0.5) // Stricter score threshold
-            .map(result => {
-              const itemName = result.item.localityName.toLowerCase();
-              const searchTerm = normalizedQuery;
-              
-              // Calculate various matching factors
-              let bonus = 0;
-              
-              // STRONG bonus for exact start match (e.g., "malapuram" starts "malappuram")
-              if (itemName.startsWith(searchTerm)) {
-                bonus = -0.5; // Very strong bonus
-              } 
-              // Check if any word in the locality starts with search term
-              else {
-                const words = itemName.split(/[\s\/,]+/);
-                const startsWithWord = words.some(word => word.startsWith(searchTerm));
-                if (startsWithWord) {
-                  bonus = -0.3; // Strong bonus for word-start match
-                } else if (itemName.includes(searchTerm)) {
-                  // Substring match but not at start - small bonus
-                  bonus = -0.05;
-                }
-              }
-              
-              // Penalty for very different lengths
-              const lengthDiff = Math.abs(itemName.length - searchTerm.length);
-              let lengthPenalty = 0;
-              if (lengthDiff > 10) {
-                lengthPenalty = 0.2; // Big difference
-              } else if (lengthDiff > 5) {
-                lengthPenalty = 0.1; // Moderate difference
-              } else if (lengthDiff <= 2) {
-                lengthPenalty = -0.05; // Very similar length - bonus
-              }
-              
-              // Additional penalty if match is in the middle/end (not start)
-              let positionPenalty = 0;
-              if (!itemName.startsWith(searchTerm) && itemName.includes(searchTerm)) {
-                const position = itemName.indexOf(searchTerm);
-                // Penalize matches that appear later in the string
-                positionPenalty = position > 0 ? 0.15 : 0;
-              }
-              
-              return {
-                ...result,
-                adjustedScore: result.score + bonus + lengthPenalty + positionPenalty
-              };
-            })
-            .sort((a, b) => a.adjustedScore - b.adjustedScore); // Sort by adjusted score
+        // Fetch Kerala pincodes for fuzzy search (limit to reasonable number)
+        const keralaPincodes = await queryWithTimeout(async () => {
+          return await prisma.pincode.findMany({
+            where: { 
+              state: "Kerala",
+              // Pre-filter by first few characters to reduce dataset
+              localityName: { startsWith: normalizedQuery.substring(0, 3), mode: "insensitive" }
+            },
+            select: {
+              id: true,
+              pincode: true,
+              localityName: true,
+              district: true,
+              state: true,
+              latitude: true,
+              longitude: true,
+            },
+            take: 1000 // Reduced from 5000 for better performance
+          });
+        }, 8000);
+
+        if (keralaPincodes.length > 0) {
+          // Configure fuse.js for fuzzy matching - stricter settings
+          const fuse = new Fuse(keralaPincodes, {
+            keys: ['localityName'],
+            threshold: 0.3, // Stricter: 0.3 instead of 0.4
+            includeScore: true,
+            minMatchCharLength: 3,
+            ignoreLocation: false, // Consider position of match
+            findAllMatches: true, // Get multiple results to choose best
+            shouldSort: true,
+          });
+
+          const results = fuse.search(localityName.trim());
           
-          if (scoredResults.length > 0 && scoredResults[0].adjustedScore < 0.5) {
-            pincodeData = scoredResults[0].item;
-            console.log(`✅ Found fuzzy match: ${pincodeData.localityName} (${pincodeData.pincode}) - Score: ${scoredResults[0].score.toFixed(2)}, Adjusted: ${scoredResults[0].adjustedScore.toFixed(2)}`);
-          } else {
-            console.log(`   No good fuzzy match found (best adjusted score: ${scoredResults[0]?.adjustedScore?.toFixed(2) || 'N/A'})`);
+          if (results.length > 0) {
+            // Score and rank results with better heuristics
+            const scoredResults = results
+              .filter(r => r.score < 0.5) // Stricter score threshold
+              .map(result => {
+                const itemName = result.item.localityName.toLowerCase();
+                const searchTerm = normalizedQuery;
+                
+                // Calculate various matching factors
+                let bonus = 0;
+                
+                // STRONG bonus for exact start match (e.g., "malapuram" starts "malappuram")
+                if (itemName.startsWith(searchTerm)) {
+                  bonus = -0.5; // Very strong bonus
+                } 
+                // Check if any word in the locality starts with search term
+                else {
+                  const words = itemName.split(/[\s\/,]+/);
+                  const startsWithWord = words.some(word => word.startsWith(searchTerm));
+                  if (startsWithWord) {
+                    bonus = -0.3; // Strong bonus for word-start match
+                  } else if (itemName.includes(searchTerm)) {
+                    // Substring match but not at start - small bonus
+                    bonus = -0.05;
+                  }
+                }
+                
+                // Penalty for very different lengths
+                const lengthDiff = Math.abs(itemName.length - searchTerm.length);
+                let lengthPenalty = 0;
+                if (lengthDiff > 10) {
+                  lengthPenalty = 0.2; // Big difference
+                } else if (lengthDiff > 5) {
+                  lengthPenalty = 0.1; // Moderate difference
+                } else if (lengthDiff <= 2) {
+                  lengthPenalty = -0.05; // Very similar length - bonus
+                }
+                
+                // Additional penalty if match is in the middle/end (not start)
+                let positionPenalty = 0;
+                if (!itemName.startsWith(searchTerm) && itemName.includes(searchTerm)) {
+                  const position = itemName.indexOf(searchTerm);
+                  // Penalize matches that appear later in the string
+                  positionPenalty = position > 0 ? 0.15 : 0;
+                }
+                
+                return {
+                  ...result,
+                  adjustedScore: result.score + bonus + lengthPenalty + positionPenalty
+                };
+              })
+              .sort((a, b) => a.adjustedScore - b.adjustedScore); // Sort by adjusted score
+            
+            if (scoredResults.length > 0 && scoredResults[0].adjustedScore < 0.5) {
+              pincodeData = scoredResults[0].item;
+              console.log(`✅ Found fuzzy match: ${pincodeData.localityName} (${pincodeData.pincode}) - Score: ${scoredResults[0].score.toFixed(2)}, Adjusted: ${scoredResults[0].adjustedScore.toFixed(2)}`);
+            } else {
+              console.log(`   No good fuzzy match found (best adjusted score: ${scoredResults[0]?.adjustedScore?.toFixed(2) || 'N/A'})`);
+            }
           }
         }
       }
@@ -601,25 +594,31 @@ const searchByLocality = async (localityName) => {
     console.error("❌ Database query error:", dbError);
     
     if (dbError.message === 'Query timeout') {
-      console.log("   Retrying query...");
+      console.log("   Retrying with simpler query...");
       try {
+        // Retry with a much simpler query - just exact match and single contains
         pincodeData = await queryWithTimeout(async () => {
           return await prisma.pincode.findFirst({
             where: {
               AND: [
                 {
-                  OR: searchTerms.map(term => ({
-                    localityName: { contains: term, mode: "insensitive" }
-                  }))
+                  OR: [
+                    { localityName: { equals: localityName.trim(), mode: "insensitive" } },
+                    { localityName: { contains: normalizedQuery, mode: "insensitive" } }
+                  ]
                 },
                 { state: "Kerala" }
               ]
-            }
+            },
+            orderBy: { localityName: 'asc' },
+            take: 1
           });
-        }, 15000);
+        }, 6000); // Shorter timeout for retry
         
         if (pincodeData) {
           console.log(`✅ Retry successful: ${pincodeData.localityName}`);
+        } else {
+          throw new Error("Database query timeout - no results found");
         }
       } catch (retryError) {
         console.error("❌ Retry failed:", retryError.message);

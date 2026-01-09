@@ -97,11 +97,14 @@ model User {
   name         String    @db.VarChar(255)
   phone        String?   @db.VarChar(20)
   passwordHash String?   @map("password_hash") @db.VarChar(255)
+  clerkId      String?   @unique @map("clerk_id") @db.VarChar(255)
+  avatarUrl    String?   @map("avatar_url") @db.VarChar(500)
   createdAt    DateTime  @default(now()) @map("created_at")
   updatedAt    DateTime  @updatedAt @map("updated_at")
   companies    Company[]
 
   @@index([email])
+  @@index([clerkId])
   @@map("users")
 }
 

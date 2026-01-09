@@ -1,13 +1,48 @@
 import { NextResponse } from "next/server";
+import { auth, currentUser } from '@clerk/nextjs/server';
 import { prisma } from "../../../../lib/prisma";
 import { cookies } from "next/headers";
 
 /**
  * GET /api/auth/me
- * Get current authenticated user from session
+ * Get current authenticated user from session (supports both Clerk and cookie-based auth)
  */
 export async function GET() {
   try {
+    // First, try to get user from Clerk
+    const { userId } = await auth();
+    
+    if (userId) {
+      // User authenticated via Clerk
+      const clerkUser = await currentUser();
+      
+      if (clerkUser) {
+        const email = clerkUser.emailAddresses[0]?.emailAddress;
+        
+        if (email) {
+          // Get user from database
+          const user = await prisma.user.findUnique({
+            where: { email: email.toLowerCase().trim() },
+            select: {
+              id: true,
+              email: true,
+              name: true,
+              phone: true,
+              createdAt: true,
+            },
+          });
+
+          if (user) {
+            return NextResponse.json({
+              success: true,
+              user,
+            });
+          }
+        }
+      }
+    }
+
+    // Fallback to cookie-based session (for email/password auth)
     const cookieStore = await cookies();
     const sessionToken = cookieStore.get("session_token");
 
@@ -19,9 +54,9 @@ export async function GET() {
     }
 
     // Extract user ID from session token (format: userId-timestamp-random)
-    const userId = parseInt(sessionToken.value.split("-")[0]);
+    const userIdFromCookie = parseInt(sessionToken.value.split("-")[0]);
 
-    if (isNaN(userId)) {
+    if (isNaN(userIdFromCookie)) {
       return NextResponse.json(
         { error: "Invalid session" },
         { status: 401 }
@@ -30,7 +65,7 @@ export async function GET() {
 
     // Get user from database
     const user = await prisma.user.findUnique({
-      where: { id: userId },
+      where: { id: userIdFromCookie },
       select: {
         id: true,
         email: true,

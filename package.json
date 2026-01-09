@@ -37,6 +37,7 @@
   },
   "dependencies": {
     "@carbon/icons-react": "^11.71.0",
+    "@clerk/nextjs": "^6.36.7",
     "@prisma/adapter-pg": "^7.2.0",
     "@prisma/client": "^7.2.0",
     "@remixicon/react": "^4.8.0",

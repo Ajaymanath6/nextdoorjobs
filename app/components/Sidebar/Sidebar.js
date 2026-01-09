@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useRef } from "react";
 import { useRouter } from "next/navigation";
+import { useClerk } from '@clerk/nextjs';
 import Image from "next/image";
 import themeClasses from "../../theme-utility-classes.json";
 import {
@@ -22,6 +23,7 @@ import {
 
 export default function Sidebar({ activeItem = "jobs-near-you", onToggle, isOpen: externalIsOpen }) {
   const router = useRouter();
+  const { signOut } = useClerk();
   const [isOpen, setIsOpen] = useState(externalIsOpen !== undefined ? externalIsOpen : true);
   const [showUserDropdown, setShowUserDropdown] = useState(false);
   const [showLogoHover, setShowLogoHover] = useState(false);
@@ -103,6 +105,17 @@ export default function Sidebar({ activeItem = "jobs-near-you", onToggle, isOpen
   // Handle logout
   const handleLogout = async () => {
     try {
+      // Sign out from Clerk first (if authenticated via Clerk)
+      if (signOut) {
+        try {
+          await signOut();
+        } catch (clerkError) {
+          console.error("Clerk signout error:", clerkError);
+          // Continue with API logout even if Clerk signout fails
+        }
+      }
+
+      // Clear session cookie via API
       const response = await fetch("/api/auth/logout", {
         method: "POST",
       });

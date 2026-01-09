@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useRef } from "react";
 import { useRouter } from "next/navigation";
+import { useUser } from '@clerk/nextjs';
 import { WatsonHealthRotate_360 } from "@carbon/icons-react";
 import ChatInterface from "../components/Onboarding/ChatInterface";
 import EmailAuthForm from "../components/Onboarding/EmailAuthForm";
@@ -32,7 +33,9 @@ const JOB_FIELDS = {
 
 export default function OnboardingPage() {
   const router = useRouter();
+  const { user: clerkUser, isLoaded: clerkLoaded } = useUser();
   const [showAuth, setShowAuth] = useState(true);
+  const [checkingAuth, setCheckingAuth] = useState(true);
   const [selectedLanguage, setSelectedLanguage] = useState("English");
   const [showLanguageDropdown, setShowLanguageDropdown] = useState(false);
   const languageDropdownRef = useRef(null);
@@ -64,6 +67,72 @@ export default function OnboardingPage() {
   const [typingText, setTypingText] = useState("");
   const [isTyping, setIsTyping] = useState(false);
   const scrollToInlineRef = useRef(null);
+
+  // Check if user is authenticated via Clerk on mount
+  useEffect(() => {
+    const checkClerkAuth = async () => {
+      // Wait for Clerk to load
+      if (!clerkLoaded) {
+        return;
+      }
+
+      setCheckingAuth(false);
+
+      if (clerkUser) {
+        // User is authenticated via Clerk, get user from database
+        try {
+          const email = clerkUser.emailAddresses[0]?.emailAddress;
+          if (email) {
+            const response = await fetch(`/api/onboarding/user?email=${encodeURIComponent(email)}`);
+            const result = await response.json();
+            
+            if (result.success && result.user) {
+              setUserData(result.user);
+              setChatMessages([
+                {
+                  type: "ai",
+                  text: `Hi ${result.user.name || "there"}! 👋 Welcome to JobsonMap. I'll help you post a job opening. What's your company name?`,
+                },
+              ]);
+              setShowAuth(false);
+            } else {
+              // User exists in Clerk but not in our DB - create them
+              const createResponse = await fetch("/api/onboarding/user", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({
+                  email: email,
+                  name: clerkUser.firstName && clerkUser.lastName
+                    ? `${clerkUser.firstName} ${clerkUser.lastName}`
+                    : clerkUser.firstName || clerkUser.username || "User",
+                }),
+              });
+              
+              const createResult = await createResponse.json();
+              if (createResult.success) {
+                setUserData(createResult.user);
+                setChatMessages([
+                  {
+                    type: "ai",
+                    text: `Hi ${createResult.user.name || "there"}! 👋 Welcome to JobsonMap. I'll help you post a job opening. What's your company name?`,
+                  },
+                ]);
+                setShowAuth(false);
+              }
+            }
+          }
+        } catch (error) {
+          console.error("Error checking Clerk auth:", error);
+          setCheckingAuth(false);
+        }
+      } else {
+        // No Clerk user, show auth form
+        setShowAuth(true);
+      }
+    };
+
+    checkClerkAuth();
+  }, [clerkUser, clerkLoaded]);
 
   // Handle email authentication
   const handleEmailAuth = async ({ email, name, password }) => {
@@ -605,7 +674,30 @@ export default function OnboardingPage() {
   };
 
 
-  // Show email authentication overlay
+  // Show loading state while checking authentication
+  if (checkingAuth) {
+    return (
+      <div 
+        className="min-h-screen relative overflow-hidden"
+        style={{
+          backgroundImage: 'url(/back.png)',
+          backgroundSize: 'cover',
+          backgroundPosition: 'center',
+          backgroundRepeat: 'no-repeat',
+          backgroundColor: '#f5f5f5',
+        }}
+      >
+        <div className="absolute inset-0 z-10 flex items-center justify-center">
+          <div className="text-center">
+            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-[#F84416] mx-auto mb-4"></div>
+            <p className="text-gray-600" style={{ fontFamily: "Open Sans, sans-serif" }}>Loading...</p>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  // Show email authentication overlay (only after checking auth to avoid flash)
   if (showAuth) {
     return (
       <div 
