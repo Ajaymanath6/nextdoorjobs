@@ -7,6 +7,8 @@ import ChatInterface from "../components/Onboarding/ChatInterface";
 import EmailAuthForm from "../components/Onboarding/EmailAuthForm";
 import StateDistrictSelector from "../components/Onboarding/StateDistrictSelector";
 import UrlInput from "../components/Onboarding/UrlInput";
+import FundingSeriesBadges from "../components/Onboarding/FundingSeriesBadges";
+import SalaryRangeBadges from "../components/Onboarding/SalaryRangeBadges";
 
 // Field collection states
 const COMPANY_FIELDS = {
@@ -187,13 +189,7 @@ export default function OnboardingPage() {
             break;
 
           case COMPANY_FIELDS.FUNDING:
-            if (value.toLowerCase() !== "skip" && value) {
-              setCompanyData((prev) => ({ ...prev, fundingSeries: value }));
-              await addAIMessage(`Funding series: ${value}. Do you have latitude and longitude coordinates? (Type "skip" if not)`);
-            } else {
-              await addAIMessage(`No problem! Do you have latitude and longitude coordinates? (Type "skip" if not)`);
-            }
-            setCurrentField(COMPANY_FIELDS.LOCATION);
+            // This case is handled by FundingSeriesBadges callback
             break;
 
           case COMPANY_FIELDS.LOCATION:
@@ -248,27 +244,26 @@ export default function OnboardingPage() {
           case JOB_FIELDS.YEARS:
             const years = parseFloat(value) || 0;
             setJobData((prev) => ({ ...prev, yearsRequired: years }));
-            await addAIMessage(`Experience required: ${years} years. What's the salary range? (e.g., "50000-100000" or "skip")`);
+            await addAIMessage(`Experience required: ${years} years. What's the salary range?`);
             setCurrentField(JOB_FIELDS.SALARY);
+            setInlineComponent(
+              <SalaryRangeBadges
+                onSelect={(min, max) => {
+                  setInlineComponent(null);
+                  handleSalarySelected(min, max);
+                }}
+                onSkip={() => {
+                  setInlineComponent(null);
+                  handleSalarySelected(null, null);
+                }}
+                selectedMin={jobData?.salaryMin}
+                selectedMax={jobData?.salaryMax}
+              />
+            );
             break;
 
           case JOB_FIELDS.SALARY:
-            if (value.toLowerCase() !== "skip" && value) {
-              const salaryMatch = value.match(/(\d+)\s*-\s*(\d+)/i) || value.match(/(\d+)\s*to\s*(\d+)/i);
-              if (salaryMatch) {
-                setJobData((prev) => ({
-                  ...prev,
-                  salaryMin: salaryMatch[1],
-                  salaryMax: salaryMatch[2],
-                }));
-              } else {
-                await addAIMessage(`Please provide salary range as "min-max" (e.g., 50000-100000) or type "skip"`);
-                setIsLoading(false);
-                return;
-              }
-            }
-            await addAIMessage(`Great! Now, please provide a detailed job description.`);
-            setCurrentField(JOB_FIELDS.DESCRIPTION);
+            // This case is handled by SalaryRangeBadges callback
             break;
 
           case JOB_FIELDS.DESCRIPTION:
@@ -331,11 +326,54 @@ export default function OnboardingPage() {
   const handleWebsiteSubmitted = async (url) => {
     setIsLoading(true);
     if (url.toLowerCase() !== "skip") {
-      await addAIMessage(`Website noted: ${url}. What's your funding series? (Type "skip" if not applicable)`);
+      await addAIMessage(`Website noted: ${url}. What's your funding series?`);
     } else {
-      await addAIMessage(`No problem! What's your funding series? (Type "skip" if not applicable)`);
+      await addAIMessage(`No problem! What's your funding series?`);
     }
     setCurrentField(COMPANY_FIELDS.FUNDING);
+    setInlineComponent(
+      <FundingSeriesBadges
+        onSelect={(series) => {
+          setCompanyData((prev) => ({ ...prev, fundingSeries: series }));
+          setInlineComponent(null);
+          handleFundingSelected(series);
+        }}
+        onSkip={() => {
+          setInlineComponent(null);
+          handleFundingSelected("skip");
+        }}
+        selectedValue={companyData?.fundingSeries}
+      />
+    );
+    setIsLoading(false);
+  };
+
+  // Handle funding selection
+  const handleFundingSelected = async (series) => {
+    setIsLoading(true);
+    if (series.toLowerCase() !== "skip") {
+      await addAIMessage(`Funding series: ${series}. Do you have latitude and longitude coordinates? (Type "skip" if not)`);
+    } else {
+      await addAIMessage(`No problem! Do you have latitude and longitude coordinates? (Type "skip" if not)`);
+    }
+    setCurrentField(COMPANY_FIELDS.LOCATION);
+    setIsLoading(false);
+  };
+
+  // Handle salary selection
+  const handleSalarySelected = async (min, max) => {
+    setIsLoading(true);
+    if (min && max) {
+      setJobData((prev) => ({
+        ...prev,
+        salaryMin: min,
+        salaryMax: max,
+      }));
+      await addAIMessage(`Salary range: ₹${parseInt(min).toLocaleString('en-IN')} - ₹${parseInt(max).toLocaleString('en-IN')}. Now, please provide a detailed job description.`);
+    } else {
+      await addAIMessage(`Great! Now, please provide a detailed job description.`);
+    }
+    setCurrentField(JOB_FIELDS.DESCRIPTION);
     setIsLoading(false);
   };
 
@@ -476,11 +514,31 @@ export default function OnboardingPage() {
   }
 
   return (
-    <div className="min-h-screen bg-white">
-      <div className="max-w-4xl mx-auto px-4 pt-8">
-        <div className="bg-white rounded-lg overflow-hidden border border-[#E5E5E5]">
+    <div className="min-h-screen relative overflow-hidden">
+      {/* Map Background - 70% opacity */}
+      <div
+        className="absolute inset-0 z-0"
+        style={{
+          background: "linear-gradient(135deg, #e0f2fe 0%, #bae6fd 25%, #7dd3fc 50%, #38bdf8 75%, #0ea5e9 100%)",
+          opacity: 0.7,
+        }}
+      >
+        {/* Map-like grid pattern */}
+        <div
+          className="w-full h-full"
+          style={{
+            backgroundImage: `
+              repeating-linear-gradient(0deg, transparent, transparent 2px, rgba(0,0,0,0.05) 2px, rgba(0,0,0,0.05) 4px),
+              repeating-linear-gradient(90deg, transparent, transparent 2px, rgba(0,0,0,0.05) 2px, rgba(0,0,0,0.05) 4px)
+            `,
+          }}
+        ></div>
+      </div>
+      
+      <div className="relative z-10 max-w-4xl mx-auto px-4 pt-8">
+        <div className="bg-white rounded-lg overflow-hidden border border-[#E5E5E5] shadow-lg">
           {/* Header */}
-          <div className="bg-white px-6 py-4 flex items-center justify-between border-b border-[#E5E5E5]">
+          <div className="bg-white px-6 py-4 flex items-center justify-between border-b border-[#E5E5E5] relative z-10">
             <div className="flex items-center gap-3">
               <button
                 onClick={handleResetChat}
