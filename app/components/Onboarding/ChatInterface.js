@@ -122,7 +122,13 @@ export default function ChatInterface({ messages = [], onSendMessage, isLoading 
               </div>
             ) : (
               <div className="flex-shrink-0 w-6 h-6 mt-1 flex items-center justify-center">
-                <Enterprise size={20} className="text-brand-stroke-strong" />
+                <Image
+                  src="/onlylogo.svg"
+                  alt="Logo"
+                  width={20}
+                  height={20}
+                  className="w-5 h-5"
+                />
               </div>
             )}
             <div

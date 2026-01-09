@@ -241,10 +241,9 @@ export default function OnboardingPage() {
             setCurrentField(JOB_FIELDS.CATEGORY);
             setInlineComponent(
               <JobCategorySelector
-                onCategorySelect={(category) => {
-                  setJobData((prev) => ({ ...prev, category }));
+                onCategorySelect={async (category) => {
                   setInlineComponent(null);
-                  handleCategorySelected(category);
+                  await handleCategorySelected(category);
                 }}
                 selectedCategory={jobData?.category}
                 onDropdownOpen={() => {
@@ -415,7 +414,14 @@ export default function OnboardingPage() {
       // Import JOB_CATEGORIES
       const { JOB_CATEGORIES } = await import("../../lib/constants/jobCategories");
       const categoryLabel = JOB_CATEGORIES.find(c => c.value === category)?.label || category;
+      
+      // Update job data first
+      setJobData((prev) => ({ ...prev, category }));
+      
+      // Set the next field
       setCurrentField(JOB_FIELDS.YEARS);
+      
+      // Add the next question
       await addAIMessage(`Category: ${categoryLabel}. How many years of experience are required? (Enter a number)`);
     } catch (error) {
       console.error("Error in handleCategorySelected:", error);
@@ -577,9 +583,21 @@ export default function OnboardingPage() {
   }
 
   return (
-    <div className="min-h-screen relative overflow-hidden bg-white">
+    <div 
+      className="min-h-screen relative overflow-hidden"
+      style={{
+        backgroundImage: 'url(/map-background.png)',
+        backgroundSize: 'cover',
+        backgroundPosition: 'center',
+        backgroundRepeat: 'no-repeat',
+        backgroundColor: '#f5f5f5', // Fallback color
+      }}
+    >
+      {/* Overlay for better readability */}
+      <div className="absolute inset-0 bg-white/30 backdrop-blur-[1px] z-0"></div>
+      
       <div className="relative z-10 max-w-4xl mx-auto px-4 pt-8">
-        <div className="bg-white rounded-lg overflow-hidden border border-[#E5E5E5] shadow-lg relative">
+        <div className="bg-white/95 backdrop-blur-sm rounded-lg overflow-hidden border border-[#E5E5E5] shadow-lg relative">
           {/* Header */}
           <div className="bg-white/95 backdrop-blur-sm px-6 py-4 flex items-center justify-between border-b border-[#E5E5E5] relative z-10">
             <div className="flex items-center gap-3">
