@@ -119,7 +119,7 @@ export default function ReviewStep({ companyData, jobData, onSubmit, onBack }) {
         </button>
         <button
           onClick={onSubmit}
-          className="flex-1 px-6 py-3 bg-[#7c00ff] text-white rounded-lg hover:bg-[#6a00e6] transition-colors"
+          className="flex-1 px-6 py-3 bg-[#F84416] text-white rounded-lg hover:bg-[#EA4C00] transition-colors"
           style={{ fontFamily: "Open Sans, sans-serif", fontSize: "14px", fontWeight: 600 }}
         >
           Submit

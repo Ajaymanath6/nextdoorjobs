@@ -392,7 +392,7 @@ export default function OnboardingPage() {
                 </p>
                 <button
                   onClick={() => router.push("/")}
-                  className="px-6 py-3 bg-[#7c00ff] text-white rounded-lg hover:bg-[#6a00e6] transition-colors"
+                  className="px-6 py-3 bg-[#F84416] text-white rounded-lg hover:bg-[#EA4C00] transition-colors"
                   style={{ fontFamily: "Open Sans, sans-serif", fontSize: "14px", fontWeight: 600 }}
                 >
                   Go to Home
@@ -403,7 +403,7 @@ export default function OnboardingPage() {
             {isLoading && currentStep !== STEPS.CHAT && (
               <div className="absolute inset-0 bg-white bg-opacity-75 flex items-center justify-center">
                 <div className="text-center">
-                  <div className="w-12 h-12 border-4 border-[#7c00ff] border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
+                  <div className="w-12 h-12 border-4 border-[#F84416] border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
                   <p className="text-gray-600" style={{ fontFamily: "Open Sans, sans-serif" }}>
                     Submitting...
                   </p>

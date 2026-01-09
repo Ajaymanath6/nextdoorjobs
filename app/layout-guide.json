@@ -1,0 +1,245 @@
+{
+  "layoutMethods": {
+    "flexboxGrow": {
+      "description": "Content area grows to fill space and scrolls independently (RECOMMENDED for app layouts)",
+      "classes": "h-screen flex flex-col",
+      "whenToUse": [
+        "Dashboard layouts",
+        "Admin panels",
+        "App-like interfaces",
+        "When only content area should scroll, not header",
+        "Full-height layouts"
+      ],
+      "example": "<div class=\"h-screen flex flex-col\"><header class=\"flex-shrink-0\">Header</header><main class=\"flex-1 overflow-y-auto\">Content scrolls</main></div>",
+      "logic": "Container is full height (h-screen). Header doesn't shrink (flex-shrink-0). Content grows (flex-1) and scrolls independently (overflow-y-auto). Only content area scrolls."
+    },
+    "stickyHeader": {
+      "description": "Header sticks to top when scrolling reaches it",
+      "classes": "sticky top-0 z-50",
+      "whenToUse": [
+        "Long pages where header should appear after scrolling",
+        "When you want header to scroll with page initially, then stick",
+        "Content-heavy pages with natural scrolling"
+      ],
+      "example": "<header class=\"sticky top-0 z-50 bg-brand-bg-white border-b border-brand-stroke-weak\">Header</header><main>Content scrolls normally</main>",
+      "logic": "Header scrolls with page initially, then sticks at top when scrolling reaches it. Full page scrolls together."
+    },
+    "fixedHeader": {
+      "description": "Header always fixed at top of viewport",
+      "classes": "fixed top-0 left-0 right-0 z-50",
+      "whenToUse": [
+        "Navigation bars that must always be visible",
+        "Simple layouts where header should never scroll away",
+        "When header height is known and consistent"
+      ],
+      "example": "<header class=\"fixed top-0 left-0 right-0 z-50 bg-brand-bg-white\">Header</header><main class=\"pt-[header-height] h-screen overflow-y-auto\">Content with padding-top</main>",
+      "logic": "Header is always visible. Content needs padding-top equal to header height. Full page scrolls."
+    }
+  },
+  "pageTypes": {
+    "pageWithHeaderContentScrollable": {
+      "description": "Page with header fixed, only content area scrolls (Flexbox Grow Method)",
+      "structure": "header (fixed) + main (scrollable)",
+      "scrollBehavior": "Only main content scrolls, header stays fixed",
+      "classes": {
+        "container": "h-screen flex flex-col",
+        "header": "flex-shrink-0 bg-brand-bg-white border-b border-brand-stroke-weak",
+        "main": "flex-1 overflow-y-auto bg-brand-bg-fill"
+      },
+      "htmlExample": "<div class=\"h-screen flex flex-col\"><header class=\"flex-shrink-0 bg-brand-bg-white border-b border-brand-stroke-weak\"><div class=\"px-4 py-4\">Header Content</div></header><main class=\"flex-1 overflow-y-auto\"><div class=\"container mx-auto px-4 py-8\"><!-- Scrollable content here --></div></main></div>",
+      "whenToUse": [
+        "Dashboard layouts",
+        "Admin panels",
+        "App interfaces",
+        "When header must always be visible",
+        "When you want only content to scroll"
+      ],
+      "importantNotes": "This is the RECOMMENDED method for app-like interfaces. Header stays fixed, only content scrolls."
+    },
+    "pageWithHeader": {
+      "description": "Simple page with header, full page scrolls",
+      "structure": "header + main content",
+      "scrollBehavior": "Full page scrolls together",
+      "classes": {
+        "container": "No special container needed",
+        "header": "bg-brand-bg-white border-b border-brand-stroke-weak",
+        "main": "container mx-auto px-4 py-8"
+      },
+      "htmlExample": "<header class=\"bg-brand-bg-white border-b border-brand-stroke-weak\"><div class=\"container mx-auto px-4 py-4\">Header Content</div></header><main class=\"container mx-auto px-4 py-8\"><!-- Content here --></main>",
+      "whenToUse": [
+        "Simple landing pages",
+        "Blog posts",
+        "Content pages where header can scroll away",
+        "When you want natural page scrolling"
+      ]
+    }
+  },
+  "containerRules": {
+    "whenToUseContainer": {
+      "description": "Use container class when content should be centered with max-width",
+      "classes": "container mx-auto px-4",
+      "whenToUse": [
+        "Main content areas",
+        "Centered content blocks",
+        "When you want responsive max-width",
+        "Article content, cards, forms"
+      ],
+      "examples": [
+        "Main content: container mx-auto px-4 py-8",
+        "Card container: container mx-auto px-4"
+      ]
+    },
+    "whenNotToUseContainer": {
+      "description": "Don't use container for full-width elements",
+      "whenToUse": [
+        "Full-width headers",
+        "Full-width backgrounds",
+        "Hero sections",
+        "Sidebars",
+        "Navigation bars",
+        "Full-width banners"
+      ],
+      "examples": [
+        "Header: No container, use px-4 or px-6 for padding",
+        "Full-width background: No container, let it span full width"
+      ]
+    }
+  },
+  "gridVsFlexbox": {
+    "whenToUseGrid": {
+      "description": "Use CSS Grid for 2D layouts (rows and columns)",
+      "classes": "grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4",
+      "whenToUse": [
+        "Card grids (equal height cards)",
+        "Complex 2D layouts",
+        "When you need both row and column control",
+        "Dashboard widgets",
+        "Image galleries",
+        "Product grids"
+      ],
+      "examples": [
+        "Card grid: grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6",
+        "Dashboard: grid grid-cols-12 gap-4 (12-column layout)"
+      ]
+    },
+    "whenToUseFlexbox": {
+      "description": "Use Flexbox for 1D layouts (row or column)",
+      "classes": "flex flex-col or flex flex-row",
+      "whenToUse": [
+        "Horizontal navigation bars",
+        "Vertical stacks",
+        "Aligning items in a row",
+        "Space distribution (justify-between, justify-around)",
+        "Centering content",
+        "Header with logo and buttons"
+      ],
+      "examples": [
+        "Header: flex items-center justify-between",
+        "Vertical stack: flex flex-col gap-4",
+        "Centered content: flex items-center justify-center"
+      ]
+    }
+  },
+  "spacingRules": {
+    "paddingVsMargin": {
+      "padding": {
+        "description": "Use padding for internal spacing within an element",
+        "whenToUse": [
+          "Inside containers",
+          "Card content spacing",
+          "Button internal spacing",
+          "Input field internal spacing"
+        ],
+        "examples": [
+          "Card: p-4 or p-6",
+          "Button: px-4 py-2",
+          "Container: px-4"
+        ]
+      },
+      "margin": {
+        "description": "Use margin for external spacing between elements",
+        "whenToUse": [
+          "Space between cards",
+          "Space between sections",
+          "Space between buttons in a group",
+          "Vertical spacing between elements"
+        ],
+        "examples": [
+          "Between cards: mb-4 or mb-6",
+          "Between sections: my-8 or my-12",
+          "Button group: gap-3 (preferred) or space-x-3"
+        ]
+      }
+    },
+    "gapVsSpace": {
+      "gap": {
+        "description": "Use gap with flexbox or grid (RECOMMENDED)",
+        "classes": "flex gap-4 or grid gap-4",
+        "whenToUse": [
+          "Flexbox containers",
+          "Grid containers",
+          "When you want consistent spacing",
+          "Modern approach (preferred)"
+        ],
+        "examples": [
+          "Flex row: flex gap-4",
+          "Grid: grid grid-cols-3 gap-6"
+        ]
+      }
+    }
+  },
+  "aiInstructions": {
+    "workflow": [
+      "1. Read layout-guide.json to understand layout patterns",
+      "2. Read theme-guide.json for color and component styling",
+      "3. Determine page type based on requirements",
+      "4. Use appropriate layout method (flexbox grow, sticky, fixed)",
+      "5. Apply container rules (when to use, when not to use)",
+      "6. Choose grid vs flexbox based on layout needs",
+      "7. Follow spacing rules (padding vs margin, gap vs space)",
+      "8. Combine with theme utility classes from theme-guide.json",
+      "9. Ensure accessibility and semantic HTML"
+    ],
+    "criticalRules": {
+      "pageTypeSelection": {
+        "rule": "ALWAYS determine page type first before creating layout",
+        "options": [
+          "pageWithHeader - Simple page, full scrolls",
+          "pageWithHeaderContentScrollable - Header fixed, content scrolls (RECOMMENDED for apps)"
+        ],
+        "decisionTree": "Ask: Does header need to stay visible? → Yes: Use flexbox grow. Is it a simple page? → Yes: Use simple header layout."
+      },
+      "containerUsage": {
+        "rule": "NEVER use container on full-width elements (headers, sidebars, backgrounds)",
+        "rule2": "ALWAYS use container mx-auto px-4 for main content areas",
+        "examples": {
+          "wrong": [
+            "Header with container (header should be full-width)",
+            "Sidebar with container (sidebar should be full-width)"
+          ],
+          "correct": [
+            "Header: No container, use px-4 for padding",
+            "Main content: container mx-auto px-4 py-8"
+          ]
+        }
+      },
+      "gridVsFlexbox": {
+        "rule": "Use Grid for 2D layouts (rows AND columns), Flexbox for 1D layouts (row OR column)",
+        "decisionTree": "Need both row and column control? → Grid. Need horizontal or vertical alignment? → Flexbox."
+      }
+    },
+    "rules": [
+      "CRITICAL: Determine page type FIRST (pageWithHeader, pageWithHeaderContentScrollable, etc.)",
+      "CRITICAL: For app-like interfaces, use flexbox grow method (h-screen flex flex-col)",
+      "CRITICAL: Header borders use border-brand-stroke-weak",
+      "CRITICAL: Never use container on full-width elements (headers, sidebars)",
+      "CRITICAL: Always use container mx-auto px-4 for main content areas",
+      "Use Grid for 2D layouts (card grids, dashboards)",
+      "Use Flexbox for 1D layouts (navigation, vertical stacks, alignment)",
+      "Use gap with flexbox/grid (preferred over space-x/space-y)",
+      "Use padding for internal spacing, margin for external spacing",
+      "Scrollable content areas: Use bg-brand-bg-fill for background",
+      "Always combine layout classes with theme utility classes from theme-guide.json"
+    ]
+  }
+}

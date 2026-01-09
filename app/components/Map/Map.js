@@ -303,7 +303,7 @@ const MapComponent = () => {
       iconCreateFunction: function(cluster) {
         const count = cluster.getChildCount();
         return L.divIcon({
-          html: `<div style="background-color:#7c00ff;color:white;border-radius:50%;width:40px;height:40px;display:flex;align-items:center;justify-content:center;font-weight:bold;font-size:14px;border:3px solid white;box-shadow:0 2px 8px rgba(0,0,0,0.3);">${count}</div>`,
+          html: `<div style="background-color:#F84416;color:white;border-radius:50%;width:40px;height:40px;display:flex;align-items:center;justify-content:center;font-weight:bold;font-size:14px;border:3px solid white;box-shadow:0 2px 8px rgba(0,0,0,0.3);">${count}</div>`,
           className: 'marker-cluster-custom',
           iconSize: L.point(40, 40),
         });
@@ -753,7 +753,7 @@ const MapComponent = () => {
     const html = `<div class="company-marker" style="position:relative;width:${boxSize}px;height:${boxSize}px;background-color:#FFFFFF;border-radius:8px;display:flex;align-items:center;justify-content:center;padding:0;box-shadow:0 2px 8px rgba(0,0,0,0.12),0 1px 3px rgba(0,0,0,0.08);border:2px solid ${lightBlueBorder};cursor:pointer;transition:transform 0.2s ease,box-shadow 0.2s ease;overflow:visible;">${
       logoUrl
         ? `<img src="${logoUrl}" alt="Logo" style="width:100%;height:100%;object-fit:cover;border-radius:6px;" />`
-        : `<div style="width:100%;height:100%;background:#7c00ff;border-radius:6px;"></div>`
+        : `<div style="width:100%;height:100%;background:#F84416;border-radius:6px;"></div>`
     }${badgeHtml}</div>`;
 
     // Calculate total icon size including badge
@@ -2408,7 +2408,7 @@ const MapComponent = () => {
                     size={18}
                     style={{
                       color: (searchQuery && searchQuery.trim()) 
-                        ? "#7c00ff" 
+                        ? "#F84416" 
                         : "var(--brand-text-tertiary)",
                     }}
                   />
@@ -2715,7 +2715,7 @@ const MapComponent = () => {
             pointerEvents: 'auto'
           }}
         >
-          <Portfolio size={18} style={{ color: '#7c00ff' }} />
+          <Portfolio size={18} style={{ color: '#F84416' }} />
           <div className="flex flex-col">
             <span
               style={{
@@ -2748,7 +2748,7 @@ const MapComponent = () => {
             pointerEvents: 'auto'
           }}
         >
-          <Enterprise size={18} style={{ color: '#7c00ff' }} />
+          <Enterprise size={18} style={{ color: '#F84416' }} />
           <div className="flex flex-col">
             <span
               style={{

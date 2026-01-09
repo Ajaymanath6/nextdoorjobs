@@ -5,13 +5,16 @@
   --foreground: #171717;
   
   /* Brand Colors */
-  --brand-color: #7c00ff;
-  --brand-text-strong: #0A0A0A;
-  --brand-text-weak: #1A1A1A;
-  --brand-stroke-strong: #575757;
-  --brand-stroke-weak: #F5F5F5;
+  --brand-color: #F84416;
+  --brand-color-hover: #EA4C00;
+  --brand-color-secondary: #0A0A0A;
+  --brand-color-secondary-hover: #292929;
+  --brand-text-strong: #1A1A1A;
+  --brand-text-weak: #575757;
+  --brand-stroke-strong: #767676;
+  --brand-stroke-weak: #E5E5E5;
   --brand-stroke-border: #E5E5E5;
-  --brand-bg-fill: #fcfcfb;
+  --brand-bg-fill: #F5F5F5;
   --brand-bg-white: #FFFFFF;
   --brand-marker-border: #87CEEB;
 }
@@ -24,6 +27,9 @@
   
   /* Brand Color Theme */
   --color-brand: var(--brand-color);
+  --color-brand-hover: var(--brand-color-hover);
+  --color-brand-secondary: var(--brand-color-secondary);
+  --color-brand-secondary-hover: var(--brand-color-secondary-hover);
   --color-brand-text-strong: var(--brand-text-strong);
   --color-brand-text-weak: var(--brand-text-weak);
   --color-brand-stroke-strong: var(--brand-stroke-strong);
@@ -77,7 +83,7 @@ body {
   width: 20px;
   height: 20px;
   border-radius: 50%;
-  background: rgba(124, 0, 255, 0.3);
+  background: rgba(248, 68, 22, 0.3);
   transform: translate(-50%, -50%) scale(0);
   animation: ripple 0.6s ease-out;
   pointer-events: none;

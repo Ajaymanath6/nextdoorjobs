@@ -102,7 +102,7 @@ export default function CompanyForm({ onSubmit, initialData = {} }) {
           name="name"
           value={formData.name}
           onChange={handleChange}
-          className={`w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-[#7c00ff] ${
+          className={`w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-[#F84416] ${
             errors.name ? "border-red-500" : "border-gray-300 dark:border-gray-700"
           } bg-white dark:bg-gray-900 text-gray-900 dark:text-gray-100`}
           style={{ fontFamily: "Open Sans, sans-serif" }}
@@ -142,7 +142,7 @@ export default function CompanyForm({ onSubmit, initialData = {} }) {
           name="fundingSeries"
           value={formData.fundingSeries}
           onChange={handleChange}
-          className="w-full px-4 py-2 border border-gray-300 dark:border-gray-700 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#7c00ff] bg-white dark:bg-gray-900 text-gray-900 dark:text-gray-100"
+          className="w-full px-4 py-2 border border-gray-300 dark:border-gray-700 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#F84416] bg-white dark:bg-gray-900 text-gray-900 dark:text-gray-100"
           style={{ fontFamily: "Open Sans, sans-serif" }}
         >
           <option value="">Select funding series</option>
@@ -165,7 +165,7 @@ export default function CompanyForm({ onSubmit, initialData = {} }) {
             value={formData.latitude}
             onChange={handleChange}
             step="any"
-            className={`w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-[#7c00ff] ${
+            className={`w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-[#F84416] ${
               errors.latitude ? "border-red-500" : "border-gray-300 dark:border-gray-700"
             } bg-white dark:bg-gray-900 text-gray-900 dark:text-gray-100`}
             style={{ fontFamily: "Open Sans, sans-serif" }}
@@ -183,7 +183,7 @@ export default function CompanyForm({ onSubmit, initialData = {} }) {
             value={formData.longitude}
             onChange={handleChange}
             step="any"
-            className={`w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-[#7c00ff] ${
+            className={`w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-[#F84416] ${
               errors.longitude ? "border-red-500" : "border-gray-300 dark:border-gray-700"
             } bg-white dark:bg-gray-900 text-gray-900 dark:text-gray-100`}
             style={{ fontFamily: "Open Sans, sans-serif" }}
@@ -202,7 +202,7 @@ export default function CompanyForm({ onSubmit, initialData = {} }) {
           name="state"
           value={formData.state}
           onChange={handleChange}
-          className={`w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-[#7c00ff] ${
+          className={`w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-[#F84416] ${
             errors.state ? "border-red-500" : "border-gray-300 dark:border-gray-700"
           } bg-white dark:bg-gray-900 text-gray-900 dark:text-gray-100`}
           style={{ fontFamily: "Open Sans, sans-serif" }}
@@ -220,7 +220,7 @@ export default function CompanyForm({ onSubmit, initialData = {} }) {
           name="district"
           value={formData.district}
           onChange={handleChange}
-          className={`w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-[#7c00ff] ${
+          className={`w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-[#F84416] ${
             errors.district ? "border-red-500" : "border-gray-300 dark:border-gray-700"
           } bg-white dark:bg-gray-900 text-gray-900 dark:text-gray-100`}
           style={{ fontFamily: "Open Sans, sans-serif" }}
@@ -238,7 +238,7 @@ export default function CompanyForm({ onSubmit, initialData = {} }) {
           name="pincode"
           value={formData.pincode}
           onChange={handleChange}
-          className="w-full px-4 py-2 border border-gray-300 dark:border-gray-700 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#7c00ff] bg-white dark:bg-gray-900 text-gray-900 dark:text-gray-100"
+          className="w-full px-4 py-2 border border-gray-300 dark:border-gray-700 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#F84416] bg-white dark:bg-gray-900 text-gray-900 dark:text-gray-100"
           style={{ fontFamily: "Open Sans, sans-serif" }}
           placeholder="e.g., 680001"
         />
@@ -246,7 +246,7 @@ export default function CompanyForm({ onSubmit, initialData = {} }) {
 
       <button
         type="submit"
-        className="w-full px-6 py-3 bg-[#7c00ff] text-white rounded-lg hover:bg-[#6a00e6] transition-colors"
+        className="w-full px-6 py-3 bg-[#F84416] text-white rounded-lg hover:bg-[#EA4C00] transition-colors"
         style={{ fontFamily: "Open Sans, sans-serif", fontSize: "14px", fontWeight: 600 }}
       >
         Continue

@@ -1,0 +1,312 @@
+{
+  "themeColors": {
+    "brandcolor-primary": {
+      "hex": "#F84416",
+      "usage": "Main CTA button background, primary brand color",
+      "utilityClasses": {
+        "background": "bg-brand",
+        "text": "text-brand",
+        "border": "border-brand"
+      },
+      "whenToUse": [
+        "Primary/CTA buttons background",
+        "Main brand color elements",
+        "Active states",
+        "Primary actions"
+      ],
+      "examples": [
+        "Button: bg-brand text-brand-bg-white hover:bg-brand-hover",
+        "Active link: text-brand"
+      ]
+    },
+    "brandcolor-primaryhover": {
+      "hex": "#EA4C00",
+      "usage": "Hover state for primary buttons (when background is primary)",
+      "utilityClasses": {
+        "background": "bg-brand-hover",
+        "text": "text-brand-hover",
+        "border": "border-brand-hover"
+      },
+      "whenToUse": [
+        "Primary button hover state",
+        "Hover on elements with primary background"
+      ],
+      "examples": [
+        "Primary button hover: hover:bg-brand-hover",
+        "Full primary button: bg-brand text-brand-bg-white hover:bg-brand-hover"
+      ],
+      "logic": "When a button or element has bg-brand, the hover should use bg-brand-hover (darker shade of primary)"
+    },
+    "brandcolor-secondary": {
+      "hex": "#0A0A0A",
+      "usage": "Secondary brand color for outline/secondary buttons with border",
+      "utilityClasses": {
+        "background": "bg-brand-secondary",
+        "text": "text-brand-secondary",
+        "border": "border-brand-secondary"
+      },
+      "whenToUse": [
+        "Secondary button background",
+        "Outline button border and text",
+        "Alternative actions"
+      ],
+      "examples": [
+        "Outline button: border-brand-stroke-weak text-brand-secondary bg-transparent hover:bg-brand-secondary-hover",
+        "Secondary button: bg-brand-secondary text-brand-bg-white"
+      ]
+    },
+    "brandcolor-secondaryhover": {
+      "hex": "#292929",
+      "usage": "Hover state for secondary/outline buttons (NOT bg-brand-bg-fill)",
+      "utilityClasses": {
+        "background": "bg-brand-secondary-hover",
+        "text": "text-brand-secondary-hover",
+        "border": "border-brand-secondary-hover"
+      },
+      "whenToUse": [
+        "Secondary button hover state",
+        "Outline button hover state",
+        "Hover on elements with secondary/outline style"
+      ],
+      "examples": [
+        "Secondary button hover: hover:bg-brand-secondary-hover",
+        "Full outline button: border-brand-stroke-weak text-brand-secondary bg-transparent hover:bg-brand-secondary-hover"
+      ],
+      "logic": "When a button is secondary (outline style with border), the hover should use bg-brand-secondary-hover (#292929), NOT bg-brand-bg-fill. This is a darker gray specifically for secondary button hovers."
+    },
+    "brandcolor-textstrong": {
+      "hex": "#1A1A1A",
+      "usage": "Headings, main headings, button text in some cases",
+      "utilityClasses": {
+        "text": "text-brand-text-strong"
+      },
+      "whenToUse": [
+        "All main headings (h1, h2, h3)",
+        "Primary text content",
+        "Button text (when specified)",
+        "Important labels"
+      ],
+      "examples": [
+        "Heading: text-brand-text-strong text-2xl font-bold",
+        "Button text: text-brand-text-strong"
+      ]
+    },
+    "brandcolor-textweak": {
+      "hex": "#575757",
+      "usage": "Secondary text, secondary hierarchy after main text",
+      "utilityClasses": {
+        "text": "text-brand-text-weak"
+      },
+      "whenToUse": [
+        "Body text",
+        "Secondary descriptions",
+        "Helper text",
+        "Less important information"
+      ],
+      "examples": [
+        "Body text: text-brand-text-weak text-sm",
+        "Description: text-brand-text-weak"
+      ]
+    },
+    "brandcolor-strokestrong": {
+      "hex": "#767676",
+      "usage": "ALWAYS use for: Sidebar borders, input field borders, button borders, icons",
+      "utilityClasses": {
+        "border": "border-brand-stroke-strong",
+        "text": "text-brand-stroke-strong"
+      },
+      "whenToUse": [
+        "Sidebar borders (ALWAYS use strokestrong)",
+        "Input field borders (ALWAYS use strokestrong)",
+        "Button borders (ALWAYS use strokestrong)",
+        "Icon colors",
+        "Strong dividers"
+      ],
+      "examples": [
+        "Sidebar: border-brand-stroke-strong",
+        "Input: border-brand-stroke-strong",
+        "Button border: border-brand-stroke-strong",
+        "Icon: text-brand-stroke-strong"
+      ],
+      "importantNote": "ALWAYS use strokestrong for sidebar borders, input field borders, and button borders. This is a mandatory rule."
+    },
+    "brandcolor-strokeweak": {
+      "hex": "#E5E5E5",
+      "usage": "ALWAYS use for: Card borders, dividers, and all other light elements",
+      "utilityClasses": {
+        "border": "border-brand-stroke-weak"
+      },
+      "whenToUse": [
+        "Card borders (ALWAYS use strokeweak)",
+        "Dividers (ALWAYS use strokeweak)",
+        "Light borders",
+        "Subtle separators",
+        "Secondary button borders (ALL secondary buttons use this border color - exception to button border rule)"
+      ],
+      "examples": [
+        "Card border: border-brand-stroke-weak",
+        "Divider: border-t border-brand-stroke-weak",
+        "Secondary button border: border-brand-stroke-weak"
+      ],
+      "importantNote": "ALWAYS use strokeweak for card borders and dividers. Secondary buttons are an exception and also use strokeweak, but all other button borders use strokestrong."
+    },
+    "brandcolor-fill": {
+      "hex": "#F5F5F5",
+      "usage": "Layout background (NOT for secondary button hover - use brandcolor-secondaryhover instead)",
+      "utilityClasses": {
+        "background": "bg-brand-bg-fill"
+      },
+      "whenToUse": [
+        "Layout backgrounds",
+        "Section backgrounds",
+        "General fill backgrounds"
+      ],
+      "examples": [
+        "Layout bg: bg-brand-bg-fill",
+        "Section background: bg-brand-bg-fill"
+      ],
+      "importantNote": "DO NOT use this for secondary button hover - use brandcolor-secondaryhover (#292929) instead"
+    },
+    "brandcolor-white": {
+      "hex": "#FFFFFF",
+      "usage": "Background color in general wherever necessary",
+      "utilityClasses": {
+        "background": "bg-brand-bg-white",
+        "text": "text-brand-bg-white"
+      },
+      "whenToUse": [
+        "Card backgrounds",
+        "Modal backgrounds",
+        "Button text on primary buttons",
+        "General white backgrounds"
+      ],
+      "examples": [
+        "Card: bg-brand-bg-white",
+        "Primary button text: text-brand-bg-white"
+      ]
+    }
+  },
+  "componentGuidelines": {
+    "button": {
+      "cornerRadius": {
+        "value": "6px",
+        "tailwindClass": "rounded-md",
+        "description": "ALL buttons (primary and secondary) MUST have 6px corner radius. Use rounded-md utility class."
+      },
+      "secondaryBorderWidth": {
+        "value": "1.5px",
+        "tailwindClass": "border-[1.5px]",
+        "description": "ALL secondary buttons (both types) MUST have 1.5px border width. Use border-[1.5px] utility class."
+      },
+      "primary": {
+        "description": "Main CTA button with primary brand color",
+        "classes": "bg-brand text-brand-bg-white hover:bg-brand-hover rounded-md",
+        "logic": "Uses primary brand color as background with white text. On hover, background changes to brand-hover which is a darker shade of primary for better visual feedback. ALWAYS includes rounded-md (6px corner radius).",
+        "requiredClasses": ["bg-brand", "text-brand-bg-white", "hover:bg-brand-hover", "rounded-md"]
+      },
+      "secondary": {
+        "description": "Secondary button WITH brand secondary color (Type 1)",
+        "classes": "border-[1.5px] border-brand-stroke-weak text-brand-secondary bg-transparent hover:bg-brand-secondary-hover rounded-md",
+        "logic": "Transparent background with brand-stroke-weak border at 1.5px width and brand-secondary text. On hover, background fills with brand-secondary-hover. IMPORTANT: Border is ALWAYS brand-stroke-weak at 1.5px width, NOT brand-secondary. ALWAYS includes rounded-md (6px corner radius).",
+        "whenToUse": "Use when you want the button to have the secondary brand color as text",
+        "requiredClasses": ["border-[1.5px]", "border-brand-stroke-weak", "text-brand-secondary", "bg-transparent", "hover:bg-brand-secondary-hover", "rounded-md"]
+      },
+      "secondary-outline": {
+        "description": "Secondary button WITHOUT brand secondary color (Type 2)",
+        "classes": "border-[1.5px] border-brand-stroke-weak text-brand-text-strong bg-transparent hover:bg-brand-secondary-hover rounded-md",
+        "logic": "Transparent background with brand-stroke-weak border at 1.5px width and brand-text-strong text. On hover, background fills with brand-secondary-hover. IMPORTANT: Border is ALWAYS brand-stroke-weak at 1.5px width, text is strong text color. ALWAYS includes rounded-md (6px corner radius).",
+        "whenToUse": "Use when you want a secondary button style but with strong text color instead of secondary brand color",
+        "requiredClasses": ["border-[1.5px]", "border-brand-stroke-weak", "text-brand-text-strong", "bg-transparent", "hover:bg-brand-secondary-hover", "rounded-md"]
+      },
+      "criticalRules": [
+        "ALL buttons MUST have rounded-md (6px corner radius) - NO EXCEPTIONS",
+        "ALL secondary buttons (both types) MUST have border-[1.5px] (1.5px border width) - NO EXCEPTIONS",
+        "Primary buttons do NOT have borders, only secondary buttons have borders",
+        "Never use rounded-lg, rounded-xl, or any other border radius for buttons - ALWAYS use rounded-md",
+        "Never use border, border-2, or any other border width for secondary buttons - ALWAYS use border-[1.5px]"
+      ]
+    },
+    "input": {
+      "description": "Input fields with proper borders - MUST override browser defaults",
+      "classes": "border-brand-stroke-strong focus:border-brand-text-strong focus:outline-none focus:ring-0 text-brand-text-strong",
+      "logic": "Strong stroke border by default, changes to text-strong color on focus. No extra border/ring on focus. Text color is always text-strong. CRITICAL: Must use focus:ring-0 to prevent default ring styles. Must use focus:outline-none to prevent browser default outline.",
+      "criticalRules": [
+        "ALWAYS include focus:ring-0 to override default focus ring",
+        "ALWAYS include focus:outline-none to override browser default outline",
+        "NEVER allow browser default focus styles",
+        "Focus border MUST be brand-text-strong, NEVER brand-secondary or any other color",
+        "No box-shadow on focus - use focus:ring-0"
+      ]
+    },
+    "heading": {
+      "h1": {
+        "classes": "text-brand-text-strong text-3xl font-bold",
+        "logic": "Strong text color for main headings"
+      },
+      "h2": {
+        "classes": "text-brand-text-strong text-2xl font-semibold",
+        "logic": "Strong text color for secondary headings"
+      },
+      "h3": {
+        "classes": "text-brand-text-strong text-xl font-semibold",
+        "logic": "Strong text color for tertiary headings"
+      }
+    },
+    "icon": {
+      "description": "Icons use strong stroke color",
+      "classes": "text-brand-stroke-strong",
+      "logic": "Icons should use strong stroke color for visibility"
+    },
+    "card": {
+      "description": "Card borders always use weak stroke",
+      "classes": "border border-brand-stroke-weak",
+      "logic": "Card borders MUST use strokeweak for subtle, light appearance"
+    },
+    "sidebar": {
+      "description": "Sidebar borders always use strong stroke",
+      "classes": "border-brand-stroke-strong",
+      "logic": "Sidebar borders MUST use strokestrong for visibility and definition"
+    }
+  },
+  "aiInstructions": {
+    "workflow": [
+      "1. BEFORE creating ANY component or making ANY styling changes, ALWAYS read this theme-guide.json file first",
+      "2. Check componentGuidelines section for specific component rules (buttons, inputs, headings, etc.)",
+      "3. Verify button specifications: rounded-md (6px) for all buttons, border-[1.5px] for secondary buttons",
+      "4. When creating components, follow the guidelines in componentGuidelines",
+      "5. Always use theme colors from globals.css, never hardcode hex values",
+      "6. Follow the logic explained in each component guideline",
+      "7. Combine utility classes as shown in examples"
+    ],
+    "criticalRules": {
+      "noHexCodes": {
+        "rule": "NEVER use hex color codes (#F84416, #0A0A0A, etc.) directly in HTML, CSS, or inline styles",
+        "severity": "CRITICAL",
+        "reason": "All colors must come from theme utility classes for consistency and maintainability"
+      },
+      "noInlineStyles": {
+        "rule": "NEVER use inline styles (style='color: #F84416') or style attributes for colors",
+        "severity": "CRITICAL",
+        "reason": "All styling must use Tailwind utility classes from the theme system"
+      },
+      "onlyUtilityClasses": {
+        "rule": "ONLY use utility classes from theme-guide.json and globals.css",
+        "severity": "CRITICAL",
+        "reason": "This ensures consistency, maintainability, and easy theme updates"
+      }
+    },
+    "rules": [
+      "CRITICAL: NEVER hardcode hex colors (#F84416, #0A0A0A, etc.) - ALWAYS use Tailwind utility classes",
+      "CRITICAL: NEVER use inline styles (style='...') for colors - ALWAYS use utility classes",
+      "ONLY use utility classes from theme-guide.json and globals.css",
+      "Primary buttons: bg-brand + text-brand-bg-white + hover:bg-brand-hover",
+      "Secondary buttons: border-[1.5px] border-brand-stroke-weak + text-brand-secondary + hover:bg-brand-secondary-hover",
+      "Headings: Always use text-brand-text-strong",
+      "Body text: Use text-brand-text-weak",
+      "Sidebar borders: ALWAYS use border-brand-stroke-strong",
+      "Input field borders: ALWAYS use border-brand-stroke-strong",
+      "Card borders: ALWAYS use border-brand-stroke-weak",
+      "Icons: Always use text-brand-stroke-strong"
+    ]
+  }
+}

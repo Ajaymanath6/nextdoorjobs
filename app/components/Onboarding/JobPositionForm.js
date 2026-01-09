@@ -69,7 +69,7 @@ export default function JobPositionForm({ onSubmit, initialData = {} }) {
           name="title"
           value={formData.title}
           onChange={handleChange}
-          className={`w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-[#7c00ff] ${
+          className={`w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-[#F84416] ${
             errors.title ? "border-red-500" : "border-gray-300 dark:border-gray-700"
           } bg-white dark:bg-gray-900 text-gray-900 dark:text-gray-100`}
           style={{ fontFamily: "Open Sans, sans-serif" }}
@@ -86,7 +86,7 @@ export default function JobPositionForm({ onSubmit, initialData = {} }) {
           name="category"
           value={formData.category}
           onChange={handleChange}
-          className={`w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-[#7c00ff] ${
+          className={`w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-[#F84416] ${
             errors.category ? "border-red-500" : "border-gray-300 dark:border-gray-700"
           } bg-white dark:bg-gray-900 text-gray-900 dark:text-gray-100`}
           style={{ fontFamily: "Open Sans, sans-serif" }}
@@ -112,7 +112,7 @@ export default function JobPositionForm({ onSubmit, initialData = {} }) {
           onChange={handleChange}
           step="0.5"
           min="0"
-          className={`w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-[#7c00ff] ${
+          className={`w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-[#F84416] ${
             errors.yearsRequired ? "border-red-500" : "border-gray-300 dark:border-gray-700"
           } bg-white dark:bg-gray-900 text-gray-900 dark:text-gray-100`}
           style={{ fontFamily: "Open Sans, sans-serif" }}
@@ -132,7 +132,7 @@ export default function JobPositionForm({ onSubmit, initialData = {} }) {
             value={formData.salaryMin}
             onChange={handleChange}
             min="0"
-            className={`w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-[#7c00ff] ${
+            className={`w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-[#F84416] ${
               errors.salaryMin ? "border-red-500" : "border-gray-300 dark:border-gray-700"
             } bg-white dark:bg-gray-900 text-gray-900 dark:text-gray-100`}
             style={{ fontFamily: "Open Sans, sans-serif" }}
@@ -150,7 +150,7 @@ export default function JobPositionForm({ onSubmit, initialData = {} }) {
             value={formData.salaryMax}
             onChange={handleChange}
             min="0"
-            className={`w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-[#7c00ff] ${
+            className={`w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-[#F84416] ${
               errors.salaryMax ? "border-red-500" : "border-gray-300 dark:border-gray-700"
             } bg-white dark:bg-gray-900 text-gray-900 dark:text-gray-100`}
             style={{ fontFamily: "Open Sans, sans-serif" }}
@@ -169,7 +169,7 @@ export default function JobPositionForm({ onSubmit, initialData = {} }) {
           value={formData.jobDescription}
           onChange={handleChange}
           rows={8}
-          className={`w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-[#7c00ff] ${
+          className={`w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-[#F84416] ${
             errors.jobDescription ? "border-red-500" : "border-gray-300 dark:border-gray-700"
           } bg-white dark:bg-gray-900 text-gray-900 dark:text-gray-100 resize-none`}
           style={{ fontFamily: "Open Sans, sans-serif" }}
@@ -180,7 +180,7 @@ export default function JobPositionForm({ onSubmit, initialData = {} }) {
 
       <button
         type="submit"
-        className="w-full px-6 py-3 bg-[#7c00ff] text-white rounded-lg hover:bg-[#6a00e6] transition-colors"
+        className="w-full px-6 py-3 bg-[#F84416] text-white rounded-lg hover:bg-[#EA4C00] transition-colors"
         style={{ fontFamily: "Open Sans, sans-serif", fontSize: "14px", fontWeight: 600 }}
       >
         Continue
