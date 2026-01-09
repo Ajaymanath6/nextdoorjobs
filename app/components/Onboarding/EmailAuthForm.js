@@ -151,9 +151,10 @@ export default function EmailAuthForm({ onSubmit, isLoading = false }) {
                 setName(e.target.value);
                 if (errors.name) setErrors({ ...errors, name: "" });
               }}
-              className={`w-full px-4 py-3 border rounded-lg focus:outline-none focus:ring-2 ${
-                errors.name ? "border-red-500 focus:ring-red-500" : "border-gray-300 focus:ring-[#F84416]"
-              } bg-white text-gray-900`}
+              className={`w-full px-4 py-3 border-brand-stroke-border rounded-lg focus:outline-none focus:border-brand-text-strong hover:bg-brand-bg-fill ${
+                errors.name ? "border-red-500" : ""
+              } bg-brand-bg-white text-gray-900`}
+              style={{ borderWidth: "1px" }}
               style={{ fontFamily: "Open Sans, sans-serif", fontSize: "14px" }}
               placeholder="Enter your name"
               disabled={isLoading}
@@ -172,9 +173,10 @@ export default function EmailAuthForm({ onSubmit, isLoading = false }) {
                 setEmail(e.target.value);
                 if (errors.email) setErrors({ ...errors, email: "" });
               }}
-              className={`w-full px-4 py-3 border rounded-lg focus:outline-none focus:ring-2 ${
-                errors.email ? "border-red-500 focus:ring-red-500" : "border-gray-300 focus:ring-[#F84416]"
-              } bg-white text-gray-900`}
+              className={`w-full px-4 py-3 border-brand-stroke-border rounded-lg focus:outline-none focus:border-brand-text-strong hover:bg-brand-bg-fill ${
+                errors.email ? "border-red-500" : ""
+              } bg-brand-bg-white text-gray-900`}
+              style={{ borderWidth: "1px" }}
               style={{ fontFamily: "Open Sans, sans-serif", fontSize: "14px" }}
               placeholder="Enter your email address"
               disabled={isLoading}
@@ -193,9 +195,10 @@ export default function EmailAuthForm({ onSubmit, isLoading = false }) {
                 setPassword(e.target.value);
                 if (errors.password) setErrors({ ...errors, password: "" });
               }}
-              className={`w-full px-4 py-3 border rounded-lg focus:outline-none focus:ring-2 ${
-                errors.password ? "border-red-500 focus:ring-red-500" : "border-gray-300 focus:ring-[#F84416]"
-              } bg-white text-gray-900`}
+              className={`w-full px-4 py-3 border-brand-stroke-border rounded-lg focus:outline-none focus:border-brand-text-strong hover:bg-brand-bg-fill ${
+                errors.password ? "border-red-500" : ""
+              } bg-brand-bg-white text-gray-900`}
+              style={{ borderWidth: "1px" }}
               style={{ fontFamily: "Open Sans, sans-serif", fontSize: "14px" }}
               placeholder="Enter your password"
               disabled={isLoading}

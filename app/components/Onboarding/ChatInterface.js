@@ -34,13 +34,13 @@ export default function ChatInterface({ messages = [], onSendMessage, isLoading 
       <div className="flex-1 overflow-y-auto px-4 pt-4 space-y-4">
         {/* Logo - Left Side */}
         <div className="flex items-center justify-start mb-4">
-          <div className="h-24 flex items-center justify-center">
+          <div className="h-8 flex items-center justify-center">
             <Image
               src="/logo.svg"
               alt="JobsonMap"
               width={0}
-              height={96}
-              className="h-24 w-auto"
+              height={32}
+              className="h-8 w-auto"
             />
           </div>
         </div>
@@ -115,8 +115,8 @@ export default function ChatInterface({ messages = [], onSendMessage, isLoading 
           <textarea
             ref={inputRef}
             placeholder="Type your message..."
-            className="w-full min-h-[140px] pl-16 pr-16 py-4 bg-white border rounded-lg focus:outline-none resize-none text-base m-0 placeholder:text-brand-text-placeholder"
-            style={{ fontFamily: "Open Sans, sans-serif" }}
+            className="w-full min-h-[140px] pl-2 pr-2 py-4 bg-brand-bg-white border border-brand-stroke-border rounded-lg focus:outline-none focus:border-brand-text-strong hover:bg-brand-bg-fill resize-none text-base m-0 placeholder:text-brand-text-placeholder text-brand-text-strong"
+            style={{ fontFamily: "Open Sans, sans-serif", borderWidth: "1px" }}
             disabled={isLoading}
             onKeyDown={(e) => {
               if (e.key === "Enter" && !e.shiftKey) {
@@ -127,7 +127,7 @@ export default function ChatInterface({ messages = [], onSendMessage, isLoading 
           />
           
           {/* Icons at Left Bottom */}
-          <div className="absolute bottom-4 left-4 flex items-center gap-3 z-10">
+          <div className="absolute bottom-4 left-2 flex items-center gap-3 z-10">
             {/* @ Icon - Left of Screenshot */}
             <div className="relative">
               <button
@@ -201,7 +201,7 @@ export default function ChatInterface({ messages = [], onSendMessage, isLoading 
           <button
             type="submit"
             disabled={isLoading}
-            className="absolute bottom-4 right-4 flex items-center gap-2 px-4 py-2 rounded-lg transition-colors shadow-md z-20 bg-[#0A0A0A] text-white hover:bg-[#1A1A1A] disabled:opacity-50 disabled:cursor-not-allowed"
+            className="absolute bottom-4 right-2 flex items-center gap-2 px-4 py-2 rounded-lg transition-colors shadow-md z-20 bg-[#0A0A0A] text-white hover:bg-[#1A1A1A] disabled:opacity-50 disabled:cursor-not-allowed"
             style={{ fontFamily: "Open Sans, sans-serif" }}
           >
             <svg

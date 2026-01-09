@@ -72,9 +72,10 @@ export default function JobPositionForm({ onSubmit, initialData = {} }) {
           name="title"
           value={formData.title}
           onChange={handleChange}
-          className={`w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-[#F84416] ${
-            errors.title ? "border-red-500" : "border-gray-300 dark:border-gray-700"
-          } bg-white dark:bg-gray-900 text-gray-900 dark:text-gray-100`}
+          className={`w-full px-4 py-2 border-brand-stroke-border rounded-lg focus:outline-none focus:border-brand-text-strong hover:bg-brand-bg-fill ${
+            errors.title ? "border-red-500" : ""
+          } bg-brand-bg-white text-gray-900 dark:text-gray-100`}
+          style={{ borderWidth: "1px" }}
           style={{ fontFamily: "Open Sans, sans-serif" }}
           placeholder="e.g., Senior Software Engineer"
         />
@@ -89,9 +90,10 @@ export default function JobPositionForm({ onSubmit, initialData = {} }) {
           name="category"
           value={formData.category}
           onChange={handleChange}
-          className={`w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-[#F84416] ${
-            errors.category ? "border-red-500" : "border-gray-300 dark:border-gray-700"
-          } bg-white dark:bg-gray-900 text-gray-900 dark:text-gray-100`}
+          className={`w-full px-4 py-2 border-brand-stroke-border rounded-lg focus:outline-none focus:border-brand-text-strong hover:bg-brand-bg-fill ${
+            errors.category ? "border-red-500" : ""
+          } bg-brand-bg-white text-gray-900 dark:text-gray-100`}
+          style={{ borderWidth: "1px" }}
           style={{ fontFamily: "Open Sans, sans-serif" }}
         >
           <option value="">Select category</option>
@@ -115,9 +117,10 @@ export default function JobPositionForm({ onSubmit, initialData = {} }) {
           onChange={handleChange}
           step="0.5"
           min="0"
-          className={`w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-[#F84416] ${
-            errors.yearsRequired ? "border-red-500" : "border-gray-300 dark:border-gray-700"
-          } bg-white dark:bg-gray-900 text-gray-900 dark:text-gray-100`}
+          className={`w-full px-4 py-2 border-brand-stroke-border rounded-lg focus:outline-none focus:border-brand-text-strong hover:bg-brand-bg-fill ${
+            errors.yearsRequired ? "border-red-500" : ""
+          } bg-brand-bg-white text-gray-900 dark:text-gray-100`}
+          style={{ borderWidth: "1px" }}
           style={{ fontFamily: "Open Sans, sans-serif" }}
           placeholder="e.g., 2.5"
         />
@@ -135,9 +138,10 @@ export default function JobPositionForm({ onSubmit, initialData = {} }) {
             value={formData.salaryMin}
             onChange={handleChange}
             min="0"
-            className={`w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-[#F84416] ${
-              errors.salaryMin ? "border-red-500" : "border-gray-300 dark:border-gray-700"
-            } bg-white dark:bg-gray-900 text-gray-900 dark:text-gray-100`}
+            className={`w-full px-4 py-2 border-brand-stroke-border rounded-lg focus:outline-none focus:border-brand-text-strong hover:bg-brand-bg-fill ${
+              errors.salaryMin ? "border-red-500" : ""
+            } bg-brand-bg-white text-gray-900 dark:text-gray-100`}
+            style={{ borderWidth: "1px" }}
             style={{ fontFamily: "Open Sans, sans-serif" }}
             placeholder="e.g., 500000"
           />
@@ -153,9 +157,10 @@ export default function JobPositionForm({ onSubmit, initialData = {} }) {
             value={formData.salaryMax}
             onChange={handleChange}
             min="0"
-            className={`w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-[#F84416] ${
-              errors.salaryMax ? "border-red-500" : "border-gray-300 dark:border-gray-700"
-            } bg-white dark:bg-gray-900 text-gray-900 dark:text-gray-100`}
+            className={`w-full px-4 py-2 border-brand-stroke-border rounded-lg focus:outline-none focus:border-brand-text-strong hover:bg-brand-bg-fill ${
+              errors.salaryMax ? "border-red-500" : ""
+            } bg-brand-bg-white text-gray-900 dark:text-gray-100`}
+            style={{ borderWidth: "1px" }}
             style={{ fontFamily: "Open Sans, sans-serif" }}
             placeholder="e.g., 1000000"
           />
@@ -172,9 +177,10 @@ export default function JobPositionForm({ onSubmit, initialData = {} }) {
           value={formData.jobDescription}
           onChange={handleChange}
           rows={8}
-          className={`w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-[#F84416] ${
-            errors.jobDescription ? "border-red-500" : "border-gray-300 dark:border-gray-700"
-          } bg-white dark:bg-gray-900 text-gray-900 dark:text-gray-100 resize-none`}
+          className={`w-full px-4 py-2 border-brand-stroke-border rounded-lg focus:outline-none focus:border-brand-text-strong hover:bg-brand-bg-fill ${
+            errors.jobDescription ? "border-red-500" : ""
+          } bg-brand-bg-white text-gray-900 dark:text-gray-100 resize-none`}
+          style={{ borderWidth: "1px" }}
           style={{ fontFamily: "Open Sans, sans-serif" }}
           placeholder="Describe the role, responsibilities, requirements, etc."
         />

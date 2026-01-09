@@ -106,9 +106,10 @@ export default function CompanyForm({ onSubmit, initialData = {} }) {
           name="name"
           value={formData.name}
           onChange={handleChange}
-          className={`w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-[#F84416] ${
-            errors.name ? "border-red-500" : "border-gray-300 dark:border-gray-700"
-          } bg-white dark:bg-gray-900 text-gray-900 dark:text-gray-100`}
+          className={`w-full px-4 py-2 border-brand-stroke-border rounded-lg focus:outline-none focus:border-brand-text-strong hover:bg-brand-bg-fill ${
+            errors.name ? "border-red-500" : ""
+          } bg-brand-bg-white text-gray-900 dark:text-gray-100`}
+          style={{ borderWidth: "1px" }}
           style={{ fontFamily: "Open Sans, sans-serif" }}
           placeholder="Enter company name"
         />
@@ -147,9 +148,10 @@ export default function CompanyForm({ onSubmit, initialData = {} }) {
           name="websiteUrl"
           value={formData.websiteUrl}
           onChange={handleChange}
-          className={`w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-[#F84416] ${
-            errors.websiteUrl ? "border-red-500" : "border-gray-300 dark:border-gray-700"
-          } bg-white dark:bg-gray-900 text-gray-900 dark:text-gray-100`}
+          className={`w-full px-4 py-2 border-brand-stroke-border rounded-lg focus:outline-none focus:border-brand-text-strong hover:bg-brand-bg-fill ${
+            errors.websiteUrl ? "border-red-500" : ""
+          } bg-brand-bg-white text-gray-900 dark:text-gray-100`}
+          style={{ borderWidth: "1px" }}
           style={{ fontFamily: "Open Sans, sans-serif" }}
           placeholder="https://example.com or example.com"
         />
@@ -165,8 +167,8 @@ export default function CompanyForm({ onSubmit, initialData = {} }) {
           name="fundingSeries"
           value={formData.fundingSeries}
           onChange={handleChange}
-          className="w-full px-4 py-2 border border-gray-300 dark:border-gray-700 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#F84416] bg-white dark:bg-gray-900 text-gray-900 dark:text-gray-100"
-          style={{ fontFamily: "Open Sans, sans-serif" }}
+          className="w-full px-4 py-2 border-brand-stroke-border rounded-lg focus:outline-none focus:border-brand-text-strong hover:bg-brand-bg-fill bg-brand-bg-white text-gray-900 dark:text-gray-100"
+          style={{ fontFamily: "Open Sans, sans-serif", borderWidth: "1px" }}
         >
           <option value="">Select funding series</option>
           {FUNDING_SERIES.map((series) => (
@@ -188,9 +190,10 @@ export default function CompanyForm({ onSubmit, initialData = {} }) {
             value={formData.latitude}
             onChange={handleChange}
             step="any"
-            className={`w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-[#F84416] ${
-              errors.latitude ? "border-red-500" : "border-gray-300 dark:border-gray-700"
-            } bg-white dark:bg-gray-900 text-gray-900 dark:text-gray-100`}
+            className={`w-full px-4 py-2 border-brand-stroke-border rounded-lg focus:outline-none focus:border-brand-text-strong hover:bg-brand-bg-fill ${
+              errors.latitude ? "border-red-500" : ""
+            } bg-brand-bg-white text-gray-900 dark:text-gray-100`}
+            style={{ borderWidth: "1px" }}
             style={{ fontFamily: "Open Sans, sans-serif" }}
             placeholder="e.g., 10.5276"
           />
@@ -206,9 +209,10 @@ export default function CompanyForm({ onSubmit, initialData = {} }) {
             value={formData.longitude}
             onChange={handleChange}
             step="any"
-            className={`w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-[#F84416] ${
-              errors.longitude ? "border-red-500" : "border-gray-300 dark:border-gray-700"
-            } bg-white dark:bg-gray-900 text-gray-900 dark:text-gray-100`}
+            className={`w-full px-4 py-2 border-brand-stroke-border rounded-lg focus:outline-none focus:border-brand-text-strong hover:bg-brand-bg-fill ${
+              errors.longitude ? "border-red-500" : ""
+            } bg-brand-bg-white text-gray-900 dark:text-gray-100`}
+            style={{ borderWidth: "1px" }}
             style={{ fontFamily: "Open Sans, sans-serif" }}
             placeholder="e.g., 76.2144"
           />
@@ -225,9 +229,10 @@ export default function CompanyForm({ onSubmit, initialData = {} }) {
           name="state"
           value={formData.state}
           onChange={handleChange}
-          className={`w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-[#F84416] ${
-            errors.state ? "border-red-500" : "border-gray-300 dark:border-gray-700"
-          } bg-white dark:bg-gray-900 text-gray-900 dark:text-gray-100`}
+          className={`w-full px-4 py-2 border-brand-stroke-border rounded-lg focus:outline-none focus:border-brand-text-strong hover:bg-brand-bg-fill ${
+            errors.state ? "border-red-500" : ""
+          } bg-brand-bg-white text-gray-900 dark:text-gray-100`}
+          style={{ borderWidth: "1px" }}
           style={{ fontFamily: "Open Sans, sans-serif" }}
           placeholder="e.g., Kerala"
         />
@@ -243,10 +248,10 @@ export default function CompanyForm({ onSubmit, initialData = {} }) {
           name="district"
           value={formData.district}
           onChange={handleChange}
-          className={`w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-[#F84416] ${
-            errors.district ? "border-red-500" : "border-gray-300 dark:border-gray-700"
-          } bg-white dark:bg-gray-900 text-gray-900 dark:text-gray-100`}
-          style={{ fontFamily: "Open Sans, sans-serif" }}
+          className={`w-full px-4 py-2 border-brand-stroke-border rounded-lg focus:outline-none focus:border-brand-text-strong hover:bg-brand-bg-fill ${
+            errors.district ? "border-red-500" : ""
+          } bg-brand-bg-white text-gray-900 dark:text-gray-100`}
+          style={{ fontFamily: "Open Sans, sans-serif", borderWidth: "1px" }}
           placeholder="e.g., Thrissur"
         />
         {errors.district && <p className="mt-1 text-sm text-red-500">{errors.district}</p>}
@@ -261,8 +266,8 @@ export default function CompanyForm({ onSubmit, initialData = {} }) {
           name="pincode"
           value={formData.pincode}
           onChange={handleChange}
-          className="w-full px-4 py-2 border border-gray-300 dark:border-gray-700 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#F84416] bg-white dark:bg-gray-900 text-gray-900 dark:text-gray-100"
-          style={{ fontFamily: "Open Sans, sans-serif" }}
+          className="w-full px-4 py-2 border-brand-stroke-border rounded-lg focus:outline-none focus:border-brand-text-strong hover:bg-brand-bg-fill bg-brand-bg-white text-gray-900 dark:text-gray-100"
+          style={{ fontFamily: "Open Sans, sans-serif", borderWidth: "1px" }}
           placeholder="e.g., 680001"
         />
       </div>
