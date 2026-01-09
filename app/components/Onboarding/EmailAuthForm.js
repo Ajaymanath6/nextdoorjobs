@@ -1,11 +1,12 @@
 "use client";
 
 import { useState } from "react";
-import JobMapIcon from "../JobMapIcon";
+import Image from "next/image";
 
 export default function EmailAuthForm({ onSubmit, isLoading = false }) {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [name, setName] = useState("");
   const [isRegister, setIsRegister] = useState(false);
   const [errors, setErrors] = useState({});
 
@@ -30,12 +31,21 @@ export default function EmailAuthForm({ onSubmit, isLoading = false }) {
       newErrors.password = "Password must be at least 6 characters";
     }
 
+    if (isRegister && !name.trim()) {
+      newErrors.name = "Name is required for registration";
+    }
+
     if (Object.keys(newErrors).length > 0) {
       setErrors(newErrors);
       return;
     }
 
-    onSubmit({ email: email.trim(), password: password.trim(), isRegister });
+    onSubmit({ 
+      email: email.trim(), 
+      password: password.trim(), 
+      name: name.trim(),
+      isRegister 
+    });
   };
 
   const handleGoogleAuth = () => {
@@ -53,11 +63,17 @@ export default function EmailAuthForm({ onSubmit, isLoading = false }) {
       <div className="bg-white rounded-lg shadow-lg p-8 border border-[#E5E5E5]" style={{ width: "100%" }}>
         {/* Logo and Title */}
         <div className="flex flex-col items-center mb-6">
-          <div className="w-8 h-8 bg-[#7c00ff] rounded flex items-center justify-center mb-3">
-            <JobMapIcon size={20} className="text-white" />
+          <div className="flex items-center justify-center mb-3">
+            <Image
+              src="/logo.svg"
+              alt="JobsonMap"
+              width={40}
+              height={40}
+              className="h-10 w-auto"
+            />
           </div>
           <h1 className="text-xl font-semibold text-gray-900" style={{ fontFamily: "Open Sans, sans-serif" }}>
-            {isRegister ? "Sign up to NextDoorJobs" : "Sign in to NextDoorJobs"}
+            {isRegister ? "Sign up to JobsonMap" : "Sign in to JobsonMap"}
           </h1>
           <p className="text-sm text-gray-600 mt-2" style={{ fontFamily: "Open Sans, sans-serif" }}>
             {isRegister ? "Create an account to get started" : "Welcome back! Please sign in to continue"}
@@ -126,6 +142,29 @@ export default function EmailAuthForm({ onSubmit, isLoading = false }) {
 
         {/* Email and Password Form */}
         <form onSubmit={handleSubmit} className="space-y-4">
+          {isRegister && (
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2" style={{ fontFamily: "Open Sans, sans-serif" }}>
+                Name
+              </label>
+              <input
+                type="text"
+                value={name}
+                onChange={(e) => {
+                  setName(e.target.value);
+                  if (errors.name) setErrors({ ...errors, name: "" });
+                }}
+                className={`w-full px-4 py-3 border rounded-lg focus:outline-none focus:ring-2 ${
+                  errors.name ? "border-red-500 focus:ring-red-500" : "border-gray-300 focus:ring-[#F84416]"
+                } bg-white text-gray-900`}
+                style={{ fontFamily: "Open Sans, sans-serif", fontSize: "14px" }}
+                placeholder="Enter your name"
+                disabled={isLoading}
+              />
+              {errors.name && <p className="mt-1 text-sm text-red-500">{errors.name}</p>}
+            </div>
+          )}
+
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-2" style={{ fontFamily: "Open Sans, sans-serif" }}>
               Email address
@@ -137,8 +176,8 @@ export default function EmailAuthForm({ onSubmit, isLoading = false }) {
                 setEmail(e.target.value);
                 if (errors.email) setErrors({ ...errors, email: "" });
               }}
-              className={`w-full px-4 py-3 border rounded-lg focus:outline-none focus:ring-2 focus:ring-[#7c00ff] ${
-                errors.email ? "border-red-500" : "border-gray-300"
+              className={`w-full px-4 py-3 border rounded-lg focus:outline-none focus:ring-2 ${
+                errors.email ? "border-red-500 focus:ring-red-500" : "border-gray-300 focus:ring-[#F84416]"
               } bg-white text-gray-900`}
               style={{ fontFamily: "Open Sans, sans-serif", fontSize: "14px" }}
               placeholder="Enter your email address"
@@ -158,8 +197,8 @@ export default function EmailAuthForm({ onSubmit, isLoading = false }) {
                 setPassword(e.target.value);
                 if (errors.password) setErrors({ ...errors, password: "" });
               }}
-              className={`w-full px-4 py-3 border rounded-lg focus:outline-none focus:ring-2 focus:ring-[#7c00ff] ${
-                errors.password ? "border-red-500" : "border-gray-300"
+              className={`w-full px-4 py-3 border rounded-lg focus:outline-none focus:ring-2 ${
+                errors.password ? "border-red-500 focus:ring-red-500" : "border-gray-300 focus:ring-[#F84416]"
               } bg-white text-gray-900`}
               style={{ fontFamily: "Open Sans, sans-serif", fontSize: "14px" }}
               placeholder="Enter your password"
@@ -171,8 +210,10 @@ export default function EmailAuthForm({ onSubmit, isLoading = false }) {
           <button
             type="submit"
             disabled={isLoading}
-            className="w-full flex items-center justify-center px-6 py-3 bg-[#7c00ff] text-white rounded-lg hover:bg-[#6a00e6] disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
-            style={{ fontFamily: "Open Sans, sans-serif", fontSize: "14px", fontWeight: 600 }}
+            className="w-full flex items-center justify-center px-6 py-3 text-white rounded-lg disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+            style={{ fontFamily: "Open Sans, sans-serif", fontSize: "14px", fontWeight: 600, backgroundColor: "#F84416" }}
+            onMouseEnter={(e) => !isLoading && (e.target.style.backgroundColor = "#e03d14")}
+            onMouseLeave={(e) => !isLoading && (e.target.style.backgroundColor = "#F84416")}
           >
             <span className="flex items-center gap-2">
               {isLoading ? "Processing..." : "Continue"}
@@ -196,9 +237,10 @@ export default function EmailAuthForm({ onSubmit, isLoading = false }) {
                 setErrors({});
                 setEmail("");
                 setPassword("");
+                setName("");
               }}
-              className="text-[#7c00ff] hover:underline font-medium"
-              style={{ fontFamily: "Open Sans, sans-serif" }}
+              className="hover:underline font-medium"
+              style={{ color: "#F84416", fontFamily: "Open Sans, sans-serif" }}
             >
               {isRegister ? "Sign in" : "Sign up"}
             </button>

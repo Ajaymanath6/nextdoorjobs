@@ -2,8 +2,8 @@
 
 import { useState, useEffect, useRef } from "react";
 import { useRouter } from "next/navigation";
+import Image from "next/image";
 import themeClasses from "../../theme-utility-classes.json";
-import JobMapIcon from "../JobMapIcon";
 import {
   Home,
   Document,
@@ -25,6 +25,7 @@ export default function Sidebar({ activeItem = "jobs-near-you", onToggle, isOpen
   const [isOpen, setIsOpen] = useState(externalIsOpen !== undefined ? externalIsOpen : true);
   const [showUserDropdown, setShowUserDropdown] = useState(false);
   const [showLogoHover, setShowLogoHover] = useState(false);
+  const [userName, setUserName] = useState("Profile");
   const userDropdownRef = useRef(null);
 
   const sidebar = themeClasses.components.sidebar;
@@ -80,6 +81,48 @@ export default function Sidebar({ activeItem = "jobs-near-you", onToggle, isOpen
     setShowUserDropdown(!showUserDropdown);
   };
 
+  // Fetch current user info
+  useEffect(() => {
+    const fetchUser = async () => {
+      try {
+        const response = await fetch("/api/auth/me");
+        if (response.ok) {
+          const data = await response.json();
+          if (data.success && data.user) {
+            setUserName(data.user.name || data.user.email || "Profile");
+          }
+        }
+      } catch (error) {
+        console.error("Error fetching user:", error);
+      }
+    };
+
+    fetchUser();
+  }, []);
+
+  // Handle logout
+  const handleLogout = async () => {
+    try {
+      const response = await fetch("/api/auth/logout", {
+        method: "POST",
+      });
+
+      if (response.ok) {
+        // Close dropdown
+        setShowUserDropdown(false);
+        // Redirect to home page which will show auth overlay
+        router.push("/");
+        // Reload to clear any cached state
+        window.location.reload();
+      } else {
+        alert("Failed to logout. Please try again.");
+      }
+    } catch (error) {
+      console.error("Logout error:", error);
+      alert("An error occurred during logout. Please try again.");
+    }
+  };
+
   return (
     <aside
       className={`h-screen flex flex-col ${
@@ -92,11 +135,15 @@ export default function Sidebar({ activeItem = "jobs-near-you", onToggle, isOpen
           {isOpen ? (
             <div className="flex items-center space-x-3">
               <div className={sidebar["logo-container"]}>
-                <div className={`w-6 h-6 ${brand.color.primary} rounded flex items-center justify-center`}>
-                  <JobMapIcon size={18} className="text-white" />
-                </div>
+                <Image
+                  src="/onlylogo.svg"
+                  alt="JobsonMap"
+                  width={24}
+                  height={24}
+                  className="w-6 h-6"
+                />
               </div>
-              <h2 className={sidebar["logo-text"]}>NextDoorJobs</h2>
+              <h2 className={sidebar["logo-text"]}>JobsonMap</h2>
             </div>
           ) : (
             <div
@@ -106,9 +153,13 @@ export default function Sidebar({ activeItem = "jobs-near-you", onToggle, isOpen
               onClick={handleToggle}
             >
               <div className={sidebar["logo-container"]}>
-                <div className={`w-6 h-6 ${brand.color.primary} rounded flex items-center justify-center`}>
-                  <JobMapIcon size={18} className="text-white" />
-                </div>
+                <Image
+                  src="/onlylogo.svg"
+                  alt="JobsonMap"
+                  width={24}
+                  height={24}
+                  className="w-6 h-6"
+                />
               </div>
               {showLogoHover && (
                 <div className="absolute left-full ml-2 z-50">
@@ -218,7 +269,7 @@ export default function Sidebar({ activeItem = "jobs-near-you", onToggle, isOpen
                 style={{ color: "rgba(87, 87, 87, 1)" }}
               />
             </div>
-            <span className={sidebar["nav-text"]}>John Doe</span>
+            <span className={sidebar["nav-text"]}>{userName}</span>
           </button>
         ) : (
           <button
@@ -261,10 +312,7 @@ export default function Sidebar({ activeItem = "jobs-near-you", onToggle, isOpen
               <div className="border-t border-brand-stroke-border my-1" />
               <button
                 className="w-full text-left px-4 py-2 text-brand-stroke-strong hover:bg-brand-stroke-weak rounded transition-colors flex items-center space-x-2"
-                onClick={() => {
-                  setShowUserDropdown(false);
-                  // Handle logout
-                }}
+                onClick={handleLogout}
               >
                 <Logout size={20} />
                 <span>Logout</span>

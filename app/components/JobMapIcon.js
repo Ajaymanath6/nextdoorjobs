@@ -1,5 +1,5 @@
-// JobMapCompany Icon - Combines job, map, and company elements
-// Design: Map pin (location) with briefcase (job) and building (company)
+// Jobs on Map Icon - Represents jobs displayed on a map
+// Design: Map view with location pin and briefcase (job marker)
 export default function JobMapIcon({ size = 24, className = "" }) {
   return (
     <svg
@@ -10,52 +10,53 @@ export default function JobMapIcon({ size = 24, className = "" }) {
       xmlns="http://www.w3.org/2000/svg"
       className={className}
     >
-      {/* Map pin shape (location marker) */}
+      {/* Map background (folded paper style) */}
+      <rect
+        x="3"
+        y="4"
+        width="18"
+        height="16"
+        rx="1"
+        fill="currentColor"
+        opacity="0.1"
+      />
+      {/* Map grid lines */}
+      <line x1="6" y1="7" x2="18" y2="7" stroke="currentColor" strokeWidth="0.5" opacity="0.3" />
+      <line x1="6" y1="10" x2="18" y2="10" stroke="currentColor" strokeWidth="0.5" opacity="0.3" />
+      <line x1="6" y1="13" x2="18" y2="13" stroke="currentColor" strokeWidth="0.5" opacity="0.3" />
+      <line x1="9" y1="4" x2="9" y2="20" stroke="currentColor" strokeWidth="0.5" opacity="0.3" />
+      <line x1="15" y1="4" x2="15" y2="20" stroke="currentColor" strokeWidth="0.5" opacity="0.3" />
+      
+      {/* Location pin with briefcase (job marker) */}
+      <g transform="translate(12, 8)">
+        {/* Pin base */}
+        <path
+          d="M0 0C-2.76 0 -5 2.24 -5 5c0 3.5 5 9 5 9s5-5.5 5-9c0-2.76-2.24-5-5-5z"
+          fill="currentColor"
+        />
+        {/* Briefcase on pin */}
+        <rect
+          x="-3"
+          y="-1"
+          width="6"
+          height="4"
+          rx="0.3"
+          fill="white"
+        />
+        {/* Briefcase handle */}
+        <path
+          d="M-2 -1V-2.5C-2 -2.78 -1.78 -3 -1.5 -3h3c0.28 0 0.5 0.22 0.5 0.5V-1"
+          stroke="white"
+          strokeWidth="0.8"
+          fill="none"
+        />
+      </g>
+      
+      {/* Map fold corner detail */}
       <path
-        d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7z"
+        d="M19 4L21 6L19 8V4Z"
         fill="currentColor"
-      />
-      {/* Briefcase body (job symbol) */}
-      <rect
-        x="8"
-        y="9"
-        width="8"
-        height="5"
-        rx="0.5"
-        fill="white"
-      />
-      {/* Briefcase handle */}
-      <path
-        d="M10 9V7.5C10 7.22 10.22 7 10.5 7h3c0.28 0 0.5 0.22 0.5 0.5V9"
-        stroke="white"
-        strokeWidth="1"
-        fill="none"
-      />
-      {/* Building/Company (small structure on top of pin) */}
-      <rect
-        x="10"
-        y="5"
-        width="4"
-        height="3"
-        rx="0.3"
-        fill="white"
-      />
-      {/* Building window */}
-      <rect
-        x="11"
-        y="6"
-        width="1"
-        height="1"
-        fill="currentColor"
-        opacity="0.3"
-      />
-      <rect
-        x="12.5"
-        y="6"
-        width="1"
-        height="1"
-        fill="currentColor"
-        opacity="0.3"
+        opacity="0.2"
       />
     </svg>
   );

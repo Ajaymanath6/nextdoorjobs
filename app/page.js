@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import Sidebar from "./components/Sidebar/Sidebar";
 import Map from "./components/Map/Map";
 import EmailAuthForm from "./components/Onboarding/EmailAuthForm";
@@ -8,18 +8,72 @@ import EmailAuthForm from "./components/Onboarding/EmailAuthForm";
 export default function Home() {
   const [showAuth, setShowAuth] = useState(true);
   const [isLoading, setIsLoading] = useState(false);
+  const [checkingAuth, setCheckingAuth] = useState(true);
+
+  // Check if user is already logged in
+  useEffect(() => {
+    const checkAuth = async () => {
+      try {
+        const response = await fetch("/api/auth/me");
+        if (response.ok) {
+          const data = await response.json();
+          if (data.success && data.user) {
+            // User is logged in, hide auth overlay
+            setShowAuth(false);
+          }
+        }
+      } catch (error) {
+        console.error("Auth check error:", error);
+      } finally {
+        setCheckingAuth(false);
+      }
+    };
+
+    checkAuth();
+  }, []);
 
   // Handle email authentication
-  const handleEmailAuth = async ({ email, password, isRegister }) => {
+  const handleEmailAuth = async ({ email, password, name, isRegister }) => {
     setIsLoading(true);
     try {
-      // TODO: Implement actual authentication logic
-      // For now, just hide the overlay
-      console.log("Email auth:", { email, password, isRegister });
-      setShowAuth(false);
+      const endpoint = isRegister ? "/api/auth/register" : "/api/auth/login";
+      const body = isRegister
+        ? { email, password, name: name || email.split("@")[0] } // Use provided name or email prefix
+        : { email, password };
+
+      const response = await fetch(endpoint, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify(body),
+      });
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        // Show more detailed error message
+        let errorMsg = data.error || "Authentication failed";
+        // Show details if available (for debugging)
+        if (data.details) {
+          console.error("API Error Details:", data.details);
+          if (data.stack) {
+            console.error("API Error Stack:", data.stack);
+          }
+        }
+        throw new Error(errorMsg);
+      }
+
+      if (data.success) {
+        // Authentication successful, hide overlay
+        setShowAuth(false);
+        // Optionally reload to ensure session is set
+        window.location.reload();
+      }
     } catch (error) {
       console.error("Auth error:", error);
-      alert(`Error: ${error.message}. Please try again.`);
+      const errorMessage = error.message || "An unexpected error occurred. Please try again.";
+      alert(`Error: ${errorMessage}`);
     } finally {
       setIsLoading(false);
     }
@@ -36,7 +90,7 @@ export default function Home() {
       </div>
 
       {/* Email Authentication Overlay */}
-      {showAuth && (
+      {showAuth && !checkingAuth && (
         <div className="absolute inset-0 z-50 flex items-center justify-center p-4">
           {/* Blur overlay background */}
           <div

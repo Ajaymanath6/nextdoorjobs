@@ -65,7 +65,7 @@ export default function OnboardingPage() {
         setChatMessages([
           {
             type: "ai",
-            text: `Hi ${result.user.name || "there"}! 👋 Welcome to NextDoorJobs. I'll help you post a job opening. Let's get started with your company information.`,
+            text: `Hi ${result.user.name || "there"}! 👋 Welcome to JobsonMap. I'll help you post a job opening. Let's get started with your company information.`,
           },
         ]);
         setShowAuth(false);
@@ -87,7 +87,7 @@ export default function OnboardingPage() {
       setChatMessages([
         {
           type: "ai",
-          text: `Hi ${userData.name || "there"}! 👋 Welcome to NextDoorJobs. I'll help you post a job opening. Let's get started with your company information.`,
+          text: `Hi ${userData.name || "there"}! 👋 Welcome to JobsonMap. I'll help you post a job opening. Let's get started with your company information.`,
         },
       ]);
     } else {

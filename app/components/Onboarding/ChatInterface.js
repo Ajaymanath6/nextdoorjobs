@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useRef } from "react";
+import Image from "next/image";
 
 export default function ChatInterface({ messages = [], onSendMessage, isLoading = false }) {
   const messagesEndRef = useRef(null);
@@ -29,11 +30,17 @@ export default function ChatInterface({ messages = [], onSendMessage, isLoading 
       <div className="flex-1 overflow-y-auto px-4 pt-4 space-y-4">
         {/* Logo and Company Name */}
         <div className="flex items-center gap-3 mb-4">
-          <div className="w-6 h-6 bg-[#7c00ff] rounded flex items-center justify-center">
-            <span className="text-white text-xs font-bold">ND</span>
+          <div className="w-6 h-6 flex items-center justify-center">
+            <Image
+              src="/logo.svg"
+              alt="JobsonMap"
+              width={24}
+              height={24}
+              className="w-6 h-6"
+            />
           </div>
           <h2 className="text-base font-medium text-gray-700" style={{ fontFamily: "Open Sans, sans-serif" }}>
-            NextDoorJobs
+            JobsonMap
           </h2>
         </div>
 
