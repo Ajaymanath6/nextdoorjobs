@@ -10,7 +10,6 @@ import UrlInput from "../components/Onboarding/UrlInput";
 import FundingSeriesBadges from "../components/Onboarding/FundingSeriesBadges";
 import SalaryRangeBadges from "../components/Onboarding/SalaryRangeBadges";
 import GetCoordinatesButton from "../components/Onboarding/GetCoordinatesButton";
-import JobCategorySelector from "../components/Onboarding/JobCategorySelector";
 
 // Field collection states
 const COMPANY_FIELDS = {
@@ -237,27 +236,8 @@ export default function OnboardingPage() {
         switch (currentField) {
           case JOB_FIELDS.TITLE:
             setJobData((prev) => ({ ...prev, title: value }));
-            await addAIMessage(`Job title: ${value}. What category does this job belong to?`);
-            setCurrentField(JOB_FIELDS.CATEGORY);
-            setInlineComponent(
-              <JobCategorySelector
-                onCategorySelect={async (category) => {
-                  setInlineComponent(null);
-                  await handleCategorySelected(category);
-                }}
-                selectedCategory={jobData?.category}
-                onDropdownOpen={() => {
-                  // Scroll to inline component when dropdown opens
-                  if (scrollToInlineRef.current) {
-                    scrollToInlineRef.current();
-                  }
-                }}
-              />
-            );
-            break;
-
-          case JOB_FIELDS.CATEGORY:
-            // This case is handled by JobCategorySelector callback
+            await addAIMessage(`Job title: ${value}. How many years of experience are required? (Enter a number)`);
+            setCurrentField(JOB_FIELDS.YEARS);
             break;
 
           case JOB_FIELDS.YEARS:
@@ -408,27 +388,6 @@ export default function OnboardingPage() {
     setIsLoading(false);
   };
 
-  // Handle category selection
-  const handleCategorySelected = async (category) => {
-    try {
-      // Import JOB_CATEGORIES
-      const { JOB_CATEGORIES } = await import("../../lib/constants/jobCategories");
-      const categoryLabel = JOB_CATEGORIES.find(c => c.value === category)?.label || category;
-      
-      // Update job data first
-      setJobData((prev) => ({ ...prev, category }));
-      
-      // Set the next field
-      setCurrentField(JOB_FIELDS.YEARS);
-      
-      // Add the next question
-      await addAIMessage(`Category: ${categoryLabel}. How many years of experience are required? (Enter a number)`);
-    } catch (error) {
-      console.error("Error in handleCategorySelected:", error);
-      await addAIMessage(`Sorry, there was an error. Please try again.`);
-    }
-  };
-
   // Handle salary selection
   const handleSalarySelected = async (min, max) => {
     setIsLoading(true);
@@ -460,7 +419,7 @@ export default function OnboardingPage() {
       return;
     }
 
-    if (!jobData.title || !jobData.category || !jobData.jobDescription) {
+    if (!jobData.title || !jobData.jobDescription) {
       alert("Please complete all required job position information.");
       return;
     }
@@ -509,7 +468,7 @@ export default function OnboardingPage() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           title: jobData.title || "",
-          category: jobData.category || "",
+          category: "EngineeringSoftwareQA", // Default category since dropdown is removed
           yearsRequired: parseFloat(jobData.yearsRequired || 0),
           salaryMin: jobData.salaryMin ? parseInt(jobData.salaryMin) : null,
           salaryMax: jobData.salaryMax ? parseInt(jobData.salaryMax) : null,
@@ -546,33 +505,20 @@ export default function OnboardingPage() {
   // Show email authentication overlay
   if (showAuth) {
     return (
-      <div className="min-h-screen relative overflow-hidden">
-        {/* Blurry Map-like Background */}
-        <div
-          className="absolute inset-0 z-0"
-          style={{
-            background: "linear-gradient(135deg, #e0f2fe 0%, #bae6fd 25%, #7dd3fc 50%, #38bdf8 75%, #0ea5e9 100%)",
-            opacity: 0.3,
-            filter: "blur(20px)",
-          }}
-        >
-          {/* Map-like grid pattern */}
-          <div
-            className="w-full h-full"
-            style={{
-              backgroundImage: `
-                repeating-linear-gradient(0deg, transparent, transparent 2px, rgba(0,0,0,0.05) 2px, rgba(0,0,0,0.05) 4px),
-                repeating-linear-gradient(90deg, transparent, transparent 2px, rgba(0,0,0,0.05) 2px, rgba(0,0,0,0.05) 4px)
-              `,
-            }}
-          ></div>
-        </div>
-        
+      <div 
+        className="min-h-screen relative overflow-hidden"
+        style={{
+          backgroundImage: 'url(/back.png)',
+          backgroundSize: 'cover',
+          backgroundPosition: 'center',
+          backgroundRepeat: 'no-repeat',
+          backgroundColor: '#f5f5f5', // Fallback color
+        }}
+      >
         {/* Overlay with blur */}
         <div
           className="absolute inset-0 z-10 flex items-center justify-center p-4"
           style={{
-            backgroundColor: "rgba(255, 255, 255, 0.65)",
             backdropFilter: "blur(3px)",
           }}
         >
@@ -586,7 +532,7 @@ export default function OnboardingPage() {
     <div 
       className="min-h-screen relative overflow-hidden"
       style={{
-        backgroundImage: 'url(/map-background.png)',
+        backgroundImage: 'url(/back.png)',
         backgroundSize: 'cover',
         backgroundPosition: 'center',
         backgroundRepeat: 'no-repeat',

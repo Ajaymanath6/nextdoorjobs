@@ -117,11 +117,11 @@ export default function ChatInterface({ messages = [], onSendMessage, isLoading 
             }`}
           >
             {message.type === "user" ? (
-              <div className="flex-shrink-0 w-6 h-6 mt-1 flex items-center justify-center">
+              <div className="flex-shrink-0 mt-1 flex items-center justify-center">
                 <Enterprise size={20} className="text-brand-stroke-strong" />
               </div>
             ) : (
-              <div className="flex-shrink-0 w-6 h-6 mt-1 flex items-center justify-center">
+              <div className="flex-shrink-0 mt-1 flex items-center justify-center">
                 <Image
                   src="/onlylogo.svg"
                   alt="Logo"
