@@ -2,7 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import Image from "next/image";
-import { At, Screen } from "@carbon/icons-react";
+import { Screen, Document } from "@carbon/icons-react";
 import TypingAnimation from "./TypingAnimation";
 
 export default function ChatInterface({ messages = [], onSendMessage, isLoading = false, inlineComponent = null, typingText = null }) {
@@ -59,7 +59,7 @@ export default function ChatInterface({ messages = [], onSendMessage, isLoading 
             <div
               className={`max-w-[80%] rounded-lg px-4 py-2 ${
                 message.type === "user"
-                  ? "bg-[#F84416] text-white"
+                  ? "bg-brand-bg-fill text-brand-text-strong"
                   : index === 0 && message.type === "ai"
                   ? "bg-white text-brand-text-strong"
                   : "bg-brand-bg-fill text-brand-text-strong"
@@ -136,22 +136,7 @@ export default function ChatInterface({ messages = [], onSendMessage, isLoading 
           />
           
           {/* Icons at Left Bottom */}
-          <div className="absolute bottom-4 left-2 flex items-center gap-3 z-10">
-            {/* @ Icon - Left of Screenshot */}
-            <div className="relative">
-              <button
-                type="button"
-                onClick={() => {
-                  // Handle @ mention functionality
-                  console.log("@ clicked");
-                }}
-                className="p-2 rounded-md hover:bg-brand-bg-fill transition-colors"
-                disabled={isLoading}
-              >
-                <At size={20} className="text-brand-stroke-strong" />
-              </button>
-            </div>
-
+          <div className="absolute bottom-4 left-2 flex items-center gap-2 z-10">
             {/* Screenshot Icon */}
             <div className="relative">
               <button
@@ -195,7 +180,7 @@ export default function ChatInterface({ messages = [], onSendMessage, isLoading 
                 className="p-2 rounded-md hover:bg-brand-bg-fill transition-colors"
                 disabled={isLoading}
               >
-                <At size={20} className="text-brand-stroke-strong" />
+                <Document size={20} className="text-brand-stroke-strong" />
               </button>
               {showClipTooltip && (
                 <div className="absolute bottom-full left-0 mb-2 px-3 py-2 bg-brand-text-strong text-brand-bg-white text-xs rounded-md whitespace-nowrap z-50">

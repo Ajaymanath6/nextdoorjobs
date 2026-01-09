@@ -11,6 +11,7 @@ import FundingSeriesBadges from "../components/Onboarding/FundingSeriesBadges";
 import SalaryRangeBadges from "../components/Onboarding/SalaryRangeBadges";
 import GetCoordinatesButton from "../components/Onboarding/GetCoordinatesButton";
 import BackgroundMap from "../components/Onboarding/BackgroundMap";
+import JobCategorySelector from "../components/Onboarding/JobCategorySelector";
 
 // Field collection states
 const COMPANY_FIELDS = {
@@ -238,12 +239,20 @@ export default function OnboardingPage() {
             setJobData((prev) => ({ ...prev, title: value }));
             await addAIMessage(`Job title: ${value}. What category does this job belong to?`);
             setCurrentField(JOB_FIELDS.CATEGORY);
+            setInlineComponent(
+              <JobCategorySelector
+                onCategorySelect={(category) => {
+                  setJobData((prev) => ({ ...prev, category }));
+                  setInlineComponent(null);
+                  handleCategorySelected(category);
+                }}
+                selectedCategory={jobData?.category}
+              />
+            );
             break;
 
           case JOB_FIELDS.CATEGORY:
-            setJobData((prev) => ({ ...prev, category: value }));
-            await addAIMessage(`Category: ${value}. How many years of experience are required? (Enter a number)`);
-            setCurrentField(JOB_FIELDS.YEARS);
+            // This case is handled by JobCategorySelector callback
             break;
 
           case JOB_FIELDS.YEARS:
@@ -391,6 +400,17 @@ export default function OnboardingPage() {
       await addAIMessage(`No problem! What's the pincode? (Type "skip" if not available)`);
     }
     setCurrentField(COMPANY_FIELDS.PINCODE);
+    setIsLoading(false);
+  };
+
+  // Handle category selection
+  const handleCategorySelected = async (category) => {
+    setIsLoading(true);
+    // Import JOB_CATEGORIES
+    const { JOB_CATEGORIES } = await import("../lib/constants/jobCategories");
+    const categoryLabel = JOB_CATEGORIES.find(c => c.value === category)?.label || category;
+    await addAIMessage(`Category: ${categoryLabel}. How many years of experience are required? (Enter a number)`);
+    setCurrentField(JOB_FIELDS.YEARS);
     setIsLoading(false);
   };
 
@@ -549,15 +569,19 @@ export default function OnboardingPage() {
 
   return (
     <div className="min-h-screen relative overflow-hidden">
-      {/* Leaflet Map Background - 70% opacity */}
-      <div className="absolute inset-0 z-0" style={{ opacity: 0.7 }}>
+      {/* Leaflet Map Background - 50% opacity */}
+      <div className="absolute inset-0 z-0" style={{ opacity: 0.5 }}>
         <BackgroundMap />
       </div>
       
       <div className="relative z-10 max-w-4xl mx-auto px-4 pt-8">
-        <div className="bg-white rounded-lg overflow-hidden border border-[#E5E5E5] shadow-lg">
+        <div className="bg-white rounded-lg overflow-hidden border border-[#E5E5E5] shadow-lg relative">
+          {/* Map Background for Form - 50% opacity */}
+          <div className="absolute inset-0 z-0 pointer-events-none" style={{ opacity: 0.5 }}>
+            <BackgroundMap />
+          </div>
           {/* Header */}
-          <div className="bg-white px-6 py-4 flex items-center justify-between border-b border-[#E5E5E5] relative z-10">
+          <div className="bg-white/95 backdrop-blur-sm px-6 py-4 flex items-center justify-between border-b border-[#E5E5E5] relative z-10">
             <div className="flex items-center gap-3">
               <button
                 onClick={handleResetChat}
@@ -627,7 +651,7 @@ export default function OnboardingPage() {
           </div>
 
           {/* Content - Always show chat interface */}
-          <div className="h-[calc(100vh-200px)]">
+          <div className="h-[calc(100vh-200px)] relative z-10">
             <ChatInterface
               messages={chatMessages}
               onSendMessage={handleChatMessage}
