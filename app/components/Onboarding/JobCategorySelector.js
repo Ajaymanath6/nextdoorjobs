@@ -5,12 +5,14 @@ import { JOB_CATEGORIES } from "../../../lib/constants/jobCategories";
 
 export default function JobCategorySelector({ 
   onCategorySelect, 
-  selectedCategory = null
+  selectedCategory = null,
+  onDropdownOpen
 }) {
   const [isOpen, setIsOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
   const dropdownRef = useRef(null);
   const inputRef = useRef(null);
+  const containerRef = useRef(null);
 
   // Close dropdown when clicking outside
   useEffect(() => {
@@ -23,12 +25,22 @@ export default function JobCategorySelector({
     if (isOpen) {
       document.addEventListener("mousedown", handleClickOutside);
       setTimeout(() => inputRef.current?.focus(), 100);
+      
+      // Auto-scroll chat area when dropdown opens
+      if (onDropdownOpen) {
+        onDropdownOpen();
+      } else {
+        // Fallback: scroll the container into view
+        setTimeout(() => {
+          containerRef.current?.scrollIntoView({ behavior: "smooth", block: "nearest" });
+        }, 100);
+      }
     }
 
     return () => {
       document.removeEventListener("mousedown", handleClickOutside);
     };
-  }, [isOpen]);
+  }, [isOpen, onDropdownOpen]);
 
   const filteredCategories = JOB_CATEGORIES.filter((category) =>
     category.label.toLowerCase().includes(searchQuery.toLowerCase())
@@ -41,20 +53,22 @@ export default function JobCategorySelector({
   };
 
   return (
-    <div className="relative w-full" ref={dropdownRef}>
-      <input
-        ref={inputRef}
-        type="text"
-        value={selectedCategory ? JOB_CATEGORIES.find(c => c.value === selectedCategory)?.label || selectedCategory : ""}
-        onChange={(e) => {
-          setSearchQuery(e.target.value);
-          setIsOpen(true);
-        }}
-        onFocus={() => setIsOpen(true)}
-        placeholder="Select job category..."
-        className="w-full px-4 py-2 border-brand-stroke-weak shadow-sm rounded-lg focus:outline-none focus:border-brand-text-strong hover:bg-brand-bg-fill bg-brand-bg-white text-brand-text-strong placeholder:text-brand-text-placeholder"
-        style={{ fontFamily: "Open Sans, sans-serif", borderWidth: "1px" }}
-      />
+    <div className="relative w-full" ref={containerRef}>
+      <div ref={dropdownRef}>
+        <input
+          ref={inputRef}
+          type="text"
+          value={selectedCategory ? JOB_CATEGORIES.find(c => c.value === selectedCategory)?.label || selectedCategory : ""}
+          onChange={(e) => {
+            setSearchQuery(e.target.value);
+            setIsOpen(true);
+          }}
+          onFocus={() => setIsOpen(true)}
+          placeholder="Select job category..."
+          className="w-full px-4 py-2 border-brand-stroke-weak shadow-sm rounded-lg focus:outline-none focus:border-brand-text-strong hover:bg-brand-bg-fill bg-brand-bg-white text-brand-text-strong placeholder:text-brand-text-placeholder"
+          style={{ fontFamily: "Open Sans, sans-serif", borderWidth: "1px" }}
+        />
+      </div>
       
       {isOpen && (
         <div className="absolute z-50 w-full mt-1 bg-brand-bg-white border border-brand-stroke-weak rounded-lg shadow-lg max-h-60 overflow-y-auto">

@@ -65,6 +65,7 @@ export default function OnboardingPage() {
   const [inlineComponent, setInlineComponent] = useState(null);
   const [typingText, setTypingText] = useState("");
   const [isTyping, setIsTyping] = useState(false);
+  const scrollToInlineRef = useRef(null);
 
   // Handle email authentication
   const handleEmailAuth = async ({ email, name, password }) => {
@@ -247,6 +248,12 @@ export default function OnboardingPage() {
                   handleCategorySelected(category);
                 }}
                 selectedCategory={jobData?.category}
+                onDropdownOpen={() => {
+                  // Scroll to inline component when dropdown opens
+                  if (scrollToInlineRef.current) {
+                    scrollToInlineRef.current();
+                  }
+                }}
               />
             );
             break;
@@ -569,15 +576,15 @@ export default function OnboardingPage() {
 
   return (
     <div className="min-h-screen relative overflow-hidden">
-      {/* Leaflet Map Background - 50% opacity */}
-      <div className="absolute inset-0 z-0" style={{ opacity: 0.5 }}>
+      {/* Leaflet Map Background - 30% opacity */}
+      <div className="absolute inset-0 z-0" style={{ opacity: 0.3 }}>
         <BackgroundMap />
       </div>
       
       <div className="relative z-10 max-w-4xl mx-auto px-4 pt-8">
         <div className="bg-white rounded-lg overflow-hidden border border-[#E5E5E5] shadow-lg relative">
-          {/* Map Background for Form - 50% opacity */}
-          <div className="absolute inset-0 z-0 pointer-events-none" style={{ opacity: 0.5 }}>
+          {/* Map Background for Form - 30% opacity */}
+          <div className="absolute inset-0 z-0 pointer-events-none" style={{ opacity: 0.3 }}>
             <BackgroundMap />
           </div>
           {/* Header */}
@@ -658,6 +665,9 @@ export default function OnboardingPage() {
               isLoading={isLoading}
               inlineComponent={inlineComponent}
               typingText={isTyping ? typingText : null}
+              onScrollRequest={(scrollFn) => {
+                scrollToInlineRef.current = scrollFn;
+              }}
             />
           </div>
         </div>

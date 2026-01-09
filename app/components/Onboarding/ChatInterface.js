@@ -5,20 +5,78 @@ import Image from "next/image";
 import { Screen, Document } from "@carbon/icons-react";
 import TypingAnimation from "./TypingAnimation";
 
-export default function ChatInterface({ messages = [], onSendMessage, isLoading = false, inlineComponent = null, typingText = null }) {
+export default function ChatInterface({ messages = [], onSendMessage, isLoading = false, inlineComponent = null, typingText = null, onScrollRequest }) {
   const messagesEndRef = useRef(null);
   const inputRef = useRef(null);
+  const messagesContainerRef = useRef(null);
   const [uploadedFiles, setUploadedFiles] = useState([]);
   const [showScreenshotTooltip, setShowScreenshotTooltip] = useState(false);
   const [showClipTooltip, setShowClipTooltip] = useState(false);
+  const [showSavedFilesDropdown, setShowSavedFilesDropdown] = useState(false);
+  const [savedFiles, setSavedFiles] = useState([]);
+  const savedFilesDropdownRef = useRef(null);
 
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
   };
 
+  // Expose scroll function for external use (e.g., when dropdown opens)
+  useEffect(() => {
+    if (onScrollRequest) {
+      // Store the scroll function so it can be called from parent
+      const scrollToInline = () => {
+        if (messagesContainerRef.current) {
+          // Find the inline component in the DOM and scroll to it
+          const inlineElement = messagesContainerRef.current.querySelector('[data-inline-component]');
+          if (inlineElement) {
+            // Scroll to show the dropdown fully
+            setTimeout(() => {
+              inlineElement.scrollIntoView({ behavior: "smooth", block: "center" });
+            }, 100);
+          }
+        }
+      };
+      onScrollRequest(scrollToInline);
+    }
+  }, [inlineComponent, onScrollRequest]);
+
   useEffect(() => {
     scrollToBottom();
   }, [messages]);
+
+  // Close saved files dropdown when clicking outside
+  useEffect(() => {
+    const handleClickOutside = (event) => {
+      if (savedFilesDropdownRef.current && !savedFilesDropdownRef.current.contains(event.target)) {
+        setShowSavedFilesDropdown(false);
+      }
+    };
+
+    if (showSavedFilesDropdown) {
+      document.addEventListener("mousedown", handleClickOutside);
+    }
+
+    return () => {
+      document.removeEventListener("mousedown", handleClickOutside);
+    };
+  }, [showSavedFilesDropdown]);
+
+  // Fetch saved files (placeholder - can be connected to API later)
+  useEffect(() => {
+    // TODO: Replace with actual API call to fetch saved files
+    // For now, using empty array - can be populated from API
+    const fetchSavedFiles = async () => {
+      try {
+        // const response = await fetch('/api/saved-files');
+        // const data = await response.json();
+        // setSavedFiles(data.files || []);
+        setSavedFiles([]); // Placeholder
+      } catch (error) {
+        console.error("Error fetching saved files:", error);
+      }
+    };
+    fetchSavedFiles();
+  }, []);
 
   const handleSubmit = (e) => {
     e.preventDefault();
@@ -47,15 +105,26 @@ export default function ChatInterface({ messages = [], onSendMessage, isLoading 
       </div>
 
       {/* Messages Container */}
-      <div className="flex-1 overflow-y-auto px-4 pt-4 space-y-4 chat-scrollable bg-white">
+      <div ref={messagesContainerRef} className="flex-1 overflow-y-auto px-4 pt-4 space-y-4 chat-scrollable bg-white">
 
         {messages.map((message, index) => (
           <div
             key={index}
-            className={`flex ${
+            className={`flex items-start gap-2 ${
               message.type === "user" ? "justify-end" : "justify-start"
             }`}
           >
+            {message.type === "user" && (
+              <div className="flex-shrink-0 w-6 h-6 mt-1">
+                <Image
+                  src="/onlylogo.svg"
+                  alt="Logo"
+                  width={24}
+                  height={24}
+                  className="w-6 h-6"
+                />
+              </div>
+            )}
             <div
               className={`max-w-[80%] rounded-lg px-4 py-2 ${
                 message.type === "user"
@@ -84,7 +153,7 @@ export default function ChatInterface({ messages = [], onSendMessage, isLoading 
           </div>
         )}
         {inlineComponent && (
-          <div className="flex justify-start">
+          <div className="flex justify-start" data-inline-component>
             <div className="max-w-[80%] w-full">
               {inlineComponent}
             </div>
@@ -186,6 +255,50 @@ export default function ChatInterface({ messages = [], onSendMessage, isLoading 
                 <div className="absolute bottom-full left-0 mb-2 px-3 py-2 bg-brand-text-strong text-brand-bg-white text-xs rounded-md whitespace-nowrap z-50">
                   Attach documents or files
                   <div className="absolute top-full left-4 w-0 h-0 border-l-4 border-r-4 border-t-4 border-transparent border-t-brand-text-strong"></div>
+                </div>
+              )}
+            </div>
+
+            {/* @ Icon for Saved Files */}
+            <div className="relative" ref={savedFilesDropdownRef}>
+              <button
+                type="button"
+                onClick={() => {
+                  setShowSavedFilesDropdown(!showSavedFilesDropdown);
+                }}
+                className="p-2 rounded-md hover:bg-brand-bg-fill transition-colors"
+                disabled={isLoading}
+                title="Show saved files"
+              >
+                <span className="text-brand-stroke-strong text-lg font-semibold">@</span>
+              </button>
+              {showSavedFilesDropdown && (
+                <div className="absolute bottom-full left-0 mb-2 w-64 bg-brand-bg-white border border-brand-stroke-weak rounded-lg shadow-lg z-50 max-h-60 overflow-y-auto">
+                  {savedFiles.length > 0 ? (
+                    <div className="py-2">
+                      {savedFiles.map((file, index) => (
+                        <button
+                          key={index}
+                          type="button"
+                          onClick={() => {
+                            // Handle file selection
+                            console.log("Selected file:", file);
+                            setShowSavedFilesDropdown(false);
+                            // TODO: Add file to input or handle selection
+                          }}
+                          className="w-full text-left px-4 py-2 text-sm text-brand-text-strong hover:bg-brand-bg-fill transition-colors flex items-center gap-2"
+                          style={{ fontFamily: "Open Sans, sans-serif" }}
+                        >
+                          <Document size={16} className="text-brand-stroke-strong" />
+                          <span className="truncate">{file.name || file}</span>
+                        </button>
+                      ))}
+                    </div>
+                  ) : (
+                    <div className="px-4 py-3 text-sm text-brand-text-weak text-center" style={{ fontFamily: "Open Sans, sans-serif" }}>
+                      No saved files
+                    </div>
+                  )}
                 </div>
               )}
             </div>
