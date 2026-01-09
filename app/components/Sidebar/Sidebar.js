@@ -3,6 +3,7 @@
 import { useState, useEffect, useRef } from "react";
 import { useRouter } from "next/navigation";
 import themeClasses from "../../theme-utility-classes.json";
+import JobMapIcon from "../JobMapIcon";
 import {
   Home,
   Document,
@@ -92,7 +93,7 @@ export default function Sidebar({ activeItem = "jobs-near-you", onToggle, isOpen
             <div className="flex items-center space-x-3">
               <div className={sidebar["logo-container"]}>
                 <div className={`w-6 h-6 ${brand.color.primary} rounded flex items-center justify-center`}>
-                  <span className="text-white text-xs font-bold">ND</span>
+                  <JobMapIcon size={18} className="text-white" />
                 </div>
               </div>
               <h2 className={sidebar["logo-text"]}>NextDoorJobs</h2>
@@ -106,7 +107,7 @@ export default function Sidebar({ activeItem = "jobs-near-you", onToggle, isOpen
             >
               <div className={sidebar["logo-container"]}>
                 <div className={`w-6 h-6 ${brand.color.primary} rounded flex items-center justify-center`}>
-                  <span className="text-white text-xs font-bold">ND</span>
+                  <JobMapIcon size={18} className="text-white" />
                 </div>
               </div>
               {showLogoHover && (
