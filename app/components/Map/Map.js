@@ -113,13 +113,24 @@ const MapComponent = () => {
   }, []);
   const collegeLinesRef = useRef([]);
 
+  // Parse response as JSON safely (avoids "Unexpected token '<'" when server returns HTML)
+  const parseJsonResponse = async (response) => {
+    const text = await response.text();
+    if (!response.ok) return null;
+    try {
+      return text ? JSON.parse(text) : null;
+    } catch {
+      return null;
+    }
+  };
+
   // Load locations data (client-side only)
   useEffect(() => {
     if (typeof window !== "undefined") {
       fetch("/data/locations.json")
-        .then((response) => response.json())
+        .then((response) => parseJsonResponse(response))
         .then((data) => {
-          setLocationsData(data);
+          if (data) setLocationsData(data);
         })
         .catch((error) => {
           console.error("Error loading locations data:", error);
@@ -131,10 +142,12 @@ const MapComponent = () => {
   useEffect(() => {
     if (typeof window !== "undefined") {
       fetch("/api/localities")
-        .then((response) => response.json())
+        .then((response) => parseJsonResponse(response))
         .then((data) => {
-          setLocalities(data);
-          console.log(`✅ Loaded ${data.length} localities for autocomplete`);
+          if (data) {
+            setLocalities(data);
+            console.log(`✅ Loaded ${data.length} localities for autocomplete`);
+          }
         })
         .catch((error) => {
           console.error("Error loading localities:", error);
@@ -146,10 +159,12 @@ const MapComponent = () => {
   useEffect(() => {
     if (typeof window !== "undefined") {
       fetch("/api/job-titles")
-        .then((response) => response.json())
+        .then((response) => parseJsonResponse(response))
         .then((data) => {
-          setJobTitles(data);
-          console.log(`✅ Loaded ${data.length} job titles for autocomplete`);
+          if (data) {
+            setJobTitles(data);
+            console.log(`✅ Loaded ${data.length} job titles for autocomplete`);
+          }
         })
         .catch((error) => {
           console.error("Error loading job titles:", error);
@@ -161,10 +176,12 @@ const MapComponent = () => {
   useEffect(() => {
     if (typeof window !== "undefined") {
       fetch("/api/colleges")
-        .then((response) => response.json())
+        .then((response) => parseJsonResponse(response))
         .then((data) => {
-          setColleges(data);
-          console.log(`✅ Loaded ${data.length} colleges for autocomplete`);
+          if (data) {
+            setColleges(data);
+            console.log(`✅ Loaded ${data.length} colleges for autocomplete`);
+          }
         })
         .catch((error) => {
           console.error("Error loading colleges:", error);
@@ -1710,10 +1727,16 @@ const MapComponent = () => {
             setIsFindingJobs(false);
             setIsDetectingLocation(false);
             
-            const errorData = await response.json().catch(() => ({}));
-            const errorMessage = errorData.error || "Unknown error";
-            const errorDetails = errorData.details || "";
-            console.error("Locality search error:", errorMessage, errorDetails);
+            const responseText = await response.text();
+            let errorData = {};
+            try {
+              errorData = responseText ? JSON.parse(responseText) : {};
+            } catch {
+              console.error("Locality search non-JSON response:", response.status, response.statusText, responseText?.slice(0, 200));
+            }
+            const errorMessage = errorData.error || `Server error (${response.status})`;
+            const errorDetails = errorData.details || (responseText && !errorData.error ? responseText.slice(0, 200) : "");
+            console.error("Locality search error:", response.status, errorMessage, errorDetails);
             
             // Check if it's a server error (like prisma.pincode undefined)
             if (response.status === 503 || (errorDetails && errorDetails.includes("restart"))) {
@@ -2432,13 +2455,12 @@ const MapComponent = () => {
                       return;
                     }
                     if (e.key === "Enter" && searchQuery.trim()) {
-                      // Only search if autocomplete is closed or no item is selected
-                      if (!showAutocomplete && !showJobAutocomplete && !showCollegeAutocomplete) {
-                        setShowAutocomplete(false);
-                        setShowJobAutocomplete(false);
-                        setShowCollegeAutocomplete(false);
-                        handleSearch();
-                      }
+                      // Always trigger search on Enter so e.g. "Kochi" + Enter works even when
+                      // autocomplete is open (autocomplete handles Enter for selected item via capture)
+                      setShowAutocomplete(false);
+                      setShowJobAutocomplete(false);
+                      setShowCollegeAutocomplete(false);
+                      handleSearch();
                     } else if (e.key === "Escape") {
                       setShowAutocomplete(false);
                       setShowJobAutocomplete(false);

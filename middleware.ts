@@ -10,6 +10,12 @@ const isPublicRoute = createRouteMatcher([
   '/api/auth/callback(.*)',
   '/api/auth/callback/clerk(.*)',
   '/onboarding',
+  // Map search and autocomplete (used before login)
+  '/api/search-locality',
+  '/api/localities',
+  '/api/search-college',
+  '/api/colleges',
+  '/api/job-titles',
 ]);
 
 export default clerkMiddleware(async (auth, req) => {

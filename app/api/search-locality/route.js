@@ -439,10 +439,12 @@ const searchByLocality = async (localityName) => {
   const wordTerms = normalizedQuery.split(/\s+/).filter(term => term.length > 2);
 
   try {
-    // First, try exact/contains match (faster) - simplified query for better performance
+    // First, try exact/contains match on localityName and district (so city names like Kochi work)
     const orConditions = [
       { localityName: { equals: localityName.trim(), mode: "insensitive" } },
-      { localityName: { contains: normalizedQuery, mode: "insensitive" } }
+      { localityName: { contains: normalizedQuery, mode: "insensitive" } },
+      { district: { equals: localityName.trim(), mode: "insensitive" } },
+      { district: { contains: normalizedQuery, mode: "insensitive" } },
     ];
     
     // Only add additional conditions if the query is short (to avoid too many OR conditions)
@@ -450,6 +452,7 @@ const searchByLocality = async (localityName) => {
       searchTerms.forEach(term => {
         if (term && term.length > 2) {
           orConditions.push({ localityName: { contains: term.trim(), mode: "insensitive" } });
+          orConditions.push({ district: { contains: term.trim(), mode: "insensitive" } });
         }
       });
     }
@@ -465,7 +468,7 @@ const searchByLocality = async (localityName) => {
         return await prisma.pincode.findFirst({
           where: {
             AND: [
-              { OR: orConditions.slice(0, 5) }, // Limit to first 5 conditions for performance
+              { OR: orConditions.slice(0, 8) }, // Allow more conditions to include locality + district
               { state: "Kerala" }
             ]
           },
@@ -604,7 +607,8 @@ const searchByLocality = async (localityName) => {
                 {
                   OR: [
                     { localityName: { equals: localityName.trim(), mode: "insensitive" } },
-                    { localityName: { contains: normalizedQuery, mode: "insensitive" } }
+                    { localityName: { contains: normalizedQuery, mode: "insensitive" } },
+                    { district: { contains: normalizedQuery, mode: "insensitive" } },
                   ]
                 },
                 { state: "Kerala" }
@@ -709,28 +713,38 @@ export async function GET(request) {
         }
       } catch (error) {
         console.error("❌ Error searching locality:", error);
-        
-      if (error.message === "Database query timeout") {
-        return NextResponse.json(
-          { 
-            error: "Database query timeout", 
-            details: "The database is taking too long to respond. Please try again." 
-          },
-          { status: 500 }
-        );
-      }
-      
-      if (error.message && error.message.includes("Pincode model not available")) {
-        return NextResponse.json(
-          { 
-            error: "Locality search is not available", 
-            details: "Please restart the development server to load the Pincode model. Run: npm run dev"
-          },
-          { status: 503 }
-        );
-      }
-      
-      throw error;
+
+        if (error.message === "Database query timeout" || error.message === "Database query timeout - no results found") {
+          return NextResponse.json(
+            {
+              error: "Database query timeout",
+              details: "The database is taking too long to respond. Please try again.",
+            },
+            { status: 500 }
+          );
+        }
+
+        if (error.message && error.message.includes("Pincode model not available")) {
+          return NextResponse.json(
+            {
+              error: "Locality search is not available",
+              details: "Please restart the development server to load the Pincode model. Run: npm run dev",
+            },
+            { status: 503 }
+          );
+        }
+
+        if (error.message && error.message.includes("Query timeout")) {
+          return NextResponse.json(
+            {
+              error: "Search timed out",
+              details: "The search took too long. Please try a more specific locality or try again.",
+            },
+            { status: 504 }
+          );
+        }
+
+        throw error;
       }
     }
 
