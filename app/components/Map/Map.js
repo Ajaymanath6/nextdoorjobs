@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import dynamic from "next/dynamic";
 import { useRouter } from "next/navigation";
 import themeClasses from "../../theme-utility-classes.json";
@@ -91,7 +91,28 @@ const MapComponent = () => {
   const filterButtonRef = useRef(null);
   const [locationsData, setLocationsData] = useState(null);
   const [companyDistances, setCompanyDistances] = useState({});
-  
+
+  // Flattened company list for filter modal (main companies + per-locality companies)
+  const flattenedCompanies = useMemo(() => {
+    if (!locationsData) return [];
+    const main = locationsData.companies || [];
+    const fromLocalities = locationsData.localities
+      ? Object.values(locationsData.localities).flatMap((loc) =>
+          (loc.companies || []).map((c) => ({
+            ...c,
+            name: c.company_name || c.name,
+          }))
+        )
+      : [];
+    const seen = new Set();
+    return [...main, ...fromLocalities].filter((c) => {
+      const name = c.name || c.company_name;
+      if (!name || seen.has(name)) return false;
+      seen.add(name);
+      return true;
+    });
+  }, [locationsData]);
+
   // College distance feature state
   const [selectedCollege, setSelectedCollege] = useState(null);
   const [isCollegeFilterActive, setIsCollegeFilterActive] = useState(false);
@@ -2402,7 +2423,7 @@ const MapComponent = () => {
           {/* Search Bar Card - same corner radius as show distance button (rounded-full) */}
           <div className={`bg-brand-bg-white rounded-full border border-brand-stroke-border shadow-lg w-full px-2 py-1.5 md:px-4 md:py-2`}>
             {/* Mobile: single bar (Person/Job + input + Filter + Profile). Desktop: no bar, separate bordered controls. */}
-            <div className={`flex items-center gap-2 md:gap-3 w-full rounded-full border border-brand-stroke-border bg-brand-bg-white min-h-[34px] md:border-0 md:bg-transparent md:rounded-none md:min-h-0 ${searchBar["search-input-hover"]}`}>
+            <div className={`flex items-center gap-2 md:gap-3 w-full rounded-full border border-brand-stroke-border bg-brand-bg-white min-h-[34px] overflow-hidden md:border-0 md:bg-transparent md:rounded-none md:min-h-0 ${searchBar["search-input-hover"]}`}>
               {/* View Selector Button - Hidden for now, will add in later stages */}
               {/* <div className="relative flex-shrink-0">
                 <button
@@ -2452,21 +2473,21 @@ const MapComponent = () => {
               </div> */}
 
               {/* Toggle: Person (users) / Job (suitcase) - hidden on mobile when search input focused */}
-              <div className={`${searchBar["toggle-wrapper"]} border-0 overflow-visible md:overflow-hidden ${mobileSearchExpanded ? "hidden md:!flex" : ""}`} ref={searchModeDropdownRef}>
+              <div className={`${searchBar["toggle-wrapper"]} border-0 overflow-visible md:overflow-hidden shrink-0 ${mobileSearchExpanded ? "hidden md:!flex" : ""}`} ref={searchModeDropdownRef}>
                 {/* Mobile: single button with chevron, dropdown with other option */}
                 <div className="relative md:hidden shrink-0">
                   <button
                     type="button"
                     onClick={() => setShowSearchModeDropdown(!showSearchModeDropdown)}
-                    className={`h-[34px] w-[34px] flex items-center justify-center gap-1 p-1.5 rounded-lg border border-brand-stroke-border bg-brand-bg-white hover:bg-brand-bg-fill transition-colors shrink-0 ${searchMode ? "bg-brand-bg-fill border-0" : ""}`}
+                    className={`h-[34px] w-[42px] flex items-center justify-center gap-0.5 p-1 rounded-lg border border-brand-stroke-border bg-brand-bg-white hover:bg-brand-bg-fill transition-colors shrink-0 ${searchMode ? "bg-brand-bg-fill border-0" : ""}`}
                     title={searchMode === "person" ? "Search for people" : "Search for jobs"}
                     aria-expanded={showSearchModeDropdown}
                     aria-haspopup="true"
                   >
                     {searchMode === "person" ? (
-                      <User size={24} className={`w-6 h-6 shrink-0 ${searchBar["toggle-segment-icon-active"]}`} />
+                      <User size={20} className={`w-5 h-5 shrink-0 ${searchBar["toggle-segment-icon-active"]}`} />
                     ) : (
-                      <Portfolio size={24} className={`w-6 h-6 shrink-0 ${searchBar["toggle-segment-icon-active"]}`} />
+                      <Portfolio size={20} className={`w-5 h-5 shrink-0 ${searchBar["toggle-segment-icon-active"]}`} />
                     )}
                     <ChevronDown size={16} className="w-4 h-4 shrink-0 text-brand-stroke-strong" />
                   </button>
@@ -2482,12 +2503,12 @@ const MapComponent = () => {
                       >
                         {searchMode === "person" ? (
                           <>
-                            <Portfolio size={24} className={`w-6 h-6 shrink-0 ${searchBar["toggle-segment-icon"]}`} />
+                            <Portfolio size={20} className={`w-5 h-5 shrink-0 ${searchBar["toggle-segment-icon"]}`} />
                             <span className="truncate">Job</span>
                           </>
                         ) : (
                           <>
-                            <User size={24} className={`w-6 h-6 shrink-0 ${searchBar["toggle-segment-icon"]}`} />
+                            <User size={20} className={`w-5 h-5 shrink-0 ${searchBar["toggle-segment-icon"]}`} />
                             <span className="truncate">Person</span>
                           </>
                         )}
@@ -2496,7 +2517,7 @@ const MapComponent = () => {
                   )}
                 </div>
                 {/* Desktop: two-segment toggle */}
-                <div className="hidden md:flex rounded-md border  overflow-hidden shrink-0">
+                <div className="hidden md:flex rounded-md border overflow-hidden shrink-0">
                   <button
                     type="button"
                     onClick={() => setSearchMode("person")}
@@ -2504,8 +2525,8 @@ const MapComponent = () => {
                     title="Search for people"
                   >
                     <User
-                      size={24}
-                      className={`w-6 h-6 shrink-0 ${searchMode === "person" ? searchBar["toggle-segment-icon-active"] : searchBar["toggle-segment-icon"]}`}
+                      size={20}
+                      className={`w-5 h-5 shrink-0 ${searchMode === "person" ? searchBar["toggle-segment-icon-active"] : searchBar["toggle-segment-icon"]}`}
                     />
                   </button>
                   <button
@@ -2515,8 +2536,8 @@ const MapComponent = () => {
                     title="Search for jobs"
                   >
                     <Portfolio
-                      size={24}
-                      className={`w-6 h-6 shrink-0 ${searchMode === "job" ? searchBar["toggle-segment-icon-active"] : searchBar["toggle-segment-icon"]}`}
+                      size={20}
+                      className={`w-5 h-5 shrink-0 ${searchMode === "job" ? searchBar["toggle-segment-icon-active"] : searchBar["toggle-segment-icon"]}`}
                     />
                   </button>
                 </div>
@@ -2721,6 +2742,10 @@ const MapComponent = () => {
                 onClose={() => setShowFilterDropdown(false)}
                 selectedOption={selectedFilterOption}
                 onSelect={(option) => setSelectedFilterOption(option)}
+                localities={localities}
+                jobTitles={jobTitles}
+                colleges={colleges}
+                companies={flattenedCompanies}
               />
 
               {/* Return Button - Hidden for now, will add in later stages */}
