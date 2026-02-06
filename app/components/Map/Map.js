@@ -17,6 +17,7 @@ import {
   UserAvatar,
   ArrowLeft,
   ChevronDown,
+  Close,
 } from "@carbon/icons-react";
 import { RiArrowDownSLine, RiSearchLine } from "@remixicon/react";
 import FilterDropdown from "./FilterDropdown";
@@ -2019,9 +2020,10 @@ const MapComponent = () => {
     }
   }, [isCollegeFilterActive, selectedCollege]);
 
-  // Handle click outside filter dropdown
+  // Handle click outside filter dropdown (do not close when click is inside filter modal)
   useEffect(() => {
     const handleClickOutside = (event) => {
+      if (event.target.closest("[data-filter-modal-root]")) return;
       if (
         filterDropdownRef.current &&
         !filterDropdownRef.current.contains(event.target) &&
@@ -2421,9 +2423,9 @@ const MapComponent = () => {
           className={`flex flex-col top-3 md:top-4 gap-2 md:gap-6 ${searchBar.container} w-[calc(100vw-16px)] max-w-[800px]`}
         >
           {/* Search Bar Card - same corner radius as show distance button (rounded-full) */}
-          <div className={`bg-brand-bg-white rounded-full border border-brand-stroke-border shadow-lg w-full px-2 py-1.5 md:px-4 md:py-2`}>
+          <div className={`bg-brand-bg-white rounded-full border border-brand-stroke-border shadow-lg w-full px-1.5 py-1.5 md:px-4 md:py-2`}>
             {/* Mobile: single bar (Person/Job + input + Filter + Profile). Desktop: no bar, separate bordered controls. */}
-            <div className={`flex items-center gap-2 md:gap-3 w-full rounded-full border border-brand-stroke-border bg-brand-bg-white min-h-[34px] overflow-hidden md:border-0 md:bg-transparent md:rounded-none md:min-h-0 ${searchBar["search-input-hover"]}`}>
+            <div className={`flex items-center gap-2 md:gap-3 w-full rounded-full border border-brand-stroke-border bg-brand-bg-white min-h-[34px] overflow-visible md:overflow-hidden md:border-0 md:bg-transparent md:rounded-none md:min-h-0 ${searchBar["search-input-hover"]}`}>
               {/* View Selector Button - Hidden for now, will add in later stages */}
               {/* <div className="relative flex-shrink-0">
                 <button
@@ -2479,7 +2481,7 @@ const MapComponent = () => {
                   <button
                     type="button"
                     onClick={() => setShowSearchModeDropdown(!showSearchModeDropdown)}
-                    className={`h-[34px] w-[42px] flex items-center justify-center gap-0.5 p-1 rounded-lg border border-brand-stroke-border bg-brand-bg-white hover:bg-brand-bg-fill transition-colors shrink-0 ${searchMode ? "bg-brand-bg-fill border-0" : ""}`}
+                    className={`h-[34px] w-[46px] flex items-center justify-center gap-0.5 p-1 rounded-lg border border-brand-stroke-border bg-brand-bg-white hover:bg-brand-bg-fill transition-colors shrink-0 ${searchMode ? "bg-brand-bg-fill border-0" : ""}`}
                     title={searchMode === "person" ? "Search for people" : "Search for jobs"}
                     aria-expanded={showSearchModeDropdown}
                     aria-haspopup="true"
@@ -2609,22 +2611,42 @@ const MapComponent = () => {
                   placeholder="Search for locality, pincode, job"
                 />
                 
-                {/* Send Button - Right side inside input */}
-                <button
-                  type="button"
-                  onClick={() => handleSearch()}
-                  disabled={!searchQuery || !searchQuery.trim()}
-                  className={`absolute right-1.5 md:right-2 top-1/2 -translate-y-1/2 flex items-center justify-center p-1 rounded transition-colors border-0 bg-transparent ${
-                    !searchQuery || !searchQuery.trim() 
-                      ? "opacity-50 cursor-not-allowed" 
-                      : "hover:bg-brand-stroke-weak cursor-pointer"
-                  }`}
-                >
-                  <SendFilled
-                    size={24}
-                    className={`w-6 h-6 shrink-0 ${searchQuery && searchQuery.trim() ? "text-brand" : "text-brand-text-tertiary"}`}
-                  />
-                </button>
+                {/* Right side inside input: mobile = cross when typing (clear) else send; desktop = send */}
+                <div className="absolute right-1.5 md:right-2 top-1/2 -translate-y-1/2 flex items-center justify-center">
+                  {/* Mobile: cross when typing (clear), else send (disabled) */}
+                  {searchQuery?.trim() ? (
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setSearchQuery("");
+                        searchInputRef.current?.focus();
+                      }}
+                      className="md:hidden flex items-center justify-center p-1 rounded border-0 bg-transparent hover:bg-brand-stroke-weak cursor-pointer"
+                      aria-label="Clear search"
+                    >
+                      <Close size={24} className="w-6 h-6 shrink-0 text-brand-stroke-strong" />
+                    </button>
+                  ) : (
+                    <span className="md:hidden flex items-center justify-center p-1 opacity-50 pointer-events-none">
+                      <SendFilled size={24} className="w-6 h-6 shrink-0 text-brand-text-tertiary" />
+                    </span>
+                  )}
+                  {/* Desktop: send button */}
+                  <button
+                    type="button"
+                    onClick={() => handleSearch()}
+                    disabled={!searchQuery?.trim()}
+                    className={`hidden md:flex items-center justify-center p-1 rounded border-0 bg-transparent transition-colors ${
+                      searchQuery?.trim() ? "hover:bg-brand-stroke-weak cursor-pointer" : "opacity-50 cursor-not-allowed"
+                    }`}
+                    aria-label="Search"
+                  >
+                    <SendFilled
+                      size={24}
+                      className={`w-6 h-6 shrink-0 ${searchQuery?.trim() ? "text-brand" : "text-brand-text-tertiary"}`}
+                    />
+                  </button>
+                </div>
                 
                 {/* Autocomplete Dropdown */}
                 <LocalityAutocomplete
@@ -2678,8 +2700,8 @@ const MapComponent = () => {
                 />
               </div>
 
-              {/* Filter + Profile grouped with 4px gap. Default: Profile only. When input focused: Filter only. */}
-              <div className="flex items-center gap-1 shrink-0">
+              {/* Filter + Profile grouped; reduced gap on mobile so Person/Job button fits */}
+              <div className="flex items-center gap-0.5 md:gap-1 shrink-0">
                 {/* Filter Button - show when search focused or filter modal open (so modal stays visible) */}
                 <div className={`relative shrink-0 ${!mobileSearchExpanded && !showFilterDropdown ? "hidden md:!flex" : ""}`}>
                   <button
