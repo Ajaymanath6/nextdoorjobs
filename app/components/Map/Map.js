@@ -40,6 +40,15 @@ const THRISSUR_BADGE_COORDINATES = [
   { lat: 10.512, lon: 76.178 },
 ];
 
+// Logo paths for Irinjalakuda companies (jobs mode): order matches locations.json
+const IRINJALAKUDA_LOGO_URLS = [
+  "/chatgpt.png",
+  "/elevenlabs.png",
+  "/gemni.png",
+  "/whisper.png",
+  "/claude.png",
+];
+
 // Import CSS files (Next.js handles these)
 import "leaflet/dist/leaflet.css";
 import "leaflet.markercluster/dist/MarkerCluster.css";
@@ -380,16 +389,45 @@ const MapComponent = () => {
     });
     clusterGroupRef.current = clusterGroup;
 
+    const isIrinjalakudaJobs =
+      searchMode === "job" &&
+      companies.length === 5 &&
+      companies[0]?.locality === "Irinjalakuda";
+
     // Create markers for each company
     companies.forEach((company, index) => {
-      const logoUrl = company.logoUrl || null;
-      
-      // Get distance from college if available for badge
       const companyName = company.company_name || company.name;
-      const distanceKm = selectedCollege && collegeDistances[companyName] 
-        ? collegeDistances[companyName]
-        : null;
-      
+
+      if (isIrinjalakudaJobs) {
+        const imageUrl = IRINJALAKUDA_LOGO_URLS[index] ?? IRINJALAKUDA_LOGO_URLS[0];
+        const customIcon = createCircularCompanyIcon(L, imageUrl, 50);
+        const marker = L.marker([company.latitude, company.longitude], {
+          icon: customIcon,
+          zIndexOffset: 1000 + index,
+          opacity: 1,
+        });
+        marker.companyData = company;
+        const tooltipContent = `
+          <div style="font-family: 'Open Sans', sans-serif; padding: 6px 8px; min-width: 120px;">
+            <div style="font-weight: 600; font-size: 13px; color: #0A0A0A; margin-bottom: 4px;">${companyName}</div>
+            <div style="font-size: 12px; color: #1A1A1A;">${company.type || ""}</div>
+          </div>
+        `;
+        marker.bindTooltip(tooltipContent, {
+          direction: "top",
+          permanent: false,
+          className: "company-tooltip",
+        });
+        clusterGroup.addLayer(marker);
+        companyMarkersRef.current.push(marker);
+        return;
+      }
+
+      const logoUrl = company.logoUrl || null;
+      const distanceKm =
+        selectedCollege && collegeDistances[companyName]
+          ? collegeDistances[companyName]
+          : null;
       const customIcon = createCustomTeardropIcon(L, logoUrl, 50, distanceKm);
 
       const marker = L.marker([company.latitude, company.longitude], {
@@ -397,16 +435,13 @@ const MapComponent = () => {
         zIndexOffset: 1000 + index,
         opacity: 1,
       });
-
-      // Store company data on marker
       marker.companyData = company;
 
-      // Get distance text for popup
-      const collegeDistanceText = selectedCollege && collegeDistances[companyName] 
-        ? `${collegeDistances[companyName]} km from ${selectedCollege.name}`
-        : null;
+      const collegeDistanceText =
+        selectedCollege && collegeDistances[companyName]
+          ? `${collegeDistances[companyName]} km from ${selectedCollege.name}`
+          : null;
 
-      // Create popup content
       const popupContent = `
         <div style="font-family: 'Open Sans', sans-serif; padding: 4px;">
           <div style="font-weight: 600; font-size: 14px; color: #0A0A0A; margin-bottom: 4px;">
@@ -419,7 +454,7 @@ const MapComponent = () => {
             <div style="font-size: 11px; color: #575757; margin-top: 4px;">
               ${collegeDistanceText}
             </div>
-          ` : ''}
+          ` : ""}
         </div>
       `;
 
@@ -837,6 +872,19 @@ const MapComponent = () => {
         totalHeight, // Anchor at the bottom of the total height (including badge)
       ],
       popupAnchor: [0, -totalHeight - 10],
+    });
+  };
+
+  // Circular company icon for Irinjalakuda (jobs mode): image + light gray border
+  const createCircularCompanyIcon = (L, imageUrl, size = 50) => {
+    const lightGrayBorder = "#d1d5db";
+    const html = `<div class="company-marker company-marker-circular" style="position:relative;width:${size}px;height:${size}px;border-radius:50%;border:2px solid ${lightGrayBorder};overflow:hidden;display:flex;align-items:center;justify-content:center;cursor:pointer;transition:transform 0.2s ease,box-shadow 0.2s ease;box-shadow:0 2px 8px rgba(0,0,0,0.12);"><img src="${imageUrl}" alt="" style="width:100%;height:100%;object-fit:cover;" /></div>`;
+    return L.divIcon({
+      html,
+      className: "custom-pindrop-marker",
+      iconSize: [size, size],
+      iconAnchor: [size / 2, size],
+      popupAnchor: [0, -size - 10],
     });
   };
 
@@ -2471,7 +2519,7 @@ const MapComponent = () => {
                   <button
                     type="button"
                     onClick={() => setShowSearchModeDropdown(!showSearchModeDropdown)}
-                    className={`h-[34px] w-[46px] flex items-center justify-center gap-0.5 p-1 rounded-lg border border-brand-stroke-border bg-transparent hover:bg-brand-bg-fill transition-colors shrink-0 ${searchMode ? "hover:bg-brand-bg-fill" : ""}`}
+                    className={`h-[34px] w-[46px] flex items-center justify-center gap-0.5 p-1 rounded-lg border-r border-brand-stroke-border bg-transparent hover:bg-brand-bg-fill transition-colors shrink-0 ${searchMode ? "hover:bg-brand-bg-fill" : ""}`}
                     title={searchMode === "person" ? "Search for people" : "Search for jobs"}
                     aria-expanded={showSearchModeDropdown}
                     aria-haspopup="true"

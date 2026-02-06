@@ -16,11 +16,16 @@ export default function EmailAuthForm({ onSubmit, isLoading = false }) {
 
     setIsGoogleLoading(true);
     try {
-      // Use Clerk's OAuth flow for Google
+      const origin =
+        typeof window !== "undefined" ? window.location.origin : "";
+      const redirectUrl = origin
+        ? `${origin}/api/auth/callback/clerk`
+        : "/api/auth/callback/clerk";
+      const redirectUrlComplete = origin ? `${origin}/onboarding` : "/onboarding";
       await signIn.authenticateWithRedirect({
-        strategy: 'oauth_google',
-        redirectUrl: '/api/auth/callback/clerk',
-        redirectUrlComplete: '/onboarding',
+        strategy: "oauth_google",
+        redirectUrl,
+        redirectUrlComplete,
       });
     } catch (error) {
       console.error("Google auth error:", error);
