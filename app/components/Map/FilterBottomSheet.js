@@ -59,7 +59,7 @@ export default function FilterBottomSheet({
   if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-0 z-[1001] md:hidden flex items-center justify-center p-4">
+    <div className="fixed inset-0 z-[1001] md:hidden grid place-items-center p-3">
       <div
         className="absolute inset-0 bg-black/50"
         onClick={onClose}

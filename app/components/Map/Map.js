@@ -2400,7 +2400,7 @@ const MapComponent = () => {
           className={`flex flex-col top-3 md:top-4 gap-2 md:gap-6 ${searchBar.container} ${searchBar["container-width"]}`}
         >
           {/* Search Bar Card - reduced padding on mobile */}
-          <div className={`${searchBar.card} px-2.5 py-1 md:px-4 md:py-2`}>
+          <div className={`${searchBar.card} px-[2px] py-1 md:px-4 md:py-2`}>
             <div className={`${searchBar["inner-flex"]} gap-1.5 md:gap-3`}>
               {/* View Selector Button - Hidden for now, will add in later stages */}
               {/* <div className="relative flex-shrink-0">
