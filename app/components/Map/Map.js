@@ -2368,12 +2368,11 @@ const MapComponent = () => {
       {/* Search Bar - visible on all viewports */}
       {isGlobeView && (
         <div
-          className={`flex ${searchBar.container} ${searchBar["container-width"]}`}
-          style={{ gap: "24px" }}
+          className={`flex flex-col top-3 md:top-4 gap-2 md:gap-6 ${searchBar.container} ${searchBar["container-width"]}`}
         >
           {/* Search Bar Card */}
-          <div className={searchBar.card}>
-            <div className={searchBar["inner-flex"]}>
+          <div className={`${searchBar.card} px-3 py-1.5 md:px-4 md:py-2`}>
+            <div className={`${searchBar["inner-flex"]} gap-2 md:gap-3`}>
               {/* View Selector Button - Hidden for now, will add in later stages */}
               {/* <div className="relative flex-shrink-0">
                 <button
@@ -2427,7 +2426,7 @@ const MapComponent = () => {
                 <button
                   type="button"
                   onClick={() => setSearchMode("person")}
-                  className={`${searchBar["toggle-segment"]} ${searchMode === "person" ? searchBar["toggle-segment-active"] : ""}`}
+                  className={`p-1.5 md:p-2 ${searchBar["toggle-segment"]} ${searchMode === "person" ? searchBar["toggle-segment-active"] : ""}`}
                   title="Search for people"
                 >
                   <User
@@ -2438,7 +2437,7 @@ const MapComponent = () => {
                 <button
                   type="button"
                   onClick={() => setSearchMode("job")}
-                  className={`${searchBar["toggle-segment"]} ${searchMode === "job" ? searchBar["toggle-segment-active"] : ""}`}
+                  className={`p-1.5 md:p-2 ${searchBar["toggle-segment"]} ${searchMode === "job" ? searchBar["toggle-segment-active"] : ""}`}
                   title="Search for jobs"
                 >
                   <Portfolio
@@ -2449,15 +2448,11 @@ const MapComponent = () => {
               </div>
 
               {/* Search Input with Autocomplete - Expanded width */}
-              <div className="relative flex-1" style={{ minWidth: 0 }}>
+              <div className="relative flex-1 min-w-0">
                 {/* Search Icon - Left side inside input */}
                 <IbmWatsonDiscovery
                   size={18}
-                  className="absolute left-3 top-1/2 transform -translate-y-1/2 z-10"
-                  style={{
-                    color: "var(--brand-stroke-strong)",
-                    pointerEvents: "none",
-                  }}
+                  className="absolute left-2.5 md:left-3 top-1/2 -translate-y-1/2 z-10 text-brand-stroke-strong pointer-events-none w-[16px] h-[16px] md:w-[18px] md:h-[18px]"
                 />
                 
                 {/* Search Input */}
@@ -2467,14 +2462,8 @@ const MapComponent = () => {
                   value={searchQuery}
                   onChange={handleSearchInputChange}
                   onKeyDown={(e) => {
-                    // Don't handle arrow keys here - let autocomplete handle them
-                    if (e.key === "ArrowDown" || e.key === "ArrowUp") {
-                      // Let autocomplete handle these - don't prevent default
-                      return;
-                    }
+                    if (e.key === "ArrowDown" || e.key === "ArrowUp") return;
                     if (e.key === "Enter" && searchQuery.trim()) {
-                      // Always trigger search on Enter so e.g. "Kochi" + Enter works even when
-                      // autocomplete is open (autocomplete handles Enter for selected item via capture)
                       setShowAutocomplete(false);
                       setShowJobAutocomplete(false);
                       setShowCollegeAutocomplete(false);
@@ -2487,7 +2476,6 @@ const MapComponent = () => {
                   }}
                   onFocus={(e) => {
                     if (searchQuery.trim().length >= 2) {
-                      // Check query type in priority order: job > college > locality
                       if (isJobSearchQuery(searchQuery)) {
                         setShowJobAutocomplete(true);
                         setShowCollegeAutocomplete(false);
@@ -2503,40 +2491,28 @@ const MapComponent = () => {
                       }
                     }
                   }}
-                  className={`${searchBar["search-input"]} ${searchBar["search-input-hover"]} ${searchBar["search-input-text"]} ${searchBar["search-input-placeholder"]} search-input-focus-active`}
+                  className={`${searchBar["search-input"]} ${searchBar["search-input-hover"]} ${searchBar["search-input-text"]} ${searchBar["search-input-placeholder"]} search-input-focus-active w-full text-sm md:text-base font-semibold py-1.5 pl-9 pr-9 md:py-2 md:pl-11 md:pr-11`}
                   style={{
                     fontFamily: "Open Sans",
-                    fontSize: "14px",
-                    fontWeight: 600,
                     boxShadow: "0 1px 6px rgba(32,33,36,0.08)",
-                    width: "100%",
-                    paddingLeft: "44px", // Space for search icon
-                    paddingRight: "44px", // Space for send button
                   }}
                   placeholder="Search for locality, pincode, job"
                 />
                 
                 {/* Send Button - Right side inside input */}
                 <button
+                  type="button"
                   onClick={() => handleSearch()}
                   disabled={!searchQuery || !searchQuery.trim()}
-                  className={`absolute right-2 top-1/2 transform -translate-y-1/2 flex items-center justify-center p-1.5 rounded transition-colors ${
+                  className={`absolute right-1.5 md:right-2 top-1/2 -translate-y-1/2 flex items-center justify-center p-1 rounded transition-colors border-0 bg-transparent ${
                     !searchQuery || !searchQuery.trim() 
                       ? "opacity-50 cursor-not-allowed" 
                       : "hover:bg-brand-stroke-weak cursor-pointer"
                   }`}
-                  style={{
-                    border: "none",
-                    background: "transparent",
-                  }}
                 >
                   <SendFilled
                     size={18}
-                    style={{
-                      color: (searchQuery && searchQuery.trim()) 
-                        ? "#F84416" 
-                        : "var(--brand-text-tertiary)",
-                    }}
+                    className={searchQuery && searchQuery.trim() ? "text-brand" : "text-brand-text-tertiary"}
                   />
                 </button>
                 
@@ -2598,7 +2574,7 @@ const MapComponent = () => {
                   ref={filterButtonRef}
                   type="button"
                   onClick={() => setShowFilterDropdown(!showFilterDropdown)}
-                  className="flex items-center justify-center p-2 rounded-lg border border-brand-stroke-border bg-brand-bg-white hover:bg-brand-bg-fill transition-colors"
+                  className="flex items-center justify-center p-1.5 md:p-2 rounded-lg border border-brand-stroke-border bg-brand-bg-white hover:bg-brand-bg-fill transition-colors"
                   aria-label="Filter"
                 >
                   <Filter size={16} className="text-brand-stroke-strong" />
@@ -2641,87 +2617,60 @@ const MapComponent = () => {
             </div>
           </div>
 
-          {/* Distance Button - Show only one at a time */}
-          <div className="relative">
-            {/* Show college distance button if college is selected, otherwise show home distance button */}
+          {/* Distance badge - small, below search bar */}
+          <div className="relative self-start">
             {selectedCollege ? (
               <button
-                className={`${searchBar["distance-button"]} ${searchBar["distance-button-height"]} ${searchBar["distance-button-nowrap"]} ${
-                  isCollegeFilterActive ? searchBar["distance-button-active"] : ""
-                }`}
+                type="button"
                 onClick={() => setIsCollegeFilterActive(!isCollegeFilterActive)}
-                style={{ fontFamily: "Open Sans", fontSize: "14px" }}
+                className={`inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg border text-xs font-medium transition-colors border-brand-stroke-border bg-brand-bg-white hover:bg-brand-bg-fill text-brand-text-weak ${isCollegeFilterActive ? "bg-brand-bg-fill" : ""}`}
+                style={{ fontFamily: "Open Sans" }}
               >
-                <span style={{ fontSize: "16px" }}>🏫</span>
-                <span style={{ fontFamily: "Open Sans", fontSize: "14px" }}>
-                  {isCollegeFilterActive ? "Hide Distance" : "Show Distance"}
-                </span>
+                <span className="text-sm">🏫</span>
+                <span>{isCollegeFilterActive ? "Hide distance" : "Show distance"}</span>
               </button>
             ) : (
               <button
-                className={`${searchBar["distance-button"]} ${searchBar["distance-button-height"]} ${searchBar["distance-button-nowrap"]} ${
-                  isHomeFilterActive ? searchBar["distance-button-active"] : ""
-                }`}
+                type="button"
                 onClick={handleDistanceToggle}
                 onContextMenu={handleHomeLocationRightClick}
-                style={{ fontFamily: "Open Sans", fontSize: "14px" }}
+                className={`inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg border text-xs font-medium transition-colors border-brand-stroke-border bg-brand-bg-white hover:bg-brand-bg-fill text-brand-text-weak ${isHomeFilterActive ? "bg-brand-bg-fill" : ""}`}
+                style={{ fontFamily: "Open Sans" }}
               >
-                <span style={{ fontSize: "16px" }}>🏠</span>
-                <span style={{ fontFamily: "Open Sans", fontSize: "14px" }}>
-                  {isHomeFilterActive ? "Hide Distance" : "Show Distance"}
-                </span>
+                <span className="text-sm">🏠</span>
+                <span>{isHomeFilterActive ? "Hide distance" : "Show distance"}</span>
               </button>
             )}
-
-            {/* Home Location Dropdown */}
             {showHomeLocationDropdown && (
               <div className="absolute top-full mt-2 right-0 w-[300px] bg-brand-bg-white border border-brand-stroke-border rounded-lg shadow-lg z-50 p-3 flex flex-col gap-3">
-                <div
-                  style={{
-                    fontFamily: "Open Sans",
-                    fontSize: "14px",
-                    fontWeight: 600,
-                    color: "#1A1A1A",
-                  }}
-                >
+                <div className="font-semibold text-sm text-brand-text-strong" style={{ fontFamily: "Open Sans" }}>
                   Home Location
                 </div>
                 <div className="relative">
                   <RiSearchLine
                     size={18}
-                    style={{
-                      color: "#A5A5A5",
-                      position: "absolute",
-                      left: "12px",
-                      top: "50%",
-                      transform: "translateY(-50%)",
-                    }}
+                    className="absolute left-3 top-1/2 -translate-y-1/2 text-brand-text-tertiary"
                   />
                   <input
                     type="text"
                     value={homeLocation}
                     onChange={(e) => setHomeLocation(e.target.value)}
-                    className="w-full pl-10 pr-3 py-2 border border-brand-stroke-border rounded-lg focus:outline-none focus:border-brand text-sm"
-                    style={{
-                      fontFamily: "Open Sans",
-                      fontSize: "14px",
-                      color: "#1A1A1A",
-                    }}
+                    className="w-full pl-10 pr-3 py-2 border border-brand-stroke-border rounded-lg focus:outline-none focus:border-brand text-sm text-brand-text-strong"
+                    style={{ fontFamily: "Open Sans" }}
                     placeholder="Enter location"
                   />
                 </div>
                 <div className="flex gap-2">
                   <button
+                    type="button"
                     className="px-4 py-2 bg-brand text-white rounded-lg hover:opacity-90 transition-opacity text-sm"
                     style={{ fontFamily: "Open Sans" }}
-                    onClick={() => {
-                      // Handle set location
-                      setShowHomeLocationDropdown(false);
-                    }}
+                    onClick={() => setShowHomeLocationDropdown(false)}
                   >
                     Set Location
                   </button>
                   <button
+                    type="button"
                     className="px-4 py-2 bg-transparent border border-brand-stroke-border text-brand-stroke-strong rounded-lg hover:bg-brand-stroke-weak transition-colors text-sm"
                     style={{ fontFamily: "Open Sans" }}
                     onClick={() => {
@@ -2733,13 +2682,7 @@ const MapComponent = () => {
                   </button>
                 </div>
                 {homeLocation && (
-                  <div
-                    style={{
-                      fontFamily: "Open Sans",
-                      fontSize: "12px",
-                      color: "#575757",
-                    }}
-                  >
+                  <div className="text-xs text-brand-text-weak" style={{ fontFamily: "Open Sans" }}>
                     Current: {homeLocation}
                   </div>
                 )}
@@ -2812,74 +2755,32 @@ const MapComponent = () => {
         </div>
       )}
 
-      {/* Statistics Badges - Bottom Left */}
+      {/* Statistics Badges - below search bar on mobile, bottom-left on desktop */}
       <div
-        className="absolute bottom-4 left-4 flex flex-col gap-2 z-[1000]"
-        style={{
-          pointerEvents: 'none'
-        }}
+        className="absolute top-30 left-4 md:top-auto md:bottom-4 md:left-4 flex flex-col gap-1.5 md:gap-2 z-[1000]"
+        style={{ pointerEvents: "none" }}
       >
         {/* Total Jobs Badge */}
         <div
-          className="bg-white border border-brand-stroke-border rounded-lg shadow-lg px-3 py-2 flex items-center gap-2"
-          style={{
-            fontFamily: 'Open Sans',
-            pointerEvents: 'auto'
-          }}
+          className="bg-white border border-brand-stroke-border rounded-lg shadow-lg px-2 py-1.5 md:px-3 md:py-2 flex items-center gap-1.5 md:gap-2 pointer-events-auto"
+          style={{ fontFamily: "Open Sans" }}
         >
-          <Portfolio size={18} style={{ color: '#F84416' }} />
-          <div className="flex flex-col">
-            <span
-              style={{
-                fontSize: '12px',
-                color: '#575757',
-                fontWeight: 400,
-                lineHeight: '1.2'
-              }}
-            >
-              Total Jobs
-            </span>
-            <span
-              style={{
-                fontSize: '16px',
-                color: '#1A1A1A',
-                fontWeight: 600,
-                lineHeight: '1.2'
-              }}
-            >
-              {(jobTitles?.length || 0).toLocaleString()}
-            </span>
+          <Portfolio size={14} className="shrink-0 text-brand" style={{ color: "#F84416" }} />
+          <div className="flex flex-col leading-tight">
+            <span className="text-[10px] md:text-xs text-brand-text-weak font-normal">Total Jobs</span>
+            <span className="text-sm md:text-base text-brand-text-strong font-semibold">{(jobTitles?.length || 0).toLocaleString()}</span>
           </div>
         </div>
 
         {/* Total Companies Badge */}
         <div
-          className="bg-white border border-brand-stroke-border rounded-lg shadow-lg px-3 py-2 flex items-center gap-2"
-          style={{
-            fontFamily: 'Open Sans',
-            pointerEvents: 'auto'
-          }}
+          className="bg-white border border-brand-stroke-border rounded-lg shadow-lg px-2 py-1.5 md:px-3 md:py-2 flex items-center gap-1.5 md:gap-2 pointer-events-auto"
+          style={{ fontFamily: "Open Sans" }}
         >
-          <Enterprise size={18} style={{ color: '#F84416' }} />
-          <div className="flex flex-col">
-            <span
-              style={{
-                fontSize: '12px',
-                color: '#575757',
-                fontWeight: 400,
-                lineHeight: '1.2'
-              }}
-            >
-              Total Companies
-            </span>
-            <span
-              style={{
-                fontSize: '16px',
-                color: '#1A1A1A',
-                fontWeight: 600,
-                lineHeight: '1.2'
-              }}
-            >
+          <Enterprise size={14} className="shrink-0 text-brand" style={{ color: "#F84416" }} />
+          <div className="flex flex-col leading-tight">
+            <span className="text-[10px] md:text-xs text-brand-text-weak font-normal">Total Companies</span>
+            <span className="text-sm md:text-base text-brand-text-strong font-semibold">
               {locationsData
                 ? (() => {
                     const mainCompanies = locationsData.companies?.length || 0;
@@ -2891,7 +2792,7 @@ const MapComponent = () => {
                       : 0;
                     return (mainCompanies + localityCompanies).toLocaleString();
                   })()
-                : '0'}
+                : "0"}
             </span>
           </div>
         </div>
