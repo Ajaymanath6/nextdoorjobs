@@ -16,6 +16,7 @@ import {
   User,
   UserAvatar,
   ArrowLeft,
+  ChevronDown,
 } from "@carbon/icons-react";
 import { RiArrowDownSLine, RiSearchLine } from "@remixicon/react";
 import FilterDropdown from "./FilterDropdown";
@@ -105,6 +106,8 @@ const MapComponent = () => {
   const showThrissurBadges = searchMode === "person" && lastSearchedDistrict === "Thrissur";
   const [badgeContainerPoints, setBadgeContainerPoints] = useState(null);
   const [mobileSearchExpanded, setMobileSearchExpanded] = useState(false);
+  const [showSearchModeDropdown, setShowSearchModeDropdown] = useState(false);
+  const searchModeDropdownRef = useRef(null);
 
   // Parse response as JSON safely (avoids "Unexpected token '<'" when server returns HTML)
   const parseJsonResponse = async (response) => {
@@ -2017,6 +2020,26 @@ const MapComponent = () => {
     };
   }, [showFilterDropdown]);
 
+  // Close search mode dropdown when clicking outside (mobile)
+  useEffect(() => {
+    const handleClickOutside = (event) => {
+      if (
+        searchModeDropdownRef.current &&
+        !searchModeDropdownRef.current.contains(event.target)
+      ) {
+        setShowSearchModeDropdown(false);
+      }
+    };
+
+    if (showSearchModeDropdown) {
+      document.addEventListener("mousedown", handleClickOutside);
+    }
+
+    return () => {
+      document.removeEventListener("mousedown", handleClickOutside);
+    };
+  }, [showSearchModeDropdown]);
+
   // Close autocomplete when clicking outside
   useEffect(() => {
     const handleClickOutside = (event) => {
@@ -2376,9 +2399,9 @@ const MapComponent = () => {
         <div
           className={`flex flex-col top-3 md:top-4 gap-2 md:gap-6 ${searchBar.container} ${searchBar["container-width"]}`}
         >
-          {/* Search Bar Card */}
-          <div className={`${searchBar.card} px-3 py-1.5 md:px-4 md:py-2`}>
-            <div className={`${searchBar["inner-flex"]} gap-2 md:gap-3`}>
+          {/* Search Bar Card - reduced padding on mobile */}
+          <div className={`${searchBar.card} px-2.5 py-1 md:px-4 md:py-2`}>
+            <div className={`${searchBar["inner-flex"]} gap-1.5 md:gap-3`}>
               {/* View Selector Button - Hidden for now, will add in later stages */}
               {/* <div className="relative flex-shrink-0">
                 <button
@@ -2427,30 +2450,75 @@ const MapComponent = () => {
                 )}
               </div> */}
 
-              {/* Toggle: Person (users) / Job (suitcase) - theme from theme-guide.json */}
-              <div className={searchBar["toggle-wrapper"]}>
-                <button
-                  type="button"
-                  onClick={() => setSearchMode("person")}
-                  className={`p-1.5 md:p-2 ${searchBar["toggle-segment"]} ${searchMode === "person" ? searchBar["toggle-segment-active"] : ""}`}
-                  title="Search for people"
-                >
-                  <User
-                    size={18}
-                    className={searchMode === "person" ? searchBar["toggle-segment-icon-active"] : searchBar["toggle-segment-icon"]}
-                  />
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setSearchMode("job")}
-                  className={`p-1.5 md:p-2 ${searchBar["toggle-segment"]} ${searchMode === "job" ? searchBar["toggle-segment-active"] : ""}`}
-                  title="Search for jobs"
-                >
-                  <Portfolio
-                    size={18}
-                    className={searchMode === "job" ? searchBar["toggle-segment-icon-active"] : searchBar["toggle-segment-icon"]}
-                  />
-                </button>
+              {/* Toggle: Person (users) / Job (suitcase) - mobile: single dropdown; desktop: two segments */}
+              <div className={searchBar["toggle-wrapper"]} ref={searchModeDropdownRef}>
+                {/* Mobile: single button with chevron, dropdown with other option */}
+                <div className="relative md:hidden shrink-0">
+                  <button
+                    type="button"
+                    onClick={() => setShowSearchModeDropdown(!showSearchModeDropdown)}
+                    className={`flex items-center gap-1 ${searchBar["toggle-segment"]} p-1.5 rounded-md border-0 ${searchMode === "person" ? searchBar["toggle-segment-active"] : ""}`}
+                    title={searchMode === "person" ? "Search for people" : "Search for jobs"}
+                    aria-expanded={showSearchModeDropdown}
+                    aria-haspopup="true"
+                  >
+                    {searchMode === "person" ? (
+                      <User size={18} className={searchBar["toggle-segment-icon-active"]} />
+                    ) : (
+                      <Portfolio size={18} className={searchBar["toggle-segment-icon-active"]} />
+                    )}
+                    <ChevronDown size={16} className="text-brand-stroke-strong" />
+                  </button>
+                  {showSearchModeDropdown && (
+                    <div className="absolute top-full left-0 mt-1 min-w-[120px] rounded-lg border border-brand-stroke-border bg-brand-bg-white shadow-lg z-[1001] py-1">
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setSearchMode(searchMode === "person" ? "job" : "person");
+                          setShowSearchModeDropdown(false);
+                        }}
+                        className="w-full flex items-center gap-2 px-3 py-2 text-left text-sm font-medium text-brand-text-strong hover:bg-brand-bg-fill transition-colors"
+                      >
+                        {searchMode === "person" ? (
+                          <>
+                            <Portfolio size={18} className={searchBar["toggle-segment-icon"]} />
+                            Job
+                          </>
+                        ) : (
+                          <>
+                            <User size={18} className={searchBar["toggle-segment-icon"]} />
+                            Person
+                          </>
+                        )}
+                      </button>
+                    </div>
+                  )}
+                </div>
+                {/* Desktop: two-segment toggle */}
+                <div className="hidden md:flex rounded-md border border-brand-stroke-weak overflow-hidden shrink-0">
+                  <button
+                    type="button"
+                    onClick={() => setSearchMode("person")}
+                    className={`p-2 ${searchBar["toggle-segment"]} ${searchMode === "person" ? searchBar["toggle-segment-active"] : ""}`}
+                    title="Search for people"
+                  >
+                    <User
+                      size={18}
+                      className={searchMode === "person" ? searchBar["toggle-segment-icon-active"] : searchBar["toggle-segment-icon"]}
+                    />
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setSearchMode("job")}
+                    className={`p-2 ${searchBar["toggle-segment"]} ${searchMode === "job" ? searchBar["toggle-segment-active"] : ""}`}
+                    title="Search for jobs"
+                  >
+                    <Portfolio
+                      size={18}
+                      className={searchMode === "job" ? searchBar["toggle-segment-icon-active"] : searchBar["toggle-segment-icon"]}
+                    />
+                  </button>
+                </div>
               </div>
 
               {/* Search Input with Autocomplete - Expanded width */}
@@ -2660,16 +2728,16 @@ const MapComponent = () => {
             </div>
           </div>
 
-          {/* Distance chip - Material-style small chip below search bar */}
-          <div className="relative self-start">
+          {/* Distance chip - below search bar, mobile only; slightly larger on mobile */}
+          <div className="relative self-start md:hidden">
             {selectedCollege ? (
               <button
                 type="button"
                 onClick={() => setIsCollegeFilterActive(!isCollegeFilterActive)}
-                className={`inline-flex items-center gap-1.5 py-1.5 px-2.5 rounded-full text-xs font-medium md:py-2 md:px-3 md:rounded-lg md:text-sm transition-colors border border-brand-stroke-border bg-brand-bg-white hover:bg-brand-bg-fill text-brand-text-weak ${isCollegeFilterActive ? "bg-brand-bg-fill" : ""}`}
+                className={`inline-flex items-center gap-1.5 py-2 px-3 rounded-full text-sm font-medium transition-colors border border-brand-stroke-border bg-brand-bg-white hover:bg-brand-bg-fill text-brand-text-weak ${isCollegeFilterActive ? "bg-brand-bg-fill" : ""}`}
                 style={{ fontFamily: "Open Sans" }}
               >
-                <span className="text-xs md:text-sm">🏫</span>
+                <span className="text-sm">🏫</span>
                 <span>{isCollegeFilterActive ? "Hide distance" : "Show distance"}</span>
               </button>
             ) : (
@@ -2677,10 +2745,10 @@ const MapComponent = () => {
                 type="button"
                 onClick={handleDistanceToggle}
                 onContextMenu={handleHomeLocationRightClick}
-                className={`inline-flex items-center gap-1.5 py-1.5 px-2.5 rounded-full text-xs font-medium md:py-2 md:px-3 md:rounded-lg md:text-sm transition-colors border border-brand-stroke-border bg-brand-bg-white hover:bg-brand-bg-fill text-brand-text-weak ${isHomeFilterActive ? "bg-brand-bg-fill" : ""}`}
+                className={`inline-flex items-center gap-1.5 py-2 px-3 rounded-full text-sm font-medium transition-colors border border-brand-stroke-border bg-brand-bg-white hover:bg-brand-bg-fill text-brand-text-weak ${isHomeFilterActive ? "bg-brand-bg-fill" : ""}`}
                 style={{ fontFamily: "Open Sans" }}
               >
-                <span className="text-xs md:text-sm">🏠</span>
+                <span className="text-sm">🏠</span>
                 <span>{isHomeFilterActive ? "Hide distance" : "Show distance"}</span>
               </button>
             )}

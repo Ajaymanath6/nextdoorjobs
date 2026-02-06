@@ -59,14 +59,14 @@ export default function FilterBottomSheet({
   if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-0 z-[1001] md:hidden flex flex-col justify-end">
+    <div className="fixed inset-0 z-[1001] md:hidden flex items-center justify-center p-4">
       <div
         className="absolute inset-0 bg-black/50"
         onClick={onClose}
         aria-hidden
       />
       <div
-        className="relative bg-white rounded-t-2xl shadow-lg max-h-[80vh] flex flex-col z-[1002]"
+        className="relative w-full max-w-[min(400px,100%)] max-h-[85vh] overflow-auto bg-white rounded-2xl shadow-lg flex flex-col z-[1002]"
         style={{ fontFamily: "Open Sans" }}
       >
         {/* Header */}
