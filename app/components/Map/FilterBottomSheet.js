@@ -67,7 +67,7 @@ export default function FilterBottomSheet({
           aria-hidden
         />
         <div
-          className="relative w-full max-w-[min(400px,100%)] max-h-[85vh] overflow-auto bg-white rounded-2xl shadow-lg flex flex-col z-[1002] pointer-events-auto mt-5"
+          className="relative w-full max-w-[min(400px,100%)] max-h-[85vh] overflow-auto bg-white rounded-2xl shadow-lg flex flex-col z-[1002] pointer-events-auto -mt-5"
           style={{ fontFamily: "Open Sans" }}
         >
         {/* Header */}

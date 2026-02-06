@@ -2401,7 +2401,8 @@ const MapComponent = () => {
         >
           {/* Search Bar Card - reduced padding on mobile */}
           <div className={`bg-brand-bg-white rounded-xl border border-brand-stroke-border shadow-lg w-full px-[2px] py-0.5 md:px-4 md:py-2`}>
-            <div className={`${searchBar["inner-flex"]} gap-1.5 md:gap-3`}>
+            {/* Mobile: single bar (Person/Job + input + Filter + Profile). Desktop: no bar, separate bordered controls. */}
+            <div className={`flex items-center gap-1.5 md:gap-3 w-full rounded-lg border border-brand-stroke-border bg-brand-bg-white min-h-[34px] md:border-0 md:bg-transparent md:rounded-none md:min-h-0 ${searchBar["search-input-hover"]}`}>
               {/* View Selector Button - Hidden for now, will add in later stages */}
               {/* <div className="relative flex-shrink-0">
                 <button
@@ -2451,7 +2452,7 @@ const MapComponent = () => {
               </div> */}
 
               {/* Toggle: Person (users) / Job (suitcase) - hidden on mobile when search input focused */}
-              <div className={`${searchBar["toggle-wrapper"]} overflow-visible md:overflow-hidden ${mobileSearchExpanded ? "hidden md:!flex" : ""}`} ref={searchModeDropdownRef}>
+              <div className={`${searchBar["toggle-wrapper"]} border-0 overflow-visible md:overflow-hidden ${mobileSearchExpanded ? "hidden md:!flex" : ""}`} ref={searchModeDropdownRef}>
                 {/* Mobile: single button with chevron, dropdown with other option */}
                 <div className="relative md:hidden shrink-0">
                   <button
@@ -2579,7 +2580,7 @@ const MapComponent = () => {
                       setShowCollegeAutocomplete(false);
                     }
                   }}
-                  className={`${searchBar["search-input"]} ${searchBar["search-input-hover"]} ${searchBar["search-input-text"]} ${searchBar["search-input-placeholder"]} search-input-focus-active w-full text-sm md:text-base font-semibold py-1.5 pl-9 pr-9 md:py-2 md:pl-11 md:pr-11`}
+                  className={`${searchBar["search-input"]} border-0 rounded-none md:border md:rounded-lg ${searchBar["search-input-hover"]} ${searchBar["search-input-text"]} ${searchBar["search-input-placeholder"]} search-input-focus-active w-full text-sm md:text-base font-semibold py-1.5 pl-9 pr-9 md:py-2 md:pl-11 md:pr-11`}
                   style={{
                     fontFamily: "Open Sans",
                     boxShadow: "0 1px 6px rgba(32,33,36,0.08)",
@@ -2662,7 +2663,7 @@ const MapComponent = () => {
                   ref={filterButtonRef}
                   type="button"
                   onClick={() => setShowFilterDropdown(!showFilterDropdown)}
-                  className="h-[34px] w-[34px] md:h-auto md:w-auto flex items-center justify-center p-1.5 md:p-2 rounded-lg border border-brand-stroke-border bg-brand-bg-white hover:bg-brand-bg-fill transition-colors shrink-0"
+                  className="h-[34px] w-[34px] md:h-auto md:w-auto flex items-center justify-center p-1.5 md:p-2 rounded-lg border-0 bg-transparent md:border md:border-brand-stroke-border md:bg-brand-bg-white hover:bg-brand-bg-fill transition-colors shrink-0"
                   aria-label="Filter"
                 >
                   <Filter size={16} className="text-brand-stroke-strong" />
@@ -2711,7 +2712,7 @@ const MapComponent = () => {
                 <button
                   type="button"
                   onClick={() => router.push("/profile")}
-                  className="h-[34px] w-[34px] flex items-center justify-center rounded-lg border border-brand-stroke-border bg-brand-bg-white hover:bg-brand-bg-fill transition-colors shrink-0"
+                  className="h-[34px] w-[34px] flex items-center justify-center rounded-lg border-0 bg-transparent hover:bg-brand-bg-fill transition-colors shrink-0"
                   aria-label="Profile"
                 >
                   <UserAvatar size={20} className="text-brand-stroke-strong" />
