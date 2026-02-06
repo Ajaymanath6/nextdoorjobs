@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import dynamic from "next/dynamic";
+import { useRouter } from "next/navigation";
 import themeClasses from "../../theme-utility-classes.json";
 import {
   EarthFilled,
@@ -13,6 +14,7 @@ import {
   Enterprise,
   Portfolio,
   User,
+  UserAvatar,
 } from "@carbon/icons-react";
 import { RiArrowDownSLine, RiSearchLine } from "@remixicon/react";
 import FilterDropdown from "./FilterDropdown";
@@ -43,6 +45,7 @@ import "leaflet.markercluster/dist/MarkerCluster.Default.css";
 
 // Dynamic import of Leaflet to avoid SSR issues
 const MapComponent = () => {
+  const router = useRouter();
   const mapRef = useRef(null);
   const mapInstanceRef = useRef(null);
   const [isClient, setIsClient] = useState(false);
@@ -2607,6 +2610,18 @@ const MapComponent = () => {
                 />
               </div>
 
+              {/* Profile icon - mobile only, next to filter */}
+              <div className="md:hidden shrink-0">
+                <button
+                  type="button"
+                  onClick={() => router.push("/profile")}
+                  className="flex items-center justify-center p-1.5 rounded-lg border border-brand-stroke-border bg-brand-bg-white hover:bg-brand-bg-fill transition-colors"
+                  aria-label="Profile"
+                >
+                  <UserAvatar size={20} className="text-brand-stroke-strong" />
+                </button>
+              </div>
+
               {/* Return Button - Hidden for now, will add in later stages */}
               {/* <button
                 onClick={handleReturn}
@@ -2617,16 +2632,16 @@ const MapComponent = () => {
             </div>
           </div>
 
-          {/* Distance badge - small, below search bar */}
+          {/* Distance chip - Material-style small chip below search bar */}
           <div className="relative self-start">
             {selectedCollege ? (
               <button
                 type="button"
                 onClick={() => setIsCollegeFilterActive(!isCollegeFilterActive)}
-                className={`inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg border text-xs font-medium transition-colors border-brand-stroke-border bg-brand-bg-white hover:bg-brand-bg-fill text-brand-text-weak ${isCollegeFilterActive ? "bg-brand-bg-fill" : ""}`}
+                className={`inline-flex items-center gap-1 py-1 px-2 rounded-full text-[10px] font-medium md:py-1.5 md:px-2.5 md:rounded-lg md:text-xs transition-colors border border-brand-stroke-border bg-brand-bg-white hover:bg-brand-bg-fill text-brand-text-weak ${isCollegeFilterActive ? "bg-brand-bg-fill" : ""}`}
                 style={{ fontFamily: "Open Sans" }}
               >
-                <span className="text-sm">🏫</span>
+                <span className="text-xs md:text-sm">🏫</span>
                 <span>{isCollegeFilterActive ? "Hide distance" : "Show distance"}</span>
               </button>
             ) : (
@@ -2634,10 +2649,10 @@ const MapComponent = () => {
                 type="button"
                 onClick={handleDistanceToggle}
                 onContextMenu={handleHomeLocationRightClick}
-                className={`inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg border text-xs font-medium transition-colors border-brand-stroke-border bg-brand-bg-white hover:bg-brand-bg-fill text-brand-text-weak ${isHomeFilterActive ? "bg-brand-bg-fill" : ""}`}
+                className={`inline-flex items-center gap-1 py-1 px-2 rounded-full text-[10px] font-medium md:py-1.5 md:px-2.5 md:rounded-lg md:text-xs transition-colors border border-brand-stroke-border bg-brand-bg-white hover:bg-brand-bg-fill text-brand-text-weak ${isHomeFilterActive ? "bg-brand-bg-fill" : ""}`}
                 style={{ fontFamily: "Open Sans" }}
               >
-                <span className="text-sm">🏠</span>
+                <span className="text-xs md:text-sm">🏠</span>
                 <span>{isHomeFilterActive ? "Hide distance" : "Show distance"}</span>
               </button>
             )}
@@ -2755,9 +2770,9 @@ const MapComponent = () => {
         </div>
       )}
 
-      {/* Statistics Badges - below search bar on mobile, bottom-left on desktop */}
+      {/* Statistics Badges - hidden on mobile, bottom-left on desktop */}
       <div
-        className="absolute top-30 left-4 md:top-auto md:bottom-4 md:left-4 flex flex-col gap-1.5 md:gap-2 z-[1000]"
+        className="hidden md:flex absolute md:top-auto md:bottom-4 md:left-4 flex-col gap-1.5 md:gap-2 z-[1000]"
         style={{ pointerEvents: "none" }}
       >
         {/* Total Jobs Badge */}
