@@ -12,6 +12,7 @@ import {
   IbmWatsonDiscovery,
   Enterprise,
   Portfolio,
+  User,
 } from "@carbon/icons-react";
 import { RiArrowDownSLine, RiSearchLine } from "@remixicon/react";
 import FilterDropdown from "./FilterDropdown";
@@ -19,6 +20,21 @@ import LocalityAutocomplete from "./LocalityAutocomplete";
 import JobTitleAutocomplete from "./JobTitleAutocomplete";
 import CollegeAutocomplete from "./CollegeAutocomplete";
 import EmptyState from "./EmptyState";
+import ThankYouBadge from "./ThankYouBadge";
+
+// 10 Thrissur district coordinates for thank-you badges (from update-pincode-coordinates.js)
+const THRISSUR_BADGE_COORDINATES = [
+  { lat: 10.5239, lon: 76.2123 },
+  { lat: 10.5361, lon: 76.2023 },
+  { lat: 10.5303, lon: 76.1912 },
+  { lat: 10.5208, lon: 76.2014 },
+  { lat: 10.528, lon: 76.225 },
+  { lat: 10.5015, lon: 76.2234 },
+  { lat: 10.503, lon: 76.2105 },
+  { lat: 10.5476, lon: 76.2285 },
+  { lat: 10.554, lon: 76.216 },
+  { lat: 10.512, lon: 76.178 },
+];
 
 // Import CSS files (Next.js handles these)
 import "leaflet/dist/leaflet.css";
@@ -75,43 +91,14 @@ const MapComponent = () => {
   const [isCollegeFilterActive, setIsCollegeFilterActive] = useState(false);
   const collegeMarkerRef = useRef(null);
   const [collegeDistances, setCollegeDistances] = useState({});
-  const [showSavedFilesDropdown, setShowSavedFilesDropdown] = useState(false);
-  const [savedFiles, setSavedFiles] = useState([]);
-  const savedFilesDropdownRef = useRef(null);
-
-  // Close saved files dropdown when clicking outside
-  useEffect(() => {
-    const handleClickOutside = (event) => {
-      if (savedFilesDropdownRef.current && !savedFilesDropdownRef.current.contains(event.target)) {
-        setShowSavedFilesDropdown(false);
-      }
-    };
-
-    if (showSavedFilesDropdown) {
-      document.addEventListener("mousedown", handleClickOutside);
-    }
-
-    return () => {
-      document.removeEventListener("mousedown", handleClickOutside);
-    };
-  }, [showSavedFilesDropdown]);
-
-  // Fetch saved files (placeholder - can be connected to API later)
-  useEffect(() => {
-    // TODO: Replace with actual API call to fetch saved files
-    const fetchSavedFiles = async () => {
-      try {
-        // const response = await fetch('/api/saved-files');
-        // const data = await response.json();
-        // setSavedFiles(data.files || []);
-        setSavedFiles([]); // Placeholder
-      } catch (error) {
-        console.error("Error fetching saved files:", error);
-      }
-    };
-    fetchSavedFiles();
-  }, []);
   const collegeLinesRef = useRef([]);
+
+  // Search bar mode toggle: "person" (users) or "job" (suitcase) - UI only for now
+  const [searchMode, setSearchMode] = useState("job");
+  // Last district from locality search; used to show Thrissur badges only in person mode
+  const [lastSearchedDistrict, setLastSearchedDistrict] = useState(null);
+  const showThrissurBadges = searchMode === "person" && lastSearchedDistrict === "Thrissur";
+  const [badgeContainerPoints, setBadgeContainerPoints] = useState(null);
 
   // Parse response as JSON safely (avoids "Unexpected token '<'" when server returns HTML)
   const parseJsonResponse = async (response) => {
@@ -910,6 +897,32 @@ const MapComponent = () => {
     };
   }, [isClient]);
 
+  // Compute badge overlay positions when in person mode and Thrissur; subscribe to map move/zoom
+  useEffect(() => {
+    if (!showThrissurBadges) {
+      setBadgeContainerPoints(null);
+      return;
+    }
+    const map = mapInstanceRef.current;
+    if (!map) return;
+    const updatePoints = () => {
+      const m = mapInstanceRef.current;
+      if (!m) return;
+      const points = THRISSUR_BADGE_COORDINATES.map(({ lat, lon }) =>
+        m.latLngToContainerPoint([lat, lon])
+      );
+      setBadgeContainerPoints(points.map((p) => ({ x: p.x, y: p.y })));
+    };
+    updatePoints();
+    map.on("moveend", updatePoints);
+    map.on("zoomend", updatePoints);
+    return () => {
+      map.off("moveend", updatePoints);
+      map.off("zoomend", updatePoints);
+      setBadgeContainerPoints(null);
+    };
+  }, [showThrissurBadges]);
+
   // Add markers when locations data and map are ready
   useEffect(() => {
     if (!mapInstanceRef.current || !locationsData) {
@@ -1072,38 +1085,33 @@ const MapComponent = () => {
     addMarkersToMap();
   }, [locationsData, isClient]);
 
-  // Check if search query is a college search
+  // Check if search query is a college search (only when user types college-related keywords).
+  // Place names like "Thrissur" must not be treated as college search so locality suggestions show.
   const isCollegeSearchQuery = (query) => {
     if (!query || !query.trim() || colleges.length === 0) return false;
-    
+
     const normalizedQuery = query.toLowerCase().trim();
-    
-    // College-related keywords
+
     const collegeKeywords = [
-      'college', 'university', 'institute', 'school', 'academy',
-      'gec', 'mti', 'pmgc', 'government college', 'govt college',
-      'engineering college', 'arts college', 'science college',
-      'polytechnic', 'law college', 'fine arts'
+      "college",
+      "university",
+      "institute",
+      "school",
+      "academy",
+      "gec",
+      "mti",
+      "pmgc",
+      "government college",
+      "govt college",
+      "engineering college",
+      "arts college",
+      "science college",
+      "polytechnic",
+      "law college",
+      "fine arts",
     ];
-    
-    // Check if query contains any college keyword
-    if (collegeKeywords.some(keyword => normalizedQuery.includes(keyword))) {
-      return true;
-    }
-    
-    // Also check if query matches any college name (for autocomplete)
-    // This allows showing college autocomplete even without typing "college"
-    if (colleges.length > 0 && normalizedQuery.length >= 3) {
-      const matchesCollege = colleges.some(college => 
-        college.name.toLowerCase().includes(normalizedQuery) ||
-        normalizedQuery.includes(college.name.toLowerCase().substring(0, normalizedQuery.length))
-      );
-      if (matchesCollege) {
-        return true;
-      }
-    }
-    
-    return false;
+
+    return collegeKeywords.some((keyword) => normalizedQuery.includes(keyword));
   };
 
   // Check if search query contains job-related keywords
@@ -1722,6 +1730,7 @@ const MapComponent = () => {
           );
           
           if (!response.ok) {
+            setLastSearchedDistrict(null);
             // Clear all loading states first
             setIsMapLoading(false);
             setIsFindingJobs(false);
@@ -1764,6 +1773,7 @@ const MapComponent = () => {
 
           const dbData = await response.json();
           console.log("Found locality in database:", dbData);
+          setLastSearchedDistrict(dbData.district ?? null);
 
           // Step 2: Get company data from locations.json using pincode/locality
           const localityData = getLocalityDataByPincode(
@@ -1793,6 +1803,7 @@ const MapComponent = () => {
             performDistrictZoom(dbData, true);
           }
         } catch (error) {
+          setLastSearchedDistrict(null);
           setIsMapLoading(false);
           setIsFindingJobs(false);
           console.error("Error searching locality:", error);
@@ -2332,6 +2343,28 @@ const MapComponent = () => {
       {/* Map Container */}
       <div ref={mapRef} className="w-full h-full absolute inset-0" />
 
+      {/* Thank-you badges at Thrissur coordinates (person mode only) */}
+      {showThrissurBadges && badgeContainerPoints && badgeContainerPoints.length === 10 && (
+        <div
+          className="absolute inset-0 pointer-events-none z-500"
+          aria-hidden
+        >
+          {badgeContainerPoints.map((point, index) => (
+            <div
+              key={index}
+              className="absolute"
+              style={{
+                left: point.x,
+                top: point.y,
+                transform: "translate(-50%, -50%)",
+              }}
+            >
+              <ThankYouBadge diameter={90} />
+            </div>
+          ))}
+        </div>
+      )}
+
       {/* Collapsed Search Bar - Shows in Globe view by default */}
       {isGlobeView && (
         <div
@@ -2389,45 +2422,30 @@ const MapComponent = () => {
                 )}
               </div> */}
 
-              {/* @ Icon for Saved Files - Before search input */}
-              <div className="relative flex-shrink-0" ref={savedFilesDropdownRef}>
+              {/* Toggle: Person (users) / Job (suitcase) - theme from theme-guide.json */}
+              <div className={searchBar["toggle-wrapper"]}>
                 <button
                   type="button"
-                  onClick={() => {
-                    setShowSavedFilesDropdown(!showSavedFilesDropdown);
-                  }}
-                  className="p-2 rounded-lg hover:bg-brand-stroke-weak transition-colors"
-                  title="Show saved files"
+                  onClick={() => setSearchMode("person")}
+                  className={`${searchBar["toggle-segment"]} ${searchMode === "person" ? searchBar["toggle-segment-active"] : ""}`}
+                  title="Search for people"
                 >
-                  <span className="text-brand-stroke-strong text-lg font-semibold">@</span>
+                  <User
+                    size={18}
+                    className={searchMode === "person" ? searchBar["toggle-segment-icon-active"] : searchBar["toggle-segment-icon"]}
+                  />
                 </button>
-                {showSavedFilesDropdown && (
-                  <div className="absolute bottom-full left-0 mb-2 w-64 bg-brand-bg-white border border-brand-stroke-weak rounded-lg shadow-lg z-50 max-h-60 overflow-y-auto">
-                    {savedFiles.length > 0 ? (
-                      <div className="py-2">
-                        {savedFiles.map((file, index) => (
-                          <button
-                            key={index}
-                            type="button"
-                            onClick={() => {
-                              console.log("Selected file:", file);
-                              setShowSavedFilesDropdown(false);
-                              // TODO: Handle file selection
-                            }}
-                            className="w-full text-left px-4 py-2 text-sm text-brand-text-strong hover:bg-brand-bg-fill transition-colors flex items-center gap-2"
-                            style={{ fontFamily: "Open Sans, sans-serif" }}
-                          >
-                            <span className="truncate">{file.name || file}</span>
-                          </button>
-                        ))}
-                      </div>
-                    ) : (
-                      <div className="px-4 py-3 text-sm text-brand-text-weak text-center" style={{ fontFamily: "Open Sans, sans-serif" }}>
-                        No saved files
-                      </div>
-                    )}
-                  </div>
-                )}
+                <button
+                  type="button"
+                  onClick={() => setSearchMode("job")}
+                  className={`${searchBar["toggle-segment"]} ${searchMode === "job" ? searchBar["toggle-segment-active"] : ""}`}
+                  title="Search for jobs"
+                >
+                  <Portfolio
+                    size={18}
+                    className={searchMode === "job" ? searchBar["toggle-segment-icon-active"] : searchBar["toggle-segment-icon"]}
+                  />
+                </button>
               </div>
 
               {/* Search Input with Autocomplete - Expanded width */}

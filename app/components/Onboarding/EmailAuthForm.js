@@ -1,54 +1,12 @@
 "use client";
 
 import { useState } from "react";
-import { useSignIn } from '@clerk/nextjs';
+import { useSignIn } from "@clerk/nextjs";
 import Image from "next/image";
-import InputField from "../InputField";
 
 export default function EmailAuthForm({ onSubmit, isLoading = false }) {
   const { signIn } = useSignIn();
-  const [email, setEmail] = useState("");
-  const [password, setPassword] = useState("");
-  const [name, setName] = useState("");
-  const [errors, setErrors] = useState({});
   const [isGoogleLoading, setIsGoogleLoading] = useState(false);
-
-  const validateEmail = (email) => {
-    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-    return emailRegex.test(email);
-  };
-
-  const handleSubmit = (e) => {
-    e.preventDefault();
-    const newErrors = {};
-
-    if (!email.trim()) {
-      newErrors.email = "Email is required";
-    } else if (!validateEmail(email)) {
-      newErrors.email = "Please enter a valid email address";
-    }
-
-    if (!password.trim()) {
-      newErrors.password = "Password is required";
-    } else if (password.length < 6) {
-      newErrors.password = "Password must be at least 6 characters";
-    }
-
-    if (!name.trim()) {
-      newErrors.name = "Name is required";
-    }
-
-    if (Object.keys(newErrors).length > 0) {
-      setErrors(newErrors);
-      return;
-    }
-
-    onSubmit({ 
-      email: email.trim(), 
-      password: password.trim(), 
-      name: name.trim()
-    });
-  };
 
   const handleGoogleAuth = async () => {
     if (!signIn) {
@@ -62,7 +20,7 @@ export default function EmailAuthForm({ onSubmit, isLoading = false }) {
       await signIn.authenticateWithRedirect({
         strategy: 'oauth_google',
         redirectUrl: '/api/auth/callback/clerk',
-        redirectUrlComplete: '/',
+        redirectUrlComplete: '/onboarding',
       });
     } catch (error) {
       console.error("Google auth error:", error);
@@ -88,18 +46,21 @@ export default function EmailAuthForm({ onSubmit, isLoading = false }) {
               width={40}
               height={40}
               className="h-10 w-auto"
+              style={{ width: "auto", height: "2.5rem" }}
+              loading="eager"
+              priority
             />
           </div>
           <h1 className="text-xl font-semibold text-gray-900" style={{ fontFamily: "Open Sans, sans-serif" }}>
             Sign in to JobsonMap
           </h1>
           <p className="text-sm text-gray-600 mt-2" style={{ fontFamily: "Open Sans, sans-serif" }}>
-            Enter your details to continue
+            Sign in with Google to continue
           </p>
         </div>
 
         {/* Social Sign-in Buttons */}
-        <div className="space-y-3 mb-6">
+        <div className="space-y-3">
           <button
             type="button"
             onClick={handleGoogleAuth}
@@ -145,84 +106,6 @@ export default function EmailAuthForm({ onSubmit, isLoading = false }) {
             <span>Continue with GitHub</span>
           </button>
         </div>
-
-        {/* Divider */}
-        <div className="relative mb-6">
-          <div className="absolute inset-0 flex items-center">
-            <div className="w-full border-t border-gray-300"></div>
-          </div>
-          <div className="relative flex justify-center text-sm">
-            <span className="px-2 bg-white text-gray-500" style={{ fontFamily: "Open Sans, sans-serif" }}>
-              or
-            </span>
-          </div>
-        </div>
-
-        {/* Email and Password Form */}
-        <form onSubmit={handleSubmit} className="space-y-4">
-          <InputField
-            type="text"
-            value={name}
-            onChange={(e) => {
-              setName(e.target.value);
-              if (errors.name) setErrors({ ...errors, name: "" });
-            }}
-            label="Name"
-            placeholder="Enter your name"
-            error={errors.name}
-            disabled={isLoading}
-            className="py-3"
-            style={{ fontSize: "14px" }}
-          />
-
-          <InputField
-            type="email"
-            value={email}
-            onChange={(e) => {
-              setEmail(e.target.value);
-              if (errors.email) setErrors({ ...errors, email: "" });
-            }}
-            label="Email address"
-            placeholder="Enter your email address"
-            error={errors.email}
-            disabled={isLoading}
-            className="py-3"
-            style={{ fontSize: "14px" }}
-          />
-
-          <InputField
-            type="password"
-            value={password}
-            onChange={(e) => {
-              setPassword(e.target.value);
-              if (errors.password) setErrors({ ...errors, password: "" });
-            }}
-            label="Password"
-            placeholder="Enter your password"
-            error={errors.password}
-            disabled={isLoading}
-            className="py-3"
-            style={{ fontSize: "14px" }}
-          />
-
-          <button
-            type="submit"
-            disabled={isLoading}
-            className="w-full flex items-center justify-center px-6 py-3 text-white rounded-lg disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
-            style={{ fontFamily: "Open Sans, sans-serif", fontSize: "14px", fontWeight: 600, backgroundColor: "#F84416" }}
-            onMouseEnter={(e) => !isLoading && (e.target.style.backgroundColor = "#e03d14")}
-            onMouseLeave={(e) => !isLoading && (e.target.style.backgroundColor = "#F84416")}
-          >
-            <span className="flex items-center gap-2">
-              {isLoading ? "Processing..." : "Continue"}
-              {!isLoading && (
-                <svg className="w-4 h-4" fill="currentColor" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" viewBox="0 0 24 24">
-                  <path d="m7.25 5-3.5-2.25v4.5L7.25 5Z" />
-                </svg>
-              )}
-            </span>
-          </button>
-        </form>
 
       </div>
     </div>

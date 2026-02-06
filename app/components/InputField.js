@@ -44,6 +44,7 @@ export default function InputField({
         rows={rows}
         className={inputClasses}
         style={inputStyle}
+        autoComplete={props.autoComplete ?? (type === "password" ? "current-password" : type === "email" ? "email" : undefined)}
         {...props}
       />
       {error && <p className="mt-1 text-sm text-red-500">{error}</p>}

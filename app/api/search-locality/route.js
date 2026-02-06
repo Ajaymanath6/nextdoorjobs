@@ -29,6 +29,19 @@ const delayForRateLimit = async () => {
   lastApiCallTime = Date.now();
 };
 
+// Map DB row (snake_case) to API response shape
+const mapPincodeRow = (row) => {
+  if (!row) return null;
+  return {
+    pincode: row.pincode,
+    localityName: row.locality_name ?? row.localityName,
+    district: row.district,
+    state: row.state,
+    latitude: row.latitude != null ? Number(row.latitude) : null,
+    longitude: row.longitude != null ? Number(row.longitude) : null,
+  };
+};
+
 // Validate locality name to ensure it's not the PIN code itself
 const isValidLocalityName = (localityName, pincode) => {
   if (!localityName || localityName === 'Unknown' || localityName.trim() === '') {
@@ -257,23 +270,19 @@ const searchByPincode = async (pincode) => {
     // First, try to find in database
     try {
       const pincodeData = await queryWithTimeout(async () => {
-        try {
-          // Check if prisma.pincode is available
-          if (!prisma.pincode) {
-            console.error("❌ prisma.pincode is not available. Prisma client needs regeneration and server restart.");
-            throw new Error("Pincode model not available. Please restart the development server.");
-          }
+        if (prisma.pincode) {
           return await prisma.pincode.findUnique({
             where: { pincode: pincode }
           });
-        } catch (prismaError) {
-          // Check if it's because pincode model doesn't exist
-          if (prismaError.message && prismaError.message.includes("Pincode model not available")) {
-            throw prismaError;
-          }
-          // Re-throw other errors
-          throw prismaError;
         }
+        const rows = await prisma.$queryRaw`
+          SELECT pincode, locality_name, district, state, latitude, longitude
+          FROM pincodes
+          WHERE pincode = ${pincode}
+          LIMIT 1
+        `;
+        const row = Array.isArray(rows) && rows[0] ? rows[0] : null;
+        return row ? mapPincodeRow(row) : null;
       });
 
     if (pincodeData) {
@@ -284,20 +293,18 @@ const searchByPincode = async (pincode) => {
         console.log(`   Coordinates missing, attempting to fetch...`);
         const coords = await fetchCoordinatesOnly(pincode);
         if (coords) {
-          // Update database with coordinates
-          try {
-            await prisma.pincode.update({
-              where: { pincode: pincode },
-              data: {
-                latitude: coords.latitude,
-                longitude: coords.longitude
-              }
-            });
-            pincodeData.latitude = coords.latitude;
-            pincodeData.longitude = coords.longitude;
-            console.log(`   ✅ Updated coordinates in DB`);
-          } catch (updateError) {
-            console.error(`   ❌ Failed to update coordinates:`, updateError.message);
+          pincodeData.latitude = coords.latitude;
+          pincodeData.longitude = coords.longitude;
+          if (prisma.pincode) {
+            try {
+              await prisma.pincode.update({
+                where: { pincode: pincode },
+                data: { latitude: coords.latitude, longitude: coords.longitude }
+              });
+              console.log(`   ✅ Updated coordinates in DB`);
+            } catch (updateError) {
+              console.error(`   ❌ Failed to update coordinates:`, updateError.message);
+            }
           }
         }
       }
@@ -356,7 +363,21 @@ const searchByPincode = async (pincode) => {
     }
   }
 
-  // Save to database for future use
+  // Save to database for future use (skip when delegate missing; still return data)
+  const responseFromExternal = {
+    pincode: externalData.pincode,
+    localityName: externalData.localityName,
+    district: externalData.district,
+    state: externalData.state,
+    latitude: externalData.latitude,
+    longitude: externalData.longitude,
+  };
+
+  if (!prisma.pincode) {
+    searchCache.set(cacheKey, { data: responseFromExternal, timestamp: Date.now() });
+    return responseFromExternal;
+  }
+
   try {
     const savedData = await prisma.pincode.create({
       data: {
@@ -368,9 +389,7 @@ const searchByPincode = async (pincode) => {
         longitude: externalData.longitude,
       }
     });
-
     console.log(`✅ Saved new PIN to DB: ${savedData.localityName} (${savedData.pincode}) [Source: ${externalData.dataSource}]`);
-
     const responseData = {
       pincode: savedData.pincode,
       localityName: savedData.localityName,
@@ -379,38 +398,18 @@ const searchByPincode = async (pincode) => {
       latitude: savedData.latitude,
       longitude: savedData.longitude,
     };
-
-    // Cache the result
-    searchCache.set(cacheKey, {
-      data: responseData,
-      timestamp: Date.now()
-    });
-
+    searchCache.set(cacheKey, { data: responseData, timestamp: Date.now() });
     return responseData;
   } catch (saveError) {
-    // If save fails (e.g., duplicate key), try to fetch from DB again
-    if (saveError.code === 'P2002') {
+    if (saveError.code === "P2002") {
       console.log("   PIN already exists, fetching from DB...");
-      const existingData = await prisma.pincode.findUnique({
-        where: { pincode: pincode }
-      });
-      
-      if (existingData) {
-        const responseData = {
-          pincode: existingData.pincode,
-          localityName: existingData.localityName,
-          district: existingData.district,
-          state: existingData.state,
-          latitude: existingData.latitude,
-          longitude: existingData.longitude,
-        };
-        
-        searchCache.set(cacheKey, {
-          data: responseData,
-          timestamp: Date.now()
-        });
-        
-        return responseData;
+      const existingData = prisma.pincode
+        ? await prisma.pincode.findUnique({ where: { pincode: pincode } })
+        : (await prisma.$queryRaw`SELECT pincode, locality_name, district, state, latitude, longitude FROM pincodes WHERE pincode = ${pincode} LIMIT 1`)?.[0];
+      const existing = existingData ? mapPincodeRow(existingData) : null;
+      if (existing) {
+        searchCache.set(cacheKey, { data: existing, timestamp: Date.now() });
+        return existing;
       }
     }
     throw saveError;
@@ -458,34 +457,32 @@ const searchByLocality = async (localityName) => {
     }
     
     pincodeData = await queryWithTimeout(async () => {
-      try {
-        // Check if prisma.pincode is available
-        if (!prisma.pincode) {
-          console.error("❌ prisma.pincode is not available. Prisma client needs regeneration and server restart.");
-          throw new Error("Pincode model not available. Please restart the development server.");
-        }
-        // Use a simpler, faster query - limit OR conditions and add take limit
+      if (prisma.pincode) {
         return await prisma.pincode.findFirst({
           where: {
             AND: [
-              { OR: orConditions.slice(0, 8) }, // Allow more conditions to include locality + district
+              { OR: orConditions.slice(0, 8) },
               { state: "Kerala" }
             ]
           },
-          orderBy: [
-            { localityName: 'asc' }
-          ],
-          take: 1 // Only need first result
+          orderBy: [{ localityName: "asc" }],
+          take: 1
         });
-      } catch (prismaError) {
-        // Check if it's because pincode model doesn't exist
-        if (prismaError.message && prismaError.message.includes("Pincode model not available")) {
-          throw prismaError;
-        }
-        // Re-throw other errors
-        throw prismaError;
       }
-    }, 8000); // Reduced timeout to 8 seconds
+      // Fallback: raw query when delegate is missing (e.g. stale Next.js cache)
+      const escaped = normalizedQuery.replace(/%/g, "\\%").replace(/_/g, "\\_");
+      const pattern = `%${escaped}%`;
+      const rows = await prisma.$queryRaw`
+        SELECT pincode, locality_name, district, state, latitude, longitude
+        FROM pincodes
+        WHERE state = 'Kerala'
+          AND (locality_name ILIKE ${pattern} OR district ILIKE ${pattern})
+        ORDER BY locality_name ASC
+        LIMIT 1
+      `;
+      const row = Array.isArray(rows) && rows[0] ? rows[0] : null;
+      return row ? mapPincodeRow(row) : null;
+    }, 8000);
 
     // If exact match found, return it
     if (pincodeData) {
@@ -496,27 +493,38 @@ const searchByLocality = async (localityName) => {
         console.log(`   No exact match found. Trying fuzzy search...`);
         
         // Fetch Kerala pincodes for fuzzy search (limit to reasonable number)
+        const prefix = normalizedQuery.substring(0, 3);
+        const prefixPattern = `${prefix}%`;
         const keralaPincodes = await queryWithTimeout(async () => {
-          return await prisma.pincode.findMany({
-            where: { 
-              state: "Kerala",
-              // Pre-filter by first few characters to reduce dataset
-              localityName: { startsWith: normalizedQuery.substring(0, 3), mode: "insensitive" }
-            },
-            select: {
-              id: true,
-              pincode: true,
-              localityName: true,
-              district: true,
-              state: true,
-              latitude: true,
-              longitude: true,
-            },
-            take: 1000 // Reduced from 5000 for better performance
-          });
+          if (prisma.pincode) {
+            return await prisma.pincode.findMany({
+              where: {
+                state: "Kerala",
+                localityName: { startsWith: prefix, mode: "insensitive" }
+              },
+              select: {
+                id: true,
+                pincode: true,
+                localityName: true,
+                district: true,
+                state: true,
+                latitude: true,
+                longitude: true,
+              },
+              take: 1000
+            });
+          }
+          const rows = await prisma.$queryRaw`
+            SELECT pincode, locality_name as "localityName", district, state, latitude, longitude
+            FROM pincodes
+            WHERE state = 'Kerala' AND (locality_name ILIKE ${prefixPattern} OR district ILIKE ${prefixPattern})
+            ORDER BY locality_name ASC
+            LIMIT 1000
+          `;
+          return (Array.isArray(rows) ? rows : []).map(mapPincodeRow);
         }, 8000);
 
-        if (keralaPincodes.length > 0) {
+        if (keralaPincodes && keralaPincodes.length > 0) {
           // Configure fuse.js for fuzzy matching - stricter settings
           const fuse = new Fuse(keralaPincodes, {
             keys: ['localityName'],
@@ -596,28 +604,40 @@ const searchByLocality = async (localityName) => {
   } catch (dbError) {
     console.error("❌ Database query error:", dbError);
     
-    if (dbError.message === 'Query timeout') {
+    if (dbError.message === "Query timeout") {
       console.log("   Retrying with simpler query...");
       try {
-        // Retry with a much simpler query - just exact match and single contains
+        const pattern = `%${normalizedQuery.replace(/%/g, "\\%").replace(/_/g, "\\_")}%`;
         pincodeData = await queryWithTimeout(async () => {
-          return await prisma.pincode.findFirst({
-            where: {
-              AND: [
-                {
-                  OR: [
-                    { localityName: { equals: localityName.trim(), mode: "insensitive" } },
-                    { localityName: { contains: normalizedQuery, mode: "insensitive" } },
-                    { district: { contains: normalizedQuery, mode: "insensitive" } },
-                  ]
-                },
-                { state: "Kerala" }
-              ]
-            },
-            orderBy: { localityName: 'asc' },
-            take: 1
-          });
-        }, 6000); // Shorter timeout for retry
+          if (prisma.pincode) {
+            return await prisma.pincode.findFirst({
+              where: {
+                AND: [
+                  {
+                    OR: [
+                      { localityName: { equals: localityName.trim(), mode: "insensitive" } },
+                      { localityName: { contains: normalizedQuery, mode: "insensitive" } },
+                      { district: { contains: normalizedQuery, mode: "insensitive" } },
+                    ]
+                  },
+                  { state: "Kerala" }
+                ]
+              },
+              orderBy: { localityName: "asc" },
+              take: 1
+            });
+          }
+          const rows = await prisma.$queryRaw`
+            SELECT pincode, locality_name, district, state, latitude, longitude
+            FROM pincodes
+            WHERE state = 'Kerala'
+              AND (locality_name ILIKE ${pattern} OR district ILIKE ${pattern})
+            ORDER BY locality_name ASC
+            LIMIT 1
+          `;
+          const row = Array.isArray(rows) && rows[0] ? rows[0] : null;
+          return row ? mapPincodeRow(row) : null;
+        }, 6000);
         
         if (pincodeData) {
           console.log(`✅ Retry successful: ${pincodeData.localityName}`);
@@ -721,16 +741,6 @@ export async function GET(request) {
               details: "The database is taking too long to respond. Please try again.",
             },
             { status: 500 }
-          );
-        }
-
-        if (error.message && error.message.includes("Pincode model not available")) {
-          return NextResponse.json(
-            {
-              error: "Locality search is not available",
-              details: "Please restart the development server to load the Pincode model. Run: npm run dev",
-            },
-            { status: 503 }
           );
         }
 

@@ -13,14 +13,14 @@ export async function GET(request) {
     const { userId } = await auth();
     
     if (!userId) {
-      return NextResponse.redirect(new URL('/', request.url));
+      return NextResponse.redirect(new URL('/onboarding', request.url));
     }
 
     // Get user details from Clerk
     const clerkUser = await currentUser();
     
     if (!clerkUser) {
-      return NextResponse.redirect(new URL('/', request.url));
+      return NextResponse.redirect(new URL('/onboarding', request.url));
     }
 
     const email = clerkUser.emailAddresses[0]?.emailAddress;
@@ -30,7 +30,7 @@ export async function GET(request) {
     const avatarUrl = clerkUser.imageUrl;
 
     if (!email) {
-      return NextResponse.redirect(new URL('/?error=no_email', request.url));
+      return NextResponse.redirect(new URL('/onboarding?error=no_email', request.url));
     }
 
     // Check if user exists in database
@@ -91,11 +91,10 @@ export async function GET(request) {
       console.error("Error setting session cookie:", cookieError);
     }
 
-    // Set Clerk session as active
-    // This is handled automatically by Clerk middleware, but we ensure it's set
-    return NextResponse.redirect(new URL('/', request.url));
+    // Redirect to onboarding chat interface after sign-in (not main app)
+    return NextResponse.redirect(new URL('/onboarding', request.url));
   } catch (error) {
     console.error("Error in Clerk callback:", error);
-    return NextResponse.redirect(new URL('/?error=auth_failed', request.url));
+    return NextResponse.redirect(new URL('/onboarding?error=auth_failed', request.url));
   }
 }

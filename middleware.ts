@@ -1,15 +1,15 @@
 import { clerkMiddleware, createRouteMatcher } from '@clerk/nextjs/server';
+import { NextResponse } from 'next/server';
 
 // Define public routes that don't require authentication
 const isPublicRoute = createRouteMatcher([
-  '/',
+  '/onboarding',
   '/api/auth/signin',
   '/api/auth/login',
   '/api/auth/register',
   '/api/auth/logout',
   '/api/auth/callback(.*)',
   '/api/auth/callback/clerk(.*)',
-  '/onboarding',
   // Map search and autocomplete (used before login)
   '/api/search-locality',
   '/api/localities',
@@ -19,10 +19,23 @@ const isPublicRoute = createRouteMatcher([
 ]);
 
 export default clerkMiddleware(async (auth, req) => {
-  // Protect all routes except public ones
+  const { userId } = await auth();
+  const path = req.nextUrl.pathname;
+
+  // When app loads at root: unauthenticated users see onboarding (Clerk signup) first
+  if (path === '/') {
+    if (!userId) {
+      return NextResponse.redirect(new URL('/onboarding', req.url));
+    }
+    return NextResponse.next();
+  }
+
+  // Protect all other routes except public ones
   if (!isPublicRoute(req)) {
     await auth.protect();
   }
+
+  return NextResponse.next();
 });
 
 export const config = {

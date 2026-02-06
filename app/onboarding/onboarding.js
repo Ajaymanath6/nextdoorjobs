@@ -68,70 +68,61 @@ export default function OnboardingPage() {
   const [isTyping, setIsTyping] = useState(false);
   const scrollToInlineRef = useRef(null);
 
-  // Check if user is authenticated via Clerk on mount
+  // Check if user is authenticated via Clerk on mount (and after OAuth redirect)
   useEffect(() => {
-    const checkClerkAuth = async () => {
-      // Wait for Clerk to load
-      if (!clerkLoaded) {
-        return;
-      }
+    if (!clerkLoaded) return;
 
+    if (clerkUser) {
       setCheckingAuth(false);
-
-      if (clerkUser) {
-        // User is authenticated via Clerk, get user from database
+      setShowAuth(false);
+      const email = clerkUser.emailAddresses[0]?.emailAddress;
+      if (!email) return;
+      (async () => {
         try {
-          const email = clerkUser.emailAddresses[0]?.emailAddress;
-          if (email) {
-            const response = await fetch(`/api/onboarding/user?email=${encodeURIComponent(email)}`);
-            const result = await response.json();
-            
-            if (result.success && result.user) {
-              setUserData(result.user);
+          const response = await fetch(`/api/onboarding/user?email=${encodeURIComponent(email)}`);
+          const result = await response.json();
+          if (result.success && result.user) {
+            setUserData(result.user);
+            setChatMessages([
+              {
+                type: "ai",
+                text: `Hi ${result.user.name || "there"}! 👋 Welcome to JobsonMap. I'll help you post a job opening. What's your company name?`,
+              },
+            ]);
+          } else {
+            const createResponse = await fetch("/api/onboarding/user", {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({
+                email: email,
+                name: clerkUser.firstName && clerkUser.lastName
+                  ? `${clerkUser.firstName} ${clerkUser.lastName}`
+                  : clerkUser.firstName || clerkUser.username || "User",
+              }),
+            });
+            const createResult = await createResponse.json();
+            if (createResult.success) {
+              setUserData(createResult.user);
               setChatMessages([
                 {
                   type: "ai",
-                  text: `Hi ${result.user.name || "there"}! 👋 Welcome to JobsonMap. I'll help you post a job opening. What's your company name?`,
+                  text: `Hi ${createResult.user.name || "there"}! 👋 Welcome to JobsonMap. I'll help you post a job opening. What's your company name?`,
                 },
               ]);
-              setShowAuth(false);
-            } else {
-              // User exists in Clerk but not in our DB - create them
-              const createResponse = await fetch("/api/onboarding/user", {
-                method: "POST",
-                headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({
-                  email: email,
-                  name: clerkUser.firstName && clerkUser.lastName
-                    ? `${clerkUser.firstName} ${clerkUser.lastName}`
-                    : clerkUser.firstName || clerkUser.username || "User",
-                }),
-              });
-              
-              const createResult = await createResponse.json();
-              if (createResult.success) {
-                setUserData(createResult.user);
-                setChatMessages([
-                  {
-                    type: "ai",
-                    text: `Hi ${createResult.user.name || "there"}! 👋 Welcome to JobsonMap. I'll help you post a job opening. What's your company name?`,
-                  },
-                ]);
-                setShowAuth(false);
-              }
             }
           }
         } catch (error) {
           console.error("Error checking Clerk auth:", error);
-          setCheckingAuth(false);
         }
-      } else {
-        // No Clerk user, show auth form
-        setShowAuth(true);
-      }
-    };
+      })();
+      return;
+    }
 
-    checkClerkAuth();
+    const t = setTimeout(() => {
+      setCheckingAuth(false);
+      setShowAuth(true);
+    }, 400);
+    return () => clearTimeout(t);
   }, [clerkUser, clerkLoaded]);
 
   // Handle email authentication

@@ -76,7 +76,12 @@
       "distance-button": "flex items-center gap-2 px-4 rounded-xl text-sm font-medium transition-all shadow-lg border bg-brand-bg-white text-brand-text-weak hover:bg-brand-stroke-weak border-brand-stroke-border",
       "distance-button-active": "bg-brand-stroke-weak",
       "distance-button-height": "h-14",
-      "distance-button-nowrap": "whitespace-nowrap"
+      "distance-button-nowrap": "whitespace-nowrap",
+      "toggle-wrapper": "flex rounded-md border border-brand-stroke-weak overflow-hidden shrink-0",
+      "toggle-segment": "flex items-center justify-center p-2 rounded-md bg-brand-bg-white text-brand-text-strong hover:bg-brand-bg-fill transition-colors border-0",
+      "toggle-segment-active": "bg-brand-bg-fill",
+      "toggle-segment-icon": "text-brand-stroke-strong",
+      "toggle-segment-icon-active": "text-brand"
     },
     "button": {
       "primary": "bg-brand text-white hover:opacity-90",
