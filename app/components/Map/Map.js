@@ -2402,7 +2402,7 @@ const MapComponent = () => {
           {/* Search Bar Card - padding and radius proportional to inner elements */}
           <div className={`bg-brand-bg-white rounded-xl border border-brand-stroke-border shadow-lg w-full px-2 py-1.5 md:px-4 md:py-2`}>
             {/* Mobile: single bar (Person/Job + input + Filter + Profile). Desktop: no bar, separate bordered controls. */}
-            <div className={`flex items-center gap-2 md:gap-3 w-full rounded-lg border border-brand-stroke-border bg-brand-bg-white min-h-[34px] md:border-0 md:bg-transparent md:rounded-none md:min-h-0 ${searchBar["search-input-hover"]}`}>
+            <div className={`flex items-center gap-2 md:gap-3 w-full rounded-xl border border-brand-stroke-border bg-brand-bg-white min-h-[34px] md:border-0 md:bg-transparent md:rounded-none md:min-h-0 ${searchBar["search-input-hover"]}`}>
               {/* View Selector Button - Hidden for now, will add in later stages */}
               {/* <div className="relative flex-shrink-0">
                 <button
@@ -2464,9 +2464,9 @@ const MapComponent = () => {
                     aria-haspopup="true"
                   >
                     {searchMode === "person" ? (
-                      <User size={18} className={searchBar["toggle-segment-icon-active"]} />
+                      <User size={16} className={searchBar["toggle-segment-icon-active"]} />
                     ) : (
-                      <Portfolio size={18} className={searchBar["toggle-segment-icon-active"]} />
+                      <Portfolio size={16} className={searchBar["toggle-segment-icon-active"]} />
                     )}
                     <ChevronDown size={16} className="text-brand-stroke-strong" />
                   </button>
@@ -2657,45 +2657,60 @@ const MapComponent = () => {
                 />
               </div>
 
-              {/* Filter Button - icon-only bordered; hidden on mobile when search expanded */}
-              <div className={`relative shrink-0 ${mobileSearchExpanded ? "hidden md:block" : ""}`}>
-                <button
-                  ref={filterButtonRef}
-                  type="button"
-                  onClick={() => setShowFilterDropdown(!showFilterDropdown)}
-                  className="h-[34px] w-[34px] md:h-auto md:w-auto flex items-center justify-center p-1.5 md:p-2 rounded-lg border-0 bg-transparent md:border md:border-brand-stroke-border md:bg-brand-bg-white hover:bg-brand-bg-fill transition-colors shrink-0"
-                  aria-label="Filter"
-                >
-                  <Filter size={16} className="text-brand-stroke-strong" />
-                </button>
+              {/* Filter + Profile grouped with 4px gap */}
+              <div className={`flex items-center gap-1 shrink-0 ${mobileSearchExpanded ? "hidden md:!flex" : ""}`}>
+                {/* Filter Button - icon-only bordered; hidden on mobile when search expanded */}
+                <div className="relative shrink-0">
+                  <button
+                    ref={filterButtonRef}
+                    type="button"
+                    onClick={() => setShowFilterDropdown(!showFilterDropdown)}
+                    className="h-[34px] w-[34px] md:h-auto md:w-auto flex items-center justify-center p-1.5 md:p-2 rounded-lg border-0 bg-transparent md:border md:border-brand-stroke-border md:bg-brand-bg-white hover:bg-brand-bg-fill transition-colors shrink-0"
+                    aria-label="Filter"
+                  >
+                    <Filter size={16} className="text-brand-stroke-strong" />
+                  </button>
 
-                {/* Desktop: dropdown */}
-                <div className="hidden md:block">
-                  <FilterDropdown
-                    isOpen={showFilterDropdown}
-                    onClose={() => setShowFilterDropdown(false)}
-                    dropdownRef={filterDropdownRef}
-                    selectedOption={selectedFilterOption}
-                    onSelect={(option) => setSelectedFilterOption(option)}
-                    position={
-                      isGlobeView
-                        ? {
-                            top: "100%",
-                            bottom: "auto",
-                            right: "0",
-                            left: "auto",
-                            marginTop: "8px",
-                          }
-                        : {
-                            top: "auto",
-                            bottom: "100%",
-                            right: "0",
-                            left: "auto",
-                            marginBottom: "8px",
-                          }
-                    }
-                    width="300px"
-                  />
+                  {/* Desktop: dropdown */}
+                  <div className="hidden md:block">
+                    <FilterDropdown
+                      isOpen={showFilterDropdown}
+                      onClose={() => setShowFilterDropdown(false)}
+                      dropdownRef={filterDropdownRef}
+                      selectedOption={selectedFilterOption}
+                      onSelect={(option) => setSelectedFilterOption(option)}
+                      position={
+                        isGlobeView
+                          ? {
+                              top: "100%",
+                              bottom: "auto",
+                              right: "0",
+                              left: "auto",
+                              marginTop: "8px",
+                            }
+                          : {
+                              top: "auto",
+                              bottom: "100%",
+                              right: "0",
+                              left: "auto",
+                              marginBottom: "8px",
+                            }
+                      }
+                      width="300px"
+                    />
+                  </div>
+                </div>
+
+                {/* Profile icon - mobile only; hidden when search expanded */}
+                <div className={`md:hidden shrink-0 ${mobileSearchExpanded ? "hidden" : ""}`}>
+                  <button
+                    type="button"
+                    onClick={() => router.push("/profile")}
+                    className="h-[34px] w-[34px] flex items-center justify-center rounded-lg border-0 bg-transparent hover:bg-brand-bg-fill transition-colors shrink-0"
+                    aria-label="Profile"
+                  >
+                    <UserAvatar size={16} className="text-brand-stroke-strong" />
+                  </button>
                 </div>
               </div>
 
@@ -2706,18 +2721,6 @@ const MapComponent = () => {
                 selectedOption={selectedFilterOption}
                 onSelect={(option) => setSelectedFilterOption(option)}
               />
-
-              {/* Profile icon - mobile only, next to filter; hidden when search expanded */}
-              <div className={`md:hidden shrink-0 ${mobileSearchExpanded ? "hidden" : ""}`}>
-                <button
-                  type="button"
-                  onClick={() => router.push("/profile")}
-                  className="h-[34px] w-[34px] flex items-center justify-center rounded-lg border-0 bg-transparent hover:bg-brand-bg-fill transition-colors shrink-0"
-                  aria-label="Profile"
-                >
-                  <UserAvatar size={20} className="text-brand-stroke-strong" />
-                </button>
-              </div>
 
               {/* Return Button - Hidden for now, will add in later stages */}
               {/* <button
