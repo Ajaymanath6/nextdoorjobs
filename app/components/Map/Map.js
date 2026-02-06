@@ -15,9 +15,11 @@ import {
   Portfolio,
   User,
   UserAvatar,
+  ArrowLeft,
 } from "@carbon/icons-react";
 import { RiArrowDownSLine, RiSearchLine } from "@remixicon/react";
 import FilterDropdown from "./FilterDropdown";
+import FilterBottomSheet from "./FilterBottomSheet";
 import LocalityAutocomplete from "./LocalityAutocomplete";
 import JobTitleAutocomplete from "./JobTitleAutocomplete";
 import CollegeAutocomplete from "./CollegeAutocomplete";
@@ -102,6 +104,7 @@ const MapComponent = () => {
   const [lastSearchedDistrict, setLastSearchedDistrict] = useState(null);
   const showThrissurBadges = searchMode === "person" && lastSearchedDistrict === "Thrissur";
   const [badgeContainerPoints, setBadgeContainerPoints] = useState(null);
+  const [mobileSearchExpanded, setMobileSearchExpanded] = useState(false);
 
   // Parse response as JSON safely (avoids "Unexpected token '<'" when server returns HTML)
   const parseJsonResponse = async (response) => {
@@ -2452,10 +2455,22 @@ const MapComponent = () => {
 
               {/* Search Input with Autocomplete - Expanded width */}
               <div className="relative flex-1 min-w-0">
-                {/* Search Icon - Left side inside input */}
+                {/* Back arrow - mobile only when search expanded */}
+                <button
+                  type="button"
+                  onClick={() => {
+                    setMobileSearchExpanded(false);
+                    searchInputRef.current?.blur();
+                  }}
+                  className={`absolute left-2 top-1/2 -translate-y-1/2 z-20 flex items-center justify-center p-1 rounded border-0 bg-transparent hover:bg-brand-bg-fill transition-colors ${mobileSearchExpanded ? "md:hidden" : "hidden"}`}
+                  aria-label="Back"
+                >
+                  <ArrowLeft size={20} className="text-brand-stroke-strong" />
+                </button>
+                {/* Search Icon - Left side; hidden on mobile when expanded */}
                 <IbmWatsonDiscovery
                   size={18}
-                  className="absolute left-2.5 md:left-3 top-1/2 -translate-y-1/2 z-10 text-brand-stroke-strong pointer-events-none w-[16px] h-[16px] md:w-[18px] md:h-[18px]"
+                  className={`absolute left-2.5 md:left-3 top-1/2 -translate-y-1/2 z-10 text-brand-stroke-strong pointer-events-none w-[16px] h-[16px] md:w-[18px] md:h-[18px] ${mobileSearchExpanded ? "hidden md:block" : ""}`}
                 />
                 
                 {/* Search Input */}
@@ -2464,20 +2479,8 @@ const MapComponent = () => {
                   type="text"
                   value={searchQuery}
                   onChange={handleSearchInputChange}
-                  onKeyDown={(e) => {
-                    if (e.key === "ArrowDown" || e.key === "ArrowUp") return;
-                    if (e.key === "Enter" && searchQuery.trim()) {
-                      setShowAutocomplete(false);
-                      setShowJobAutocomplete(false);
-                      setShowCollegeAutocomplete(false);
-                      handleSearch();
-                    } else if (e.key === "Escape") {
-                      setShowAutocomplete(false);
-                      setShowJobAutocomplete(false);
-                      setShowCollegeAutocomplete(false);
-                    }
-                  }}
                   onFocus={(e) => {
+                    setMobileSearchExpanded(true);
                     if (searchQuery.trim().length >= 2) {
                       if (isJobSearchQuery(searchQuery)) {
                         setShowJobAutocomplete(true);
@@ -2492,6 +2495,20 @@ const MapComponent = () => {
                         setShowJobAutocomplete(false);
                         setShowCollegeAutocomplete(false);
                       }
+                    }
+                  }}
+                  onBlur={() => setMobileSearchExpanded(false)}
+                  onKeyDown={(e) => {
+                    if (e.key === "ArrowDown" || e.key === "ArrowUp") return;
+                    if (e.key === "Enter" && searchQuery.trim()) {
+                      setShowAutocomplete(false);
+                      setShowJobAutocomplete(false);
+                      setShowCollegeAutocomplete(false);
+                      handleSearch();
+                    } else if (e.key === "Escape") {
+                      setShowAutocomplete(false);
+                      setShowJobAutocomplete(false);
+                      setShowCollegeAutocomplete(false);
                     }
                   }}
                   className={`${searchBar["search-input"]} ${searchBar["search-input-hover"]} ${searchBar["search-input-text"]} ${searchBar["search-input-placeholder"]} search-input-focus-active w-full text-sm md:text-base font-semibold py-1.5 pl-9 pr-9 md:py-2 md:pl-11 md:pr-11`}
@@ -2571,8 +2588,8 @@ const MapComponent = () => {
                 />
               </div>
 
-              {/* Filter Button - icon-only bordered */}
-              <div className="relative shrink-0">
+              {/* Filter Button - icon-only bordered; hidden on mobile when search expanded */}
+              <div className={`relative shrink-0 ${mobileSearchExpanded ? "hidden md:block" : ""}`}>
                 <button
                   ref={filterButtonRef}
                   type="button"
@@ -2583,35 +2600,46 @@ const MapComponent = () => {
                   <Filter size={16} className="text-brand-stroke-strong" />
                 </button>
 
-                <FilterDropdown
-                  isOpen={showFilterDropdown}
-                  onClose={() => setShowFilterDropdown(false)}
-                  dropdownRef={filterDropdownRef}
-                  selectedOption={selectedFilterOption}
-                  onSelect={(option) => setSelectedFilterOption(option)}
-                  position={
-                    isGlobeView
-                      ? {
-                          top: "100%",
-                          bottom: "auto",
-                          right: "0",
-                          left: "auto",
-                          marginTop: "8px",
-                        }
-                      : {
-                          top: "auto",
-                          bottom: "100%",
-                          right: "0",
-                          left: "auto",
-                          marginBottom: "8px",
-                        }
-                  }
-                  width="300px"
-                />
+                {/* Desktop: dropdown */}
+                <div className="hidden md:block">
+                  <FilterDropdown
+                    isOpen={showFilterDropdown}
+                    onClose={() => setShowFilterDropdown(false)}
+                    dropdownRef={filterDropdownRef}
+                    selectedOption={selectedFilterOption}
+                    onSelect={(option) => setSelectedFilterOption(option)}
+                    position={
+                      isGlobeView
+                        ? {
+                            top: "100%",
+                            bottom: "auto",
+                            right: "0",
+                            left: "auto",
+                            marginTop: "8px",
+                          }
+                        : {
+                            top: "auto",
+                            bottom: "100%",
+                            right: "0",
+                            left: "auto",
+                            marginBottom: "8px",
+                          }
+                    }
+                    width="300px"
+                  />
+                </div>
               </div>
 
-              {/* Profile icon - mobile only, next to filter */}
-              <div className="md:hidden shrink-0">
+              {/* Mobile: bottom sheet */}
+              <FilterBottomSheet
+                isOpen={showFilterDropdown}
+                onClose={() => setShowFilterDropdown(false)}
+                selectedOption={selectedFilterOption}
+                onSelect={(option) => setSelectedFilterOption(option)}
+              />
+
+              {/* Profile icon - mobile only, next to filter; hidden when search expanded */}
+              <div className={`md:hidden shrink-0 ${mobileSearchExpanded ? "hidden" : ""}`}>
                 <button
                   type="button"
                   onClick={() => router.push("/profile")}
@@ -2638,7 +2666,7 @@ const MapComponent = () => {
               <button
                 type="button"
                 onClick={() => setIsCollegeFilterActive(!isCollegeFilterActive)}
-                className={`inline-flex items-center gap-1 py-1 px-2 rounded-full text-[10px] font-medium md:py-1.5 md:px-2.5 md:rounded-lg md:text-xs transition-colors border border-brand-stroke-border bg-brand-bg-white hover:bg-brand-bg-fill text-brand-text-weak ${isCollegeFilterActive ? "bg-brand-bg-fill" : ""}`}
+                className={`inline-flex items-center gap-1.5 py-1.5 px-2.5 rounded-full text-xs font-medium md:py-2 md:px-3 md:rounded-lg md:text-sm transition-colors border border-brand-stroke-border bg-brand-bg-white hover:bg-brand-bg-fill text-brand-text-weak ${isCollegeFilterActive ? "bg-brand-bg-fill" : ""}`}
                 style={{ fontFamily: "Open Sans" }}
               >
                 <span className="text-xs md:text-sm">🏫</span>
@@ -2649,7 +2677,7 @@ const MapComponent = () => {
                 type="button"
                 onClick={handleDistanceToggle}
                 onContextMenu={handleHomeLocationRightClick}
-                className={`inline-flex items-center gap-1 py-1 px-2 rounded-full text-[10px] font-medium md:py-1.5 md:px-2.5 md:rounded-lg md:text-xs transition-colors border border-brand-stroke-border bg-brand-bg-white hover:bg-brand-bg-fill text-brand-text-weak ${isHomeFilterActive ? "bg-brand-bg-fill" : ""}`}
+                className={`inline-flex items-center gap-1.5 py-1.5 px-2.5 rounded-full text-xs font-medium md:py-2 md:px-3 md:rounded-lg md:text-sm transition-colors border border-brand-stroke-border bg-brand-bg-white hover:bg-brand-bg-fill text-brand-text-weak ${isHomeFilterActive ? "bg-brand-bg-fill" : ""}`}
                 style={{ fontFamily: "Open Sans" }}
               >
                 <span className="text-xs md:text-sm">🏠</span>
