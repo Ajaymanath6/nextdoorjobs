@@ -5,7 +5,7 @@ import Image from "next/image";
 import { Screen, Document, Enterprise, Save, Location, Add } from "@carbon/icons-react";
 import TypingAnimation from "./TypingAnimation";
 
-export default function ChatInterface({ messages = [], onSendMessage, isLoading = false, inlineComponent = null, typingText = null, onScrollRequest, onSave, onViewOnMap, onStartNext }) {
+export default function ChatInterface({ messages = [], onSendMessage, isLoading = false, inlineComponent = null, typingText = null, onScrollRequest, onSave, onViewOnMap, onStartNext, showFindOrPostButtons = false, onFindJob, onPostGig }) {
   const messagesEndRef = useRef(null);
   const inputRef = useRef(null);
   const messagesContainerRef = useRef(null);
@@ -149,6 +149,34 @@ export default function ChatInterface({ messages = [], onSendMessage, isLoading 
                 >
                   {message.text}
                 </div>
+                {/* Find a job / Post a gig - show after first welcome message only */}
+                {message.type === "ai" && index === 0 && showFindOrPostButtons && onFindJob && onPostGig && (
+                  <div className="flex flex-col gap-2 mt-2">
+                    <p className="text-sm text-brand-text-weak" style={{ fontFamily: "Open Sans, sans-serif" }}>
+                      Do you want to find a job or post a gig?
+                    </p>
+                    <div className="flex flex-wrap gap-2">
+                      <button
+                        type="button"
+                        onClick={onFindJob}
+                        className="flex items-center gap-2 px-4 py-2.5 bg-brand-bg-white text-brand-text-strong hover:bg-brand-bg-fill rounded-md text-sm font-medium transition-colors border border-brand-stroke-weak"
+                        style={{ fontFamily: "Open Sans, sans-serif" }}
+                      >
+                        <Location size={16} className="text-brand-stroke-strong" />
+                        <span>Find a job</span>
+                      </button>
+                      <button
+                        type="button"
+                        onClick={onPostGig}
+                        className="flex items-center gap-2 px-4 py-2.5 bg-brand-bg-white text-brand-text-strong hover:bg-brand-bg-fill rounded-md text-sm font-medium transition-colors border border-brand-stroke-weak"
+                        style={{ fontFamily: "Open Sans, sans-serif" }}
+                      >
+                        <Add size={16} className="text-brand-stroke-strong" />
+                        <span>Post a gig</span>
+                      </button>
+                    </div>
+                  </div>
+                )}
                 {/* Action buttons for AI messages */}
                 {message.type === "ai" && (
                   <div className="flex items-center gap-2 flex-wrap">

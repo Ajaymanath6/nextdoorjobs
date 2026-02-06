@@ -66,6 +66,7 @@ export default function OnboardingPage() {
   const [inlineComponent, setInlineComponent] = useState(null);
   const [typingText, setTypingText] = useState("");
   const [isTyping, setIsTyping] = useState(false);
+  const [hasChosenPostGig, setHasChosenPostGig] = useState(false);
   const scrollToInlineRef = useRef(null);
 
   // Check if user is authenticated via Clerk on mount (and after OAuth redirect)
@@ -86,7 +87,7 @@ export default function OnboardingPage() {
             setChatMessages([
               {
                 type: "ai",
-                text: `Hi ${result.user.name || "there"}! 👋 Welcome to mapmyGig. I'll help you post a job opening. What's your company name?`,
+                text: `Hi ${result.user.name || "there"}! 👋 Welcome to mapmyGig.`,
               },
             ]);
           } else {
@@ -106,7 +107,7 @@ export default function OnboardingPage() {
               setChatMessages([
                 {
                   type: "ai",
-                  text: `Hi ${createResult.user.name || "there"}! 👋 Welcome to mapmyGig. I'll help you post a job opening. What's your company name?`,
+                  text: `Hi ${createResult.user.name || "there"}! 👋 Welcome to mapmyGig.`,
                 },
               ]);
             }
@@ -142,7 +143,7 @@ export default function OnboardingPage() {
         setChatMessages([
           {
             type: "ai",
-            text: `Hi ${result.user.name || "there"}! 👋 Welcome to mapmyGig. I'll help you post a job opening. What's your company name?`,
+            text: `Hi ${result.user.name || "there"}! 👋 Welcome to mapmyGig.`,
           },
         ]);
         setShowAuth(false);
@@ -159,11 +160,12 @@ export default function OnboardingPage() {
 
   // Reset chat function
   const handleResetChat = () => {
+    setHasChosenPostGig(false);
     if (userData) {
       setChatMessages([
         {
           type: "ai",
-          text: `Hi ${userData.name || "there"}! 👋 Welcome to mapmyGig. I'll help you post a job opening. What's your company name?`,
+          text: `Hi ${userData.name || "there"}! 👋 Welcome to mapmyGig.`,
         },
       ]);
     } else {
@@ -173,6 +175,17 @@ export default function OnboardingPage() {
     setJobData(null);
     setCurrentField(COMPANY_FIELDS.NAME);
     setCollectingCompany(true);
+  };
+
+  // User chose "Find a job" → go to map view
+  const handleFindJob = () => {
+    router.push("/");
+  };
+
+  // User chose "Post a gig" → continue onboarding chat
+  const handlePostGig = async () => {
+    setHasChosenPostGig(true);
+    await addAIMessage("I'll help you post a job opening. What's your company name?");
   };
 
   // Extract value from message
@@ -205,6 +218,11 @@ export default function OnboardingPage() {
     setIsLoading(true);
 
     setTimeout(async () => {
+      // Ignore messages until user has chosen "Post a gig"
+      if (!hasChosenPostGig) {
+        setIsLoading(false);
+        return;
+      }
       if (collectingCompany) {
         // Collecting company information
         const value = extractValue(message);
@@ -873,6 +891,9 @@ export default function OnboardingPage() {
               onSave={handleSave}
               onViewOnMap={handleViewOnMap}
               onStartNext={handleStartNext}
+              showFindOrPostButtons={chatMessages.length === 1 && !hasChosenPostGig}
+              onFindJob={handleFindJob}
+              onPostGig={handlePostGig}
             />
           </div>
         </div>
