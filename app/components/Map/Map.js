@@ -2399,10 +2399,10 @@ const MapComponent = () => {
         <div
           className={`flex flex-col top-3 md:top-4 gap-2 md:gap-6 ${searchBar.container} ${searchBar["container-width"]}`}
         >
-          {/* Search Bar Card - reduced padding on mobile */}
-          <div className={`bg-brand-bg-white rounded-xl border border-brand-stroke-border shadow-lg w-full px-[2px] py-0.5 md:px-4 md:py-2`}>
+          {/* Search Bar Card - padding and radius proportional to inner elements */}
+          <div className={`bg-brand-bg-white rounded-xl border border-brand-stroke-border shadow-lg w-full px-2 py-1.5 md:px-4 md:py-2`}>
             {/* Mobile: single bar (Person/Job + input + Filter + Profile). Desktop: no bar, separate bordered controls. */}
-            <div className={`flex items-center gap-1.5 md:gap-3 w-full rounded-lg border border-brand-stroke-border bg-brand-bg-white min-h-[34px] md:border-0 md:bg-transparent md:rounded-none md:min-h-0 ${searchBar["search-input-hover"]}`}>
+            <div className={`flex items-center gap-2 md:gap-3 w-full rounded-lg border border-brand-stroke-border bg-brand-bg-white min-h-[34px] md:border-0 md:bg-transparent md:rounded-none md:min-h-0 ${searchBar["search-input-hover"]}`}>
               {/* View Selector Button - Hidden for now, will add in later stages */}
               {/* <div className="relative flex-shrink-0">
                 <button
@@ -2458,7 +2458,7 @@ const MapComponent = () => {
                   <button
                     type="button"
                     onClick={() => setShowSearchModeDropdown(!showSearchModeDropdown)}
-                    className={`h-[34px] w-[34px] flex items-center justify-center gap-1 rounded-lg border border-brand-stroke-border bg-brand-bg-white hover:bg-brand-bg-fill transition-colors shrink-0 ${searchMode === "person" ? "bg-brand-bg-fill" : ""}`}
+                    className={`h-[34px] w-[34px] flex items-center justify-center gap-1 p-1.5 rounded-lg border border-brand-stroke-border bg-brand-bg-white hover:bg-brand-bg-fill transition-colors shrink-0 ${searchMode ? "bg-brand-bg-fill border-0" : ""}`}
                     title={searchMode === "person" ? "Search for people" : "Search for jobs"}
                     aria-expanded={showSearchModeDropdown}
                     aria-haspopup="true"
@@ -2580,7 +2580,7 @@ const MapComponent = () => {
                       setShowCollegeAutocomplete(false);
                     }
                   }}
-                  className={`${searchBar["search-input"]} border-0 rounded-none md:border md:rounded-lg ${searchBar["search-input-hover"]} ${searchBar["search-input-text"]} ${searchBar["search-input-placeholder"]} search-input-focus-active w-full text-sm md:text-base font-semibold py-1.5 pl-9 pr-9 md:py-2 md:pl-11 md:pr-11`}
+                  className={`${searchBar["search-input"]} border-0 rounded-none md:border md:rounded-lg ${searchBar["search-input-hover"]} ${searchBar["search-input-text"]} ${searchBar["search-input-placeholder"]} search-input-focus-active focus:ring-2 focus:ring-inset focus:ring-brand focus:outline-none w-full text-sm md:text-base font-semibold py-1.5 pl-9 pr-9 md:py-2 md:pl-11 md:pr-11`}
                   style={{
                     fontFamily: "Open Sans",
                     boxShadow: "0 1px 6px rgba(32,33,36,0.08)",

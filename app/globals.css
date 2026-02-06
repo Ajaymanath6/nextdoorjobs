@@ -155,9 +155,8 @@ body {
   font-family: "Open Sans", sans-serif !important;
 }
 
-/* Search Input Focus State - Stroke Strong Border */
+/* Search Input Focus State - Centered ring (not outline) */
 .search-input-focus-active:focus {
-  border-color: var(--brand-stroke-strong) !important;
   outline: none !important;
 }
 
