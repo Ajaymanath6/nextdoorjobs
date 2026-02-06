@@ -2464,11 +2464,11 @@ const MapComponent = () => {
                     aria-haspopup="true"
                   >
                     {searchMode === "person" ? (
-                      <User size={24} className={searchBar["toggle-segment-icon-active"]} />
+                      <User size={24} className={`w-6 h-6 shrink-0 ${searchBar["toggle-segment-icon-active"]}`} />
                     ) : (
-                      <Portfolio size={24} className={searchBar["toggle-segment-icon-active"]} />
+                      <Portfolio size={24} className={`w-6 h-6 shrink-0 ${searchBar["toggle-segment-icon-active"]}`} />
                     )}
-                    <ChevronDown size={24} className="text-brand-stroke-strong" />
+                    <ChevronDown size={24} className={`w-6 h-6 shrink-0 text-brand-stroke-strong`} />
                   </button>
                   {showSearchModeDropdown && (
                     <div className="absolute top-full left-0 mt-1 min-w-[120px] rounded-lg border border-brand-stroke-border bg-brand-bg-white shadow-lg z-[1001] py-1">
@@ -2482,12 +2482,12 @@ const MapComponent = () => {
                       >
                         {searchMode === "person" ? (
                           <>
-                            <Portfolio size={24} className={searchBar["toggle-segment-icon"]} />
+                            <Portfolio size={24} className={`w-6 h-6 shrink-0 ${searchBar["toggle-segment-icon"]}`} />
                             Job
                           </>
                         ) : (
                           <>
-                            <User size={24} className={searchBar["toggle-segment-icon"]} />
+                            <User size={24} className={`w-6 h-6 shrink-0 ${searchBar["toggle-segment-icon"]}`} />
                             Person
                           </>
                         )}
@@ -2505,7 +2505,7 @@ const MapComponent = () => {
                   >
                     <User
                       size={24}
-                      className={searchMode === "person" ? searchBar["toggle-segment-icon-active"] : searchBar["toggle-segment-icon"]}
+                      className={`w-6 h-6 shrink-0 ${searchMode === "person" ? searchBar["toggle-segment-icon-active"] : searchBar["toggle-segment-icon"]}`}
                     />
                   </button>
                   <button
@@ -2516,7 +2516,7 @@ const MapComponent = () => {
                   >
                     <Portfolio
                       size={24}
-                      className={searchMode === "job" ? searchBar["toggle-segment-icon-active"] : searchBar["toggle-segment-icon"]}
+                      className={`w-6 h-6 shrink-0 ${searchMode === "job" ? searchBar["toggle-segment-icon-active"] : searchBar["toggle-segment-icon"]}`}
                     />
                   </button>
                 </div>
@@ -2534,12 +2534,12 @@ const MapComponent = () => {
                   className={`absolute left-2 top-1/2 -translate-y-1/2 z-20 flex items-center justify-center p-1 rounded border-0 bg-transparent hover:bg-brand-bg-fill transition-colors ${mobileSearchExpanded ? "md:hidden" : "hidden"}`}
                   aria-label="Back"
                 >
-                  <ArrowLeft size={24} className="text-brand-stroke-strong" />
+                  <ArrowLeft size={24} className="text-brand-stroke-strong w-6 h-6 shrink-0" />
                 </button>
                 {/* Search Icon - Left side; hidden on mobile when expanded */}
                 <IbmWatsonDiscovery
                   size={24}
-                  className={`absolute left-2.5 md:left-3 top-1/2 -translate-y-1/2 z-10 text-brand-stroke-strong pointer-events-none w-[24px] h-[24px] ${mobileSearchExpanded ? "hidden md:block" : ""}`}
+                  className={`absolute left-2.5 md:left-3 top-1/2 -translate-y-1/2 z-10 text-brand-stroke-strong pointer-events-none w-6 h-6 shrink-0 ${mobileSearchExpanded ? "hidden md:block" : ""}`}
                 />
                 
                 {/* Search Input */}
@@ -2601,7 +2601,7 @@ const MapComponent = () => {
                 >
                   <SendFilled
                     size={24}
-                    className={searchQuery && searchQuery.trim() ? "text-brand" : "text-brand-text-tertiary"}
+                    className={`w-6 h-6 shrink-0 ${searchQuery && searchQuery.trim() ? "text-brand" : "text-brand-text-tertiary"}`}
                   />
                 </button>
                 
@@ -2659,8 +2659,8 @@ const MapComponent = () => {
 
               {/* Filter + Profile grouped with 4px gap. Default: Profile only. When input focused: Filter only. */}
               <div className="flex items-center gap-1 shrink-0">
-                {/* Filter Button - show on mobile only when search input focused */}
-                <div className={`relative shrink-0 ${!mobileSearchExpanded ? "hidden md:!flex" : ""}`}>
+                {/* Filter Button - show when search focused or filter modal open (so modal stays visible) */}
+                <div className={`relative shrink-0 ${!mobileSearchExpanded && !showFilterDropdown ? "hidden md:!flex" : ""}`}>
                   <button
                     ref={filterButtonRef}
                     type="button"
@@ -2668,7 +2668,7 @@ const MapComponent = () => {
                     className="h-[34px] w-[34px] md:h-auto md:w-auto flex items-center justify-center p-1.5 md:p-2 rounded-lg border-0 bg-transparent md:border md:border-brand-stroke-border md:bg-brand-bg-white hover:bg-brand-bg-fill transition-colors shrink-0"
                     aria-label="Filter"
                   >
-                    <Filter size={24} className="text-brand-stroke-strong" />
+                    <Filter size={24} className="text-brand-stroke-strong w-6 h-6 shrink-0" />
                   </button>
 
                   {/* Desktop: dropdown */}
@@ -2701,15 +2701,15 @@ const MapComponent = () => {
                   </div>
                 </div>
 
-                {/* Profile icon - mobile only; show by default, hide when search input focused */}
-                <div className={`md:hidden shrink-0 ${mobileSearchExpanded ? "hidden" : ""}`}>
+                {/* Profile icon - mobile only; hide when search focused or filter modal open */}
+                <div className={`md:hidden shrink-0 ${mobileSearchExpanded || showFilterDropdown ? "hidden" : ""}`}>
                   <button
                     type="button"
                     onClick={() => router.push("/profile")}
                     className="h-[34px] w-[34px] flex items-center justify-center rounded-lg border-0 bg-transparent hover:bg-brand-bg-fill transition-colors shrink-0"
                     aria-label="Profile"
                   >
-                    <UserAvatar size={24} className="text-brand-stroke-strong" />
+                    <UserAvatar size={24} className="text-brand-stroke-strong w-6 h-6 shrink-0" />
                   </button>
                 </div>
               </div>
@@ -2738,7 +2738,7 @@ const MapComponent = () => {
               <button
                 type="button"
                 onClick={() => setIsCollegeFilterActive(!isCollegeFilterActive)}
-                className={`inline-flex items-center gap-1.5 py-2 px-3 rounded-full text-sm font-medium transition-colors border border-brand-stroke-border bg-brand-bg-white hover:bg-brand-bg-fill text-brand-text-weak ${isCollegeFilterActive ? "bg-brand-bg-fill" : ""}`}
+                className={`inline-flex items-center gap-1.5 py-2 px-3 rounded-full text-sm font-medium transition-colors border border-brand-stroke-border bg-brand-bg-white hover:bg-brand-bg-fill text-brand-text-weak shadow-lg ${isCollegeFilterActive ? "bg-brand-bg-fill" : ""}`}
                 style={{ fontFamily: "Open Sans" }}
               >
                 <span className="text-sm">🏫</span>
@@ -2749,7 +2749,7 @@ const MapComponent = () => {
                 type="button"
                 onClick={handleDistanceToggle}
                 onContextMenu={handleHomeLocationRightClick}
-                className={`inline-flex items-center gap-1.5 py-2 px-3 rounded-full text-sm font-medium transition-colors border border-brand-stroke-border bg-brand-bg-white hover:bg-brand-bg-fill text-brand-text-weak ${isHomeFilterActive ? "bg-brand-bg-fill" : ""}`}
+                className={`inline-flex items-center gap-1.5 py-2 px-3 rounded-full text-sm font-medium transition-colors border border-brand-stroke-border bg-brand-bg-white hover:bg-brand-bg-fill text-brand-text-weak shadow-lg ${isHomeFilterActive ? "bg-brand-bg-fill" : ""}`}
                 style={{ fontFamily: "Open Sans" }}
               >
                 <span className="text-sm">🏠</span>
