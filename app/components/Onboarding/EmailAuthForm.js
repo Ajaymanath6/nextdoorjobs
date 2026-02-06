@@ -42,7 +42,7 @@ export default function EmailAuthForm({ onSubmit, isLoading = false }) {
           <div className="flex items-center justify-center mb-3">
             <Image
               src="/logo.svg"
-              alt="JobsonMap"
+              alt="mapmyGig"
               width={40}
               height={40}
               className="h-10 w-auto"

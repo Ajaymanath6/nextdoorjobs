@@ -150,13 +150,13 @@ export default function Sidebar({ activeItem = "jobs-near-you", onToggle, isOpen
               <div className={sidebar["logo-container"]}>
                 <Image
                   src="/onlylogo.svg"
-                  alt="JobsonMap"
+                  alt="mapmyGig"
                   width={24}
                   height={24}
                   className="w-6 h-6"
                 />
               </div>
-              <h2 className={sidebar["logo-text"]}>JobsonMap</h2>
+              <h2 className={sidebar["logo-text"]}>mapmyGig</h2>
             </div>
           ) : (
             <div
@@ -168,7 +168,7 @@ export default function Sidebar({ activeItem = "jobs-near-you", onToggle, isOpen
               <div className={sidebar["logo-container"]}>
                 <Image
                   src="/onlylogo.svg"
-                  alt="JobsonMap"
+                  alt="mapmyGig"
                   width={24}
                   height={24}
                   className="w-6 h-6"

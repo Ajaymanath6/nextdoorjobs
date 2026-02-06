@@ -86,7 +86,7 @@ export default function OnboardingPage() {
             setChatMessages([
               {
                 type: "ai",
-                text: `Hi ${result.user.name || "there"}! 👋 Welcome to JobsonMap. I'll help you post a job opening. What's your company name?`,
+                text: `Hi ${result.user.name || "there"}! 👋 Welcome to mapmyGig. I'll help you post a job opening. What's your company name?`,
               },
             ]);
           } else {
@@ -106,7 +106,7 @@ export default function OnboardingPage() {
               setChatMessages([
                 {
                   type: "ai",
-                  text: `Hi ${createResult.user.name || "there"}! 👋 Welcome to JobsonMap. I'll help you post a job opening. What's your company name?`,
+                  text: `Hi ${createResult.user.name || "there"}! 👋 Welcome to mapmyGig. I'll help you post a job opening. What's your company name?`,
                 },
               ]);
             }
@@ -142,7 +142,7 @@ export default function OnboardingPage() {
         setChatMessages([
           {
             type: "ai",
-            text: `Hi ${result.user.name || "there"}! 👋 Welcome to JobsonMap. I'll help you post a job opening. What's your company name?`,
+            text: `Hi ${result.user.name || "there"}! 👋 Welcome to mapmyGig. I'll help you post a job opening. What's your company name?`,
           },
         ]);
         setShowAuth(false);
@@ -163,7 +163,7 @@ export default function OnboardingPage() {
       setChatMessages([
         {
           type: "ai",
-          text: `Hi ${userData.name || "there"}! 👋 Welcome to JobsonMap. I'll help you post a job opening. What's your company name?`,
+          text: `Hi ${userData.name || "there"}! 👋 Welcome to mapmyGig. I'll help you post a job opening. What's your company name?`,
         },
       ]);
     } else {

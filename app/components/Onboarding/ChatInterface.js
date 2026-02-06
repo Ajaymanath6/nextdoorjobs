@@ -97,7 +97,7 @@ export default function ChatInterface({ messages = [], onSendMessage, isLoading 
           <div className="h-8 flex items-center justify-center">
             <Image
               src="/logo.svg"
-              alt="JobsonMap"
+              alt="mapmyGig"
               width={0}
               height={32}
               className="h-8 w-auto"

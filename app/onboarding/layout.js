@@ -1,6 +1,6 @@
 export const metadata = {
   title: "onboarding",
-  description: "Onboarding - JobsonMap",
+  description: "Onboarding - mapmyGig",
 };
 
 export default function OnboardingLayout({ children }) {

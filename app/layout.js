@@ -13,7 +13,7 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata = {
-  title: "JobsonMap",
+  title: "mapmyGig",
   description: "Find jobs near you on the map",
 };
 

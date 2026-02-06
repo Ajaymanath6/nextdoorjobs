@@ -62,7 +62,7 @@ const fetchFromIndiaPostAPI = async (pincode) => {
     const url = `https://api.postalpincode.in/pincode/${pincode}`;
     const response = await fetch(url, {
       headers: {
-        'User-Agent': 'JobsonMap/1.0'
+        'User-Agent': 'mapmyGig/1.0'
       }
     });
 
@@ -120,7 +120,7 @@ const fetchFromZippopotam = async (pincode) => {
     const url = `https://api.zippopotam.us/in/${pincode}`;
     const response = await fetch(url, {
       headers: {
-        'User-Agent': 'JobsonMap/1.0'
+        'User-Agent': 'mapmyGig/1.0'
       }
     });
 
@@ -168,7 +168,7 @@ const fetchFromNominatim = async (pincode) => {
     const url = `https://nominatim.openstreetmap.org/search?postalcode=${pincode}&country=India&format=json&limit=1&addressdetails=1`;
     const response = await fetch(url, {
       headers: {
-        'User-Agent': 'JobsonMap/1.0'
+        'User-Agent': 'mapmyGig/1.0'
       }
     });
 
