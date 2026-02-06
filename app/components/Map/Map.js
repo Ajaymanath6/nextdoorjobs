@@ -2400,7 +2400,7 @@ const MapComponent = () => {
           className={`flex flex-col top-3 md:top-4 gap-2 md:gap-6 ${searchBar.container} ${searchBar["container-width"]}`}
         >
           {/* Search Bar Card - reduced padding on mobile */}
-          <div className={`${searchBar.card} px-[2px] pt-0 pb-1 md:px-4 md:py-2`}>
+          <div className={`bg-brand-bg-white rounded-xl border border-brand-stroke-border shadow-lg w-full px-[2px] py-0.5 md:px-4 md:py-2`}>
             <div className={`${searchBar["inner-flex"]} gap-1.5 md:gap-3`}>
               {/* View Selector Button - Hidden for now, will add in later stages */}
               {/* <div className="relative flex-shrink-0">
@@ -2450,14 +2450,14 @@ const MapComponent = () => {
                 )}
               </div> */}
 
-              {/* Toggle: Person (users) / Job (suitcase) - mobile: single dropdown; desktop: two segments */}
-              <div className={`${searchBar["toggle-wrapper"]} overflow-visible md:overflow-hidden`} ref={searchModeDropdownRef}>
+              {/* Toggle: Person (users) / Job (suitcase) - hidden on mobile when search input focused */}
+              <div className={`${searchBar["toggle-wrapper"]} overflow-visible md:overflow-hidden ${mobileSearchExpanded ? "hidden md:!flex" : ""}`} ref={searchModeDropdownRef}>
                 {/* Mobile: single button with chevron, dropdown with other option */}
                 <div className="relative md:hidden shrink-0">
                   <button
                     type="button"
                     onClick={() => setShowSearchModeDropdown(!showSearchModeDropdown)}
-                    className={`flex items-center gap-1 ${searchBar["toggle-segment"]} p-1.5 rounded-md border-0 ${searchMode === "person" ? searchBar["toggle-segment-active"] : ""}`}
+                    className={`h-[34px] w-[34px] flex items-center justify-center gap-1 rounded-lg border border-brand-stroke-border bg-brand-bg-white hover:bg-brand-bg-fill transition-colors shrink-0 ${searchMode === "person" ? "bg-brand-bg-fill" : ""}`}
                     title={searchMode === "person" ? "Search for people" : "Search for jobs"}
                     aria-expanded={showSearchModeDropdown}
                     aria-haspopup="true"
@@ -2495,7 +2495,7 @@ const MapComponent = () => {
                   )}
                 </div>
                 {/* Desktop: two-segment toggle */}
-                <div className="hidden md:flex rounded-md border border-brand-stroke-weak overflow-hidden shrink-0">
+                <div className="hidden md:flex rounded-md border  overflow-hidden shrink-0">
                   <button
                     type="button"
                     onClick={() => setSearchMode("person")}
@@ -2662,7 +2662,7 @@ const MapComponent = () => {
                   ref={filterButtonRef}
                   type="button"
                   onClick={() => setShowFilterDropdown(!showFilterDropdown)}
-                  className="flex items-center justify-center p-1.5 md:p-2 rounded-lg border border-brand-stroke-border bg-brand-bg-white hover:bg-brand-bg-fill transition-colors"
+                  className="h-[34px] w-[34px] md:h-auto md:w-auto flex items-center justify-center p-1.5 md:p-2 rounded-lg border border-brand-stroke-border bg-brand-bg-white hover:bg-brand-bg-fill transition-colors shrink-0"
                   aria-label="Filter"
                 >
                   <Filter size={16} className="text-brand-stroke-strong" />
@@ -2711,7 +2711,7 @@ const MapComponent = () => {
                 <button
                   type="button"
                   onClick={() => router.push("/profile")}
-                  className="flex items-center justify-center p-1.5 rounded-lg border border-brand-stroke-border bg-brand-bg-white hover:bg-brand-bg-fill transition-colors"
+                  className="h-[34px] w-[34px] flex items-center justify-center rounded-lg border border-brand-stroke-border bg-brand-bg-white hover:bg-brand-bg-fill transition-colors shrink-0"
                   aria-label="Profile"
                 >
                   <UserAvatar size={20} className="text-brand-stroke-strong" />
