@@ -13,8 +13,6 @@ import {
   Enterprise,
   Portfolio,
   User,
-  Menu,
-  Close,
 } from "@carbon/icons-react";
 import { RiArrowDownSLine, RiSearchLine } from "@remixicon/react";
 import FilterDropdown from "./FilterDropdown";
@@ -101,7 +99,6 @@ const MapComponent = () => {
   const [lastSearchedDistrict, setLastSearchedDistrict] = useState(null);
   const showThrissurBadges = searchMode === "person" && lastSearchedDistrict === "Thrissur";
   const [badgeContainerPoints, setBadgeContainerPoints] = useState(null);
-  const [mobileSearchModalOpen, setMobileSearchModalOpen] = useState(false);
 
   // Parse response as JSON safely (avoids "Unexpected token '<'" when server returns HTML)
   const parseJsonResponse = async (response) => {
@@ -2368,10 +2365,10 @@ const MapComponent = () => {
         </div>
       )}
 
-      {/* Desktop: Search Bar - hidden on mobile */}
+      {/* Search Bar - visible on all viewports */}
       {isGlobeView && (
         <div
-          className={`hidden md:flex ${searchBar.container} ${searchBar["container-width"]}`}
+          className={`flex ${searchBar.container} ${searchBar["container-width"]}`}
           style={{ gap: "24px" }}
         >
           {/* Search Bar Card */}
@@ -2595,30 +2592,16 @@ const MapComponent = () => {
                 />
               </div>
 
-              {/* Filter Button */}
-              <div className="relative flex-shrink-0">
+              {/* Filter Button - icon-only bordered */}
+              <div className="relative shrink-0">
                 <button
                   ref={filterButtonRef}
-                  className={`${searchBar["filter-button"]} ${searchBar["filter-button-text-default"]} ${searchBar["filter-button-text-hover"]}`}
+                  type="button"
                   onClick={() => setShowFilterDropdown(!showFilterDropdown)}
-                  style={{ border: "none" }}
+                  className="flex items-center justify-center p-2 rounded-lg border border-brand-stroke-border bg-brand-bg-white hover:bg-brand-bg-fill transition-colors"
                   aria-label="Filter"
                 >
-                  <span style={{ fontSize: "16px" }}>🇮🇳</span>
-                  <Filter size={16} style={{ color: "#575757" }} />
-                  <span
-                    style={{
-                      color: "#1A1A1A",
-                      fontFamily: "Open Sans",
-                      fontSize: "12px",
-                    }}
-                  >
-                    {selectedFilterOption
-                      ? selectedFilterOption.state
-                        ? selectedFilterOption.state
-                        : "India"
-                      : "India"}
-                  </span>
+                  <Filter size={16} className="text-brand-stroke-strong" />
                 </button>
 
                 <FilterDropdown
@@ -2765,274 +2748,6 @@ const MapComponent = () => {
           </div>
         </div>
       )}
-
-      {/* Mobile: FAB - hamburger opens search modal */}
-      <button
-        type="button"
-        onClick={() => setMobileSearchModalOpen(true)}
-        className="fixed top-4 left-4 z-[1000] md:hidden flex items-center justify-center w-12 h-12 rounded-xl bg-white border border-brand-stroke-border shadow-lg hover:bg-brand-bg-fill transition-colors"
-        aria-label="Open search"
-      >
-        <Menu size={24} className="text-brand-stroke-strong" />
-      </button>
-
-      {/* Mobile: Search modal - contains search bar */}
-      <div
-        className={`fixed inset-0 z-[1001] md:hidden flex flex-col ${mobileSearchModalOpen ? "flex" : "hidden"}`}
-        aria-hidden={!mobileSearchModalOpen}
-      >
-        <div
-          className="absolute inset-0 bg-black/50"
-          onClick={() => setMobileSearchModalOpen(false)}
-          aria-hidden
-        />
-        <div className="relative flex-1 overflow-auto flex flex-col items-stretch p-4 pt-14 max-h-full">
-          <button
-            type="button"
-            onClick={() => setMobileSearchModalOpen(false)}
-            className="absolute top-4 right-4 z-10 flex items-center justify-center w-10 h-10 rounded-lg bg-white border border-brand-stroke-border shadow hover:bg-brand-bg-fill transition-colors"
-            aria-label="Close"
-          >
-            <Close size={24} className="text-brand-stroke-strong" />
-          </button>
-          {mobileSearchModalOpen && isGlobeView && (
-            <div
-              className={`flex flex-col w-full ${searchBar["container-width"]}`}
-              style={{ gap: "24px" }}
-            >
-              {/* Search Bar Card - same as desktop */}
-              <div className={searchBar.card}>
-                <div className={searchBar["inner-flex"]}>
-                  <div className={searchBar["toggle-wrapper"]}>
-                    <button
-                      type="button"
-                      onClick={() => setSearchMode("person")}
-                      className={`${searchBar["toggle-segment"]} ${searchMode === "person" ? searchBar["toggle-segment-active"] : ""}`}
-                      title="Search for people"
-                    >
-                      <User
-                        size={18}
-                        className={searchMode === "person" ? searchBar["toggle-segment-icon-active"] : searchBar["toggle-segment-icon"]}
-                      />
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => setSearchMode("job")}
-                      className={`${searchBar["toggle-segment"]} ${searchMode === "job" ? searchBar["toggle-segment-active"] : ""}`}
-                      title="Search for jobs"
-                    >
-                      <Portfolio
-                        size={18}
-                        className={searchMode === "job" ? searchBar["toggle-segment-icon-active"] : searchBar["toggle-segment-icon"]}
-                      />
-                    </button>
-                  </div>
-                  <div className="relative flex-1" style={{ minWidth: 0 }}>
-                    <IbmWatsonDiscovery
-                      size={18}
-                      className="absolute left-3 top-1/2 transform -translate-y-1/2 z-10"
-                      style={{ color: "var(--brand-stroke-strong)", pointerEvents: "none" }}
-                    />
-                    <input
-                      ref={searchInputRef}
-                      type="text"
-                      value={searchQuery}
-                      onChange={handleSearchInputChange}
-                      onKeyDown={(e) => {
-                        if (e.key === "ArrowDown" || e.key === "ArrowUp") return;
-                        if (e.key === "Enter" && searchQuery.trim()) {
-                          setShowAutocomplete(false);
-                          setShowJobAutocomplete(false);
-                          setShowCollegeAutocomplete(false);
-                          handleSearch();
-                          setMobileSearchModalOpen(false);
-                        } else if (e.key === "Escape") {
-                          setShowAutocomplete(false);
-                          setShowJobAutocomplete(false);
-                          setShowCollegeAutocomplete(false);
-                        }
-                      }}
-                      onFocus={() => {
-                        if (searchQuery.trim().length >= 2) {
-                          if (isJobSearchQuery(searchQuery)) {
-                            setShowJobAutocomplete(true);
-                            setShowCollegeAutocomplete(false);
-                            setShowAutocomplete(false);
-                          } else if (isCollegeSearchQuery(searchQuery)) {
-                            setShowCollegeAutocomplete(true);
-                            setShowJobAutocomplete(false);
-                            setShowAutocomplete(false);
-                          } else {
-                            setShowAutocomplete(true);
-                            setShowJobAutocomplete(false);
-                            setShowCollegeAutocomplete(false);
-                          }
-                        }
-                      }}
-                      className={`${searchBar["search-input"]} ${searchBar["search-input-hover"]} ${searchBar["search-input-text"]} ${searchBar["search-input-placeholder"]} search-input-focus-active`}
-                      style={{
-                        fontFamily: "Open Sans",
-                        fontSize: "14px",
-                        fontWeight: 600,
-                        boxShadow: "0 1px 6px rgba(32,33,36,0.08)",
-                        width: "100%",
-                        paddingLeft: "44px",
-                        paddingRight: "44px",
-                      }}
-                      placeholder="Search for locality, pincode, job"
-                    />
-                    <button
-                      onClick={() => {
-                        handleSearch();
-                        setMobileSearchModalOpen(false);
-                      }}
-                      disabled={!searchQuery || !searchQuery.trim()}
-                      className={`absolute right-2 top-1/2 transform -translate-y-1/2 flex items-center justify-center p-1.5 rounded transition-colors ${
-                        !searchQuery || !searchQuery.trim()
-                          ? "opacity-50 cursor-not-allowed"
-                          : "hover:bg-brand-stroke-weak cursor-pointer"
-                      }`}
-                      style={{ border: "none", background: "transparent" }}
-                    >
-                      <SendFilled
-                        size={18}
-                        style={{
-                          color: (searchQuery && searchQuery.trim()) ? "#F84416" : "var(--brand-text-tertiary)",
-                        }}
-                      />
-                    </button>
-                    <LocalityAutocomplete
-                      isOpen={showAutocomplete}
-                      onClose={() => setShowAutocomplete(false)}
-                      dropdownRef={autocompleteRef}
-                      position={{ top: "100%", left: "0", right: "auto", marginTop: "8px" }}
-                      width="100%"
-                      localities={localities}
-                      searchQuery={searchQuery}
-                      onSelect={handleLocalitySelect}
-                    />
-                    <JobTitleAutocomplete
-                      isOpen={showJobAutocomplete}
-                      onClose={() => setShowJobAutocomplete(false)}
-                      dropdownRef={jobAutocompleteRef}
-                      position={{ top: "100%", left: "0", right: "auto", marginTop: "8px" }}
-                      width="100%"
-                      jobTitles={jobTitles}
-                      searchQuery={searchQuery}
-                      onSelect={handleJobTitleSelect}
-                    />
-                    <CollegeAutocomplete
-                      isOpen={showCollegeAutocomplete}
-                      onClose={() => setShowCollegeAutocomplete(false)}
-                      dropdownRef={collegeAutocompleteRef}
-                      position={{ top: "100%", left: "0", right: "auto", marginTop: "8px" }}
-                      width="100%"
-                      colleges={colleges}
-                      searchQuery={searchQuery}
-                      onSelect={handleCollegeSelect}
-                    />
-                  </div>
-                  <div className="relative shrink-0">
-                    <button
-                      ref={filterButtonRef}
-                      className={`${searchBar["filter-button"]} ${searchBar["filter-button-text-default"]} ${searchBar["filter-button-text-hover"]}`}
-                      onClick={() => setShowFilterDropdown(!showFilterDropdown)}
-                      style={{ border: "none" }}
-                      aria-label="Filter"
-                    >
-                      <span style={{ fontSize: "16px" }}>🇮🇳</span>
-                      <Filter size={16} style={{ color: "#575757" }} />
-                      <span style={{ color: "#1A1A1A", fontFamily: "Open Sans", fontSize: "12px" }}>
-                        {selectedFilterOption?.state ?? "India"}
-                      </span>
-                    </button>
-                    <FilterDropdown
-                      isOpen={showFilterDropdown}
-                      onClose={() => setShowFilterDropdown(false)}
-                      dropdownRef={filterDropdownRef}
-                      selectedOption={selectedFilterOption}
-                      onSelect={(option) => setSelectedFilterOption(option)}
-                      position={{ top: "100%", bottom: "auto", right: "0", left: "auto", marginTop: "8px" }}
-                      width="300px"
-                    />
-                  </div>
-                </div>
-              </div>
-              <div className="relative">
-                {selectedCollege ? (
-                  <button
-                    className={`${searchBar["distance-button"]} ${searchBar["distance-button-height"]} ${searchBar["distance-button-nowrap"]} ${isCollegeFilterActive ? searchBar["distance-button-active"] : ""}`}
-                    onClick={() => setIsCollegeFilterActive(!isCollegeFilterActive)}
-                    style={{ fontFamily: "Open Sans", fontSize: "14px" }}
-                  >
-                    <span style={{ fontSize: "16px" }}>🏫</span>
-                    <span style={{ fontFamily: "Open Sans", fontSize: "14px" }}>
-                      {isCollegeFilterActive ? "Hide Distance" : "Show Distance"}
-                    </span>
-                  </button>
-                ) : (
-                  <button
-                    className={`${searchBar["distance-button"]} ${searchBar["distance-button-height"]} ${searchBar["distance-button-nowrap"]} ${isHomeFilterActive ? searchBar["distance-button-active"] : ""}`}
-                    onClick={handleDistanceToggle}
-                    onContextMenu={handleHomeLocationRightClick}
-                    style={{ fontFamily: "Open Sans", fontSize: "14px" }}
-                  >
-                    <span style={{ fontSize: "16px" }}>🏠</span>
-                    <span style={{ fontFamily: "Open Sans", fontSize: "14px" }}>
-                      {isHomeFilterActive ? "Hide Distance" : "Show Distance"}
-                    </span>
-                  </button>
-                )}
-                {showHomeLocationDropdown && (
-                  <div className="absolute top-full mt-2 right-0 w-[300px] bg-brand-bg-white border border-brand-stroke-border rounded-lg shadow-lg z-50 p-3 flex flex-col gap-3">
-                    <div style={{ fontFamily: "Open Sans", fontSize: "14px", fontWeight: 600, color: "#1A1A1A" }}>
-                      Home Location
-                    </div>
-                    <div className="relative">
-                      <RiSearchLine
-                        size={18}
-                        style={{ color: "#A5A5A5", position: "absolute", left: "12px", top: "50%", transform: "translateY(-50%)" }}
-                      />
-                      <input
-                        type="text"
-                        value={homeLocation}
-                        onChange={(e) => setHomeLocation(e.target.value)}
-                        className="w-full pl-10 pr-3 py-2 border border-brand-stroke-border rounded-lg focus:outline-none focus:border-brand text-sm"
-                        style={{ fontFamily: "Open Sans", fontSize: "14px", color: "#1A1A1A" }}
-                        placeholder="Enter location"
-                      />
-                    </div>
-                    <div className="flex gap-2">
-                      <button
-                        className="px-4 py-2 bg-brand text-white rounded-lg hover:opacity-90 transition-opacity text-sm"
-                        style={{ fontFamily: "Open Sans" }}
-                        onClick={() => setShowHomeLocationDropdown(false)}
-                      >
-                        Set Location
-                      </button>
-                      <button
-                        className="px-4 py-2 bg-transparent border border-brand-stroke-border text-brand-stroke-strong rounded-lg hover:bg-brand-stroke-weak transition-colors text-sm"
-                        style={{ fontFamily: "Open Sans" }}
-                        onClick={() => {
-                          setHomeLocation("");
-                          setShowHomeLocationDropdown(false);
-                        }}
-                      >
-                        Clear
-                      </button>
-                    </div>
-                    {homeLocation && (
-                      <div style={{ fontFamily: "Open Sans", fontSize: "12px", color: "#575757" }}>
-                        Current: {homeLocation}
-                      </div>
-                    )}
-                  </div>
-                )}
-              </div>
-            </div>
-          )}
-        </div>
-      </div>
 
       {/* Empty State Overlay */}
       <EmptyState
