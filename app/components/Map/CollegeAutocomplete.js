@@ -120,7 +120,7 @@ export default function CollegeAutocomplete({
     onClose();
   };
 
-  if (!isOpen || suggestions.length === 0) return null;
+  if (!isOpen) return null;
 
   return (
     <div
@@ -141,7 +141,7 @@ export default function CollegeAutocomplete({
         padding: "8px 0",
       }}
     >
-      {/* Suggestions List */}
+      {/* Suggestions List or empty state */}
       <div
         ref={suggestionsListRef}
         className="autocomplete-suggestions-list"
@@ -151,7 +151,21 @@ export default function CollegeAutocomplete({
           flexDirection: "column",
         }}
       >
-        {suggestions.map((college, index) => (
+        {suggestions.length === 0 ? (
+          <div
+            style={{
+              padding: "16px",
+              fontSize: "14px",
+              color: "var(--brand-text-weak)",
+              textAlign: "center",
+              fontFamily: "Open Sans",
+            }}
+          >
+            {searchQuery?.trim().length >= 2
+              ? "No colleges found"
+              : "Keep typing to search"}
+          </div>
+        ) : suggestions.map((college, index) => (
           <button
             key={`${college.id}-${index}`}
             ref={(el) => {

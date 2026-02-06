@@ -111,13 +111,6 @@ export default function JobTitleAutocomplete({
     };
   }, [isOpen, suggestions, selectedIndex, onSelect, onClose]);
 
-  const handleSelect = (jobTitle) => {
-    if (onSelect) {
-      onSelect(jobTitle);
-    }
-    onClose();
-  };
-
   // Debug logging
   useEffect(() => {
     if (isOpen) {
@@ -130,7 +123,7 @@ export default function JobTitleAutocomplete({
     }
   }, [isOpen, suggestions.length, jobTitles.length, searchQuery]);
 
-  if (!isOpen || suggestions.length === 0) return null;
+  if (!isOpen) return null;
 
   return (
     <div
@@ -154,7 +147,7 @@ export default function JobTitleAutocomplete({
         backgroundColor: "white",
       }}
     >
-      {/* Suggestions List */}
+      {/* Suggestions List or empty state */}
       <div
         ref={suggestionsListRef}
         className="autocomplete-suggestions-list"
@@ -164,7 +157,21 @@ export default function JobTitleAutocomplete({
           flexDirection: "column",
         }}
       >
-        {suggestions.map((jobTitle, index) => (
+        {suggestions.length === 0 ? (
+          <div
+            style={{
+              padding: "16px",
+              fontSize: "14px",
+              color: "var(--brand-text-weak)",
+              textAlign: "center",
+              fontFamily: "Open Sans",
+            }}
+          >
+            {searchQuery?.trim().length >= 2
+              ? "No roles found"
+              : "Keep typing to search"}
+          </div>
+        ) : suggestions.map((jobTitle, index) => (
           <button
             key={`${jobTitle.id}-${index}`}
             ref={(el) => {

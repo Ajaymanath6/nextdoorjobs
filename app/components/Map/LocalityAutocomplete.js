@@ -58,6 +58,13 @@ export default function LocalityAutocomplete({
     }
   }, [searchQuery]);
 
+  const handleSelect = (locality) => {
+    if (onSelect) {
+      onSelect(locality);
+    }
+    onClose();
+  };
+
   // Handle keyboard navigation
   useEffect(() => {
     if (!isOpen || suggestions.length === 0) {
@@ -118,14 +125,7 @@ export default function LocalityAutocomplete({
     };
   }, [isOpen, suggestions, selectedIndex, onSelect, onClose]);
 
-  const handleSelect = (locality) => {
-    if (onSelect) {
-      onSelect(locality);
-    }
-    onClose();
-  };
-
-  if (!isOpen || suggestions.length === 0) return null;
+  if (!isOpen) return null;
 
   return (
     <div
@@ -146,7 +146,7 @@ export default function LocalityAutocomplete({
         padding: "8px 0",
       }}
     >
-      {/* Suggestions List */}
+      {/* Suggestions List or empty state */}
       <div
         ref={suggestionsListRef}
         className="autocomplete-suggestions-list"
@@ -156,7 +156,21 @@ export default function LocalityAutocomplete({
           flexDirection: "column",
         }}
       >
-        {suggestions.map((locality, index) => (
+        {suggestions.length === 0 ? (
+          <div
+            style={{
+              padding: "16px",
+              fontSize: "14px",
+              color: "var(--brand-text-weak)",
+              textAlign: "center",
+              fontFamily: "Open Sans",
+            }}
+          >
+            {searchQuery?.trim().length >= 2
+              ? "No localities found"
+              : "Keep typing to search"}
+          </div>
+        ) : suggestions.map((locality, index) => (
           <button
             key={`${locality.pincode}-${index}`}
             ref={(el) => {

@@ -26,8 +26,6 @@ import LocalityAutocomplete from "./LocalityAutocomplete";
 import JobTitleAutocomplete from "./JobTitleAutocomplete";
 import CollegeAutocomplete from "./CollegeAutocomplete";
 import EmptyState from "./EmptyState";
-import ThankYouBadge from "./ThankYouBadge";
-
 // 10 Thrissur district coordinates for thank-you badges (from update-pincode-coordinates.js)
 const THRISSUR_BADGE_COORDINATES = [
   { lat: 10.5239, lon: 76.2123 },
@@ -126,7 +124,7 @@ const MapComponent = () => {
   // Last district from locality search; used to show Thrissur badges only in person mode
   const [lastSearchedDistrict, setLastSearchedDistrict] = useState(null);
   const showThrissurBadges = searchMode === "person" && lastSearchedDistrict === "Thrissur";
-  const [badgeContainerPoints, setBadgeContainerPoints] = useState(null);
+  const thrissurBadgeMarkersRef = useRef([]);
   const [mobileSearchExpanded, setMobileSearchExpanded] = useState(false);
   const [showSearchModeDropdown, setShowSearchModeDropdown] = useState(false);
   const searchModeDropdownRef = useRef(null);
@@ -928,29 +926,43 @@ const MapComponent = () => {
     };
   }, [isClient]);
 
-  // Compute badge overlay positions when in person mode and Thrissur; subscribe to map move/zoom
+  // Thrissur thank-you badges as Leaflet markers (no jump on zoom, same as company markers)
+  const THRISSUR_BADGE_LOGO_URL =
+    "https://vucvdpamtrjkzmubwlts.supabase.co/storage/v1/object/public/users/user_2zMtrqo9RMaaIn4f8F2z3oeY497/avatar.png";
   useEffect(() => {
     if (!showThrissurBadges) {
-      setBadgeContainerPoints(null);
+      const map = mapInstanceRef.current;
+      if (map && thrissurBadgeMarkersRef.current.length > 0) {
+        thrissurBadgeMarkersRef.current.forEach((marker) => {
+          map.removeLayer(marker);
+        });
+        thrissurBadgeMarkersRef.current = [];
+      }
       return;
     }
     const map = mapInstanceRef.current;
-    if (!map) return;
-    const updatePoints = () => {
-      const m = mapInstanceRef.current;
-      if (!m) return;
-      const points = THRISSUR_BADGE_COORDINATES.map(({ lat, lon }) =>
-        m.latLngToContainerPoint([lat, lon])
-      );
-      setBadgeContainerPoints(points.map((p) => ({ x: p.x, y: p.y })));
-    };
-    updatePoints();
-    map.on("moveend", updatePoints);
-    map.on("zoomend", updatePoints);
+    if (!map || typeof window === "undefined" || !window.L) return;
+    const L = window.L;
+    const size = 90;
+    const logoSize = 36;
+    const html = `<div style="width:${size}px;height:${size}px;border-radius:50%;display:flex;align-items:center;justify-content:center;background:transparent;pointer-events:none;"><img src="${THRISSUR_BADGE_LOGO_URL}" alt="" style="width:${logoSize}px;height:${logoSize}px;border-radius:50%;object-fit:cover;box-shadow:0 2px 8px rgba(0,0,0,0.15);" onerror="this.src='https://placehold.co/96x96/27272a/ffffff?text=Logo'" /></div>`;
+    const icon = L.divIcon({
+      html,
+      className: "thrissur-thankyou-badge",
+      iconSize: [size, size],
+      iconAnchor: [size / 2, size / 2],
+    });
+    const markers = THRISSUR_BADGE_COORDINATES.map(({ lat, lon }) => {
+      const marker = L.marker([lat, lon], { icon });
+      marker.addTo(map);
+      return marker;
+    });
+    thrissurBadgeMarkersRef.current = markers;
     return () => {
-      map.off("moveend", updatePoints);
-      map.off("zoomend", updatePoints);
-      setBadgeContainerPoints(null);
+      markers.forEach((marker) => {
+        if (map.hasLayer(marker)) map.removeLayer(marker);
+      });
+      thrissurBadgeMarkersRef.current = [];
     };
   }, [showThrissurBadges]);
 
@@ -2395,28 +2407,6 @@ const MapComponent = () => {
       {/* Map Container */}
       <div ref={mapRef} className="w-full h-full absolute inset-0" />
 
-      {/* Thank-you badges at Thrissur coordinates (person mode only) */}
-      {showThrissurBadges && badgeContainerPoints && badgeContainerPoints.length === 10 && (
-        <div
-          className="absolute inset-0 pointer-events-none z-500"
-          aria-hidden
-        >
-          {badgeContainerPoints.map((point, index) => (
-            <div
-              key={index}
-              className="absolute"
-              style={{
-                left: point.x,
-                top: point.y,
-                transform: "translate(-50%, -50%)",
-              }}
-            >
-              <ThankYouBadge diameter={90} />
-            </div>
-          ))}
-        </div>
-      )}
-
       {/* Search Bar - visible on all viewports */}
       {isGlobeView && (
         <div
@@ -2425,7 +2415,7 @@ const MapComponent = () => {
           {/* Search Bar Card - same corner radius as show distance button (rounded-full) */}
           <div className={`bg-brand-bg-white rounded-full border border-brand-stroke-border shadow-lg w-full px-1.5 py-1.5 md:px-4 md:py-2`}>
             {/* Mobile: single bar (Person/Job + input + Filter + Profile). Desktop: no bar, separate bordered controls. */}
-            <div className={`flex items-center gap-2 md:gap-3 w-full rounded-full border border-brand-stroke-border bg-brand-bg-white min-h-[34px] overflow-visible md:overflow-hidden md:border-0 md:bg-transparent md:rounded-none md:min-h-0 ${searchBar["search-input-hover"]}`}>
+            <div className={`flex items-center gap-0 md:gap-3 w-full rounded-full border border-brand-stroke-border bg-brand-bg-white min-h-[34px] overflow-visible md:overflow-hidden md:border-0 md:bg-transparent md:rounded-none md:min-h-0 ${searchBar["search-input-hover"]}`}>
               {/* View Selector Button - Hidden for now, will add in later stages */}
               {/* <div className="relative flex-shrink-0">
                 <button
@@ -2481,7 +2471,7 @@ const MapComponent = () => {
                   <button
                     type="button"
                     onClick={() => setShowSearchModeDropdown(!showSearchModeDropdown)}
-                    className={`h-[34px] w-[46px] flex items-center justify-center gap-0.5 p-1 rounded-lg border border-brand-stroke-border bg-brand-bg-white hover:bg-brand-bg-fill transition-colors shrink-0 ${searchMode ? "bg-brand-bg-fill border-0" : ""}`}
+                    className={`h-[34px] w-[46px] flex items-center justify-center gap-0.5 p-1 rounded-lg border border-brand-stroke-border bg-transparent hover:bg-brand-bg-fill transition-colors shrink-0 ${searchMode ? "hover:bg-brand-bg-fill" : ""}`}
                     title={searchMode === "person" ? "Search for people" : "Search for jobs"}
                     aria-expanded={showSearchModeDropdown}
                     aria-haspopup="true"
@@ -2545,8 +2535,8 @@ const MapComponent = () => {
                 </div>
               </div>
 
-              {/* Search Input with Autocomplete - Expanded width */}
-              <div className="relative flex-1 min-w-0">
+              {/* Search Input with Autocomplete - Expanded width (overflow-visible so dropdown is not clipped) */}
+              <div className="relative flex-1 min-w-0 overflow-visible">
                 {/* Back arrow - mobile only when search expanded */}
                 <button
                   type="button"

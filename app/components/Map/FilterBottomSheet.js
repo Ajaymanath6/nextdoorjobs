@@ -28,18 +28,24 @@ const DEFAULT_SKILLS_LIST = [
   "Leadership",
 ];
 
-const SKILL_ICONS = {
-  JavaScript: "JS",
-  React: "⚛",
-  "Node.js": "Node",
-  Python: "Py",
-  TypeScript: "TS",
-  SQL: "SQL",
-  Communication: "💬",
-  Leadership: "👤",
+// Simple Icons CDN slugs (https://cdn.simpleicons.org/<slug>)
+const SKILL_ICON_SLUGS = {
+  JavaScript: "javascript",
+  React: "react",
+  "Node.js": "nodedotjs",
+  Python: "python",
+  TypeScript: "typescript",
+  SQL: "postgresql",
+  Communication: "messenger",
+  Leadership: "linkedin",
 };
-function getSkillIcon(skill) {
-  return SKILL_ICONS[skill] || skill.slice(0, 2);
+const SIMPLE_ICONS_CDN = "https://cdn.simpleicons.org";
+function getSkillIconUrl(skill) {
+  const slug = SKILL_ICON_SLUGS[skill];
+  return slug ? `${SIMPLE_ICONS_CDN}/${slug}` : null;
+}
+function getSkillIconFallback(skill) {
+  return skill.slice(0, 2);
 }
 
 export default function FilterBottomSheet({
@@ -239,8 +245,12 @@ export default function FilterBottomSheet({
                         onClick={() => addSkill(skill)}
                         className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full border border-brand-stroke-border bg-brand-bg-white text-brand-text-strong text-sm font-medium hover:bg-brand-bg-fill transition-colors disabled:opacity-50"
                       >
-                        <span className="flex items-center justify-center w-5 h-5 rounded-full bg-brand-stroke-weak text-xs">
-                          {getSkillIcon(skill)}
+                        <span className="flex items-center justify-center w-5 h-5 rounded-full bg-brand-stroke-weak text-xs overflow-hidden">
+                          {getSkillIconUrl(skill) ? (
+                            <img src={getSkillIconUrl(skill)} alt={skill} className="w-5 h-5 object-contain" />
+                          ) : (
+                            getSkillIconFallback(skill)
+                          )}
                         </span>
                         {skill}
                       </button>
@@ -253,7 +263,13 @@ export default function FilterBottomSheet({
                       key={skill}
                       className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-brand-bg-fill text-brand-text-strong text-sm font-medium"
                     >
-                      <span className="opacity-80">{getSkillIcon(skill)}</span>
+                      <span className="opacity-80 flex items-center">
+                        {getSkillIconUrl(skill) ? (
+                          <img src={getSkillIconUrl(skill)} alt={skill} className="w-4 h-4 object-contain" />
+                        ) : (
+                          getSkillIconFallback(skill)
+                        )}
+                      </span>
                       {skill}
                       <button
                         type="button"
@@ -511,7 +527,13 @@ export default function FilterBottomSheet({
                       key={skill}
                       className="inline-flex items-center gap-1 px-2 py-1 rounded-full bg-brand-bg-fill text-brand-text-strong text-xs font-medium"
                     >
-                      <span className="opacity-80">{getSkillIcon(skill)}</span>
+                      <span className="opacity-80 flex items-center">
+                        {getSkillIconUrl(skill) ? (
+                          <img src={getSkillIconUrl(skill)} alt={skill} className="w-4 h-4 object-contain" />
+                        ) : (
+                          getSkillIconFallback(skill)
+                        )}
+                      </span>
                       {skill}
                       <button
                         type="button"
@@ -533,8 +555,12 @@ export default function FilterBottomSheet({
                       onClick={() => addSkill(skill)}
                       className="w-full text-left px-3 py-2 text-sm transition-colors flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed hover:bg-brand-bg-fill text-brand-text-weak"
                     >
-                      <span className="flex items-center justify-center w-6 h-6 rounded-full bg-brand-stroke-weak text-xs font-semibold text-brand-text-strong">
-                        {getSkillIcon(skill)}
+                      <span className="flex items-center justify-center w-6 h-6 rounded-full bg-brand-stroke-weak text-xs font-semibold text-brand-text-strong overflow-hidden">
+                        {getSkillIconUrl(skill) ? (
+                          <img src={getSkillIconUrl(skill)} alt={skill} className="w-5 h-5 object-contain" />
+                        ) : (
+                          getSkillIconFallback(skill)
+                        )}
                       </span>
                       {skill}
                     </button>
