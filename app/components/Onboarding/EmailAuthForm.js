@@ -51,9 +51,7 @@ export default function EmailAuthForm({ onSubmit, isLoading = false }) {
               priority
             />
           </div>
-          <h1 className="text-xl font-semibold text-gray-900" style={{ fontFamily: "Open Sans, sans-serif" }}>
-            Sign in to JobsonMap
-          </h1>
+         
           <p className="text-sm text-gray-600 mt-2" style={{ fontFamily: "Open Sans, sans-serif" }}>
             Sign in with Google to continue
           </p>
