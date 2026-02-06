@@ -28,48 +28,11 @@ function CentralLogo({ logoUrl, size = 10 }) {
 }
 
 /**
- * Text arranged in a circular arc. Each character is rotated around the circle.
- * Uses theme text and font; rotation via CSS animation in parent.
- */
-function TextArc({ text, diameter = 90 }) {
-  const characters = text.split("");
-  const radius = diameter / 2;
-  const angleStep = 360 / characters.length;
-
-  return (
-    <div className="relative" style={{ width: diameter, height: diameter }}>
-      {characters.map((char, index) => {
-        const angle = angleStep * index;
-        return (
-          <div
-            key={index}
-            className="absolute text-brand-text-strong font-bold text-xs md:text-sm"
-            style={{
-              height: `${radius}px`,
-              transform: `rotate(${angle}deg)`,
-              transformOrigin: "bottom center",
-              top: 0,
-              left: "50%",
-              marginLeft: "-0.5em",
-              fontFamily: "Open Sans, sans-serif",
-            }}
-          >
-            {char}
-          </div>
-        );
-      })}
-    </div>
-  );
-}
-
-/**
- * Thank-you badge: rotating arc text with central logo.
- * Theme-only (Tailwind + theme-guide); no framer-motion; CSS rotation.
+ * Thank-you badge: central logo only (no arc text).
  * Optional diameter and logoUrl for map overlay use.
  */
 export default function ThankYouBadge({
   diameter = 90,
-  text = " THANK YOU • FOR VISITING •",
   logoUrl,
 }) {
   const logoSize = Math.max(28, Math.min(40, Math.round(diameter * 0.4)));
@@ -79,15 +42,6 @@ export default function ThankYouBadge({
       className="relative flex items-center justify-center shrink-0"
       style={{ width: diameter, height: diameter }}
     >
-      {/* Rotating arc text - CSS animation instead of framer-motion */}
-      <div
-        className="absolute pointer-events-none animate-[spin_20s_linear_infinite]"
-        style={{ width: diameter, height: diameter }}
-      >
-        <TextArc text={text} diameter={diameter} />
-      </div>
-
-      {/* Central logo */}
       <div className="relative z-10">
         <CentralLogo logoUrl={logoUrl} size={logoSize} />
       </div>

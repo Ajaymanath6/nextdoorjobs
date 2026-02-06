@@ -2397,7 +2397,7 @@ const MapComponent = () => {
       {/* Search Bar - visible on all viewports */}
       {isGlobeView && (
         <div
-          className={`flex flex-col top-3 md:top-4 gap-2 md:gap-6 ${searchBar.container} ${searchBar["container-width"]}`}
+          className={`flex flex-col top-3 md:top-4 gap-2 md:gap-6 ${searchBar.container} w-[calc(100vw-16px)] max-w-[800px]`}
         >
           {/* Search Bar Card - same corner radius as show distance button (rounded-full) */}
           <div className={`bg-brand-bg-white rounded-full border border-brand-stroke-border shadow-lg w-full px-2 py-1.5 md:px-4 md:py-2`}>
@@ -2468,27 +2468,27 @@ const MapComponent = () => {
                     ) : (
                       <Portfolio size={24} className={`w-6 h-6 shrink-0 ${searchBar["toggle-segment-icon-active"]}`} />
                     )}
-                    <ChevronDown size={24} className={`w-6 h-6 shrink-0 text-brand-stroke-strong`} />
+                    <ChevronDown size={16} className="w-4 h-4 shrink-0 text-brand-stroke-strong" />
                   </button>
                   {showSearchModeDropdown && (
-                    <div className="absolute top-full left-0 mt-1 min-w-[120px] rounded-lg border border-brand-stroke-border bg-brand-bg-white shadow-lg z-[1001] py-1">
+                    <div className="absolute top-full left-0 mt-1 min-w-[120px] rounded-lg border border-brand-stroke-border bg-brand-bg-white shadow-lg z-[1001] py-1 overflow-hidden">
                       <button
                         type="button"
                         onClick={() => {
                           setSearchMode(searchMode === "person" ? "job" : "person");
                           setShowSearchModeDropdown(false);
                         }}
-                        className="w-full flex items-center gap-2 px-3 py-2 text-left text-sm font-medium text-brand-text-strong hover:bg-brand-bg-fill transition-colors"
+                        className="w-full flex items-center gap-2 px-3 py-2 text-left text-sm font-medium text-brand-text-strong hover:bg-brand-bg-fill transition-colors min-w-0"
                       >
                         {searchMode === "person" ? (
                           <>
                             <Portfolio size={24} className={`w-6 h-6 shrink-0 ${searchBar["toggle-segment-icon"]}`} />
-                            Job
+                            <span className="truncate">Job</span>
                           </>
                         ) : (
                           <>
                             <User size={24} className={`w-6 h-6 shrink-0 ${searchBar["toggle-segment-icon"]}`} />
-                            Person
+                            <span className="truncate">Person</span>
                           </>
                         )}
                       </button>
@@ -2664,6 +2664,7 @@ const MapComponent = () => {
                   <button
                     ref={filterButtonRef}
                     type="button"
+                    onMouseDown={(e) => e.preventDefault()}
                     onClick={() => setShowFilterDropdown(!showFilterDropdown)}
                     className="h-[34px] w-[34px] md:h-auto md:w-auto flex items-center justify-center p-1.5 md:p-2 rounded-lg border-0 bg-transparent md:border md:border-brand-stroke-border md:bg-brand-bg-white hover:bg-brand-bg-fill transition-colors shrink-0"
                     aria-label="Filter"
