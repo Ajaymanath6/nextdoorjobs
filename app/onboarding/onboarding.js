@@ -865,7 +865,7 @@ export default function OnboardingPage() {
         left: 0,
         right: 0,
         bottom: 0,
-        height: '100vh',
+        height: '100dvh',
         width: '100vw',
         margin: 0,
         padding: 0,
@@ -909,8 +909,8 @@ export default function OnboardingPage() {
         }}
       ></div>
       
-      <div className="relative z-10 flex justify-center px-4" style={{ height: '100vh', width: '100vw', margin: 0, padding: 0 }}>
-        <div className="bg-white/95 backdrop-blur-sm rounded-lg overflow-hidden border border-[#E5E5E5] shadow-lg relative w-full max-w-4xl flex flex-col" style={{ height: '100%', margin: 0, padding: 0 }}>
+      <div className="relative z-10 flex justify-center px-4" style={{ height: '100dvh', width: '100vw', margin: 0, padding: 0, paddingBottom: 'env(safe-area-inset-bottom, 0)' }}>
+        <div className="bg-white/95 backdrop-blur-sm rounded-lg overflow-hidden border border-[#E5E5E5] shadow-lg relative w-full max-w-4xl flex flex-col" style={{ height: '100%', margin: 0, padding: 0, minHeight: 0 }}>
           {/* Header */}
           <div className="bg-white/95 backdrop-blur-sm px-6 py-4 flex items-center justify-between border-b border-[#E5E5E5] relative z-10 flex-shrink-0">
             <div className="flex items-center gap-3">
