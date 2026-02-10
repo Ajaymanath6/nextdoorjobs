@@ -67,7 +67,36 @@ export default function OnboardingPage() {
   const [typingText, setTypingText] = useState("");
   const [isTyping, setIsTyping] = useState(false);
   const [hasChosenPostGig, setHasChosenPostGig] = useState(false);
+  const [onboardingSessionId, setOnboardingSessionId] = useState(null);
+  const onboardingSessionIdRef = useRef(null);
+  const conversationOrderRef = useRef(0);
+  const lastAIMessageTextRef = useRef("");
   const scrollToInlineRef = useRef(null);
+
+  useEffect(() => {
+    onboardingSessionIdRef.current = onboardingSessionId;
+  }, [onboardingSessionId]);
+
+  const saveConversation = async (stepKey, questionText, answerText) => {
+    const sessionId = onboardingSessionIdRef.current;
+    if (!sessionId || !questionText) return;
+    try {
+      await fetch("/api/onboarding/conversation", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          sessionId,
+          stepKey,
+          questionText,
+          answerText: String(answerText),
+          orderIndex: conversationOrderRef.current,
+        }),
+      });
+      conversationOrderRef.current += 1;
+    } catch (err) {
+      console.error("Error saving conversation:", err);
+    }
+  };
 
   // Check if user is authenticated via Clerk on mount (and after OAuth redirect)
   useEffect(() => {
@@ -80,7 +109,10 @@ export default function OnboardingPage() {
       if (!email) return;
       (async () => {
         try {
-          const response = await fetch(`/api/onboarding/user?email=${encodeURIComponent(email)}`);
+          const params = new URLSearchParams({ email });
+          if (clerkUser.id) params.set("clerkId", clerkUser.id);
+          if (clerkUser.imageUrl) params.set("avatarUrl", clerkUser.imageUrl);
+          const response = await fetch(`/api/onboarding/user?${params.toString()}`);
           const result = await response.json();
           if (result.success && result.user) {
             setUserData(result.user);
@@ -99,6 +131,8 @@ export default function OnboardingPage() {
                 name: clerkUser.firstName && clerkUser.lastName
                   ? `${clerkUser.firstName} ${clerkUser.lastName}`
                   : clerkUser.firstName || clerkUser.username || "User",
+                clerkId: clerkUser.id,
+                avatarUrl: clerkUser.imageUrl || undefined,
               }),
             });
             const createResult = await createResponse.json();
@@ -161,6 +195,8 @@ export default function OnboardingPage() {
   // Reset chat function
   const handleResetChat = () => {
     setHasChosenPostGig(false);
+    setOnboardingSessionId(null);
+    conversationOrderRef.current = 0;
     if (userData) {
       setChatMessages([
         {
@@ -182,9 +218,40 @@ export default function OnboardingPage() {
     router.push("/");
   };
 
-  // User chose "Post a gig" → continue onboarding chat
+  // User chose "Post a gig" → ensure user profile (Clerk linkage), create session, then continue chat
   const handlePostGig = async () => {
+    if (!userData) return;
     setHasChosenPostGig(true);
+
+    try {
+      if (clerkUser) {
+        const email = clerkUser.emailAddresses[0]?.emailAddress;
+        if (email) {
+          await fetch("/api/onboarding/user", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              email,
+              name: clerkUser.firstName && clerkUser.lastName
+                ? `${clerkUser.firstName} ${clerkUser.lastName}`
+                : clerkUser.firstName || clerkUser.username || "User",
+              clerkId: clerkUser.id,
+              avatarUrl: clerkUser.imageUrl || undefined,
+            }),
+          });
+        }
+      }
+      const sessionRes = await fetch("/api/onboarding/session", { method: "POST" });
+      const sessionData = await sessionRes.json();
+      if (sessionData.success && sessionData.sessionId) {
+        setOnboardingSessionId(sessionData.sessionId);
+        onboardingSessionIdRef.current = sessionData.sessionId;
+        conversationOrderRef.current = 0;
+      }
+    } catch (err) {
+      console.error("Error starting onboarding session:", err);
+    }
+
     await addAIMessage("I'll help you post a job opening. What's your company name?");
   };
 
@@ -204,6 +271,7 @@ export default function OnboardingPage() {
       await new Promise(resolve => setTimeout(resolve, 20)); // 20ms per character
     }
     setIsTyping(false);
+    lastAIMessageTextRef.current = text;
     setChatMessages((prev) => [
       ...prev,
       { type: "ai", text },
@@ -213,6 +281,11 @@ export default function OnboardingPage() {
 
   // Handle chat messages - conversational form collection
   const handleChatMessage = async (message) => {
+    const lastAIText = [...chatMessages].reverse().find((m) => m.type === "ai")?.text ?? "";
+    const sessionId = onboardingSessionIdRef.current;
+    const stepKey = currentField;
+    const orderIndex = conversationOrderRef.current;
+
     const userMessage = { type: "user", text: message };
     setChatMessages((prev) => [...prev, userMessage]);
     setIsLoading(true);
@@ -223,6 +296,11 @@ export default function OnboardingPage() {
         setIsLoading(false);
         return;
       }
+
+      if (sessionId && lastAIText) {
+        await saveConversation(stepKey, lastAIText, message);
+      }
+
       if (collectingCompany) {
         // Collecting company information
         const value = extractValue(message);
@@ -367,6 +445,7 @@ export default function OnboardingPage() {
 
   // Handle state selection
   const handleStateSelected = async (state) => {
+    await saveConversation(COMPANY_FIELDS.STATE, lastAIMessageTextRef.current, state);
     setIsLoading(true);
     await addAIMessage(`Perfect! State: ${state}. Which district?`);
     setCurrentField(COMPANY_FIELDS.DISTRICT);
@@ -386,6 +465,7 @@ export default function OnboardingPage() {
 
   // Handle district selection
   const handleDistrictSelected = async (district) => {
+    await saveConversation(COMPANY_FIELDS.DISTRICT, lastAIMessageTextRef.current, district);
     setIsLoading(true);
     await addAIMessage(`Great! District: ${district}. Do you have a company website URL?`);
     setCurrentField(COMPANY_FIELDS.WEBSITE);
@@ -410,6 +490,7 @@ export default function OnboardingPage() {
 
   // Handle website submission
   const handleWebsiteSubmitted = async (url) => {
+    await saveConversation(COMPANY_FIELDS.WEBSITE, lastAIMessageTextRef.current, url);
     setIsLoading(true);
     if (url.toLowerCase() !== "skip") {
       await addAIMessage(`Website noted: ${url}. What's your funding series?`);
@@ -436,6 +517,7 @@ export default function OnboardingPage() {
 
   // Handle funding selection
   const handleFundingSelected = async (series) => {
+    await saveConversation(COMPANY_FIELDS.FUNDING, lastAIMessageTextRef.current, series);
     setIsLoading(true);
     if (series.toLowerCase() !== "skip") {
       await addAIMessage(`Funding series: ${series}. Do you have latitude and longitude coordinates?`);
@@ -465,6 +547,8 @@ export default function OnboardingPage() {
 
   // Handle coordinates received
   const handleCoordinatesReceived = async (lat, lon) => {
+    const answerText = lat && lon ? `${lat}, ${lon}` : "skip";
+    await saveConversation(COMPANY_FIELDS.LOCATION, lastAIMessageTextRef.current, answerText);
     setIsLoading(true);
     if (lat && lon) {
       await addAIMessage(`Coordinates saved! What's the pincode? (Type "skip" if not available)`);
@@ -477,6 +561,8 @@ export default function OnboardingPage() {
 
   // Handle salary selection
   const handleSalarySelected = async (min, max) => {
+    const answerText = min != null && max != null ? `${min}-${max}` : "skip";
+    await saveConversation(JOB_FIELDS.SALARY, lastAIMessageTextRef.current, answerText);
     setIsLoading(true);
     if (min && max) {
       setJobData((prev) => ({
@@ -663,6 +749,23 @@ export default function OnboardingPage() {
       const jobResult = await jobResponse.json();
       if (!jobResult.success) {
         throw new Error(jobResult.error || "Failed to create job position");
+      }
+
+      const sid = onboardingSessionIdRef.current ?? onboardingSessionId;
+      if (sid) {
+        try {
+          await fetch("/api/onboarding/session", {
+            method: "PATCH",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              sessionId: sid,
+              companyId: companyResult.company.id,
+              jobPositionId: jobResult.jobPosition.id,
+            }),
+          });
+        } catch (e) {
+          console.error("Error updating session:", e);
+        }
       }
 
       // Success!

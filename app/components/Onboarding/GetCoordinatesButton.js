@@ -22,21 +22,21 @@ export default function GetCoordinatesButton({ onCoordinatesReceived, onSkip }) 
         setIsGettingLocation(false);
         onCoordinatesReceived(latitude.toString(), longitude.toString());
       },
-      (error) => {
+      (err) => {
         setIsGettingLocation(false);
-        let errorMessage = "Failed to get your location. ";
-        switch (error.code) {
-          case error.PERMISSION_DENIED:
-            errorMessage += "Please allow location access in your browser settings.";
+        let errorMessage;
+        switch (err.code) {
+          case err.PERMISSION_DENIED:
+            errorMessage = "Location access was denied. Please allow location in your browser settings, or skip and enter coordinates manually.";
             break;
-          case error.POSITION_UNAVAILABLE:
-            errorMessage += "Location information is unavailable.";
+          case err.POSITION_UNAVAILABLE:
+            errorMessage = "Location unavailable (e.g. no GPS or network location). You can skip or type coordinates manually (e.g. 10.5276, 76.2144).";
             break;
-          case error.TIMEOUT:
-            errorMessage += "Location request timed out.";
+          case err.TIMEOUT:
+            errorMessage = "Location request timed out. You can skip or enter coordinates manually.";
             break;
           default:
-            errorMessage += "An unknown error occurred.";
+            errorMessage = "Could not get your location. You can skip or enter coordinates manually.";
             break;
         }
         setError(errorMessage);

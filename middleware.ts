@@ -10,6 +10,8 @@ const isPublicRoute = createRouteMatcher([
   '/api/auth/logout',
   '/api/auth/callback(.*)',
   '/api/auth/callback/clerk(.*)',
+  // Onboarding: auth enforced inside routes (Clerk or cookie via getCurrentUser)
+  '/api/onboarding(.*)',
   // Map search and autocomplete (used before login)
   '/api/search-locality',
   '/api/localities',

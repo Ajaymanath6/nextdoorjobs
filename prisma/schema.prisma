@@ -92,16 +92,17 @@ enum JobCategory {
 }
 
 model User {
-  id           Int       @id @default(autoincrement())
-  email        String    @unique @db.VarChar(255)
-  name         String    @db.VarChar(255)
-  phone        String?   @db.VarChar(20)
-  passwordHash String?   @map("password_hash") @db.VarChar(255)
-  clerkId      String?   @unique @map("clerk_id") @db.VarChar(255)
-  avatarUrl    String?   @map("avatar_url") @db.VarChar(500)
-  createdAt    DateTime  @default(now()) @map("created_at")
-  updatedAt    DateTime  @updatedAt @map("updated_at")
-  companies    Company[]
+  id                  Int                   @id @default(autoincrement())
+  email               String                @unique @db.VarChar(255)
+  name                String                @db.VarChar(255)
+  phone               String?               @db.VarChar(20)
+  passwordHash        String?               @map("password_hash") @db.VarChar(255)
+  clerkId             String?               @unique @map("clerk_id") @db.VarChar(255)
+  avatarUrl           String?               @map("avatar_url") @db.VarChar(500)
+  createdAt           DateTime              @default(now()) @map("created_at")
+  updatedAt           DateTime              @updatedAt @map("updated_at")
+  companies           Company[]
+  onboardingSessions  OnboardingSession[]
 
   @@index([email])
   @@index([clerkId])
@@ -109,21 +110,22 @@ model User {
 }
 
 model Company {
-  id           Int            @id @default(autoincrement())
-  name         String         @db.VarChar(255)
-  logoPath     String?        @db.VarChar(500)
-  websiteUrl   String?        @map("website_url") @db.VarChar(500)
-  fundingSeries FundingSeries?
-  latitude     Float?
-  longitude    Float?
-  state        String         @db.VarChar(100)
-  district     String         @db.VarChar(100)
-  pincode      String?        @db.VarChar(10)
-  userId       Int
-  createdAt    DateTime       @default(now()) @map("created_at")
-  updatedAt    DateTime       @updatedAt @map("updated_at")
-  user         User           @relation(fields: [userId], references: [id], onDelete: Cascade)
-  jobPositions JobPosition[]
+  id                  Int                  @id @default(autoincrement())
+  name                String               @db.VarChar(255)
+  logoPath            String?              @db.VarChar(500)
+  websiteUrl          String?              @map("website_url") @db.VarChar(500)
+  fundingSeries       FundingSeries?
+  latitude            Float?
+  longitude           Float?
+  state               String               @db.VarChar(100)
+  district            String               @db.VarChar(100)
+  pincode             String?              @db.VarChar(10)
+  userId              Int
+  createdAt           DateTime             @default(now()) @map("created_at")
+  updatedAt           DateTime             @updatedAt @map("updated_at")
+  user                User                 @relation(fields: [userId], references: [id], onDelete: Cascade)
+  jobPositions        JobPosition[]
+  onboardingSessions  OnboardingSession[]
 
   @@index([name])
   @@index([state])
@@ -133,21 +135,54 @@ model Company {
 }
 
 model JobPosition {
-  id             Int         @id @default(autoincrement())
-  title          String      @db.VarChar(255)
-  category       JobCategory
-  yearsRequired  Float       @default(0)
-  salaryMin      Int?        @map("salary_min")
-  salaryMax      Int?        @map("salary_max")
-  jobDescription String      @db.Text
-  companyId      Int
-  isActive       Boolean     @default(true) @map("is_active")
-  createdAt      DateTime    @default(now()) @map("created_at")
-  updatedAt      DateTime    @updatedAt @map("updated_at")
-  company        Company     @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  id                  Int                  @id @default(autoincrement())
+  title               String               @db.VarChar(255)
+  category            JobCategory
+  yearsRequired       Float                @default(0)
+  salaryMin           Int?                 @map("salary_min")
+  salaryMax           Int?                 @map("salary_max")
+  jobDescription      String               @db.Text
+  companyId           Int
+  isActive            Boolean              @default(true) @map("is_active")
+  createdAt           DateTime             @default(now()) @map("created_at")
+  updatedAt          DateTime             @updatedAt @map("updated_at")
+  company             Company              @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  onboardingSessions  OnboardingSession[]
 
   @@index([category])
   @@index([companyId])
   @@index([isActive])
   @@map("job_positions")
+}
+
+model OnboardingSession {
+  id             Int          @id @default(autoincrement())
+  userId         Int
+  createdAt      DateTime     @default(now()) @map("created_at")
+  completedAt    DateTime?    @map("completed_at")
+  companyId     Int?         @map("company_id")
+  jobPositionId  Int?         @map("job_position_id")
+  user           User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+  company        Company?     @relation(fields: [companyId], references: [id], onDelete: SetNull)
+  jobPosition    JobPosition? @relation(fields: [jobPositionId], references: [id], onDelete: SetNull)
+  conversations  OnboardingConversation[]
+
+  @@index([userId])
+  @@index([createdAt])
+  @@map("onboarding_sessions")
+}
+
+model OnboardingConversation {
+  id                    Int                @id @default(autoincrement())
+  onboardingSessionId    Int                @map("onboarding_session_id")
+  stepKey               String             @map("step_key") @db.VarChar(100)
+  questionText          String             @map("question_text") @db.Text
+  answerText            String             @map("answer_text") @db.Text
+  orderIndex            Int                @map("order_index")
+  createdAt             DateTime           @default(now()) @map("created_at")
+  session               OnboardingSession   @relation(fields: [onboardingSessionId], references: [id], onDelete: Cascade)
+
+  @@index([onboardingSessionId])
+  @@index([onboardingSessionId, orderIndex])
+  @@map("onboarding_conversations")
 }

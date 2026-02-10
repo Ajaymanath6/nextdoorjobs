@@ -1,16 +1,17 @@
 import { NextResponse } from "next/server";
+import { cookies } from "next/headers";
 import { prisma } from "../../../../lib/prisma";
 import bcrypt from "bcryptjs";
 
 /**
  * POST /api/onboarding/user
  * Create or retrieve a user by email
- * Body: { email: string, name: string, password: string, phone?: string }
+ * Body: { email: string, name: string, password?: string, phone?: string, clerkId?: string, avatarUrl?: string }
  */
 export async function POST(request) {
   try {
     const body = await request.json();
-    const { email, name, password, phone } = body;
+    const { email, name, password, phone, clerkId, avatarUrl } = body;
 
     // Validation
     if (!email || !name) {
@@ -51,6 +52,12 @@ export async function POST(request) {
       if (phone !== user.phone) {
         updateData.phone = phone || null;
       }
+      if (clerkId !== undefined && clerkId !== user.clerkId) {
+        updateData.clerkId = clerkId || null;
+      }
+      if (avatarUrl !== undefined && avatarUrl !== user.avatarUrl) {
+        updateData.avatarUrl = avatarUrl || null;
+      }
       // Update password if provided
       if (password) {
         const saltRounds = 10;
@@ -82,6 +89,8 @@ export async function POST(request) {
       email,
       name,
       phone: phone || null,
+      clerkId: clerkId && String(clerkId).trim() ? String(clerkId).trim() : null,
+      avatarUrl: avatarUrl && String(avatarUrl).trim() ? String(avatarUrl).trim() : null,
     };
 
     // Hash password if provided
@@ -93,6 +102,22 @@ export async function POST(request) {
     user = await prisma.user.create({
       data: userData,
     });
+
+    if (password) {
+      try {
+        const sessionToken = `${user.id}-${Date.now()}-${Math.random().toString(36).substring(7)}`;
+        const cookieStore = await cookies();
+        cookieStore.set("session_token", sessionToken, {
+          httpOnly: true,
+          secure: process.env.NODE_ENV === "production",
+          sameSite: "lax",
+          maxAge: 60 * 60 * 24 * 30,
+          path: "/",
+        });
+      } catch (cookieError) {
+        console.error("Error setting session cookie:", cookieError);
+      }
+    }
 
     return NextResponse.json({
       success: true,
@@ -117,13 +142,15 @@ export async function POST(request) {
 }
 
 /**
- * GET /api/onboarding/user?email=...
- * Retrieve user by email
+ * GET /api/onboarding/user?email=...&clerkId=...&avatarUrl=...
+ * Retrieve user by email. Optionally pass clerkId and avatarUrl to link Clerk and update profile.
  */
 export async function GET(request) {
   try {
     const { searchParams } = new URL(request.url);
     const email = searchParams.get("email");
+    const clerkId = searchParams.get("clerkId");
+    const avatarUrl = searchParams.get("avatarUrl");
 
     if (!email) {
       return NextResponse.json(
@@ -132,13 +159,15 @@ export async function GET(request) {
       );
     }
 
-    const user = await prisma.user.findUnique({
+    let user = await prisma.user.findUnique({
       where: { email },
       select: {
         id: true,
         email: true,
         name: true,
         phone: true,
+        clerkId: true,
+        avatarUrl: true,
         createdAt: true,
       },
     });
@@ -150,9 +179,46 @@ export async function GET(request) {
       );
     }
 
+    // Optionally update Clerk linkage when found by email
+    if (clerkId !== null && clerkId !== undefined && clerkId !== "" && user.clerkId !== clerkId) {
+      user = await prisma.user.update({
+        where: { email },
+        data: {
+          clerkId: clerkId.trim(),
+          ...(avatarUrl !== null && avatarUrl !== undefined && avatarUrl !== ""
+            ? { avatarUrl: avatarUrl.trim() }
+            : {}),
+        },
+        select: {
+          id: true,
+          email: true,
+          name: true,
+          phone: true,
+          createdAt: true,
+        },
+      });
+    } else if (avatarUrl !== null && avatarUrl !== undefined && avatarUrl !== "" && user.avatarUrl !== avatarUrl) {
+      user = await prisma.user.update({
+        where: { email },
+        data: { avatarUrl: avatarUrl.trim() },
+        select: {
+          id: true,
+          email: true,
+          name: true,
+          phone: true,
+          createdAt: true,
+        },
+      });
+    }
+
     return NextResponse.json({
       success: true,
-      user,
+      user: {
+        id: user.id,
+        email: user.email,
+        name: user.name,
+        phone: user.phone,
+      },
     });
   } catch (error) {
     console.error("Error in user GET API:", error);

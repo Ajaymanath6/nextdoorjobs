@@ -1411,21 +1411,22 @@ const MapComponent = () => {
           
           setIsDetectingLocation(false);
           
+          const localityHint = ' You can search for a locality instead.';
           let errorMessage = 'Unable to access your location. ';
           if (error.code === 1) {
-            errorMessage = 'Location permission denied. Please allow location access in your browser settings to use "near me" features.';
+            errorMessage = 'Location permission denied. Please allow location access in your browser settings to use "near me" features.' + localityHint;
             setLocationError(errorMessage);
             alert(errorMessage);
           } else if (error.code === 2) {
-            errorMessage = 'Location unavailable. Please check your device location settings.';
+            errorMessage = 'Location unavailable (in some browsers "Near me" does not work). Please search for a locality instead.';
             setLocationError(errorMessage);
             alert(errorMessage);
           } else if (error.code === 3) {
-            errorMessage = 'Location request timed out. Please try again.';
+            errorMessage = 'Location request timed out. Please try again or search for a specific locality.';
             setLocationError(errorMessage);
             alert(errorMessage);
           } else {
-            errorMessage = 'Unable to detect your location. Please try again or search for a specific locality.';
+            errorMessage = 'Unable to detect your location. In some browsers "Near me" may not work; try searching for a locality instead.';
             setLocationError(errorMessage);
             alert(errorMessage);
           }
@@ -1529,7 +1530,7 @@ const MapComponent = () => {
       } catch (browserError) {
         console.log('⚠️ Browser geolocation failed or rejected');
         setIsDetectingLocation(false);
-        setLocationError('Location detection failed. Please search for your city manually.');
+        setLocationError('Location detection failed. In some browsers "Near me" may not work; please search for a locality instead.');
         return null;
       }
     }
@@ -1578,18 +1579,18 @@ const MapComponent = () => {
         
         setIsDetectingLocation(false);
         
-        // Show detailed error message
+        // Show detailed error message; in some browsers "Near me" may not work (e.g. network location 404)
         let errorMessage = 'Unable to detect your location. ';
         if (e.code === 1) {
           errorMessage += 'Location permission denied. Please allow location access in your browser settings.';
         } else if (e.code === 2) {
-          errorMessage += 'Location unavailable. Please check your device location settings.';
+          errorMessage += 'Location unavailable. In some browsers "Near me" does not work; please search for a locality instead.';
         } else if (e.code === 3) {
-          errorMessage += 'Location request timed out. Please try again.';
+          errorMessage += 'Location request timed out. Please try again or search for a locality.';
         } else {
           errorMessage += 'Please search for a specific locality instead.';
         }
-        
+        errorMessage += ' You can search for a locality in the search box.';
         setLocationError(errorMessage);
         alert(errorMessage);
         resolve(null);
