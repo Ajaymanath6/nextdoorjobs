@@ -2474,6 +2474,19 @@ const MapComponent = () => {
     }
   };
 
+  const tryIpFallbackForHome = async () => {
+    const ipLoc = await fetchLocationByIP();
+    if (ipLoc && ipLoc.lat != null && ipLoc.lng != null) {
+      setUserHomeLocation({ lat: ipLoc.lat, lon: ipLoc.lng });
+      sessionStorage.setItem(MOBILE_HOME_STORAGE_KEY, "granted");
+      sessionStorage.setItem(MOBILE_HOME_COORDS_KEY, JSON.stringify({ lat: ipLoc.lat, lon: ipLoc.lng }));
+      setShowMobileHomePrompt(false);
+      setLocationHomeError(null);
+      return true;
+    }
+    return false;
+  };
+
   const handleMobileHomeAllow = async () => {
     setLocationHomeError(null);
     const isDesktop = typeof window !== "undefined" && window.innerWidth >= 768;
@@ -2487,20 +2500,27 @@ const MapComponent = () => {
           sessionStorage.setItem(MOBILE_HOME_COORDS_KEY, JSON.stringify({ lat: location.lat, lon: location.lng }));
           setShowMobileHomePrompt(false);
         } else {
-          setLocationHomeError(
-            "Location couldn't be determined. Allow location for this site in your browser settings (address bar or site settings), or search for your city."
-          );
+          const usedIp = await tryIpFallbackForHome();
+          if (!usedIp) {
+            setLocationHomeError(
+              "Precise location failed (browser service error). You can use approximate location from your network below, or search for your city."
+            );
+          }
         }
       } catch (_) {
-        setLocationHomeError(
-          "Location couldn't be determined. Allow location for this site in your browser settings, or search for your city."
-        );
+        const usedIp = await tryIpFallbackForHome();
+        if (!usedIp) {
+          setLocationHomeError(
+            "Precise location failed. You can use approximate location from your network below, or search for your city."
+          );
+        }
       }
       setIsGettingMobileHomeLocation(false);
       return;
     }
     if (!navigator.geolocation) {
-      setLocationHomeError("Location is not supported in this browser. Search for your city instead.");
+      const usedIp = await tryIpFallbackForHome();
+      if (!usedIp) setLocationHomeError("Location is not supported in this browser. Search for your city instead.");
       setIsGettingMobileHomeLocation(false);
       return;
     }
@@ -2515,21 +2535,38 @@ const MapComponent = () => {
         setLocationHomeError(null);
         setIsGettingMobileHomeLocation(false);
       },
-      (err) => {
+      async (err) => {
         const code = err?.code;
+        if (code === 2) {
+          const usedIp = await tryIpFallbackForHome();
+          if (usedIp) {
+            setIsGettingMobileHomeLocation(false);
+            return;
+          }
+        }
         if (code === 1) {
-          setLocationHomeError("Location permission denied. Allow location for this site in your browser (address bar or site settings), then try again.");
+          setLocationHomeError("Location permission denied. Allow location for this site in your browser (address bar or site settings), or use approximate location below.");
         } else if (code === 2) {
-          setLocationHomeError("Location unavailable. Check that location is enabled for your browser/device, or search for your city.");
+          setLocationHomeError("Precise location failed (browser/network). Use approximate location from your network below, or search for your city.");
         } else if (code === 3) {
-          setLocationHomeError("Location request timed out. Check your connection and try again, or search for your city.");
+          setLocationHomeError("Location request timed out. Try again or use approximate location below.");
         } else {
-          setLocationHomeError("Couldn't get location. Allow location in browser settings or search for your city.");
+          setLocationHomeError("Couldn't get precise location. Use approximate location from your network below, or search for your city.");
         }
         setIsGettingMobileHomeLocation(false);
       },
       { enableHighAccuracy: true, timeout: 10000, maximumAge: 0 }
     );
+  };
+
+  const handleUseApproximateLocation = async () => {
+    setLocationHomeError(null);
+    setIsGettingMobileHomeLocation(true);
+    const used = await tryIpFallbackForHome();
+    if (!used) {
+      setLocationHomeError("Approximate location unavailable. Please search for your city.");
+    }
+    setIsGettingMobileHomeLocation(false);
   };
 
   const handleMobileHomeSkip = () => {
@@ -2561,20 +2598,30 @@ const MapComponent = () => {
             {locationHomeError ? (
               <>
                 <p className="text-sm font-medium text-brand-text-weak">{locationHomeError}</p>
-                <div className="flex gap-2">
-                  <button
-                    type="button"
-                    onClick={handleMobileHomeAllow}
-                    disabled={isGettingMobileHomeLocation}
-                    className="flex-1 py-2 px-3 rounded-lg bg-brand text-white text-sm font-medium disabled:opacity-50"
-                  >
-                    {isGettingMobileHomeLocation ? "Trying…" : "Try again"}
-                  </button>
+                <div className="flex flex-col gap-2">
+                  <div className="flex gap-2">
+                    <button
+                      type="button"
+                      onClick={handleUseApproximateLocation}
+                      disabled={isGettingMobileHomeLocation}
+                      className="flex-1 py-2 px-3 rounded-lg bg-brand text-white text-sm font-medium disabled:opacity-50"
+                    >
+                      {isGettingMobileHomeLocation ? "Getting…" : "Use approximate location"}
+                    </button>
+                    <button
+                      type="button"
+                      onClick={handleMobileHomeAllow}
+                      disabled={isGettingMobileHomeLocation}
+                      className="flex-1 py-2 px-3 rounded-lg border border-brand-stroke-border text-brand-text-weak text-sm font-medium hover:bg-brand-stroke-weak"
+                    >
+                      Try again
+                    </button>
+                  </div>
                   <button
                     type="button"
                     onClick={handleMobileHomeSkip}
                     disabled={isGettingMobileHomeLocation}
-                    className="flex-1 py-2 px-3 rounded-lg border border-brand-stroke-border text-brand-text-weak text-sm font-medium hover:bg-brand-stroke-weak"
+                    className="w-full py-2 px-3 rounded-lg border border-brand-stroke-border text-brand-text-weak text-sm font-medium hover:bg-brand-stroke-weak"
                   >
                     Skip
                   </button>
