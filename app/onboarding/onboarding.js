@@ -3,7 +3,7 @@
 import { useState, useEffect, useRef } from "react";
 import { useRouter } from "next/navigation";
 import { useUser } from '@clerk/nextjs';
-import { WatsonHealthRotate_360 } from "@carbon/icons-react";
+import { WatsonHealthRotate_360, List } from "@carbon/icons-react";
 import ChatInterface from "../components/Onboarding/ChatInterface";
 import EmailAuthForm from "../components/Onboarding/EmailAuthForm";
 import StateDistrictSelector from "../components/Onboarding/StateDistrictSelector";
@@ -935,6 +935,24 @@ export default function OnboardingPage() {
                 title="Restart chat"
               >
                 <WatsonHealthRotate_360 size={20} style={{ color: "#575757" }} />
+              </button>
+              <button
+                type="button"
+                onClick={async () => {
+                  try {
+                    const res = await fetch("/api/onboarding/my-jobs");
+                    const data = await res.json().catch(() => ({}));
+                    const jobs = data.success ? (data.jobs || []) : [];
+                    setChatMessages((prev) => [...prev, { type: "jobList", jobs }]);
+                  } catch (e) {
+                    console.error("Error fetching my jobs:", e);
+                    setChatMessages((prev) => [...prev, { type: "jobList", jobs: [] }]);
+                  }
+                }}
+                className="p-2 rounded-lg hover:bg-gray-100 transition-colors"
+                title="Your job postings"
+              >
+                <List size={20} style={{ color: "#575757" }} />
               </button>
               <div className="relative" ref={languageDropdownRef}>
               <button

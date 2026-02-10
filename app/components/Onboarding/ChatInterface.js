@@ -2,7 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import Image from "next/image";
-import { Screen, Document, Enterprise, Save, Location, Add } from "@carbon/icons-react";
+import { Screen, Document, Enterprise, Save, Location, Add, OverflowMenuVertical } from "@carbon/icons-react";
 import TypingAnimation from "./TypingAnimation";
 
 export default function ChatInterface({ messages = [], onSendMessage, isLoading = false, inlineComponent = null, typingText = null, onScrollRequest, onSave, onViewOnMap, onStartNext, showFindOrPostButtons = false, onFindJob, onPostGig }) {
@@ -111,6 +111,39 @@ export default function ChatInterface({ messages = [], onSendMessage, isLoading 
 
         {messages.map((message, index) => (
           <div key={index} className="w-full">
+            {message.type === "jobList" ? (
+              <div className="flex justify-start">
+                <div className="max-w-[85%] w-full rounded-lg border border-brand-stroke-weak bg-brand-bg-white px-4 py-3">
+                  <p className="text-sm font-medium text-brand-text-strong mb-3" style={{ fontFamily: "Open Sans, sans-serif" }}>
+                    Your job postings
+                  </p>
+                  {(message.jobs || []).length === 0 ? (
+                    <p className="text-sm text-brand-text-weak" style={{ fontFamily: "Open Sans, sans-serif" }}>No job postings yet.</p>
+                  ) : (
+                    <ul className="space-y-2">
+                      {(message.jobs || []).map((job) => (
+                        <li
+                          key={job.id}
+                          className="flex items-center gap-2 py-2 border-b border-brand-stroke-weak last:border-b-0 last:pb-0 first:pt-0"
+                        >
+                          <div className="flex-1 min-w-0">
+                            <p className="text-sm font-medium text-brand-text-strong truncate" style={{ fontFamily: "Open Sans, sans-serif" }}>{job.title}</p>
+                            <p className="text-xs text-brand-text-weak truncate mt-0.5" style={{ fontFamily: "Open Sans, sans-serif" }}>{job.jobDescription}</p>
+                          </div>
+                          <button
+                            type="button"
+                            className="shrink-0 p-1 rounded hover:bg-brand-bg-fill text-brand-stroke-strong"
+                            aria-label="More options"
+                          >
+                            <OverflowMenuVertical size={20} />
+                          </button>
+                        </li>
+                      ))}
+                    </ul>
+                  )}
+                </div>
+              </div>
+            ) : (
             <div
               className={`flex items-start gap-2 ${
                 message.type === "user" ? "justify-end" : "justify-start"
@@ -220,6 +253,7 @@ export default function ChatInterface({ messages = [], onSendMessage, isLoading 
                 )}
               </div>
             </div>
+            )}
           </div>
         ))}
         {typingText && (
