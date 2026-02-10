@@ -1076,10 +1076,8 @@ export default function OnboardingPage() {
 
         if (companyResult.success && companyResult.company) break;
         const errMsg = companyResult.error || "";
-        if (
-          (companyResponse.status === 400 && errMsg.toLowerCase().includes("logo")) ||
-          (companyResponse.status >= 500 && attempt === 0)
-        ) {
+        // Only retry without logo on server error (5xx), not on 400 – so we don't lose the uploaded logo
+        if (companyResponse.status >= 500 && attempt === 0) {
           includeLogo = false;
           continue;
         }
