@@ -567,7 +567,8 @@ export default function OnboardingPage() {
     await saveConversation(COMPANY_FIELDS.LOCATION, lastAIMessageTextRef.current, answerText);
     setIsLoading(true);
     if (lat && lon) {
-      await addAIMessage(`Coordinates saved: ${lat}, ${lon}. What's the pincode? (Type "skip" if not available)`);
+      await addAIMessage(`Coordinates saved: ${lat}, ${lon}.`);
+      await addAIMessage(`What's the pincode? (Type "skip" if not available)`);
     } else {
       await addAIMessage(`No problem! What's the pincode? (Type "skip" if not available)`);
     }
@@ -885,7 +886,7 @@ export default function OnboardingPage() {
           left: 0,
           right: 0,
           bottom: 0,
-          height: '100vh',
+          height: '100dvh',
           width: '100vw',
           margin: 0,
           padding: 0,
@@ -900,7 +901,7 @@ export default function OnboardingPage() {
           left: 0,
           right: 0,
           bottom: 0,
-          height: '100vh',
+          height: '100dvh',
           width: '100vw',
           margin: 0,
           padding: 0,

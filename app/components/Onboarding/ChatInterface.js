@@ -90,9 +90,9 @@ export default function ChatInterface({ messages = [], onSendMessage, isLoading 
   };
 
   return (
-    <div className="flex flex-col h-full bg-white rounded-lg relative overflow-hidden">
+    <div className="flex flex-col h-full min-h-0 bg-white rounded-lg relative overflow-hidden">
       {/* Logo - Sticky at Top */}
-      <div className="sticky top-0 z-10 bg-white px-4 py-3">
+      <div className="sticky top-0 z-10 shrink-0 bg-white px-4 py-3">
         <div className="flex items-center justify-start">
           <div className="h-8 flex items-center justify-center">
             <Image
@@ -106,8 +106,8 @@ export default function ChatInterface({ messages = [], onSendMessage, isLoading 
         </div>
       </div>
 
-      {/* Messages Container */}
-      <div ref={messagesContainerRef} className="flex-1 overflow-y-auto px-4 pt-4 space-y-4 chat-scrollable bg-white">
+      {/* Messages Container - scrollable, leaves room for input */}
+      <div ref={messagesContainerRef} className="flex-1 min-h-0 overflow-y-auto px-4 pt-4 space-y-4 chat-scrollable bg-white">
 
         {messages.map((message, index) => (
           <div key={index} className="w-full">
@@ -299,15 +299,23 @@ export default function ChatInterface({ messages = [], onSendMessage, isLoading 
         </div>
       )}
 
-      {/* Input Area - Inside chat area at bottom */}
-      <div className="border-t border-[#E5E5E5] px-4 py-4 bg-white">
+      {/* Input Area - always visible on mobile; safe-area padding; scroll into view when keyboard opens */}
+      <div
+        className="shrink-0 border-t border-[#E5E5E5] px-4 py-3 md:py-4 bg-white"
+        style={{ paddingBottom: "max(0.75rem, env(safe-area-inset-bottom, 0px))" }}
+      >
         <form onSubmit={handleSubmit} className="relative">
           <textarea
             ref={inputRef}
             placeholder="Type your message..."
-            className="w-full min-h-[140px] pl-2 pr-2 py-4 bg-brand-bg-white border border-brand-stroke-weak shadow-sm rounded-lg focus:outline-none focus:border-brand-text-strong hover:bg-brand-bg-fill resize-none text-base m-0 placeholder:text-brand-text-placeholder text-brand-text-strong"
+            className="w-full min-h-[88px] md:min-h-[120px] pl-2 pr-2 py-3 md:py-4 bg-brand-bg-white border border-brand-stroke-weak shadow-sm rounded-lg focus:outline-none focus:border-brand-text-strong hover:bg-brand-bg-fill resize-none text-base m-0 placeholder:text-brand-text-placeholder text-brand-text-strong"
             style={{ fontFamily: "Open Sans, sans-serif", borderWidth: "1px" }}
             disabled={isLoading}
+            onFocus={() => {
+              setTimeout(() => {
+                inputRef.current?.scrollIntoView({ behavior: "smooth", block: "end" });
+              }, 300);
+            }}
             onKeyDown={(e) => {
               if (e.key === "Enter" && !e.shiftKey) {
                 e.preventDefault();
