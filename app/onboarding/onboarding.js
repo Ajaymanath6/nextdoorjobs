@@ -790,7 +790,11 @@ export default function OnboardingPage() {
 
         const companyResult = await companyResponse.json();
         if (companyResult.success) {
-          setCompanyData((prev) => ({ ...prev, id: companyResult.company.id }));
+          setCompanyData((prev) => ({
+            ...prev,
+            id: companyResult.company.id,
+            logoPath: companyResult.company.logoPath ?? prev.logoPath,
+          }));
           await addAIMessage("✅ Company information saved successfully!");
         } else {
           alert(companyResult.error || "Failed to save company information.");
@@ -840,8 +844,17 @@ export default function OnboardingPage() {
       const lng = parseFloat(companyData.longitude);
       if (!Number.isNaN(lat) && !Number.isNaN(lng)) {
         const companyName = companyData.name || companyData.company_name || "";
-        const logoUrl =
+        let logoUrl =
           submittedCompany?.company?.logoPath ?? companyData.logoPath ?? null;
+        if (!logoUrl && companyData?.id) {
+          try {
+            const res = await fetch(`/api/onboarding/company/${companyData.id}`);
+            if (res.ok) {
+              const data = await res.json();
+              logoUrl = data.company?.logoPath ?? null;
+            }
+          } catch (_) {}
+        }
         const baseUrl = typeof window !== "undefined" ? window.location.origin : "";
         const resolvedLogoUrl = logoUrl && !logoUrl.startsWith("http") ? `${baseUrl}${logoUrl.startsWith("/") ? "" : "/"}${logoUrl}` : logoUrl;
         sessionStorage.setItem(
@@ -977,7 +990,14 @@ export default function OnboardingPage() {
       return { company: companyResult.company, job: jobResult.jobPosition };
     } catch (error) {
       console.error("Submission error:", error);
-      alert("Could not submit. Please try again.");
+      setChatMessages((prev) => [
+        ...prev,
+        {
+          type: "ai",
+          text: `Sorry, we couldn’t submit your posting right now. Please try again. (${error?.message || "Unknown error"})`,
+          isFinalMessage: false,
+        },
+      ]);
       return null;
     } finally {
       setIsLoading(false);
@@ -1000,7 +1020,10 @@ export default function OnboardingPage() {
       >
         <div className="absolute inset-0 z-10 flex items-center justify-center">
           <div className="text-center">
-            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-[#F84416] mx-auto mb-4"></div>
+            <div
+              className="rounded-full h-12 w-12 border-4 loading-spinner mx-auto mb-4"
+              style={{ borderColor: "rgba(0,0,0,0.1)", borderTopColor: "#F84416" }}
+            />
             <p className="text-gray-600" style={{ fontFamily: "Open Sans, sans-serif" }}>Loading...</p>
           </div>
         </div>
@@ -1089,7 +1112,10 @@ export default function OnboardingPage() {
       {/* 2s loader when navigating to map */}
       {isNavigatingToMap && (
         <div className="fixed inset-0 z-[100] flex flex-col items-center justify-center bg-white/90" style={{ fontFamily: "Open Sans, sans-serif" }}>
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-brand mx-auto mb-4" />
+          <div
+            className="rounded-full h-12 w-12 border-4 loading-spinner mx-auto mb-4"
+            style={{ borderColor: "rgba(0,0,0,0.1)", borderTopColor: "#F84416" }}
+          />
           <p className="text-brand-text-weak font-medium">Taking you to the map…</p>
         </div>
       )}

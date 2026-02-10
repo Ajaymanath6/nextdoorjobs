@@ -835,11 +835,13 @@ const MapComponent = () => {
     });
   };
 
-  // Job posting pindrop: round, primary border, shadow; optional logoUrl (else gemni.png)
+  // Job posting pindrop: round, primary border, shadow; optional logoUrl (else gemni.png). onerror fallback when logo fails to load.
   const PRIMARY_BORDER = "#F84416";
+  const DEFAULT_LOGO = "/gemni.png";
   const createGeminiJobIcon = (L, size = 50, logoUrl = null) => {
-    const imgSrc = logoUrl || "/gemni.png";
-    const html = `<div class="company-marker" style="position:relative;width:${size}px;height:${size}px;background-color:#FFFFFF;border-radius:50%;display:flex;align-items:center;justify-content:center;cursor:pointer;transition:transform 0.2s ease;box-shadow:0 2px 8px rgba(0,0,0,0.15),0 1px 3px rgba(0,0,0,0.1);border:2px solid ${PRIMARY_BORDER};overflow:hidden;"><img src="${imgSrc}" alt="Job" style="width:100%;height:100%;object-fit:cover;" /></div>`;
+    const imgSrc = logoUrl || DEFAULT_LOGO;
+    const safeSrc = imgSrc.replace(/"/g, "&quot;");
+    const html = `<div class="company-marker" style="position:relative;width:${size}px;height:${size}px;background-color:#FFFFFF;border-radius:50%;display:flex;align-items:center;justify-content:center;cursor:pointer;transition:transform 0.2s ease;box-shadow:0 2px 8px rgba(0,0,0,0.15),0 1px 3px rgba(0,0,0,0.1);border:2px solid ${PRIMARY_BORDER};overflow:hidden;"><img src="${safeSrc}" alt="Job" style="width:100%;height:100%;object-fit:cover;" onerror="this.onerror=null;this.src='${DEFAULT_LOGO}';" /></div>`;
     return L.divIcon({
       html,
       className: "custom-pindrop-marker",
@@ -2736,14 +2738,13 @@ const MapComponent = () => {
         >
           <div className="text-center">
             {/* Spinner */}
-            <div 
+            <div
               className="w-12 h-12 border-4 rounded-full loading-spinner mx-auto mb-4"
               style={{
                 width: '48px',
                 height: '48px',
-                border: '4px solid #E9D5FF',
-                borderTop: '4px solid #9333EA',
-                borderRadius: '50%',
+                borderColor: 'rgba(0,0,0,0.1)',
+                borderTopColor: '#F84416',
                 animation: 'spin 1s linear infinite'
               }}
             />
