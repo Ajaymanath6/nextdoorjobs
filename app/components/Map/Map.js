@@ -909,8 +909,7 @@ const MapComponent = () => {
         }
       } catch (_) {}
     }
-    const isMobile = window.innerWidth < 768;
-    if (isMobile && !sessionStorage.getItem(MOBILE_HOME_STORAGE_KEY)) {
+    if (!sessionStorage.getItem(MOBILE_HOME_STORAGE_KEY)) {
       setShowMobileHomePrompt(true);
     }
   }, [isClient]);
@@ -2474,7 +2473,22 @@ const MapComponent = () => {
     }
   };
 
-  const handleMobileHomeAllow = () => {
+  const handleMobileHomeAllow = async () => {
+    const isDesktop = typeof window !== "undefined" && window.innerWidth >= 768;
+    if (isDesktop && mapInstanceRef.current) {
+      setIsGettingMobileHomeLocation(true);
+      try {
+        const location = await detectUserLocation(true);
+        if (location && location.lat != null && location.lng != null) {
+          setUserHomeLocation({ lat: location.lat, lon: location.lng });
+          sessionStorage.setItem(MOBILE_HOME_STORAGE_KEY, "granted");
+          sessionStorage.setItem(MOBILE_HOME_COORDS_KEY, JSON.stringify({ lat: location.lat, lon: location.lng }));
+        }
+      } catch (_) {}
+      setShowMobileHomePrompt(false);
+      setIsGettingMobileHomeLocation(false);
+      return;
+    }
     if (!navigator.geolocation) {
       setShowMobileHomePrompt(false);
       sessionStorage.setItem(MOBILE_HOME_STORAGE_KEY, "skipped");
@@ -2522,25 +2536,27 @@ const MapComponent = () => {
 
       {/* Mobile: one-time prompt to use current location as Home on the map */}
       {showMobileHomePrompt && (
-        <div className="md:hidden absolute bottom-4 left-4 right-4 z-[1000] bg-brand-bg-white border border-brand-stroke-border rounded-lg shadow-lg p-4 flex flex-col gap-3" style={{ fontFamily: "Open Sans, sans-serif" }}>
-          <p className="text-sm font-medium text-brand-text-weak">Use your current location as Home on the map?</p>
-          <div className="flex gap-2">
-            <button
-              type="button"
-              onClick={handleMobileHomeAllow}
-              disabled={isGettingMobileHomeLocation}
-              className="flex-1 py-2 px-3 rounded-lg bg-brand text-white text-sm font-medium disabled:opacity-50"
-            >
-              {isGettingMobileHomeLocation ? "Getting location…" : "Allow"}
-            </button>
-            <button
-              type="button"
-              onClick={handleMobileHomeSkip}
-              disabled={isGettingMobileHomeLocation}
-              className="flex-1 py-2 px-3 rounded-lg border border-brand-stroke-border text-brand-text-weak text-sm font-medium hover:bg-brand-stroke-weak"
-            >
-              Skip
-            </button>
+        <div className="fixed inset-0 z-[1000] flex items-center justify-center p-4 bg-black/20">
+          <div className="bg-brand-bg-white border border-brand-stroke-border rounded-lg shadow-lg p-4 flex flex-col gap-3 w-full max-w-sm" style={{ fontFamily: "Open Sans, sans-serif" }}>
+            <p className="text-sm font-medium text-brand-text-weak">Use your current location as Home on the map?</p>
+            <div className="flex gap-2">
+              <button
+                type="button"
+                onClick={handleMobileHomeAllow}
+                disabled={isGettingMobileHomeLocation}
+                className="flex-1 py-2 px-3 rounded-lg bg-brand text-white text-sm font-medium disabled:opacity-50"
+              >
+                {isGettingMobileHomeLocation ? "Getting location…" : "Allow"}
+              </button>
+              <button
+                type="button"
+                onClick={handleMobileHomeSkip}
+                disabled={isGettingMobileHomeLocation}
+                className="flex-1 py-2 px-3 rounded-lg border border-brand-stroke-border text-brand-text-weak text-sm font-medium hover:bg-brand-stroke-weak"
+              >
+                Skip
+              </button>
+            </div>
           </div>
         </div>
       )}
@@ -2553,7 +2569,7 @@ const MapComponent = () => {
           {/* Search Bar Card - same corner radius as show distance button (rounded-full), white bg. */}
           <div className={`bg-brand-bg-white rounded-full border border-brand-stroke-border shadow-lg w-full px-1.5 py-1.5 md:px-4 md:py-2`}>
             {/* Mobile: single bar (Person/Job + input + Filter + Profile). Desktop: no bar, separate bordered controls. */}
-            <div className={`flex items-center gap-0 w-full rounded-full border border-brand-stroke-border bg-brand-bg-white min-h-[34px] overflow-visible md:overflow-hidden md:border-0 md:bg-transparent md:rounded-none md:min-h-0`}>
+            <div className={`flex items-center gap-0 w-full rounded-full border border-brand-stroke-border bg-brand-bg-white min-h-[34px] overflow-visible md:border-0 md:bg-transparent md:rounded-none md:min-h-0`}>
               {/* View Selector Button - Hidden for now, will add in later stages */}
               {/* <div className="relative flex-shrink-0">
                 <button
@@ -2662,7 +2678,7 @@ const MapComponent = () => {
                   <button
                     type="button"
                     onClick={() => setSearchMode("job")}
-                    className={`p-2 border-0 ${searchBar["toggle-segment"]} ${searchMode === "job" ? searchBar["toggle-segment-active"] : ""} !rounded-r-md !rounded-l-none`}
+                    className={`p-2 border-0 ${searchBar["toggle-segment"]} ${searchMode === "job" ? searchBar["toggle-segment-active"] + " bg-brand-bg-fill" : ""} !rounded-r-md !rounded-l-none`}
                     title="Search for jobs"
                   >
                     <Portfolio

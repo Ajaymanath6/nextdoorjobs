@@ -160,7 +160,7 @@ export default function Sidebar({ activeItem = "jobs-near-you", onToggle, isOpen
           ) : (
             <button
               onClick={handleToggle}
-              className={`${sidebar["toggle-button"]} w-full flex items-center justify-center rounded-lg`}
+              className={`${sidebar["toggle-button"]} w-full flex items-center justify-center rounded-lg bg-transparent hover:bg-brand-stroke-weak`}
               aria-label="Open sidebar"
             >
               <SidePanelOpen size={20} style={{ color: "rgba(87, 87, 87, 1)" }} />
