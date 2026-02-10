@@ -869,45 +869,56 @@ export default function OnboardingPage() {
     }
   };
 
-  // Handle view on map - submit first, show 2s loader, then navigate and zoom to job coordinates.
-  // Only navigate when we didn't need to submit (have both ids) or handleFinalSubmit succeeded.
+  // Handle view on map - submit first, then pass coordinates to map and show pindrop.
+  // If submit fails we still navigate with coords when we have them so the pin always shows (user can retry save from chat).
   const handleViewOnMap = async () => {
     const needSubmit = !jobData?.id || !companyData?.id;
     let submittedCompany = null;
     if (needSubmit) {
       submittedCompany = await handleFinalSubmit();
-      if (submittedCompany == null) {
-        return; // Submit failed; error already shown in chat; do not navigate
-      }
     }
-    if (typeof window !== "undefined" && companyData?.latitude != null && companyData?.longitude != null) {
-      const lat = parseFloat(companyData.latitude);
-      const lng = parseFloat(companyData.longitude);
-      if (!Number.isNaN(lat) && !Number.isNaN(lng)) {
-        const companyName = companyData.name || companyData.company_name || "";
-        let logoUrl =
-          submittedCompany?.company?.logoPath ?? companyData.logoPath ?? null;
-        if (!logoUrl && companyData?.id) {
-          try {
-            const res = await fetch(`/api/onboarding/company/${companyData.id}`);
-            if (res.ok) {
-              const data = await res.json();
-              logoUrl = data.company?.logoPath ?? null;
-            }
-          } catch (_) {}
-        }
-        const baseUrl = typeof window !== "undefined" ? window.location.origin : "";
-        const resolvedLogoUrl = logoUrl && !logoUrl.startsWith("http") ? `${baseUrl}${logoUrl.startsWith("/") ? "" : "/"}${logoUrl}` : logoUrl;
-        sessionStorage.setItem(
-          "zoomToJobCoords",
-          JSON.stringify({
-            lat,
-            lng,
-            companyName,
-            ...(resolvedLogoUrl && { logoUrl: resolvedLogoUrl }),
-          })
-        );
+    // Prefer coordinates from submitted company (authoritative after submit); else use companyData
+    const source = submittedCompany?.company ?? companyData;
+    const latVal = source?.latitude != null ? source.latitude : companyData?.latitude;
+    const lngVal = source?.longitude != null ? source.longitude : companyData?.longitude;
+    const hasCoords =
+      latVal != null &&
+      lngVal != null &&
+      !Number.isNaN(parseFloat(latVal)) &&
+      !Number.isNaN(parseFloat(lngVal));
+    if (typeof window !== "undefined" && hasCoords) {
+      const lat = parseFloat(latVal);
+      const lng = parseFloat(lngVal);
+      const companyName =
+        submittedCompany?.company?.name ??
+        companyData?.name ??
+        companyData?.company_name ??
+        "";
+      let logoUrl =
+        submittedCompany?.company?.logoPath ?? companyData?.logoPath ?? null;
+      if (!logoUrl && companyData?.id) {
+        try {
+          const res = await fetch(`/api/onboarding/company/${companyData.id}`);
+          if (res.ok) {
+            const data = await res.json();
+            logoUrl = data.company?.logoPath ?? null;
+          }
+        } catch (_) {}
       }
+      const baseUrl = typeof window !== "undefined" ? window.location.origin : "";
+      const resolvedLogoUrl =
+        logoUrl && !logoUrl.startsWith("http")
+          ? `${baseUrl}${logoUrl.startsWith("/") ? "" : "/"}${logoUrl}`
+          : logoUrl;
+      sessionStorage.setItem(
+        "zoomToJobCoords",
+        JSON.stringify({
+          lat,
+          lng,
+          companyName: companyName || "Your posting",
+          ...(resolvedLogoUrl && { logoUrl: resolvedLogoUrl }),
+        })
+      );
     }
     setIsNavigatingToMap(true);
     setTimeout(() => {
@@ -920,79 +931,185 @@ export default function OnboardingPage() {
     handleResetChat();
   };
 
-  // Handle final submission
+  // Ensure we have a valid user id (fetch from API if we have Clerk user but id was null)
+  const ensureUserId = async () => {
+    if (userData?.id != null) return userData.id;
+    if (!clerkUser?.emailAddresses?.[0]?.emailAddress) return null;
+    const email = clerkUser.emailAddresses[0].emailAddress;
+    const name =
+      clerkUser.firstName && clerkUser.lastName
+        ? `${clerkUser.firstName} ${clerkUser.lastName}`
+        : clerkUser.firstName || clerkUser.username || "User";
+    try {
+      let res = await fetch(
+        `/api/onboarding/user?${new URLSearchParams({ email }).toString()}`
+      );
+      let data = await res.json().catch(() => ({}));
+      if (data.success && data.user?.id) {
+        setUserData((prev) => (prev ? { ...prev, id: data.user.id } : data.user));
+        return data.user.id;
+      }
+      res = await fetch("/api/onboarding/user", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          email,
+          name,
+          clerkId: clerkUser.id,
+          avatarUrl: clerkUser.imageUrl || undefined,
+        }),
+      });
+      data = await res.json().catch(() => ({}));
+      if (data.success && data.user?.id) {
+        setUserData((prev) => (prev ? { ...prev, id: data.user.id } : data.user));
+        return data.user.id;
+      }
+    } catch (_) {}
+    return null;
+  };
+
+  const fetchWithRetry = async (url, options, retries = 2) => {
+    let lastError;
+    for (let i = 0; i <= retries; i++) {
+      try {
+        const res = await fetch(url, options);
+        const text = await res.text();
+        let data;
+        try {
+          data = text ? JSON.parse(text) : {};
+        } catch (_) {
+          data = { success: false, error: res.ok ? "Invalid response" : `Request failed (${res.status})` };
+        }
+        return { response: res, data };
+      } catch (e) {
+        lastError = e;
+        if (i < retries) await new Promise((r) => setTimeout(r, 800 * (i + 1)));
+      }
+    }
+    throw lastError || new Error("Network error");
+  };
+
+  // Handle final submission – normalized payloads, user fallback, retries, logo fallback
   const handleFinalSubmit = async () => {
-    if (!userData || !companyData || !jobData) {
+    if (!companyData || !jobData) {
       alert("Missing required data. Please go back and complete all steps.");
-      return;
+      return null;
     }
 
-    // Additional null checks for required fields
-    if (!companyData.name || !companyData.state || !companyData.district) {
-      alert("Please complete all required company information.");
-      return;
+    const name = String(companyData.name || "").trim();
+    const state = String(companyData.state || "").trim();
+    const district = String(companyData.district || "").trim();
+    if (!name || !state || !district) {
+      alert("Please complete all required company information (name, state, district).");
+      return null;
     }
 
-    if (!jobData.title || !jobData.jobDescription) {
-      alert("Please complete all required job position information.");
-      return;
+    const title = String(jobData.title || "").trim();
+    const jobDescription = String(jobData.jobDescription || "").trim();
+    if (!title || !jobDescription) {
+      alert("Please complete all required job position information (title, description).");
+      return null;
+    }
+
+    const userId = await ensureUserId();
+    if (userId == null) {
+      alert("Please sign in and try again.");
+      return null;
     }
 
     setIsLoading(true);
 
     try {
-      // Submit company first
-      const companyFormData = new FormData();
-      companyFormData.append("name", companyData.name || "");
-      if (companyData.logo) {
-        companyFormData.append("logo", companyData.logo);
-      }
-      if (companyData.websiteUrl) {
-        companyFormData.append("websiteUrl", companyData.websiteUrl);
-      }
-      if (companyData.fundingSeries) {
-        companyFormData.append("fundingSeries", companyData.fundingSeries);
-      }
-      if (companyData.latitude) {
-        companyFormData.append("latitude", companyData.latitude);
-      }
-      if (companyData.longitude) {
-        companyFormData.append("longitude", companyData.longitude);
-      }
-      companyFormData.append("state", companyData.state || "");
-      companyFormData.append("district", companyData.district || "");
-      if (companyData.pincode) {
-        companyFormData.append("pincode", companyData.pincode);
-      }
-      companyFormData.append("userId", userData.id.toString());
+      const lat =
+        companyData.latitude != null && !Number.isNaN(parseFloat(companyData.latitude))
+          ? parseFloat(companyData.latitude)
+          : null;
+      const lon =
+        companyData.longitude != null && !Number.isNaN(parseFloat(companyData.longitude))
+          ? parseFloat(companyData.longitude)
+          : null;
+      const yearsRequired = Math.max(
+        0,
+        Number.isNaN(parseFloat(jobData.yearsRequired)) ? 0 : parseFloat(jobData.yearsRequired)
+      );
+      let salaryMin =
+        jobData.salaryMin != null && jobData.salaryMin !== ""
+          ? parseInt(jobData.salaryMin, 10)
+          : null;
+      let salaryMax =
+        jobData.salaryMax != null && jobData.salaryMax !== ""
+          ? parseInt(jobData.salaryMax, 10)
+          : null;
+      if (salaryMin != null && (Number.isNaN(salaryMin) || salaryMin < 0)) salaryMin = null;
+      if (salaryMax != null && (Number.isNaN(salaryMax) || salaryMax < 0)) salaryMax = null;
+      if (salaryMin != null && salaryMax != null && salaryMin > salaryMax) salaryMax = salaryMin;
 
-      const companyResponse = await fetch("/api/onboarding/company", {
-        method: "POST",
-        body: companyFormData,
-      });
+      let companyResult = null;
+      let includeLogo = Boolean(companyData.logo);
 
-      const companyResult = await companyResponse.json();
-      if (!companyResult.success) {
+      for (let attempt = 0; attempt <= 1; attempt++) {
+        const companyFormData = new FormData();
+        companyFormData.append("name", name);
+        if (includeLogo && companyData.logo) {
+          companyFormData.append("logo", companyData.logo);
+        }
+        if (companyData.websiteUrl) {
+          companyFormData.append("websiteUrl", String(companyData.websiteUrl).trim());
+        }
+        if (companyData.fundingSeries) {
+          companyFormData.append("fundingSeries", companyData.fundingSeries);
+        }
+        if (lat != null) companyFormData.append("latitude", String(lat));
+        if (lon != null) companyFormData.append("longitude", String(lon));
+        companyFormData.append("state", state);
+        companyFormData.append("district", district);
+        if (companyData.pincode) {
+          companyFormData.append("pincode", String(companyData.pincode).trim());
+        }
+        companyFormData.append("userId", String(userId));
+
+        const { response: companyResponse, data: companyDataRes } = await fetchWithRetry(
+          "/api/onboarding/company",
+          { method: "POST", body: companyFormData }
+        );
+        companyResult = companyDataRes;
+
+        if (companyResult.success && companyResult.company) break;
+        const errMsg = companyResult.error || "";
+        if (
+          (companyResponse.status === 400 && errMsg.toLowerCase().includes("logo")) ||
+          (companyResponse.status >= 500 && attempt === 0)
+        ) {
+          includeLogo = false;
+          continue;
+        }
         throw new Error(companyResult.error || "Failed to create company");
       }
 
-      // Submit job position
-      const jobResponse = await fetch("/api/onboarding/job-position", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          title: jobData.title || "",
-          category: "EngineeringSoftwareQA", // Default category since dropdown is removed
-          yearsRequired: parseFloat(jobData.yearsRequired || 0),
-          salaryMin: jobData.salaryMin ? parseInt(jobData.salaryMin) : null,
-          salaryMax: jobData.salaryMax ? parseInt(jobData.salaryMax) : null,
-          jobDescription: jobData.jobDescription || "",
-          companyId: companyResult.company.id,
-        }),
-      });
+      if (!companyResult?.success || !companyResult?.company?.id) {
+        throw new Error(companyResult?.error || "Failed to create company");
+      }
 
-      const jobResult = await jobResponse.json();
-      if (!jobResult.success) {
+      const jobPayload = {
+        title,
+        category: "EngineeringSoftwareQA",
+        yearsRequired,
+        salaryMin,
+        salaryMax,
+        jobDescription,
+        companyId: companyResult.company.id,
+      };
+
+      const { response: jobResponse, data: jobResult } = await fetchWithRetry(
+        "/api/onboarding/job-position",
+        {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(jobPayload),
+        }
+      );
+
+      if (!jobResult.success || !jobResult.jobPosition?.id) {
         throw new Error(jobResult.error || "Failed to create job position");
       }
 
@@ -1013,7 +1130,6 @@ export default function OnboardingPage() {
         }
       }
 
-      // Success! Update state so "See your posting" won't re-submit and has logoPath
       setCompanyData((prev) => ({
         ...prev,
         id: companyResult.company.id,
