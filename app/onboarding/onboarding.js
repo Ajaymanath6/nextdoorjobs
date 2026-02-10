@@ -567,7 +567,22 @@ export default function OnboardingPage() {
     await saveConversation(COMPANY_FIELDS.LOCATION, lastAIMessageTextRef.current, answerText);
     setIsLoading(true);
     if (lat && lon) {
-      await addAIMessage(`Coordinates saved: ${lat}, ${lon}.`);
+      let coordsLine = `Coordinates saved: ${lat}, ${lon}`;
+      try {
+        const res = await fetch(
+          `/api/geocode/reverse?lat=${encodeURIComponent(lat)}&lon=${encodeURIComponent(lon)}`
+        );
+        if (res.ok) {
+          const { state, district } = await res.json();
+          if (district || state) {
+            const parts = [district, state].filter(Boolean);
+            coordsLine += ` • ${parts.join(", ")}`;
+          }
+        }
+      } catch (_) {
+        // Keep coordinates-only message on failure
+      }
+      await addAIMessage(`${coordsLine}.`);
       await addAIMessage(`What's the pincode? (Type "skip" if not available)`);
     } else {
       await addAIMessage(`No problem! What's the pincode? (Type "skip" if not available)`);
@@ -687,7 +702,14 @@ export default function OnboardingPage() {
       const lat = parseFloat(companyData.latitude);
       const lng = parseFloat(companyData.longitude);
       if (!Number.isNaN(lat) && !Number.isNaN(lng)) {
-        sessionStorage.setItem("zoomToJobCoords", JSON.stringify({ lat, lng }));
+        sessionStorage.setItem(
+          "zoomToJobCoords",
+          JSON.stringify({
+            lat,
+            lng,
+            companyName: companyData.name || companyData.company_name || "",
+          })
+        );
       }
     }
     router.push("/");

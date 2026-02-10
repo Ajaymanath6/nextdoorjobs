@@ -101,6 +101,7 @@ const MapComponent = () => {
   const companyMarkersRef = useRef([]);
   const straightLinesRef = useRef([]);
   const clusterGroupRef = useRef(null);
+  const zoomToJobMarkerRef = useRef(null);
   const filterDropdownRef = useRef(null);
   const filterButtonRef = useRef(null);
   const [locationsData, setLocationsData] = useState(null);
@@ -235,6 +236,10 @@ const MapComponent = () => {
         // Remove company markers
         if (clusterGroupRef.current) {
           mapInstanceRef.current.removeLayer(clusterGroupRef.current);
+        }
+        if (zoomToJobMarkerRef.current) {
+          mapInstanceRef.current.removeLayer(zoomToJobMarkerRef.current);
+          zoomToJobMarkerRef.current = null;
         }
         // Remove lines
         straightLinesRef.current.forEach((line) => {
@@ -888,9 +893,9 @@ const MapComponent = () => {
     });
   };
 
-  // Job posting pindrop icon using gemni.png (public/)
+  // Job posting pindrop icon: white background with gemni.png on top
   const createGeminiJobIcon = (L, size = 50) => {
-    const html = `<div class="company-marker" style="position:relative;width:${size}px;height:${size}px;display:flex;align-items:center;justify-content:center;cursor:pointer;transition:transform 0.2s ease,box-shadow 0.2s ease;"><img src="/gemni.png" alt="Job" style="width:100%;height:100%;object-fit:contain;" /></div>`;
+    const html = `<div class="company-marker" style="position:relative;width:${size}px;height:${size}px;background-color:#FFFFFF;border-radius:8px;display:flex;align-items:center;justify-content:center;cursor:pointer;transition:transform 0.2s ease,box-shadow 0.2s ease;box-shadow:0 2px 8px rgba(0,0,0,0.12),0 1px 3px rgba(0,0,0,0.08);border:2px solid #87CEEB;overflow:visible;"><img src="/gemni.png" alt="Job" style="width:100%;height:100%;object-fit:contain;" /></div>`;
     return L.divIcon({
       html,
       className: "custom-pindrop-marker",
@@ -974,17 +979,7 @@ const MapComponent = () => {
 
           mapInstanceRef.current = map;
 
-          // Zoom to job coords when arriving from "See your posting on the map"
-          try {
-            const raw = sessionStorage.getItem("zoomToJobCoords");
-            if (raw) {
-              const { lat, lng } = JSON.parse(raw);
-              if (typeof lat === "number" && typeof lng === "number") {
-                sessionStorage.removeItem("zoomToJobCoords");
-                setTimeout(() => map.flyTo([lat, lng], 15), 300);
-              }
-            }
-          } catch (_) {}
+          // zoomToJobCoords is handled in the addMarkersToMap effect so the "my job" marker can be added there
         }).catch((error) => {
           console.error("Error loading markercluster:", error);
         });
@@ -1149,6 +1144,7 @@ const MapComponent = () => {
         // Create company markers
         companies.forEach((company, index) => {
           const customIcon = createGeminiJobIcon(L, 50);
+          const companyName = company.company_name || company.name || "Company";
 
           const marker = L.marker([company.lat, company.lon], {
             icon: customIcon,
@@ -1159,10 +1155,12 @@ const MapComponent = () => {
           // Store company data on marker
           marker.companyData = company;
 
-          // Click handler for company marker
-          marker.on("click", function () {
-            console.log("Company clicked:", company.name);
-          });
+          const popupContent = `
+            <div style="font-family: 'Open Sans', sans-serif; padding: 4px;">
+              <div style="font-weight: 600; font-size: 14px; color: #0A0A0A;">${companyName}</div>
+            </div>
+          `;
+          marker.bindPopup(popupContent, { className: "company-popup" });
 
           clusterGroup.addLayer(marker);
           companyMarkersRef.current.push(marker);
@@ -1236,9 +1234,33 @@ const MapComponent = () => {
     try {
       const raw = typeof window !== "undefined" ? sessionStorage.getItem("zoomToJobCoords") : null;
       if (raw && mapInstanceRef.current) {
-        const { lat, lng } = JSON.parse(raw);
+        const payload = JSON.parse(raw);
+        const lat = payload.lat;
+        const lng = payload.lng;
+        const companyName = payload.companyName || "Your posting";
         if (typeof lat === "number" && typeof lng === "number") {
           sessionStorage.removeItem("zoomToJobCoords");
+          const L = window.L;
+          if (L) {
+            if (zoomToJobMarkerRef.current) {
+              mapInstanceRef.current.removeLayer(zoomToJobMarkerRef.current);
+              zoomToJobMarkerRef.current = null;
+            }
+            const jobIcon = createGeminiJobIcon(L, 50);
+            const myJobMarker = L.marker([lat, lng], {
+              icon: jobIcon,
+              zIndexOffset: 3000,
+              opacity: 1,
+            });
+            const popupContent = `
+              <div style="font-family: 'Open Sans', sans-serif; padding: 4px;">
+                <div style="font-weight: 600; font-size: 14px; color: #0A0A0A;">${companyName}</div>
+              </div>
+            `;
+            myJobMarker.bindPopup(popupContent, { className: "company-popup" });
+            myJobMarker.addTo(mapInstanceRef.current);
+            zoomToJobMarkerRef.current = myJobMarker;
+          }
           setTimeout(() => {
             if (mapInstanceRef.current) {
               mapInstanceRef.current.flyTo([lat, lng], 15);
