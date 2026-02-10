@@ -8,15 +8,17 @@ export default function GetCoordinatesButton({ onCoordinatesReceived, onSkip, is
 
   const handleGetCoordinates = () => {
     if (!isMobile) return;
-    setIsGettingLocation(true);
-    setError(null);
-
     if (!navigator.geolocation) {
       setError("Geolocation is not supported by your browser");
-      setIsGettingLocation(false);
+      return;
+    }
+    if (typeof window !== "undefined" && !window.isSecureContext) {
+      setError("Location only works on HTTPS. Open this page via https:// (or use a secure tunnel) and try again.");
       return;
     }
 
+    // Must call getCurrentPosition in the same synchronous click stack (before any setState).
+    // Otherwise mobile browsers often skip the system "Allow location?" modal and return PERMISSION_DENIED.
     navigator.geolocation.getCurrentPosition(
       (position) => {
         const { latitude, longitude } = position.coords;
@@ -28,7 +30,8 @@ export default function GetCoordinatesButton({ onCoordinatesReceived, onSkip, is
         let errorMessage;
         switch (err.code) {
           case err.PERMISSION_DENIED:
-            errorMessage = "Location access was denied. Allow location for this site, or skip.";
+            errorMessage =
+              "Location was denied. If you didn't see the phone's \"Allow\" prompt, open your browser or phone Settings → Site settings → Location and allow it for this site, then tap the button again.";
             break;
           case err.POSITION_UNAVAILABLE:
             errorMessage = "Location unavailable. You can skip or enter coordinates manually in chat.";
@@ -48,6 +51,8 @@ export default function GetCoordinatesButton({ onCoordinatesReceived, onSkip, is
         maximumAge: 0,
       }
     );
+    requestAnimationFrame(() => setIsGettingLocation(true));
+    setError(null);
   };
 
   return (

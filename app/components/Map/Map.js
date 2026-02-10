@@ -97,6 +97,7 @@ const MapComponent = () => {
   const filterDropdownRef = useRef(null);
   const filterButtonRef = useRef(null);
   const [locationsData, setLocationsData] = useState(null);
+  const [mapReady, setMapReady] = useState(false);
   const [companyDistances, setCompanyDistances] = useState({});
 
   // Flattened company list for filter modal (main companies + per-locality companies)
@@ -902,6 +903,7 @@ const MapComponent = () => {
           }).addTo(map);
 
           mapInstanceRef.current = map;
+          setMapReady(true);
 
           // zoomToJobCoords is handled in the addMarkersToMap effect so the "my job" marker can be added there
         }).catch((error) => {
@@ -1110,7 +1112,7 @@ const MapComponent = () => {
         }
       }
     } catch (_) {}
-  }, [locationsData, isClient]);
+  }, [locationsData, isClient, mapReady]);
 
   // Check if search query is a college search (only when user types college-related keywords).
   // Place names like "Thrissur" must not be treated as college search so locality suggestions show.

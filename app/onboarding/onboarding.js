@@ -13,6 +13,7 @@ import FundingSeriesBadges from "../components/Onboarding/FundingSeriesBadges";
 import ExperienceRangeSelect from "../components/Onboarding/ExperienceRangeSelect";
 import SalaryRangeBadges from "../components/Onboarding/SalaryRangeBadges";
 import GetCoordinatesButton from "../components/Onboarding/GetCoordinatesButton";
+import PincodeDropdown from "../components/Onboarding/PincodeDropdown";
 
 // Field collection states
 const COMPANY_FIELDS = {
@@ -620,6 +621,25 @@ export default function OnboardingPage() {
     setIsLoading(false);
   };
 
+  // Handle pincode selected from dropdown (or skip)
+  const handlePincodeChosen = async (pincode) => {
+    const answerText = pincode || "skip";
+    await saveConversation(COMPANY_FIELDS.PINCODE, lastAIMessageTextRef.current, answerText);
+    if (pincode) {
+      setCompanyData((prev) => ({ ...prev, pincode }));
+    }
+    setInlineComponent(null);
+    setCollectingCompany(false);
+    setCurrentField(JOB_FIELDS.TITLE);
+    setIsLoading(true);
+    await addAIMessage(
+      pincode
+        ? `Pincode: ${pincode}. Excellent! Company information collected. Now let's add the job position details. What's the job title?`
+        : `No problem! Excellent! Company information collected. Now let's add the job position details. What's the job title?`
+    );
+    setIsLoading(false);
+  };
+
   // Handle coordinates received
   const handleCoordinatesReceived = async (lat, lon) => {
     const answerText = lat && lon ? `${lat}, ${lon}` : "skip";
@@ -627,12 +647,18 @@ export default function OnboardingPage() {
     setIsLoading(true);
     if (lat && lon) {
       let coordsLine = `Coordinates saved: ${lat}, ${lon}`;
+      let state = null;
+      let district = null;
+      let postcode = null;
       try {
         const res = await fetch(
           `/api/geocode/reverse?lat=${encodeURIComponent(lat)}&lon=${encodeURIComponent(lon)}`
         );
         if (res.ok) {
-          const { state, district } = await res.json();
+          const data = await res.json();
+          state = data.state ?? null;
+          district = data.district ?? null;
+          postcode = data.postcode ?? null;
           if (district || state) {
             const parts = [district, state].filter(Boolean);
             coordsLine += ` • ${parts.join(", ")}`;
@@ -642,11 +668,41 @@ export default function OnboardingPage() {
         // Keep coordinates-only message on failure
       }
       await addAIMessage(`${coordsLine}.`);
-      await addAIMessage(`What's the pincode? (Type "skip" if not available)`);
+
+      let pincodes = [];
+      if (district && state) {
+        try {
+          const pinRes = await fetch(
+            `/api/pincodes/by-district?district=${encodeURIComponent(district)}&state=${encodeURIComponent(state)}`
+          );
+          if (pinRes.ok) {
+            const { pincodes: list } = await pinRes.json();
+            pincodes = Array.isArray(list) ? list.slice(0, 4) : [];
+          }
+        } catch (_) {}
+      }
+      if (postcode && !pincodes.includes(postcode)) {
+        pincodes = [postcode, ...pincodes].slice(0, 4);
+      }
+
+      if (pincodes.length > 0) {
+        await addAIMessage(`What's the pincode? (Choose one or skip)`);
+        setCurrentField(COMPANY_FIELDS.PINCODE);
+        setInlineComponent(
+          <PincodeDropdown
+            pincodes={pincodes}
+            onSelect={(pincode) => handlePincodeChosen(pincode)}
+            onSkip={() => handlePincodeChosen(null)}
+          />
+        );
+      } else {
+        await addAIMessage(`What's the pincode? (Type "skip" if not available)`);
+        setCurrentField(COMPANY_FIELDS.PINCODE);
+      }
     } else {
       await addAIMessage(`No problem! What's the pincode? (Type "skip" if not available)`);
+      setCurrentField(COMPANY_FIELDS.PINCODE);
     }
-    setCurrentField(COMPANY_FIELDS.PINCODE);
     setIsLoading(false);
   };
 

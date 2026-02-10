@@ -15,7 +15,7 @@ const delayForRateLimit = async () => {
 
 /**
  * GET /api/geocode/reverse?lat=10.5276&lon=76.2144
- * Returns { state, district, locality } or { state: null, district: null, locality: null } on failure.
+ * Returns { state, district, locality, postcode } (or nulls on failure).
  * Uses Nominatim (OpenStreetMap) reverse geocoding; no API key required.
  */
 export async function GET(request) {
@@ -55,7 +55,7 @@ export async function GET(request) {
 
     if (!response.ok) {
       return NextResponse.json(
-        { state: null, district: null, locality: null },
+        { state: null, district: null, locality: null, postcode: null },
         { status: 200 }
       );
     }
@@ -67,6 +67,7 @@ export async function GET(request) {
         state: null,
         district: null,
         locality: null,
+        postcode: null,
       });
     }
 
@@ -84,11 +85,13 @@ export async function GET(request) {
       addr.city ||
       addr.hamlet ||
       null;
+    const postcode = addr.postcode ? String(addr.postcode).trim() : null;
 
     return NextResponse.json({
       state,
       district,
       locality,
+      postcode,
     });
   } catch (err) {
     console.error("Reverse geocode error:", err?.message);
@@ -96,6 +99,7 @@ export async function GET(request) {
       state: null,
       district: null,
       locality: null,
+      postcode: null,
     });
   }
 }

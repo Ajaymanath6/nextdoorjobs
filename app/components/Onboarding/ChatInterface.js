@@ -355,24 +355,59 @@ export default function ChatInterface({ messages = [], onSendMessage, isLoading 
             onChange={handleFileInputChange}
           />
 
-          {/* Icons at Left Bottom - Mobile: single file icon only; Desktop: all three */}
-          <div className="absolute bottom-4 left-2 flex items-center gap-2 z-10">
-            {/* Mobile only: single icon to open device file picker */}
-            <div className="relative flex md:hidden">
+          {/* Icons at Left Bottom - Mobile: @ and + only; Desktop: @, Screenshot, Attachment */}
+          <div className="absolute bottom-4 left-2 flex items-center gap-2 z-10" ref={savedFilesDropdownRef}>
+            {/* Mobile only: @ and + (Add) */}
+            <div className="relative flex items-center gap-2 md:hidden">
+              <div className="relative">
+                <button
+                  type="button"
+                  onClick={() => setShowSavedFilesDropdown(!showSavedFilesDropdown)}
+                  className="p-2 rounded-md hover:bg-brand-bg-fill transition-colors"
+                  disabled={isLoading}
+                  title="Show saved files"
+                >
+                  <span className="text-brand-stroke-strong text-lg font-semibold">@</span>
+                </button>
+                {showSavedFilesDropdown && (
+                  <div className="absolute bottom-full left-0 mb-2 w-64 bg-brand-bg-white border border-brand-stroke-weak rounded-lg shadow-lg z-50 max-h-60 overflow-y-auto">
+                    {savedFiles.length > 0 ? (
+                      <div className="py-2">
+                        {savedFiles.map((file, index) => (
+                          <button
+                            key={index}
+                            type="button"
+                            onClick={() => setShowSavedFilesDropdown(false)}
+                            className="w-full text-left px-4 py-2 text-sm text-brand-text-strong hover:bg-brand-bg-fill transition-colors flex items-center gap-2"
+                            style={{ fontFamily: "Open Sans, sans-serif" }}
+                          >
+                            <Document size={16} className="text-brand-stroke-strong" />
+                            <span className="truncate">{file.name || file}</span>
+                          </button>
+                        ))}
+                      </div>
+                    ) : (
+                      <div className="px-4 py-3 text-sm text-brand-text-weak text-center" style={{ fontFamily: "Open Sans, sans-serif" }}>
+                        No saved files
+                      </div>
+                    )}
+                  </div>
+                )}
+              </div>
               <button
                 type="button"
                 onClick={openDeviceFilePicker}
                 className="p-2 rounded-md hover:bg-brand-bg-fill transition-colors"
                 disabled={isLoading}
                 title="Attach file"
-                aria-label="Attach file from device"
+                aria-label="Attach file"
               >
-                <Document size={20} className="text-brand-stroke-strong" />
+                <Add size={20} className="text-brand-stroke-strong" />
               </button>
             </div>
 
-            {/* Desktop: @ Saved Files - hidden on mobile */}
-            <div className="relative hidden md:block" ref={savedFilesDropdownRef}>
+            {/* Desktop: @ Saved Files */}
+            <div className="relative hidden md:block">
               <button
                 type="button"
                 onClick={() => setShowSavedFilesDropdown(!showSavedFilesDropdown)}
