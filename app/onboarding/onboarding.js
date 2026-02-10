@@ -567,7 +567,7 @@ export default function OnboardingPage() {
     await saveConversation(COMPANY_FIELDS.LOCATION, lastAIMessageTextRef.current, answerText);
     setIsLoading(true);
     if (lat && lon) {
-      await addAIMessage(`Coordinates saved! What's the pincode? (Type "skip" if not available)`);
+      await addAIMessage(`Coordinates saved: ${lat}, ${lon}. What's the pincode? (Type "skip" if not available)`);
     } else {
       await addAIMessage(`No problem! What's the pincode? (Type "skip" if not available)`);
     }
@@ -676,13 +676,19 @@ export default function OnboardingPage() {
     }
   };
 
-  // Handle view on map - submit first, then navigate
+  // Handle view on map - submit first, then navigate and zoom to job coordinates
   const handleViewOnMap = async () => {
     // Submit if not already submitted
     if (!jobData?.id || !companyData?.id) {
       await handleFinalSubmit();
     }
-    // Navigate to home page
+    if (typeof window !== "undefined" && companyData?.latitude != null && companyData?.longitude != null) {
+      const lat = parseFloat(companyData.latitude);
+      const lng = parseFloat(companyData.longitude);
+      if (!Number.isNaN(lat) && !Number.isNaN(lng)) {
+        sessionStorage.setItem("zoomToJobCoords", JSON.stringify({ lat, lng }));
+      }
+    }
     router.push("/");
   };
 

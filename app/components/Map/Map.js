@@ -405,8 +405,7 @@ const MapComponent = () => {
       const companyName = company.company_name || company.name;
 
       if (isIrinjalakudaJobs) {
-        const imageUrl = IRINJALAKUDA_LOGO_URLS[index] ?? IRINJALAKUDA_LOGO_URLS[0];
-        const customIcon = createCircularCompanyIcon(L, imageUrl, 50);
+        const customIcon = createGeminiJobIcon(L, 50);
         const marker = L.marker([company.latitude, company.longitude], {
           icon: customIcon,
           zIndexOffset: 1000 + index,
@@ -429,12 +428,7 @@ const MapComponent = () => {
         return;
       }
 
-      const logoUrl = company.logoUrl || null;
-      const distanceKm =
-        selectedCollege && collegeDistances[companyName]
-          ? collegeDistances[companyName]
-          : null;
-      const customIcon = createCustomTeardropIcon(L, logoUrl, 50, distanceKm);
+      const customIcon = createGeminiJobIcon(L, 50);
 
       const marker = L.marker([company.latitude, company.longitude], {
         icon: customIcon,
@@ -894,6 +888,18 @@ const MapComponent = () => {
     });
   };
 
+  // Job posting pindrop icon using gemni.png (public/)
+  const createGeminiJobIcon = (L, size = 50) => {
+    const html = `<div class="company-marker" style="position:relative;width:${size}px;height:${size}px;display:flex;align-items:center;justify-content:center;cursor:pointer;transition:transform 0.2s ease,box-shadow 0.2s ease;"><img src="/gemni.png" alt="Job" style="width:100%;height:100%;object-fit:contain;" /></div>`;
+    return L.divIcon({
+      html,
+      className: "custom-pindrop-marker",
+      iconSize: [size, size],
+      iconAnchor: [size / 2, size],
+      popupAnchor: [0, -size - 10],
+    });
+  };
+
   useEffect(() => {
     setIsClient(true);
   }, []);
@@ -942,6 +948,9 @@ const MapComponent = () => {
               "https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/images/marker-shadow.png",
           });
 
+        // Guard: container may be unmounted (e.g. user navigated away) during async load
+        if (!mapRef.current || !document.body.contains(mapRef.current)) return;
+
         // Set initial view to home location (Thrissur, Kerala)
         // Will be adjusted by fitBounds when markers are added
         const initialLat = 10.5276;
@@ -964,6 +973,18 @@ const MapComponent = () => {
           }).addTo(map);
 
           mapInstanceRef.current = map;
+
+          // Zoom to job coords when arriving from "See your posting on the map"
+          try {
+            const raw = sessionStorage.getItem("zoomToJobCoords");
+            if (raw) {
+              const { lat, lng } = JSON.parse(raw);
+              if (typeof lat === "number" && typeof lng === "number") {
+                sessionStorage.removeItem("zoomToJobCoords");
+                setTimeout(() => map.flyTo([lat, lng], 15), 300);
+              }
+            }
+          } catch (_) {}
         }).catch((error) => {
           console.error("Error loading markercluster:", error);
         });
@@ -1127,8 +1148,7 @@ const MapComponent = () => {
 
         // Create company markers
         companies.forEach((company, index) => {
-          const logoUrl = company.logoUrl || null;
-          const customIcon = createCustomTeardropIcon(L, logoUrl, 50, null);
+          const customIcon = createGeminiJobIcon(L, 50);
 
           const marker = L.marker([company.lat, company.lon], {
             icon: customIcon,
@@ -1211,6 +1231,22 @@ const MapComponent = () => {
     };
 
     addMarkersToMap();
+
+    // Zoom to job coordinates when arriving from "See your posting on the map"
+    try {
+      const raw = typeof window !== "undefined" ? sessionStorage.getItem("zoomToJobCoords") : null;
+      if (raw && mapInstanceRef.current) {
+        const { lat, lng } = JSON.parse(raw);
+        if (typeof lat === "number" && typeof lng === "number") {
+          sessionStorage.removeItem("zoomToJobCoords");
+          setTimeout(() => {
+            if (mapInstanceRef.current) {
+              mapInstanceRef.current.flyTo([lat, lng], 15);
+            }
+          }, 400);
+        }
+      }
+    } catch (_) {}
   }, [locationsData, userHomeLocation, isClient]);
 
   // Check if search query is a college search (only when user types college-related keywords).
