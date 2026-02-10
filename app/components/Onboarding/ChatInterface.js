@@ -181,6 +181,16 @@ export default function ChatInterface({ messages = [], onSendMessage, isLoading 
                   }}
                 >
                   {message.text}
+                  {message.imageUrl && (
+                    <div className="mt-2">
+                      <img
+                        src={message.imageUrl}
+                        alt="Uploaded"
+                        className="rounded-lg max-h-32 object-cover border border-brand-stroke-weak"
+                        style={{ maxWidth: "200px" }}
+                      />
+                    </div>
+                  )}
                 </div>
                 {/* Find a job / Post a gig - show after first welcome message only */}
                 {message.type === "ai" && index === 0 && showFindOrPostButtons && onFindJob && onPostGig && (

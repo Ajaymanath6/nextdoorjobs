@@ -118,21 +118,37 @@ export async function POST(request) {
       }
     }
 
-    // Create company
-    const company = await prisma.company.create({
-      data: {
-        name: name.toString(),
-        logoPath,
-        websiteUrl: websiteUrlValue,
-        fundingSeries: fundingSeriesValue,
-        latitude: lat,
-        longitude: lon,
-        state: state.toString(),
-        district: district.toString(),
-        pincode: pincode ? pincode.toString() : null,
-        userId: parseInt(userId),
-      },
+    const userIdNum = parseInt(userId);
+    const nameStr = name.toString();
+
+    // Idempotent: return existing company if same user and name (e.g. "See your posting" retry)
+    const existing = await prisma.company.findFirst({
+      where: { userId: userIdNum, name: nameStr },
     });
+    let company;
+    if (existing) {
+      company = logoPath
+        ? await prisma.company.update({
+            where: { id: existing.id },
+            data: { logoPath },
+          })
+        : existing;
+    } else {
+      company = await prisma.company.create({
+        data: {
+          name: nameStr,
+          logoPath,
+          websiteUrl: websiteUrlValue,
+          fundingSeries: fundingSeriesValue,
+          latitude: lat,
+          longitude: lon,
+          state: state.toString(),
+          district: district.toString(),
+          pincode: pincode ? pincode.toString() : null,
+          userId: userIdNum,
+        },
+      });
+    }
 
     return NextResponse.json({
       success: true,
@@ -148,7 +164,7 @@ export async function POST(request) {
         district: company.district,
         pincode: company.pincode,
       },
-      message: "Company created successfully",
+      message: existing ? "Company already exists" : "Company created successfully",
     });
   } catch (error) {
     console.error("Error in company API:", error);

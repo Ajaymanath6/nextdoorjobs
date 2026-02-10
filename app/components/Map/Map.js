@@ -410,7 +410,8 @@ const MapComponent = () => {
       const companyName = company.company_name || company.name;
 
       if (isIrinjalakudaJobs) {
-        const customIcon = createGeminiJobIcon(L, 50);
+        const logoUrl = company.logoPath || company.logoUrl || null;
+        const customIcon = createGeminiJobIcon(L, 50, logoUrl);
         const marker = L.marker([company.latitude, company.longitude], {
           icon: customIcon,
           zIndexOffset: 1000 + index,
@@ -433,7 +434,8 @@ const MapComponent = () => {
         return;
       }
 
-      const customIcon = createGeminiJobIcon(L, 50);
+      const logoUrl = company.logoPath || company.logoUrl || null;
+      const customIcon = createGeminiJobIcon(L, 50, logoUrl);
 
       const marker = L.marker([company.latitude, company.longitude], {
         icon: customIcon,
@@ -893,9 +895,11 @@ const MapComponent = () => {
     });
   };
 
-  // Job posting pindrop icon: white background with gemni.png on top
-  const createGeminiJobIcon = (L, size = 50) => {
-    const html = `<div class="company-marker" style="position:relative;width:${size}px;height:${size}px;background-color:#FFFFFF;border-radius:8px;display:flex;align-items:center;justify-content:center;cursor:pointer;transition:transform 0.2s ease,box-shadow 0.2s ease;box-shadow:0 2px 8px rgba(0,0,0,0.12),0 1px 3px rgba(0,0,0,0.08);border:2px solid #87CEEB;overflow:visible;"><img src="/gemni.png" alt="Job" style="width:100%;height:100%;object-fit:contain;" /></div>`;
+  // Job posting pindrop: round, primary border, shadow; optional logoUrl (else gemni.png)
+  const PRIMARY_BORDER = "#F84416";
+  const createGeminiJobIcon = (L, size = 50, logoUrl = null) => {
+    const imgSrc = logoUrl || "/gemni.png";
+    const html = `<div class="company-marker" style="position:relative;width:${size}px;height:${size}px;background-color:#FFFFFF;border-radius:50%;display:flex;align-items:center;justify-content:center;cursor:pointer;transition:transform 0.2s ease;box-shadow:0 2px 8px rgba(0,0,0,0.15),0 1px 3px rgba(0,0,0,0.1);border:2px solid ${PRIMARY_BORDER};overflow:hidden;"><img src="${imgSrc}" alt="Job" style="width:100%;height:100%;object-fit:cover;" /></div>`;
     return L.divIcon({
       html,
       className: "custom-pindrop-marker",
@@ -1143,7 +1147,8 @@ const MapComponent = () => {
 
         // Create company markers
         companies.forEach((company, index) => {
-          const customIcon = createGeminiJobIcon(L, 50);
+          const companyLogoUrl = company.logoPath || company.logoUrl || null;
+          const customIcon = createGeminiJobIcon(L, 50, companyLogoUrl);
           const companyName = company.company_name || company.name || "Company";
 
           const marker = L.marker([company.lat, company.lon], {
@@ -1238,6 +1243,7 @@ const MapComponent = () => {
         const lat = payload.lat;
         const lng = payload.lng;
         const companyName = payload.companyName || "Your posting";
+        const logoUrl = payload.logoUrl || null;
         if (typeof lat === "number" && typeof lng === "number") {
           sessionStorage.removeItem("zoomToJobCoords");
           const L = window.L;
@@ -1246,7 +1252,7 @@ const MapComponent = () => {
               mapInstanceRef.current.removeLayer(zoomToJobMarkerRef.current);
               zoomToJobMarkerRef.current = null;
             }
-            const jobIcon = createGeminiJobIcon(L, 50);
+            const jobIcon = createGeminiJobIcon(L, 50, logoUrl);
             const myJobMarker = L.marker([lat, lng], {
               icon: jobIcon,
               zIndexOffset: 3000,

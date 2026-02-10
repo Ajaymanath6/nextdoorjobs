@@ -7,14 +7,17 @@ import { WatsonHealthRotate_360, List } from "@carbon/icons-react";
 import ChatInterface from "../components/Onboarding/ChatInterface";
 import EmailAuthForm from "../components/Onboarding/EmailAuthForm";
 import StateDistrictSelector from "../components/Onboarding/StateDistrictSelector";
+import LogoPicker from "../components/Onboarding/LogoPicker";
 import UrlInput from "../components/Onboarding/UrlInput";
 import FundingSeriesBadges from "../components/Onboarding/FundingSeriesBadges";
+import ExperienceRangeSelect from "../components/Onboarding/ExperienceRangeSelect";
 import SalaryRangeBadges from "../components/Onboarding/SalaryRangeBadges";
 import GetCoordinatesButton from "../components/Onboarding/GetCoordinatesButton";
 
 // Field collection states
 const COMPANY_FIELDS = {
   NAME: "company_name",
+  LOGO: "company_logo",
   STATE: "company_state",
   DISTRICT: "company_district",
   WEBSITE: "company_website",
@@ -278,8 +281,9 @@ export default function OnboardingPage() {
     return trimmed.replace(/^["']|["']$/g, "");
   };
 
-  // Add AI message with typing animation
-  const addAIMessage = async (text) => {
+  // Add AI message with typing animation; optional imageUrl for logo etc.
+  const addAIMessage = async (text, options = {}) => {
+    const { imageUrl } = options;
     setIsTyping(true);
     setTypingText("");
     for (let i = 0; i < text.length; i++) {
@@ -290,7 +294,7 @@ export default function OnboardingPage() {
     lastAIMessageTextRef.current = text;
     setChatMessages((prev) => [
       ...prev,
-      { type: "ai", text },
+      { type: "ai", text, ...(imageUrl && { imageUrl }) },
     ]);
     setTypingText("");
   };
@@ -324,18 +328,26 @@ export default function OnboardingPage() {
         switch (currentField) {
           case COMPANY_FIELDS.NAME:
             setCompanyData((prev) => ({ ...prev, name: value }));
-            await addAIMessage(`Got it! Your company name is "${value}". What state is your company located in?`);
-            setCurrentField(COMPANY_FIELDS.STATE);
+            await addAIMessage(`Got it! Your company name is "${value}". Add a logo for your company (optional).`);
+            setCurrentField(COMPANY_FIELDS.LOGO);
             setInlineComponent(
-              <StateDistrictSelector
-                onStateSelect={(state) => {
-                  setCompanyData((prev) => ({ ...prev, state }));
+              <LogoPicker
+                onLogoSelected={(file) => {
+                  const previewUrl = URL.createObjectURL(file);
+                  setCompanyData((prev) => ({ ...prev, logo: file, logoPreviewUrl: previewUrl }));
                   setInlineComponent(null);
-                  handleStateSelected(state);
+                  handleLogoSelected(file, previewUrl);
                 }}
-                selectedState={companyData?.state}
+                onSkip={() => {
+                  setInlineComponent(null);
+                  handleLogoSkipped();
+                }}
               />
             );
+            break;
+
+          case COMPANY_FIELDS.LOGO:
+            // Handled by LogoPicker callback; if user types, treat as skip
             break;
 
           case COMPANY_FIELDS.STATE:
@@ -408,33 +420,26 @@ export default function OnboardingPage() {
         switch (currentField) {
           case JOB_FIELDS.TITLE:
             setJobData((prev) => ({ ...prev, title: value }));
-            await addAIMessage(`Job title: ${value}. How many years of experience are required? (Enter a number)`);
+            await addAIMessage(`Job title: ${value}. How many years of experience are required?`);
             setCurrentField(JOB_FIELDS.YEARS);
-            break;
-
-          case JOB_FIELDS.YEARS:
-            const years = parseFloat(value) || 0;
-            setJobData((prev) => ({ ...prev, yearsRequired: years }));
-            await addAIMessage(`Experience required: ${years} years. What's the salary range?`);
-            setCurrentField(JOB_FIELDS.SALARY);
             setInlineComponent(
-              <SalaryRangeBadges
-                onSelect={(min, max) => {
+              <ExperienceRangeSelect
+                onSelect={(years) => {
+                  setJobData((prev) => ({ ...prev, yearsRequired: years }));
                   setInlineComponent(null);
-                  handleSalarySelected(min, max);
+                  handleExperienceSelected(years);
                 }}
-                onSkip={() => {
-                  setInlineComponent(null);
-                  handleSalarySelected(null, null);
-                }}
-                selectedMin={jobData?.salaryMin}
-                selectedMax={jobData?.salaryMax}
+                selectedValue={jobData?.yearsRequired}
               />
             );
             break;
 
+          case JOB_FIELDS.YEARS:
+            // Handled by ExperienceRangeSelect callback
+            break;
+
           case JOB_FIELDS.SALARY:
-            // This case is handled by SalaryRangeBadges callback
+            // Handled by SalaryRangeBadges callback
             break;
 
           case JOB_FIELDS.DESCRIPTION:
@@ -459,6 +464,45 @@ export default function OnboardingPage() {
     }, 500);
   };
 
+  // Handle logo selected
+  const handleLogoSelected = async (file, previewUrl) => {
+    await saveConversation(COMPANY_FIELDS.LOGO, lastAIMessageTextRef.current, "logo");
+    setIsLoading(true);
+    await addAIMessage("Logo added.", { imageUrl: previewUrl });
+    await addAIMessage("What state is your company located in?");
+    setCurrentField(COMPANY_FIELDS.STATE);
+    setInlineComponent(
+      <StateDistrictSelector
+        onStateSelect={(state) => {
+          setCompanyData((prev) => ({ ...prev, state }));
+          setInlineComponent(null);
+          handleStateSelected(state);
+        }}
+        selectedState={companyData?.state}
+      />
+    );
+    setIsLoading(false);
+  };
+
+  // Handle logo skipped
+  const handleLogoSkipped = async () => {
+    await saveConversation(COMPANY_FIELDS.LOGO, lastAIMessageTextRef.current, "skip");
+    setIsLoading(true);
+    await addAIMessage("No problem! What state is your company located in?");
+    setCurrentField(COMPANY_FIELDS.STATE);
+    setInlineComponent(
+      <StateDistrictSelector
+        onStateSelect={(state) => {
+          setCompanyData((prev) => ({ ...prev, state }));
+          setInlineComponent(null);
+          handleStateSelected(state);
+        }}
+        selectedState={companyData?.state}
+      />
+    );
+    setIsLoading(false);
+  };
+
   // Handle state selection
   const handleStateSelected = async (state) => {
     await saveConversation(COMPANY_FIELDS.STATE, lastAIMessageTextRef.current, state);
@@ -473,6 +517,7 @@ export default function OnboardingPage() {
           handleDistrictSelected(district);
         }}
         selectedDistrict={companyData?.district}
+        selectedState={companyData?.state}
         showDistrict={true}
       />
     );
@@ -592,6 +637,28 @@ export default function OnboardingPage() {
   };
 
   // Handle salary selection
+  const handleExperienceSelected = async (years) => {
+    await saveConversation(JOB_FIELDS.YEARS, lastAIMessageTextRef.current, String(years));
+    setIsLoading(true);
+    await addAIMessage(`Experience required: ${years} years. What's the salary range?`);
+    setCurrentField(JOB_FIELDS.SALARY);
+    setInlineComponent(
+      <SalaryRangeBadges
+        onSelect={(min, max) => {
+          setInlineComponent(null);
+          handleSalarySelected(min, max);
+        }}
+        onSkip={() => {
+          setInlineComponent(null);
+          handleSalarySelected(null, null);
+        }}
+        selectedMin={jobData?.salaryMin}
+        selectedMax={jobData?.salaryMax}
+      />
+    );
+    setIsLoading(false);
+  };
+
   const handleSalarySelected = async (min, max) => {
     const answerText = min != null && max != null ? `${min}-${max}` : "skip";
     await saveConversation(JOB_FIELDS.SALARY, lastAIMessageTextRef.current, answerText);
@@ -694,20 +761,24 @@ export default function OnboardingPage() {
 
   // Handle view on map - submit first, then navigate and zoom to job coordinates
   const handleViewOnMap = async () => {
-    // Submit if not already submitted
+    let submittedCompany = null;
     if (!jobData?.id || !companyData?.id) {
-      await handleFinalSubmit();
+      submittedCompany = await handleFinalSubmit();
     }
     if (typeof window !== "undefined" && companyData?.latitude != null && companyData?.longitude != null) {
       const lat = parseFloat(companyData.latitude);
       const lng = parseFloat(companyData.longitude);
       if (!Number.isNaN(lat) && !Number.isNaN(lng)) {
+        const companyName = companyData.name || companyData.company_name || "";
+        const logoUrl =
+          submittedCompany?.company?.logoPath ?? companyData.logoPath ?? null;
         sessionStorage.setItem(
           "zoomToJobCoords",
           JSON.stringify({
             lat,
             lng,
-            companyName: companyData.name || companyData.company_name || "",
+            companyName,
+            ...(logoUrl && { logoUrl }),
           })
         );
       }
@@ -813,7 +884,13 @@ export default function OnboardingPage() {
         }
       }
 
-      // Success!
+      // Success! Update state so "See your posting" won't re-submit and has logoPath
+      setCompanyData((prev) => ({
+        ...prev,
+        id: companyResult.company.id,
+        logoPath: companyResult.company.logoPath ?? prev.logoPath,
+      }));
+      setJobData((prev) => ({ ...prev, id: jobResult.jobPosition.id }));
       setChatMessages((prev) => [
         ...prev,
         {
@@ -822,9 +899,11 @@ export default function OnboardingPage() {
           isFinalMessage: true,
         },
       ]);
+      return { company: companyResult.company, job: jobResult.jobPosition };
     } catch (error) {
       console.error("Submission error:", error);
-      alert(`Error submitting: ${error.message}. Please try again.`);
+      alert("Could not submit. Please try again.");
+      return null;
     } finally {
       setIsLoading(false);
     }
