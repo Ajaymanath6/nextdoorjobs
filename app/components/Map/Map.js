@@ -3,6 +3,7 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import dynamic from "next/dynamic";
 import { useRouter } from "next/navigation";
+import { useClerk } from "@clerk/nextjs";
 import themeClasses from "../../theme-utility-classes.json";
 import {
   EarthFilled,
@@ -57,6 +58,7 @@ import "leaflet.markercluster/dist/MarkerCluster.Default.css";
 // Dynamic import of Leaflet to avoid SSR issues
 const MapComponent = () => {
   const router = useRouter();
+  const { signOut } = useClerk();
   const mapRef = useRef(null);
   const mapInstanceRef = useRef(null);
   const [isClient, setIsClient] = useState(false);
@@ -3010,13 +3012,25 @@ const MapComponent = () => {
                   </div>
                 </div>
 
-                {/* Profile icon - mobile only; hide when search focused or filter modal open */}
+                {/* Profile icon - mobile only: direct logout; hide when search focused or filter modal open */}
                 <div className={`md:hidden shrink-0 ${mobileSearchExpanded || showFilterDropdown ? "hidden" : ""}`}>
                   <button
                     type="button"
-                    onClick={() => router.push("/profile")}
+                    onClick={async () => {
+                      try {
+                        if (signOut) await signOut();
+                        await fetch("/api/auth/logout", { method: "POST" });
+                        router.push("/");
+                        window.location.reload();
+                      } catch (e) {
+                        console.error("Logout error:", e);
+                        await fetch("/api/auth/logout", { method: "POST" });
+                        router.push("/");
+                        window.location.reload();
+                      }
+                    }}
                     className="h-[34px] w-[34px] flex items-center justify-center rounded-lg border-0 bg-transparent hover:bg-brand-bg-fill transition-colors shrink-0"
-                    aria-label="Profile"
+                    aria-label="Log out"
                   >
                     <UserAvatar size={24} className="text-brand-stroke-strong w-6 h-6 shrink-0" />
                   </button>

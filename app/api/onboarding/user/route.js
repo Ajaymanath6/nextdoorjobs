@@ -148,16 +148,18 @@ export async function POST(request) {
 export async function GET(request) {
   try {
     const { searchParams } = new URL(request.url);
-    const email = searchParams.get("email");
+    const emailParam = searchParams.get("email");
     const clerkId = searchParams.get("clerkId");
     const avatarUrl = searchParams.get("avatarUrl");
 
-    if (!email) {
+    if (!emailParam || typeof emailParam !== "string") {
       return NextResponse.json(
         { error: "Email parameter is required" },
         { status: 400 }
       );
     }
+
+    const email = emailParam.toLowerCase().trim();
 
     let user = await prisma.user.findUnique({
       where: { email },
@@ -166,9 +168,6 @@ export async function GET(request) {
         email: true,
         name: true,
         phone: true,
-        clerkId: true,
-        avatarUrl: true,
-        createdAt: true,
       },
     });
 
@@ -179,36 +178,23 @@ export async function GET(request) {
       );
     }
 
-    // Optionally update Clerk linkage when found by email
-    if (clerkId !== null && clerkId !== undefined && clerkId !== "" && user.clerkId !== clerkId) {
-      user = await prisma.user.update({
-        where: { email },
-        data: {
-          clerkId: clerkId.trim(),
-          ...(avatarUrl !== null && avatarUrl !== undefined && avatarUrl !== ""
-            ? { avatarUrl: avatarUrl.trim() }
-            : {}),
-        },
-        select: {
-          id: true,
-          email: true,
-          name: true,
-          phone: true,
-          createdAt: true,
-        },
-      });
-    } else if (avatarUrl !== null && avatarUrl !== undefined && avatarUrl !== "" && user.avatarUrl !== avatarUrl) {
-      user = await prisma.user.update({
-        where: { email },
-        data: { avatarUrl: avatarUrl.trim() },
-        select: {
-          id: true,
-          email: true,
-          name: true,
-          phone: true,
-          createdAt: true,
-        },
-      });
+    // Optionally update Clerk linkage when found by email (best-effort; do not 500 if update fails)
+    const clerkIdStr = clerkId != null && String(clerkId).trim() ? String(clerkId).trim() : null;
+    const avatarUrlStr = avatarUrl != null && String(avatarUrl).trim() ? String(avatarUrl).trim() : null;
+    if (clerkIdStr || avatarUrlStr) {
+      try {
+        const updateData = {};
+        if (clerkIdStr) updateData.clerkId = clerkIdStr;
+        if (avatarUrlStr) updateData.avatarUrl = avatarUrlStr;
+        if (Object.keys(updateData).length > 0) {
+          await prisma.user.update({
+            where: { email },
+            data: updateData,
+          });
+        }
+      } catch (updateErr) {
+        console.error("Error updating Clerk linkage in user GET:", updateErr);
+      }
     }
 
     return NextResponse.json({

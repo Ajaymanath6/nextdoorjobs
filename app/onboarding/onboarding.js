@@ -108,46 +108,45 @@ export default function OnboardingPage() {
       const email = clerkUser.emailAddresses[0]?.emailAddress;
       if (!email) return;
       (async () => {
+        const name = clerkUser.firstName && clerkUser.lastName
+          ? `${clerkUser.firstName} ${clerkUser.lastName}`
+          : clerkUser.firstName || clerkUser.username || "User";
+        const setWelcome = (user) => {
+          setUserData(user);
+          setChatMessages([
+            { type: "ai", text: `Hi ${user.name || "there"}! 👋 Welcome to mapmyGig.` },
+          ]);
+        };
         try {
           const params = new URLSearchParams({ email });
           if (clerkUser.id) params.set("clerkId", clerkUser.id);
           if (clerkUser.imageUrl) params.set("avatarUrl", clerkUser.imageUrl);
           const response = await fetch(`/api/onboarding/user?${params.toString()}`);
-          const result = await response.json();
+          const result = await response.json().catch(() => ({}));
           if (result.success && result.user) {
-            setUserData(result.user);
-            setChatMessages([
-              {
-                type: "ai",
-                text: `Hi ${result.user.name || "there"}! 👋 Welcome to mapmyGig.`,
-              },
-            ]);
-          } else {
-            const createResponse = await fetch("/api/onboarding/user", {
-              method: "POST",
-              headers: { "Content-Type": "application/json" },
-              body: JSON.stringify({
-                email: email,
-                name: clerkUser.firstName && clerkUser.lastName
-                  ? `${clerkUser.firstName} ${clerkUser.lastName}`
-                  : clerkUser.firstName || clerkUser.username || "User",
-                clerkId: clerkUser.id,
-                avatarUrl: clerkUser.imageUrl || undefined,
-              }),
-            });
-            const createResult = await createResponse.json();
-            if (createResult.success) {
-              setUserData(createResult.user);
-              setChatMessages([
-                {
-                  type: "ai",
-                  text: `Hi ${createResult.user.name || "there"}! 👋 Welcome to mapmyGig.`,
-                },
-              ]);
-            }
+            setWelcome(result.user);
+            return;
+          }
+        } catch (e) {
+          console.error("Error fetching user:", e);
+        }
+        try {
+          const createResponse = await fetch("/api/onboarding/user", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              email,
+              name,
+              clerkId: clerkUser.id,
+              avatarUrl: clerkUser.imageUrl || undefined,
+            }),
+          });
+          const createResult = await createResponse.json().catch(() => ({}));
+          if (createResult.success && createResult.user) {
+            setWelcome(createResult.user);
           }
         } catch (error) {
-          console.error("Error checking Clerk auth:", error);
+          console.error("Error creating/fetching user:", error);
         }
       })();
       return;
