@@ -105,12 +105,25 @@ export default function OnboardingPage() {
     if (clerkUser) {
       setCheckingAuth(false);
       setShowAuth(false);
+      const name = clerkUser.firstName && clerkUser.lastName
+        ? `${clerkUser.firstName} ${clerkUser.lastName}`
+        : clerkUser.firstName || clerkUser.username || "there";
       const email = clerkUser.emailAddresses[0]?.emailAddress;
+
+      // Show welcome message and buttons immediately so the chat is never empty
+      setUserData({
+        id: null,
+        email: email || "",
+        name: name || "there",
+        phone: null,
+      });
+      setChatMessages([
+        { type: "ai", text: `Hi ${name || "there"}! 👋 Welcome to mapmyGig.` },
+      ]);
+
       if (!email) return;
+
       (async () => {
-        const name = clerkUser.firstName && clerkUser.lastName
-          ? `${clerkUser.firstName} ${clerkUser.lastName}`
-          : clerkUser.firstName || clerkUser.username || "User";
         const setWelcome = (user) => {
           setUserData(user);
           setChatMessages([
@@ -136,7 +149,7 @@ export default function OnboardingPage() {
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify({
               email,
-              name,
+              name: name || "User",
               clerkId: clerkUser.id,
               avatarUrl: clerkUser.imageUrl || undefined,
             }),
@@ -220,6 +233,10 @@ export default function OnboardingPage() {
   // User chose "Post a gig" → ensure user profile (Clerk linkage), create session, then continue chat
   const handlePostGig = async () => {
     if (!userData) return;
+    if (userData.id == null && clerkUser && !clerkUser.emailAddresses?.[0]?.emailAddress) {
+      alert("Please add an email to your account (Clerk settings) to post a gig.");
+      return;
+    }
     setHasChosenPostGig(true);
 
     try {
