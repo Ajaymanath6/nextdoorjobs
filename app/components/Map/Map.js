@@ -20,7 +20,7 @@ import {
   ChevronDown,
   Close,
 } from "@carbon/icons-react";
-import { RiArrowDownSLine, RiSearchLine } from "@remixicon/react";
+import { RiArrowDownSLine } from "@remixicon/react";
 import FilterDropdown from "./FilterDropdown";
 import FilterBottomSheet from "./FilterBottomSheet";
 import LocalityAutocomplete from "./LocalityAutocomplete";
@@ -66,17 +66,14 @@ const MapComponent = () => {
   const [searchQuery, setSearchQuery] = useState("");
   const [isGlobeView, setIsGlobeView] = useState(true);
   const [selectedFilterOption, setSelectedFilterOption] = useState(null);
-  const [isHomeFilterActive, setIsHomeFilterActive] = useState(false);
   const [showViewDropdown, setShowViewDropdown] = useState(false);
   const [showFilterDropdown, setShowFilterDropdown] = useState(false);
-  const [showHomeLocationDropdown, setShowHomeLocationDropdown] = useState(false);
   const [showAutocomplete, setShowAutocomplete] = useState(false);
   const [showJobAutocomplete, setShowJobAutocomplete] = useState(false);
   const [showCollegeAutocomplete, setShowCollegeAutocomplete] = useState(false);
   const [localities, setLocalities] = useState([]);
   const [jobTitles, setJobTitles] = useState([]);
   const [colleges, setColleges] = useState([]);
-  const [homeLocation, setHomeLocation] = useState("");
   const [isMapLoading, setIsMapLoading] = useState(false);
   const [isFindingJobs, setIsFindingJobs] = useState(false);
   const [userLocation, setUserLocation] = useState(null);
@@ -84,10 +81,6 @@ const MapComponent = () => {
   const [locationError, setLocationError] = useState(null);
   const [showEmptyState, setShowEmptyState] = useState(false);
   const [emptyStateQuery, setEmptyStateQuery] = useState("");
-  const [userHomeLocation, setUserHomeLocation] = useState(null);
-  const [showMobileHomePrompt, setShowMobileHomePrompt] = useState(false);
-  const [isGettingMobileHomeLocation, setIsGettingMobileHomeLocation] = useState(false);
-  const [locationHomeError, setLocationHomeError] = useState(null);
   const autocompleteRef = useRef(null);
   const jobAutocompleteRef = useRef(null);
   const collegeAutocompleteRef = useRef(null);
@@ -97,7 +90,6 @@ const MapComponent = () => {
   const searchBar = themeClasses.components.searchBar;
   const brand = themeClasses.brand;
   const markers = themeClasses.components.markers;
-  const homeMarkerRef = useRef(null);
   const companyMarkersRef = useRef([]);
   const straightLinesRef = useRef([]);
   const clusterGroupRef = useRef(null);
@@ -225,10 +217,6 @@ const MapComponent = () => {
   useEffect(() => {
     return () => {
       if (mapInstanceRef.current) {
-        // Remove home marker
-        if (homeMarkerRef.current) {
-          mapInstanceRef.current.removeLayer(homeMarkerRef.current);
-        }
         // Remove user location marker
         if (userLocationMarkerRef.current) {
           mapInstanceRef.current.removeLayer(userLocationMarkerRef.current);
@@ -285,34 +273,6 @@ const MapComponent = () => {
     }
   };
 
-  // Calculate distances for all companies
-  const calculateDistances = async (homeLoc, companies, map) => {
-    if (!homeLoc || !homeLoc.lat || !homeLoc.lon || !map) return {};
-
-    const distances = {};
-    const homeCoords = [homeLoc.lat, homeLoc.lon];
-
-    await Promise.all(
-      companies.map(async (company) => {
-        const companyCoords = [company.lat, company.lon];
-        const roadDistanceMeters = await fetchRoadDistance(
-          homeCoords,
-          companyCoords
-        );
-
-        if (roadDistanceMeters !== null) {
-          distances[company.name] = (roadDistanceMeters / 1000).toFixed(1);
-        } else {
-          // Fallback to straight-line distance
-          const straightDistance = map.distance(homeCoords, companyCoords);
-          distances[company.name] = (straightDistance / 1000).toFixed(1);
-        }
-      })
-    );
-
-    return distances;
-  };
-
   // Calculate distances from college to companies
   const calculateCollegeDistances = async (collegeLoc, companies, map) => {
     if (!collegeLoc || !collegeLoc.latitude || !collegeLoc.longitude || !map) return {};
@@ -346,16 +306,6 @@ const MapComponent = () => {
     );
 
     return distances;
-  };
-
-  // Create home icon function
-  const createHomeIcon = (L) => {
-    return L.divIcon({
-      html: `<div style="background-color:#FFFFFF;border-radius:50%;width:40px;height:40px;display:flex;align-items:center;justify-content:center;font-size:20px;border:3px solid #E5E5E5;box-shadow:0 2px 8px rgba(0,0,0,0.3);">🏠</div>`,
-      className: "home-marker",
-      iconSize: [40, 40],
-      iconAnchor: [20, 20],
-    });
   };
 
   // Create college icon function
@@ -676,17 +626,6 @@ const MapComponent = () => {
       category: collegeData.category || null,
     });
 
-    // Clear home filter if active
-    if (isHomeFilterActive) {
-      setIsHomeFilterActive(false);
-    }
-
-    // Remove existing home marker if present
-    if (homeMarkerRef.current) {
-      mapInstanceRef.current.removeLayer(homeMarkerRef.current);
-      homeMarkerRef.current = null;
-    }
-
     // Remove existing college marker if present
     if (collegeMarkerRef.current) {
       mapInstanceRef.current.removeLayer(collegeMarkerRef.current);
@@ -913,25 +852,6 @@ const MapComponent = () => {
     setIsClient(true);
   }, []);
 
-  const MOBILE_HOME_STORAGE_KEY = "mobileHomeAsked";
-  const MOBILE_HOME_COORDS_KEY = "mobileHomeCoords";
-
-  useEffect(() => {
-    if (!isClient || typeof window === "undefined") return;
-    const coordsRaw = sessionStorage.getItem(MOBILE_HOME_COORDS_KEY);
-    if (coordsRaw) {
-      try {
-        const { lat, lon } = JSON.parse(coordsRaw);
-        if (typeof lat === "number" && typeof lon === "number") {
-          setUserHomeLocation({ lat, lon });
-        }
-      } catch (_) {}
-    }
-    if (!sessionStorage.getItem(MOBILE_HOME_STORAGE_KEY)) {
-      setShowMobileHomePrompt(true);
-    }
-  }, [isClient]);
-
   useEffect(() => {
     // Only run on client side
     if (!isClient || !mapRef.current || mapInstanceRef.current) return;
@@ -998,9 +918,6 @@ const MapComponent = () => {
     return () => {
       if (mapInstanceRef.current) {
         // Remove all markers and lines
-        if (homeMarkerRef.current) {
-          mapInstanceRef.current.removeLayer(homeMarkerRef.current);
-        }
         if (clusterGroupRef.current) {
           mapInstanceRef.current.removeLayer(clusterGroupRef.current);
         }
@@ -1059,15 +976,9 @@ const MapComponent = () => {
     };
   }, [showThrissurBadges]);
 
-  // Add markers when locations data and map are ready (or user home from mobile)
+  // Add markers when locations data and map are ready (companies only; no home)
   useEffect(() => {
-    if (!mapInstanceRef.current) {
-      return;
-    }
-    const effectiveHome = userHomeLocation
-      ? { lat: userHomeLocation.lat, lon: userHomeLocation.lon, name: "Home" }
-      : locationsData?.homeLocation;
-    if (!effectiveHome || effectiveHome.lat == null || effectiveHome.lon == null) {
+    if (!mapInstanceRef.current || !locationsData) {
       return;
     }
 
@@ -1082,64 +993,14 @@ const MapComponent = () => {
         return;
       }
 
-      const homeLoc = userHomeLocation
-        ? { lat: userHomeLocation.lat, lon: userHomeLocation.lon, name: "Home" }
-        : locationsData?.homeLocation;
       const companies = locationsData?.companies ?? [];
 
-      if (!homeLoc || homeLoc.lat == null || homeLoc.lon == null) {
-        return;
-      }
-
-      if (homeMarkerRef.current) {
-        mapInstanceRef.current.removeLayer(homeMarkerRef.current);
-        homeMarkerRef.current = null;
-      }
       if (clusterGroupRef.current) {
         mapInstanceRef.current.removeLayer(clusterGroupRef.current);
         clusterGroupRef.current = null;
       }
       companyMarkersRef.current = [];
 
-      // Create home marker
-      const homeIcon = createHomeIcon(L);
-      const homeMarker = L.marker([homeLoc.lat, homeLoc.lon], {
-        icon: homeIcon,
-        zIndexOffset: 2000,
-        interactive: true,
-      }).addTo(mapInstanceRef.current);
-
-      homeMarkerRef.current = homeMarker;
-
-      // Simple tooltip for home marker
-      homeMarker.bindTooltip(
-        `<div style="font-weight:bold;color:#1A1A1A;font-size:14px;">${homeLoc.name || "Home"}</div>`,
-        {
-          permanent: false,
-          direction: "right",
-          offset: [10, 0],
-          className: "home-panel-tooltip",
-          interactive: true,
-        }
-      );
-
-      // Click handler for home marker
-      homeMarker.on("click", function () {
-        if (homeMarker.isTooltipOpen()) {
-          homeMarker.closeTooltip();
-        } else {
-          homeMarker.openTooltip();
-        }
-      });
-
-      // Close tooltip on map click
-      mapInstanceRef.current.on("click", function () {
-        if (homeMarker.isTooltipOpen()) {
-          homeMarker.closeTooltip();
-        }
-      });
-
-      // Create company markers if companies exist
       if (companies && companies.length > 0) {
         // Create marker cluster group for companies
         const clusterGroup = L.markerClusterGroup();
@@ -1174,11 +1035,8 @@ const MapComponent = () => {
         // Add cluster group to map
         mapInstanceRef.current.addLayer(clusterGroup);
 
-        // Calculate bounds from all coordinates (home + companies)
-        const allCoords = [
-          [homeLoc.lat, homeLoc.lon],
-          ...companies.map(c => [c.lat, c.lon])
-        ];
+        // Calculate bounds from company coordinates only
+        const allCoords = companies.map(c => [c.lat, c.lon]);
         const lats = allCoords.map(c => c[0]);
         const lons = allCoords.map(c => c[1]);
         const minLat = Math.min(...lats);
@@ -1186,50 +1044,26 @@ const MapComponent = () => {
         const minLon = Math.min(...lons);
         const maxLon = Math.max(...lons);
 
-        // Add 10% coordinate padding
-        const latPadding = (maxLat - minLat) * 0.1;
-        const lonPadding = (maxLon - minLon) * 0.1;
+        const latPadding = (maxLat - minLat) * 0.1 || 0.01;
+        const lonPadding = (maxLon - minLon) * 0.1 || 0.01;
         const bounds = L.latLngBounds(
           [minLat - latPadding, minLon - lonPadding],
           [maxLat + latPadding, maxLon + lonPadding]
         );
 
-        // Calculate optimal pixel padding based on pin count
-        const totalPinCount = 1 + companies.length; // home + companies
+        const totalPinCount = companies.length;
         const padding = calculateOptimalPadding(totalPinCount);
 
-        // Determine max zoom level: 12 for Thrissur with 5+ companies, 14 for others
-        // Check if location is Thrissur (based on coordinates or name)
-        const isThrissur = 
-          (homeLoc.lat >= 10.4 && homeLoc.lat <= 10.6 && homeLoc.lon >= 76.1 && homeLoc.lon <= 76.3) ||
-          (homeLoc.name && homeLoc.name.toLowerCase().includes('thrissur'));
-        const maxZoomLevel = isThrissur && companies.length >= 5 ? 12 : 14;
+        const maxZoomLevel = companies.length >= 5 ? 12 : 14;
 
-        // Use setTimeout to ensure markers are fully added before fitting bounds
         setTimeout(() => {
-          // Create feature group from all markers
-          const group = new L.featureGroup([
-            homeMarker,
-            ...companyMarkersRef.current,
-          ]);
-          
-          // Get bounds
+          const group = new L.featureGroup(companyMarkersRef.current);
           const groupBounds = group.getBounds();
-          
-          // Pad the bounds (10% coordinate padding is already in bounds calculation)
-          // Add additional pixel padding by expanding bounds
           const paddedBounds = groupBounds.pad(0.1);
-          
-          // Fit bounds with maxZoom limit
-          // Note: Leaflet's fitBounds doesn't support padding option directly in older versions
-          // So we use pad() on bounds and then fitBounds
           mapInstanceRef.current.fitBounds(paddedBounds, {
             maxZoom: maxZoomLevel,
           });
         }, 200);
-      } else {
-        // If no companies, center on home location
-        mapInstanceRef.current.setView([homeLoc.lat, homeLoc.lon], 13);
       }
     };
 
@@ -1275,7 +1109,7 @@ const MapComponent = () => {
         }
       }
     } catch (_) {}
-  }, [locationsData, userHomeLocation, isClient]);
+  }, [locationsData, isClient]);
 
   // Check if search query is a college search (only when user types college-related keywords).
   // Place names like "Thrissur" must not be treated as college search so locality suggestions show.
@@ -2011,101 +1845,6 @@ const MapComponent = () => {
     // Preserve searchQuery, selectedFilterOption, etc.
   };
 
-  const handleDistanceToggle = () => {
-    setIsHomeFilterActive(!isHomeFilterActive);
-  };
-
-  const handleHomeLocationRightClick = (e) => {
-    e.preventDefault();
-    setShowHomeLocationDropdown(!showHomeLocationDropdown);
-  };
-
-  // Function to show road distance on line hover
-  const showRoadDistanceOnHover = async (line, company, home) => {
-    if (!mapInstanceRef.current || !home || !company || !line) return;
-    const homeCoords = [home.lat, home.lon];
-    const companyCoords = [company.lat, company.lon];
-    const roadDistanceMeters = await fetchRoadDistance(homeCoords, companyCoords);
-
-    if (roadDistanceMeters !== null) {
-      const roadDistanceKm = (roadDistanceMeters / 1000).toFixed(1);
-      line.bindTooltip(
-        `${company.name || "Location"}: ${roadDistanceKm} km by road`,
-        {
-          permanent: false,
-          direction: "top",
-          className: "road-distance-tooltip",
-        }
-      );
-    }
-  };
-
-  // Handle connecting lines when distance toggle is active
-  useEffect(() => {
-    if (!mapInstanceRef.current || !locationsData) {
-      // Remove lines if map is not ready
-      if (straightLinesRef.current.length > 0 && mapInstanceRef.current) {
-        straightLinesRef.current.forEach((line) => {
-          mapInstanceRef.current.removeLayer(line);
-        });
-        straightLinesRef.current = [];
-      }
-      return;
-    }
-
-    const L = window.L;
-    if (!L) return;
-
-    const homeLoc = locationsData.homeLocation;
-    const companies = locationsData.companies;
-
-    if (!homeLoc || !homeLoc.lat || !homeLoc.lon || !companies || companies.length === 0) {
-      // Remove lines if no valid data
-      if (straightLinesRef.current.length > 0) {
-        straightLinesRef.current.forEach((line) => {
-          mapInstanceRef.current.removeLayer(line);
-        });
-        straightLinesRef.current = [];
-      }
-      return;
-    }
-
-    // Remove existing lines
-    straightLinesRef.current.forEach((line) => {
-      mapInstanceRef.current.removeLayer(line);
-    });
-    straightLinesRef.current = [];
-
-    // Only create lines if distance toggle is active
-    if (isHomeFilterActive && homeMarkerRef.current) {
-      // Create new lines
-      companies.forEach(async (company) => {
-        const home = [homeLoc.lat, homeLoc.lon];
-        const companyLoc = [company.lat, company.lon];
-
-        // Create dashed line
-        const straightLine = L.polyline([home, companyLoc], {
-          color: "#0A0A0A",
-          weight: 2,
-          opacity: 0.6,
-          dashArray: "5, 5",
-          interactive: true,
-        }).addTo(mapInstanceRef.current);
-
-        // Add hover handler to show road distance
-        straightLine.on("mouseover", async function () {
-          await showRoadDistanceOnHover(straightLine, company, homeLoc);
-        });
-
-        straightLine.on("mouseout", function () {
-          straightLine.closeTooltip();
-        });
-
-        straightLinesRef.current.push(straightLine);
-      });
-    }
-  }, [isHomeFilterActive, locationsData]);
-
   // Handle connecting lines from college to companies when college distance toggle is active
   useEffect(() => {
     if (!mapInstanceRef.current || !selectedCollege || !companyMarkersRef.current) {
@@ -2359,17 +2098,6 @@ const MapComponent = () => {
     setIsCollegeFilterActive(false);
     setCollegeDistances({});
     
-    // Clear home filter if active
-    if (isHomeFilterActive) {
-      setIsHomeFilterActive(false);
-    }
-    
-    // Remove home marker if present
-    if (homeMarkerRef.current) {
-      mapInstanceRef.current?.removeLayer(homeMarkerRef.current);
-      homeMarkerRef.current = null;
-    }
-    
     setSearchQuery(selectedCollegeName);
     setShowCollegeAutocomplete(false);
     
@@ -2541,107 +2269,6 @@ const MapComponent = () => {
     }
   };
 
-  const tryIpFallbackForHome = async () => {
-    const ipLoc = await fetchLocationByIP();
-    if (ipLoc && ipLoc.lat != null && ipLoc.lng != null) {
-      setUserHomeLocation({ lat: ipLoc.lat, lon: ipLoc.lng });
-      sessionStorage.setItem(MOBILE_HOME_STORAGE_KEY, "granted");
-      sessionStorage.setItem(MOBILE_HOME_COORDS_KEY, JSON.stringify({ lat: ipLoc.lat, lon: ipLoc.lng }));
-      setShowMobileHomePrompt(false);
-      setLocationHomeError(null);
-      return true;
-    }
-    return false;
-  };
-
-  const handleMobileHomeAllow = async () => {
-    setLocationHomeError(null);
-    const isDesktop = typeof window !== "undefined" && window.innerWidth >= 768;
-    if (isDesktop && mapInstanceRef.current) {
-      setIsGettingMobileHomeLocation(true);
-      try {
-        const location = await detectUserLocation(true);
-        if (location && location.lat != null && location.lng != null) {
-          setUserHomeLocation({ lat: location.lat, lon: location.lng });
-          sessionStorage.setItem(MOBILE_HOME_STORAGE_KEY, "granted");
-          sessionStorage.setItem(MOBILE_HOME_COORDS_KEY, JSON.stringify({ lat: location.lat, lon: location.lng }));
-          setShowMobileHomePrompt(false);
-        } else {
-          const usedIp = await tryIpFallbackForHome();
-          if (!usedIp) {
-            setLocationHomeError(
-              "Precise location failed (browser service error). You can use approximate location from your network below, or search for your city."
-            );
-          }
-        }
-      } catch (_) {
-        const usedIp = await tryIpFallbackForHome();
-        if (!usedIp) {
-          setLocationHomeError(
-            "Precise location failed. You can use approximate location from your network below, or search for your city."
-          );
-        }
-      }
-      setIsGettingMobileHomeLocation(false);
-      return;
-    }
-    if (!navigator.geolocation) {
-      const usedIp = await tryIpFallbackForHome();
-      if (!usedIp) setLocationHomeError("Location is not supported in this browser. Search for your city instead.");
-      setIsGettingMobileHomeLocation(false);
-      return;
-    }
-    setIsGettingMobileHomeLocation(true);
-    navigator.geolocation.getCurrentPosition(
-      (position) => {
-        const { latitude, longitude } = position.coords;
-        setUserHomeLocation({ lat: latitude, lon: longitude });
-        sessionStorage.setItem(MOBILE_HOME_STORAGE_KEY, "granted");
-        sessionStorage.setItem(MOBILE_HOME_COORDS_KEY, JSON.stringify({ lat: latitude, lon: longitude }));
-        setShowMobileHomePrompt(false);
-        setLocationHomeError(null);
-        setIsGettingMobileHomeLocation(false);
-      },
-      async (err) => {
-        const code = err?.code;
-        if (code === 2) {
-          const usedIp = await tryIpFallbackForHome();
-          if (usedIp) {
-            setIsGettingMobileHomeLocation(false);
-            return;
-          }
-        }
-        if (code === 1) {
-          setLocationHomeError("Location permission denied. Allow location for this site in your browser (address bar or site settings), or use approximate location below.");
-        } else if (code === 2) {
-          setLocationHomeError("Precise location failed (browser/network). Use approximate location from your network below, or search for your city.");
-        } else if (code === 3) {
-          setLocationHomeError("Location request timed out. Try again or use approximate location below.");
-        } else {
-          setLocationHomeError("Couldn't get precise location. Use approximate location from your network below, or search for your city.");
-        }
-        setIsGettingMobileHomeLocation(false);
-      },
-      { enableHighAccuracy: true, timeout: 10000, maximumAge: 0 }
-    );
-  };
-
-  const handleUseApproximateLocation = async () => {
-    setLocationHomeError(null);
-    setIsGettingMobileHomeLocation(true);
-    const used = await tryIpFallbackForHome();
-    if (!used) {
-      setLocationHomeError("Approximate location unavailable. Please search for your city.");
-    }
-    setIsGettingMobileHomeLocation(false);
-  };
-
-  const handleMobileHomeSkip = () => {
-    setShowMobileHomePrompt(false);
-    setLocationHomeError(null);
-    sessionStorage.setItem(MOBILE_HOME_STORAGE_KEY, "skipped");
-  };
-
   if (!isClient) {
     return (
       <div className="flex-1 h-screen bg-gray-50 dark:bg-gray-950 relative flex items-center justify-center">
@@ -2657,72 +2284,6 @@ const MapComponent = () => {
     <div className="flex-1 h-screen bg-gray-50 dark:bg-gray-950 relative overflow-hidden">
       {/* Map Container */}
       <div ref={mapRef} className="w-full h-full absolute inset-0" />
-
-      {/* Mobile: one-time prompt to use current location as Home on the map */}
-      {showMobileHomePrompt && (
-        <div className="fixed inset-0 z-[1000] flex items-center justify-center p-4 bg-black/20">
-          <div className="bg-brand-bg-white border border-brand-stroke-border rounded-lg shadow-lg p-4 flex flex-col gap-3 w-full max-w-sm" style={{ fontFamily: "Open Sans, sans-serif" }}>
-            {locationHomeError ? (
-              <>
-                <p className="text-sm font-medium text-brand-text-weak">{locationHomeError}</p>
-                <div className="flex flex-col gap-2">
-                  <div className="flex gap-2">
-                    <button
-                      type="button"
-                      onClick={handleUseApproximateLocation}
-                      disabled={isGettingMobileHomeLocation}
-                      className="flex-1 py-2 px-3 rounded-lg bg-brand text-white text-sm font-medium disabled:opacity-50"
-                    >
-                      {isGettingMobileHomeLocation ? "Getting…" : "Use approximate location"}
-                    </button>
-                    <button
-                      type="button"
-                      onClick={handleMobileHomeAllow}
-                      disabled={isGettingMobileHomeLocation}
-                      className="flex-1 py-2 px-3 rounded-lg border border-brand-stroke-border text-brand-text-weak text-sm font-medium hover:bg-brand-stroke-weak"
-                    >
-                      Try again
-                    </button>
-                  </div>
-                  <button
-                    type="button"
-                    onClick={handleMobileHomeSkip}
-                    disabled={isGettingMobileHomeLocation}
-                    className="w-full py-2 px-3 rounded-lg border border-brand-stroke-border text-brand-text-weak text-sm font-medium hover:bg-brand-stroke-weak"
-                  >
-                    Skip
-                  </button>
-                </div>
-              </>
-            ) : (
-              <>
-                <p className="text-sm font-medium text-brand-text-weak">Use your current location as Home on the map?</p>
-                {typeof window !== "undefined" && window.innerWidth >= 768 && (
-                  <p className="text-xs text-brand-text-weak">Your browser may ask for permission. Check the address bar or a popup.</p>
-                )}
-                <div className="flex gap-2">
-                  <button
-                    type="button"
-                    onClick={handleMobileHomeAllow}
-                    disabled={isGettingMobileHomeLocation}
-                    className="flex-1 py-2 px-3 rounded-lg bg-brand text-white text-sm font-medium disabled:opacity-50"
-                  >
-                    {isGettingMobileHomeLocation ? "Getting location…" : "Allow"}
-                  </button>
-                  <button
-                    type="button"
-                    onClick={handleMobileHomeSkip}
-                    disabled={isGettingMobileHomeLocation}
-                    className="flex-1 py-2 px-3 rounded-lg border border-brand-stroke-border text-brand-text-weak text-sm font-medium hover:bg-brand-stroke-weak"
-                  >
-                    Skip
-                  </button>
-                </div>
-              </>
-            )}
-          </div>
-        </div>
-      )}
 
       {/* Search Bar - visible on all viewports */}
       {isGlobeView && (
@@ -3123,9 +2684,9 @@ const MapComponent = () => {
             </div>
           </div>
 
-          {/* Distance chip - below search bar, mobile only; slightly larger on mobile */}
+          {/* Distance chip - below search bar, mobile only; only when a college is selected */}
           <div className="relative self-start md:hidden">
-            {selectedCollege ? (
+            {selectedCollege && (
               <button
                 type="button"
                 onClick={() => setIsCollegeFilterActive(!isCollegeFilterActive)}
@@ -3135,64 +2696,6 @@ const MapComponent = () => {
                 <span className="text-sm">🏫</span>
                 <span>{isCollegeFilterActive ? "Hide distance" : "Show distance"}</span>
               </button>
-            ) : (
-              <button
-                type="button"
-                onClick={handleDistanceToggle}
-                onContextMenu={handleHomeLocationRightClick}
-                className={`inline-flex items-center gap-1.5 py-2 px-3 rounded-full text-sm font-medium transition-colors border border-brand-stroke-border bg-brand-bg-white hover:bg-brand-bg-fill text-brand-text-weak shadow-lg ${isHomeFilterActive ? "bg-brand-bg-fill" : ""}`}
-                style={{ fontFamily: "Open Sans" }}
-              >
-                <span className="text-sm">🏠</span>
-                <span>{isHomeFilterActive ? "Hide distance" : "Show distance"}</span>
-              </button>
-            )}
-            {showHomeLocationDropdown && (
-              <div className="absolute top-full mt-2 right-0 w-[300px] bg-brand-bg-white border border-brand-stroke-border rounded-lg shadow-lg z-50 p-3 flex flex-col gap-3">
-                <div className="font-semibold text-sm text-brand-text-strong" style={{ fontFamily: "Open Sans" }}>
-                  Home Location
-                </div>
-                <div className="relative">
-                  <RiSearchLine
-                    size={18}
-                    className="absolute left-3 top-1/2 -translate-y-1/2 text-brand-text-tertiary"
-                  />
-                  <input
-                    type="text"
-                    value={homeLocation}
-                    onChange={(e) => setHomeLocation(e.target.value)}
-                    className="w-full pl-10 pr-3 py-2 border border-brand-stroke-border rounded-lg focus:outline-none focus:border-brand text-sm text-brand-text-strong"
-                    style={{ fontFamily: "Open Sans" }}
-                    placeholder="Enter location"
-                  />
-                </div>
-                <div className="flex gap-2">
-                  <button
-                    type="button"
-                    className="px-4 py-2 bg-brand text-white rounded-lg hover:opacity-90 transition-opacity text-sm"
-                    style={{ fontFamily: "Open Sans" }}
-                    onClick={() => setShowHomeLocationDropdown(false)}
-                  >
-                    Set Location
-                  </button>
-                  <button
-                    type="button"
-                    className="px-4 py-2 bg-transparent border border-brand-stroke-border text-brand-stroke-strong rounded-lg hover:bg-brand-stroke-weak transition-colors text-sm"
-                    style={{ fontFamily: "Open Sans" }}
-                    onClick={() => {
-                      setHomeLocation("");
-                      setShowHomeLocationDropdown(false);
-                    }}
-                  >
-                    Clear
-                  </button>
-                </div>
-                {homeLocation && (
-                  <div className="text-xs text-brand-text-weak" style={{ fontFamily: "Open Sans" }}>
-                    Current: {homeLocation}
-                  </div>
-                )}
-              </div>
             )}
           </div>
         </div>
