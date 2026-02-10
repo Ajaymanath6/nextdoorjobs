@@ -9,12 +9,23 @@ export default function ChatInterface({ messages = [], onSendMessage, isLoading 
   const messagesEndRef = useRef(null);
   const inputRef = useRef(null);
   const messagesContainerRef = useRef(null);
+  const fileInputRef = useRef(null);
   const [uploadedFiles, setUploadedFiles] = useState([]);
   const [showScreenshotTooltip, setShowScreenshotTooltip] = useState(false);
   const [showClipTooltip, setShowClipTooltip] = useState(false);
   const [showSavedFilesDropdown, setShowSavedFilesDropdown] = useState(false);
   const [savedFiles, setSavedFiles] = useState([]);
   const savedFilesDropdownRef = useRef(null);
+
+  const openDeviceFilePicker = () => {
+    if (fileInputRef.current) fileInputRef.current.click();
+  };
+
+  const handleFileInputChange = (e) => {
+    const files = Array.from(e.target.files || []);
+    if (files.length) setUploadedFiles((prev) => [...prev, ...files.map((f) => ({ name: f.name, file: f }))]);
+    e.target.value = "";
+  };
 
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
@@ -334,15 +345,38 @@ export default function ChatInterface({ messages = [], onSendMessage, isLoading 
             }}
           />
           
-          {/* Icons at Left Bottom */}
+          {/* Hidden file input - used by mobile single icon and desktop attachment */}
+          <input
+            ref={fileInputRef}
+            type="file"
+            multiple
+            accept="*/*"
+            className="hidden"
+            aria-hidden="true"
+            onChange={handleFileInputChange}
+          />
+
+          {/* Icons at Left Bottom - Mobile: single file icon only; Desktop: all three */}
           <div className="absolute bottom-4 left-2 flex items-center gap-2 z-10">
-            {/* @ Icon for Saved Files - FIRST */}
-            <div className="relative" ref={savedFilesDropdownRef}>
+            {/* Mobile only: single icon to open device file picker */}
+            <div className="relative flex md:hidden">
               <button
                 type="button"
-                onClick={() => {
-                  setShowSavedFilesDropdown(!showSavedFilesDropdown);
-                }}
+                onClick={openDeviceFilePicker}
+                className="p-2 rounded-md hover:bg-brand-bg-fill transition-colors"
+                disabled={isLoading}
+                title="Attach file"
+                aria-label="Attach file from device"
+              >
+                <Document size={20} className="text-brand-stroke-strong" />
+              </button>
+            </div>
+
+            {/* Desktop: @ Saved Files - hidden on mobile */}
+            <div className="relative hidden md:block" ref={savedFilesDropdownRef}>
+              <button
+                type="button"
+                onClick={() => setShowSavedFilesDropdown(!showSavedFilesDropdown)}
                 className="p-2 rounded-md hover:bg-brand-bg-fill transition-colors"
                 disabled={isLoading}
                 title="Show saved files"
@@ -358,9 +392,7 @@ export default function ChatInterface({ messages = [], onSendMessage, isLoading 
                           key={index}
                           type="button"
                           onClick={() => {
-                            console.log("Selected file:", file);
                             setShowSavedFilesDropdown(false);
-                            // TODO: Add file to input or handle selection
                           }}
                           className="w-full text-left px-4 py-2 text-sm text-brand-text-strong hover:bg-brand-bg-fill transition-colors flex items-center gap-2"
                           style={{ fontFamily: "Open Sans, sans-serif" }}
@@ -379,14 +411,11 @@ export default function ChatInterface({ messages = [], onSendMessage, isLoading 
               )}
             </div>
 
-            {/* Screenshot Icon */}
-            <div className="relative">
+            {/* Desktop: Screenshot Icon - hidden on mobile */}
+            <div className="relative hidden md:block">
               <button
                 type="button"
-                onClick={() => {
-                  // Handle screenshot functionality
-                  console.log("Screenshot clicked");
-                }}
+                onClick={() => {}}
                 onMouseEnter={() => setShowScreenshotTooltip(true)}
                 onMouseLeave={() => setShowScreenshotTooltip(false)}
                 className="p-2 rounded-md hover:bg-brand-bg-fill transition-colors"
@@ -402,21 +431,11 @@ export default function ChatInterface({ messages = [], onSendMessage, isLoading 
               )}
             </div>
 
-            {/* Attachment Icon */}
-            <div className="relative">
+            {/* Desktop: Attachment Icon - hidden on mobile (mobile uses single icon above) */}
+            <div className="relative hidden md:block">
               <button
                 type="button"
-                onClick={() => {
-                  // Handle file attachment
-                  const input = document.createElement("input");
-                  input.type = "file";
-                  input.multiple = true;
-                  input.onchange = (e) => {
-                    const files = Array.from(e.target.files);
-                    setUploadedFiles([...uploadedFiles, ...files.map(f => ({ name: f.name, file: f }))]);
-                  };
-                  input.click();
-                }}
+                onClick={openDeviceFilePicker}
                 onMouseEnter={() => setShowClipTooltip(true)}
                 onMouseLeave={() => setShowClipTooltip(false)}
                 className="p-2 rounded-md hover:bg-brand-bg-fill transition-colors"
