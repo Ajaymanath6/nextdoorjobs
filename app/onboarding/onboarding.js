@@ -71,10 +71,20 @@ export default function OnboardingPage() {
   const [isTyping, setIsTyping] = useState(false);
   const [hasChosenPostGig, setHasChosenPostGig] = useState(false);
   const [onboardingSessionId, setOnboardingSessionId] = useState(null);
+  const [isMobile, setIsMobile] = useState(false);
+  const [isNavigatingToMap, setIsNavigatingToMap] = useState(false);
   const onboardingSessionIdRef = useRef(null);
   const conversationOrderRef = useRef(0);
   const lastAIMessageTextRef = useRef("");
   const scrollToInlineRef = useRef(null);
+
+  useEffect(() => {
+    const checkMobile = () =>
+      setIsMobile(typeof window !== "undefined" && (window.innerWidth < 768 || /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent)));
+    checkMobile();
+    window.addEventListener("resize", checkMobile);
+    return () => window.removeEventListener("resize", checkMobile);
+  }, []);
 
   useEffect(() => {
     onboardingSessionIdRef.current = onboardingSessionId;
@@ -482,6 +492,7 @@ export default function OnboardingPage() {
       />
     );
     setIsLoading(false);
+    setTimeout(() => scrollToInlineRef.current?.(), 150);
   };
 
   // Handle logo skipped
@@ -501,6 +512,7 @@ export default function OnboardingPage() {
       />
     );
     setIsLoading(false);
+    setTimeout(() => scrollToInlineRef.current?.(), 150);
   };
 
   // Handle state selection
@@ -517,11 +529,12 @@ export default function OnboardingPage() {
           handleDistrictSelected(district);
         }}
         selectedDistrict={companyData?.district}
-        selectedState={companyData?.state}
+        selectedState={state}
         showDistrict={true}
       />
     );
     setIsLoading(false);
+    setTimeout(() => scrollToInlineRef.current?.(), 150);
   };
 
   // Handle district selection
@@ -588,6 +601,7 @@ export default function OnboardingPage() {
     setCurrentField(COMPANY_FIELDS.LOCATION);
     setInlineComponent(
       <GetCoordinatesButton
+        isMobile={isMobile}
         onCoordinatesReceived={(lat, lon) => {
           setCompanyData((prev) => ({
             ...prev,
@@ -759,7 +773,7 @@ export default function OnboardingPage() {
     }
   };
 
-  // Handle view on map - submit first, then navigate and zoom to job coordinates
+  // Handle view on map - submit first, show 2s loader, then navigate and zoom to job coordinates
   const handleViewOnMap = async () => {
     let submittedCompany = null;
     if (!jobData?.id || !companyData?.id) {
@@ -772,18 +786,23 @@ export default function OnboardingPage() {
         const companyName = companyData.name || companyData.company_name || "";
         const logoUrl =
           submittedCompany?.company?.logoPath ?? companyData.logoPath ?? null;
+        const baseUrl = typeof window !== "undefined" ? window.location.origin : "";
+        const resolvedLogoUrl = logoUrl && !logoUrl.startsWith("http") ? `${baseUrl}${logoUrl.startsWith("/") ? "" : "/"}${logoUrl}` : logoUrl;
         sessionStorage.setItem(
           "zoomToJobCoords",
           JSON.stringify({
             lat,
             lng,
             companyName,
-            ...(logoUrl && { logoUrl }),
+            ...(resolvedLogoUrl && { logoUrl: resolvedLogoUrl }),
           })
         );
       }
     }
-    router.push("/");
+    setIsNavigatingToMap(true);
+    setTimeout(() => {
+      router.push("/");
+    }, 2000);
   };
 
   // Handle start next job post
@@ -1010,6 +1029,14 @@ export default function OnboardingPage() {
           backdropFilter: 'blur(1px)',
         }}
       ></div>
+
+      {/* 2s loader when navigating to map */}
+      {isNavigatingToMap && (
+        <div className="fixed inset-0 z-[100] flex flex-col items-center justify-center bg-white/90" style={{ fontFamily: "Open Sans, sans-serif" }}>
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-brand mx-auto mb-4" />
+          <p className="text-brand-text-weak font-medium">Taking you to the map…</p>
+        </div>
+      )}
       
       <div className="relative z-10 flex justify-center px-4" style={{ height: '100dvh', width: '100vw', margin: 0, padding: 0, paddingBottom: 'env(safe-area-inset-bottom, 0)' }}>
         <div className="bg-white/95 backdrop-blur-sm rounded-lg overflow-hidden border border-[#E5E5E5] shadow-lg relative w-full max-w-4xl flex flex-col" style={{ height: '100%', margin: 0, padding: 0, minHeight: 0 }}>

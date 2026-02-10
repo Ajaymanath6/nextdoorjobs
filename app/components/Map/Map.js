@@ -993,7 +993,8 @@ const MapComponent = () => {
         return;
       }
 
-      const companies = locationsData?.companies ?? [];
+      // Do not render demo pins from locationsData; only job pin from zoomToJobCoords
+      const companies = [];
 
       if (clusterGroupRef.current) {
         mapInstanceRef.current.removeLayer(clusterGroupRef.current);

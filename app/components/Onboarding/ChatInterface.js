@@ -37,17 +37,16 @@ export default function ChatInterface({ messages = [], onSendMessage, isLoading 
       // Store the scroll function so it can be called from parent
       const scrollToInline = () => {
         if (messagesContainerRef.current) {
-          // Find the inline component in the DOM and scroll to it
           const inlineElement = messagesContainerRef.current.querySelector('[data-inline-component]');
           if (inlineElement) {
-            // Scroll to show the dropdown fully with extra space at bottom
             setTimeout(() => {
-              inlineElement.scrollIntoView({ behavior: "smooth", block: "center" });
-              // Additional scroll to ensure dropdown is visible
+              inlineElement.scrollIntoView({ behavior: "smooth", block: "end" });
               setTimeout(() => {
-                messagesContainerRef.current?.scrollBy({ top: 100, behavior: "smooth" });
+                messagesContainerRef.current?.scrollBy({ top: 220, behavior: "smooth" });
               }, 300);
             }, 100);
+          } else {
+            messagesEndRef.current?.scrollIntoView({ behavior: "smooth", block: "end" });
           }
         }
       };
