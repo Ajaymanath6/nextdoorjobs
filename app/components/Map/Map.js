@@ -82,6 +82,9 @@ const MapComponent = () => {
   const [locationError, setLocationError] = useState(null);
   const [showEmptyState, setShowEmptyState] = useState(false);
   const [emptyStateQuery, setEmptyStateQuery] = useState("");
+  const [userHomeLocation, setUserHomeLocation] = useState(null);
+  const [showMobileHomePrompt, setShowMobileHomePrompt] = useState(false);
+  const [isGettingMobileHomeLocation, setIsGettingMobileHomeLocation] = useState(false);
   const autocompleteRef = useRef(null);
   const jobAutocompleteRef = useRef(null);
   const collegeAutocompleteRef = useRef(null);
@@ -892,6 +895,26 @@ const MapComponent = () => {
     setIsClient(true);
   }, []);
 
+  const MOBILE_HOME_STORAGE_KEY = "mobileHomeAsked";
+  const MOBILE_HOME_COORDS_KEY = "mobileHomeCoords";
+
+  useEffect(() => {
+    if (!isClient || typeof window === "undefined") return;
+    const coordsRaw = sessionStorage.getItem(MOBILE_HOME_COORDS_KEY);
+    if (coordsRaw) {
+      try {
+        const { lat, lon } = JSON.parse(coordsRaw);
+        if (typeof lat === "number" && typeof lon === "number") {
+          setUserHomeLocation({ lat, lon });
+        }
+      } catch (_) {}
+    }
+    const isMobile = window.innerWidth < 768;
+    if (isMobile && !sessionStorage.getItem(MOBILE_HOME_STORAGE_KEY)) {
+      setShowMobileHomePrompt(true);
+    }
+  }, [isClient]);
+
   useEffect(() => {
     // Only run on client side
     if (!isClient || !mapRef.current || mapInstanceRef.current) return;
@@ -1014,35 +1037,47 @@ const MapComponent = () => {
     };
   }, [showThrissurBadges]);
 
-  // Add markers when locations data and map are ready
+  // Add markers when locations data and map are ready (or user home from mobile)
   useEffect(() => {
-    if (!mapInstanceRef.current || !locationsData) {
+    if (!mapInstanceRef.current) {
       return;
     }
-
-    // Don't add markers if they already exist
-    if (homeMarkerRef.current !== null) {
+    const effectiveHome = userHomeLocation
+      ? { lat: userHomeLocation.lat, lon: userHomeLocation.lon, name: "Home" }
+      : locationsData?.homeLocation;
+    if (!effectiveHome || effectiveHome.lat == null || effectiveHome.lon == null) {
       return;
     }
 
     const addMarkersToMap = async () => {
       const L = window.L;
       if (!L || !mapInstanceRef.current) {
-        // Retry after a short delay if L is not available yet
         setTimeout(() => {
-          if (window.L && mapInstanceRef.current && locationsData) {
+          if (window.L && mapInstanceRef.current) {
             addMarkersToMap();
           }
         }, 100);
         return;
       }
 
-      const homeLoc = locationsData.homeLocation;
-      const companies = locationsData.companies;
+      const homeLoc = userHomeLocation
+        ? { lat: userHomeLocation.lat, lon: userHomeLocation.lon, name: "Home" }
+        : locationsData?.homeLocation;
+      const companies = locationsData?.companies ?? [];
 
-      if (!homeLoc || !homeLoc.lat || !homeLoc.lon) {
+      if (!homeLoc || homeLoc.lat == null || homeLoc.lon == null) {
         return;
       }
+
+      if (homeMarkerRef.current) {
+        mapInstanceRef.current.removeLayer(homeMarkerRef.current);
+        homeMarkerRef.current = null;
+      }
+      if (clusterGroupRef.current) {
+        mapInstanceRef.current.removeLayer(clusterGroupRef.current);
+        clusterGroupRef.current = null;
+      }
+      companyMarkersRef.current = [];
 
       // Create home marker
       const homeIcon = createHomeIcon(L);
@@ -1174,7 +1209,7 @@ const MapComponent = () => {
     };
 
     addMarkersToMap();
-  }, [locationsData, isClient]);
+  }, [locationsData, userHomeLocation, isClient]);
 
   // Check if search query is a college search (only when user types college-related keywords).
   // Place names like "Thrissur" must not be treated as college search so locality suggestions show.
@@ -2439,6 +2474,36 @@ const MapComponent = () => {
     }
   };
 
+  const handleMobileHomeAllow = () => {
+    if (!navigator.geolocation) {
+      setShowMobileHomePrompt(false);
+      sessionStorage.setItem(MOBILE_HOME_STORAGE_KEY, "skipped");
+      return;
+    }
+    setIsGettingMobileHomeLocation(true);
+    navigator.geolocation.getCurrentPosition(
+      (position) => {
+        const { latitude, longitude } = position.coords;
+        setUserHomeLocation({ lat: latitude, lon: longitude });
+        sessionStorage.setItem(MOBILE_HOME_STORAGE_KEY, "granted");
+        sessionStorage.setItem(MOBILE_HOME_COORDS_KEY, JSON.stringify({ lat: latitude, lon: longitude }));
+        setShowMobileHomePrompt(false);
+        setIsGettingMobileHomeLocation(false);
+      },
+      () => {
+        setShowMobileHomePrompt(false);
+        sessionStorage.setItem(MOBILE_HOME_STORAGE_KEY, "skipped");
+        setIsGettingMobileHomeLocation(false);
+      },
+      { enableHighAccuracy: true, timeout: 10000, maximumAge: 0 }
+    );
+  };
+
+  const handleMobileHomeSkip = () => {
+    setShowMobileHomePrompt(false);
+    sessionStorage.setItem(MOBILE_HOME_STORAGE_KEY, "skipped");
+  };
+
   if (!isClient) {
     return (
       <div className="flex-1 h-screen bg-gray-50 dark:bg-gray-950 relative flex items-center justify-center">
@@ -2455,15 +2520,40 @@ const MapComponent = () => {
       {/* Map Container */}
       <div ref={mapRef} className="w-full h-full absolute inset-0" />
 
+      {/* Mobile: one-time prompt to use current location as Home on the map */}
+      {showMobileHomePrompt && (
+        <div className="md:hidden absolute bottom-4 left-4 right-4 z-[1000] bg-brand-bg-white border border-brand-stroke-border rounded-lg shadow-lg p-4 flex flex-col gap-3" style={{ fontFamily: "Open Sans, sans-serif" }}>
+          <p className="text-sm font-medium text-brand-text-weak">Use your current location as Home on the map?</p>
+          <div className="flex gap-2">
+            <button
+              type="button"
+              onClick={handleMobileHomeAllow}
+              disabled={isGettingMobileHomeLocation}
+              className="flex-1 py-2 px-3 rounded-lg bg-brand text-white text-sm font-medium disabled:opacity-50"
+            >
+              {isGettingMobileHomeLocation ? "Getting location…" : "Allow"}
+            </button>
+            <button
+              type="button"
+              onClick={handleMobileHomeSkip}
+              disabled={isGettingMobileHomeLocation}
+              className="flex-1 py-2 px-3 rounded-lg border border-brand-stroke-border text-brand-text-weak text-sm font-medium hover:bg-brand-stroke-weak"
+            >
+              Skip
+            </button>
+          </div>
+        </div>
+      )}
+
       {/* Search Bar - visible on all viewports */}
       {isGlobeView && (
         <div
           className={`flex flex-col top-3 md:top-4 gap-2 md:gap-6 ${searchBar.container} w-[calc(100vw-16px)] max-w-[800px]`}
         >
-          {/* Search Bar Card - same corner radius as show distance button (rounded-full) */}
+          {/* Search Bar Card - same corner radius as show distance button (rounded-full), white bg. */}
           <div className={`bg-brand-bg-white rounded-full border border-brand-stroke-border shadow-lg w-full px-1.5 py-1.5 md:px-4 md:py-2`}>
             {/* Mobile: single bar (Person/Job + input + Filter + Profile). Desktop: no bar, separate bordered controls. */}
-            <div className={`flex items-center gap-0 md:gap-3 w-full rounded-full border border-brand-stroke-border bg-brand-bg-white min-h-[34px] overflow-visible md:overflow-hidden md:border-0 md:bg-transparent md:rounded-none md:min-h-0 ${searchBar["search-input-hover"]}`}>
+            <div className={`flex items-center gap-0 w-full rounded-full border border-brand-stroke-border bg-brand-bg-white min-h-[34px] overflow-visible md:overflow-hidden md:border-0 md:bg-transparent md:rounded-none md:min-h-0`}>
               {/* View Selector Button - Hidden for now, will add in later stages */}
               {/* <div className="relative flex-shrink-0">
                 <button
@@ -2513,7 +2603,7 @@ const MapComponent = () => {
               </div> */}
 
               {/* Toggle: Person (users) / Job (suitcase) - hidden on mobile when search input focused */}
-              <div className={`${searchBar["toggle-wrapper"]} border-0 overflow-visible md:overflow-hidden shrink-0 ${mobileSearchExpanded ? "hidden md:!flex" : ""}`} ref={searchModeDropdownRef}>
+              <div className={`${searchBar["toggle-wrapper"]} border-0 overflow-visible md:overflow-hidden shrink-0 md:pr-1 ${mobileSearchExpanded ? "hidden md:!flex" : ""}`} ref={searchModeDropdownRef}>
                 {/* Mobile: single button with chevron, dropdown with other option */}
                 <div className="relative md:hidden shrink-0">
                   <button
@@ -2556,12 +2646,12 @@ const MapComponent = () => {
                     </div>
                   )}
                 </div>
-                {/* Desktop: two-segment toggle */}
-                <div className="hidden md:flex rounded-md border overflow-hidden shrink-0">
+                {/* Desktop: two-segment toggle - rounded left for Person, rounded right for Job; selected segment has bg fill. ! important to override theme rounded-md. */}
+                <div className="hidden md:flex rounded-full border border-brand-stroke-border overflow-hidden shrink-0">
                   <button
                     type="button"
                     onClick={() => setSearchMode("person")}
-                    className={`p-2 ${searchBar["toggle-segment"]} ${searchMode === "person" ? searchBar["toggle-segment-active"] : ""}`}
+                    className={`p-2 border-0 ${searchBar["toggle-segment"]} ${searchMode === "person" ? searchBar["toggle-segment-active"] : ""} !rounded-l-md !rounded-r-none`}
                     title="Search for people"
                   >
                     <User
@@ -2572,7 +2662,7 @@ const MapComponent = () => {
                   <button
                     type="button"
                     onClick={() => setSearchMode("job")}
-                    className={`p-2 ${searchBar["toggle-segment"]} ${searchMode === "job" ? searchBar["toggle-segment-active"] : ""}`}
+                    className={`p-2 border-0 ${searchBar["toggle-segment"]} ${searchMode === "job" ? searchBar["toggle-segment-active"] : ""} !rounded-r-md !rounded-l-none`}
                     title="Search for jobs"
                   >
                     <Portfolio
@@ -2641,7 +2731,7 @@ const MapComponent = () => {
                       setShowCollegeAutocomplete(false);
                     }
                   }}
-                  className={`${searchBar["search-input"]} border-0 rounded-none md:border md:rounded-full bg-transparent ${searchBar["search-input-hover"]} ${searchBar["search-input-text"]} ${searchBar["search-input-placeholder"]} search-input-focus-active focus:ring-2 focus:ring-inset focus:ring-brand focus:outline-none w-full text-sm md:text-base font-semibold py-1.5 pl-9 pr-9 md:py-2 md:pl-11 md:pr-11`}
+                  className={`${searchBar["search-input"]} border-0 rounded-none md:border md:rounded-full bg-transparent hover:bg-transparent ${searchBar["search-input-text"]} ${searchBar["search-input-placeholder"]} search-input-focus-active focus:ring-2 focus:ring-inset focus:ring-brand focus:outline-none w-full text-sm md:text-base font-semibold py-1.5 pl-9 pr-9 md:py-2 md:pl-11 md:pr-11`}
                   style={{
                     fontFamily: "Open Sans",
                     boxShadow: "0 1px 6px rgba(32,33,36,0.08)",
@@ -2649,8 +2739,8 @@ const MapComponent = () => {
                   placeholder="Search for locality, pincode, job"
                 />
                 
-                {/* Right side inside input: mobile = cross when typing (clear) else send; desktop = send */}
-                <div className="absolute right-1.5 md:right-2 top-1/2 -translate-y-1/2 flex items-center justify-center">
+                {/* Right side: mobile = cross when typing else send; desktop = clear (when typing) + send + filter */}
+                <div className="absolute right-1.5 md:right-0 top-1/2 -translate-y-1/2 flex items-center justify-center gap-0 md:gap-0.5">
                   {/* Mobile: cross when typing (clear), else send (disabled) */}
                   {searchQuery?.trim() ? (
                     <button
@@ -2669,6 +2759,20 @@ const MapComponent = () => {
                       <SendFilled size={24} className="w-6 h-6 shrink-0 text-brand-text-tertiary" />
                     </span>
                   )}
+                  {/* Desktop: cross (clear) when typing - click clears all search */}
+                  {searchQuery?.trim() ? (
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setSearchQuery("");
+                        searchInputRef.current?.focus();
+                      }}
+                      className="hidden md:flex items-center justify-center p-1 rounded border-0 bg-transparent hover:bg-brand-stroke-weak cursor-pointer shrink-0"
+                      aria-label="Clear search"
+                    >
+                      <Close size={24} className="w-6 h-6 shrink-0 text-brand-stroke-strong" />
+                    </button>
+                  ) : null}
                   {/* Desktop: send button */}
                   <button
                     type="button"
@@ -2683,6 +2787,16 @@ const MapComponent = () => {
                       size={24}
                       className={`w-6 h-6 shrink-0 ${searchQuery?.trim() ? "text-brand" : "text-brand-text-tertiary"}`}
                     />
+                  </button>
+                  {/* Desktop: filter button inside search bar - no bg on hover, icon turns primary on hover */}
+                  <button
+                    type="button"
+                    onMouseDown={(e) => e.preventDefault()}
+                    onClick={() => setShowFilterDropdown(!showFilterDropdown)}
+                    className="group hidden md:flex items-center justify-center p-1.5 rounded border-0 bg-transparent hover:bg-transparent transition-colors shrink-0"
+                    aria-label="Filter"
+                  >
+                    <Filter size={24} className="text-brand-stroke-strong group-hover:text-brand w-6 h-6 shrink-0 transition-colors" />
                   </button>
                 </div>
                 
@@ -2738,19 +2852,19 @@ const MapComponent = () => {
                 />
               </div>
 
-              {/* Filter + Profile grouped; reduced gap on mobile so Person/Job button fits */}
+              {/* Filter + Profile grouped. Mobile: filter button here. Desktop: filter is inside search input, this wrapper only holds dropdown (no width). */}
               <div className="flex items-center gap-0.5 md:gap-1 shrink-0">
-                {/* Filter Button - show when search focused or filter modal open (so modal stays visible) */}
-                <div className={`relative shrink-0 ${!mobileSearchExpanded && !showFilterDropdown ? "hidden md:!flex" : ""}`}>
+                {/* Filter Button (mobile only); on desktop filter is inside input. Wrapper md:w-0 so dropdown can still open. */}
+                <div className={`relative shrink-0 ${!mobileSearchExpanded && !showFilterDropdown ? "hidden" : ""} md:!flex md:w-0 md:min-w-0 md:overflow-visible`}>
                   <button
                     ref={filterButtonRef}
                     type="button"
                     onMouseDown={(e) => e.preventDefault()}
                     onClick={() => setShowFilterDropdown(!showFilterDropdown)}
-                    className="h-[34px] w-[34px] md:h-auto md:w-auto flex items-center justify-center p-1.5 md:p-2 rounded-lg border-0 bg-transparent md:border md:border-brand-stroke-border md:bg-brand-bg-white hover:bg-brand-bg-fill transition-colors shrink-0"
+                    className="group h-[34px] w-[34px] md:hidden flex items-center justify-center p-1.5 rounded-lg border-0 bg-transparent hover:bg-transparent transition-colors shrink-0"
                     aria-label="Filter"
                   >
-                    <Filter size={24} className="text-brand-stroke-strong w-6 h-6 shrink-0" />
+                    <Filter size={24} className="text-brand-stroke-strong group-hover:text-brand w-6 h-6 shrink-0 transition-colors" />
                   </button>
 
                   {/* Desktop: dropdown */}

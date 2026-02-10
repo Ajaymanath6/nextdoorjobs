@@ -26,7 +26,6 @@ export default function Sidebar({ activeItem = "jobs-near-you", onToggle, isOpen
   const { signOut } = useClerk();
   const [isOpen, setIsOpen] = useState(externalIsOpen !== undefined ? externalIsOpen : true);
   const [showUserDropdown, setShowUserDropdown] = useState(false);
-  const [showLogoHover, setShowLogoHover] = useState(false);
   const [userName, setUserName] = useState("Profile");
   const userDropdownRef = useRef(null);
 
@@ -159,33 +158,13 @@ export default function Sidebar({ activeItem = "jobs-near-you", onToggle, isOpen
               <h2 className={sidebar["logo-text"]}>mapmyGig</h2>
             </div>
           ) : (
-            <div
-              className="flex items-center justify-center cursor-pointer rounded-lg p-1 hover:bg-brand-stroke-weak transition-colors relative"
-              onMouseEnter={() => setShowLogoHover(true)}
-              onMouseLeave={() => setShowLogoHover(false)}
+            <button
               onClick={handleToggle}
+              className={`${sidebar["toggle-button"]} w-full flex items-center justify-center rounded-lg`}
+              aria-label="Open sidebar"
             >
-              <div className={sidebar["logo-container"]}>
-                <Image
-                  src="/onlylogo.svg"
-                  alt="mapmyGig"
-                  width={24}
-                  height={24}
-                  className="w-6 h-6"
-                />
-              </div>
-              {showLogoHover && (
-                <div className="absolute left-full ml-2 z-50">
-                  <button
-                    onClick={handleToggle}
-                    className={`${sidebar["toggle-button"]} rounded-lg shadow-lg`}
-                    aria-label="Open sidebar"
-                  >
-                    <SidePanelOpen size={20} style={{ color: "rgba(87, 87, 87, 1)" }} />
-                  </button>
-                </div>
-              )}
-            </div>
+              <SidePanelOpen size={20} style={{ color: "rgba(87, 87, 87, 1)" }} />
+            </button>
           )}
 
           {isOpen && (
