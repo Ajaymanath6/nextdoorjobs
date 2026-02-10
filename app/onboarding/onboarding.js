@@ -568,7 +568,38 @@ export default function OnboardingPage() {
     await saveConversation(COMPANY_FIELDS.WEBSITE, lastAIMessageTextRef.current, url);
     setIsLoading(true);
     if (url.toLowerCase() !== "skip") {
-      await addAIMessage(`Website noted: ${url}. What's your funding series?`);
+      try {
+        const res = await fetch(
+          `/api/onboarding/company-from-url?url=${encodeURIComponent(url)}`
+        );
+        if (res.ok) {
+          const data = await res.json();
+          const hasAll =
+            data.state &&
+            data.district &&
+            typeof data.latitude === "number" &&
+            typeof data.longitude === "number";
+          if (hasAll) {
+            setCompanyData((prev) => ({
+              ...prev,
+              state: data.state,
+              district: data.district,
+              latitude: String(data.latitude),
+              longitude: String(data.longitude),
+              ...(data.pincode && { pincode: data.pincode }),
+            }));
+            await addAIMessage(
+              `We found your company location from your website: ${data.district}, ${data.state}. Coordinates saved. What's your funding series?`
+            );
+          } else {
+            await addAIMessage(`Website noted: ${url}. What's your funding series?`);
+          }
+        } else {
+          await addAIMessage(`Website noted: ${url}. What's your funding series?`);
+        }
+      } catch (_) {
+        await addAIMessage(`Website noted: ${url}. What's your funding series?`);
+      }
     } else {
       await addAIMessage(`No problem! What's your funding series?`);
     }
@@ -600,6 +631,11 @@ export default function OnboardingPage() {
       await addAIMessage(`No problem! Do you have latitude and longitude coordinates?`);
     }
     setCurrentField(COMPANY_FIELDS.LOCATION);
+    // If we already have coordinates (e.g. from company URL fetch), skip GetCoordinatesButton
+    if (companyData?.latitude != null && companyData?.longitude != null) {
+      await handleCoordinatesReceived(companyData.latitude, companyData.longitude);
+      return;
+    }
     setInlineComponent(
       <GetCoordinatesButton
         isMobile={isMobile}
@@ -833,11 +869,16 @@ export default function OnboardingPage() {
     }
   };
 
-  // Handle view on map - submit first, show 2s loader, then navigate and zoom to job coordinates
+  // Handle view on map - submit first, show 2s loader, then navigate and zoom to job coordinates.
+  // Only navigate when we didn't need to submit (have both ids) or handleFinalSubmit succeeded.
   const handleViewOnMap = async () => {
+    const needSubmit = !jobData?.id || !companyData?.id;
     let submittedCompany = null;
-    if (!jobData?.id || !companyData?.id) {
+    if (needSubmit) {
       submittedCompany = await handleFinalSubmit();
+      if (submittedCompany == null) {
+        return; // Submit failed; error already shown in chat; do not navigate
+      }
     }
     if (typeof window !== "undefined" && companyData?.latitude != null && companyData?.longitude != null) {
       const lat = parseFloat(companyData.latitude);
