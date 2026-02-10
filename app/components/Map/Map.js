@@ -85,6 +85,7 @@ const MapComponent = () => {
   const [userHomeLocation, setUserHomeLocation] = useState(null);
   const [showMobileHomePrompt, setShowMobileHomePrompt] = useState(false);
   const [isGettingMobileHomeLocation, setIsGettingMobileHomeLocation] = useState(false);
+  const [locationHomeError, setLocationHomeError] = useState(null);
   const autocompleteRef = useRef(null);
   const jobAutocompleteRef = useRef(null);
   const collegeAutocompleteRef = useRef(null);
@@ -1504,13 +1505,13 @@ const MapComponent = () => {
               resolve(location);
             },
             (error) => {
-              console.error('❌ Browser geolocation error:', {
-                code: error.code,
-                message: error.message,
-                PERMISSION_DENIED: error.code === 1,
-                POSITION_UNAVAILABLE: error.code === 2,
-                TIMEOUT: error.code === 3
-              });
+              const code = error?.code;
+              const message = error?.message ?? "Unknown error";
+              if (code === 2) {
+                console.warn("Location unavailable (browser/network). User can allow location or search manually.");
+              } else if (code !== undefined || message) {
+                console.warn("Geolocation:", message, "code:", code);
+              }
               reject(error);
             },
             {
@@ -2474,6 +2475,7 @@ const MapComponent = () => {
   };
 
   const handleMobileHomeAllow = async () => {
+    setLocationHomeError(null);
     const isDesktop = typeof window !== "undefined" && window.innerWidth >= 768;
     if (isDesktop && mapInstanceRef.current) {
       setIsGettingMobileHomeLocation(true);
@@ -2483,15 +2485,23 @@ const MapComponent = () => {
           setUserHomeLocation({ lat: location.lat, lon: location.lng });
           sessionStorage.setItem(MOBILE_HOME_STORAGE_KEY, "granted");
           sessionStorage.setItem(MOBILE_HOME_COORDS_KEY, JSON.stringify({ lat: location.lat, lon: location.lng }));
+          setShowMobileHomePrompt(false);
+        } else {
+          setLocationHomeError(
+            "Location couldn't be determined. Allow location for this site in your browser settings (address bar or site settings), or search for your city."
+          );
         }
-      } catch (_) {}
-      setShowMobileHomePrompt(false);
+      } catch (_) {
+        setLocationHomeError(
+          "Location couldn't be determined. Allow location for this site in your browser settings, or search for your city."
+        );
+      }
       setIsGettingMobileHomeLocation(false);
       return;
     }
     if (!navigator.geolocation) {
-      setShowMobileHomePrompt(false);
-      sessionStorage.setItem(MOBILE_HOME_STORAGE_KEY, "skipped");
+      setLocationHomeError("Location is not supported in this browser. Search for your city instead.");
+      setIsGettingMobileHomeLocation(false);
       return;
     }
     setIsGettingMobileHomeLocation(true);
@@ -2502,11 +2512,20 @@ const MapComponent = () => {
         sessionStorage.setItem(MOBILE_HOME_STORAGE_KEY, "granted");
         sessionStorage.setItem(MOBILE_HOME_COORDS_KEY, JSON.stringify({ lat: latitude, lon: longitude }));
         setShowMobileHomePrompt(false);
+        setLocationHomeError(null);
         setIsGettingMobileHomeLocation(false);
       },
-      () => {
-        setShowMobileHomePrompt(false);
-        sessionStorage.setItem(MOBILE_HOME_STORAGE_KEY, "skipped");
+      (err) => {
+        const code = err?.code;
+        if (code === 1) {
+          setLocationHomeError("Location permission denied. Allow location for this site in your browser (address bar or site settings), then try again.");
+        } else if (code === 2) {
+          setLocationHomeError("Location unavailable. Check that location is enabled for your browser/device, or search for your city.");
+        } else if (code === 3) {
+          setLocationHomeError("Location request timed out. Check your connection and try again, or search for your city.");
+        } else {
+          setLocationHomeError("Couldn't get location. Allow location in browser settings or search for your city.");
+        }
         setIsGettingMobileHomeLocation(false);
       },
       { enableHighAccuracy: true, timeout: 10000, maximumAge: 0 }
@@ -2515,6 +2534,7 @@ const MapComponent = () => {
 
   const handleMobileHomeSkip = () => {
     setShowMobileHomePrompt(false);
+    setLocationHomeError(null);
     sessionStorage.setItem(MOBILE_HOME_STORAGE_KEY, "skipped");
   };
 
@@ -2538,25 +2558,54 @@ const MapComponent = () => {
       {showMobileHomePrompt && (
         <div className="fixed inset-0 z-[1000] flex items-center justify-center p-4 bg-black/20">
           <div className="bg-brand-bg-white border border-brand-stroke-border rounded-lg shadow-lg p-4 flex flex-col gap-3 w-full max-w-sm" style={{ fontFamily: "Open Sans, sans-serif" }}>
-            <p className="text-sm font-medium text-brand-text-weak">Use your current location as Home on the map?</p>
-            <div className="flex gap-2">
-              <button
-                type="button"
-                onClick={handleMobileHomeAllow}
-                disabled={isGettingMobileHomeLocation}
-                className="flex-1 py-2 px-3 rounded-lg bg-brand text-white text-sm font-medium disabled:opacity-50"
-              >
-                {isGettingMobileHomeLocation ? "Getting location…" : "Allow"}
-              </button>
-              <button
-                type="button"
-                onClick={handleMobileHomeSkip}
-                disabled={isGettingMobileHomeLocation}
-                className="flex-1 py-2 px-3 rounded-lg border border-brand-stroke-border text-brand-text-weak text-sm font-medium hover:bg-brand-stroke-weak"
-              >
-                Skip
-              </button>
-            </div>
+            {locationHomeError ? (
+              <>
+                <p className="text-sm font-medium text-brand-text-weak">{locationHomeError}</p>
+                <div className="flex gap-2">
+                  <button
+                    type="button"
+                    onClick={handleMobileHomeAllow}
+                    disabled={isGettingMobileHomeLocation}
+                    className="flex-1 py-2 px-3 rounded-lg bg-brand text-white text-sm font-medium disabled:opacity-50"
+                  >
+                    {isGettingMobileHomeLocation ? "Trying…" : "Try again"}
+                  </button>
+                  <button
+                    type="button"
+                    onClick={handleMobileHomeSkip}
+                    disabled={isGettingMobileHomeLocation}
+                    className="flex-1 py-2 px-3 rounded-lg border border-brand-stroke-border text-brand-text-weak text-sm font-medium hover:bg-brand-stroke-weak"
+                  >
+                    Skip
+                  </button>
+                </div>
+              </>
+            ) : (
+              <>
+                <p className="text-sm font-medium text-brand-text-weak">Use your current location as Home on the map?</p>
+                {typeof window !== "undefined" && window.innerWidth >= 768 && (
+                  <p className="text-xs text-brand-text-weak">Your browser may ask for permission. Check the address bar or a popup.</p>
+                )}
+                <div className="flex gap-2">
+                  <button
+                    type="button"
+                    onClick={handleMobileHomeAllow}
+                    disabled={isGettingMobileHomeLocation}
+                    className="flex-1 py-2 px-3 rounded-lg bg-brand text-white text-sm font-medium disabled:opacity-50"
+                  >
+                    {isGettingMobileHomeLocation ? "Getting location…" : "Allow"}
+                  </button>
+                  <button
+                    type="button"
+                    onClick={handleMobileHomeSkip}
+                    disabled={isGettingMobileHomeLocation}
+                    className="flex-1 py-2 px-3 rounded-lg border border-brand-stroke-border text-brand-text-weak text-sm font-medium hover:bg-brand-stroke-weak"
+                  >
+                    Skip
+                  </button>
+                </div>
+              </>
+            )}
           </div>
         </div>
       )}
