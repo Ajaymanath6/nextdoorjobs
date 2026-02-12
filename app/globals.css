@@ -223,3 +223,9 @@ body {
   scrollbar-width: thin;
   scrollbar-color: rgba(0, 0, 0, 0.15) transparent;
 }
+
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}

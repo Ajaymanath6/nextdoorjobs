@@ -151,37 +151,31 @@ export async function GET(request) {
     const districtSlice = matchingDistricts.slice(0, maxDistricts);
 
     for (const { name } of stateSlice) {
-      const coords = await geocode(`${name}, India`);
-      if (coords) {
-        const stateNorm = normalize(name);
-        const pincode = stateToPincode.get(stateNorm) || null;
-        suggestions.push({
-          type: "state",
-          name,
-          state: name,
-          district: null,
-          lat: coords.lat,
-          lon: coords.lon,
-          ...(pincode && { pincode }),
-        });
-      }
+      const stateNorm = normalize(name);
+      const pincode = stateToPincode.get(stateNorm) || null;
+      suggestions.push({
+        type: "state",
+        name,
+        state: name,
+        district: null,
+        lat: null,
+        lon: null,
+        ...(pincode && { pincode }),
+      });
     }
 
     for (const { name, state } of districtSlice) {
-      const coords = await geocode(`${name}, ${state}, India`);
-      if (coords) {
-        const key = `${normalize(state)}|${normalize(name)}`;
-        const pincode = districtToPincode.get(key) || null;
-        suggestions.push({
-          type: "district",
-          name,
-          state,
-          district: name,
-          lat: coords.lat,
-          lon: coords.lon,
-          ...(pincode && { pincode }),
-        });
-      }
+      const key = `${normalize(state)}|${normalize(name)}`;
+      const pincode = districtToPincode.get(key) || null;
+      suggestions.push({
+        type: "district",
+        name,
+        state,
+        district: name,
+        lat: null,
+        lon: null,
+        ...(pincode && { pincode }),
+      });
     }
 
     const placeQuery = `${query} India`;

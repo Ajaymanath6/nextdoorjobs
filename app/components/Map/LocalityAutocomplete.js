@@ -17,6 +17,7 @@ export default function LocalityAutocomplete({
   width = "400px",
   localities = [],
   indiaSuggestions = [],
+  indiaSuggestionsLoading = false,
   onSelect,
   searchQuery = "",
 }) {
@@ -143,7 +144,7 @@ export default function LocalityAutocomplete({
           flexDirection: "column",
         }}
       >
-        {suggestions.length === 0 ? (
+        {suggestions.length === 0 && !indiaSuggestionsLoading ? (
           <div
             style={{
               padding: "16px",
@@ -157,7 +158,35 @@ export default function LocalityAutocomplete({
               ? "No localities or places found"
               : "Keep typing to search"}
           </div>
-        ) : suggestions.map((item, index) => {
+        ) : suggestions.length === 0 && indiaSuggestionsLoading ? (
+          <div
+            style={{
+              padding: "16px",
+              fontSize: "14px",
+              color: "var(--brand-text-weak)",
+              textAlign: "center",
+              fontFamily: "Open Sans",
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+              gap: "10px",
+            }}
+          >
+            <span
+              style={{
+                width: "18px",
+                height: "18px",
+                border: "2px solid var(--brand-stroke-weak)",
+                borderTopColor: "var(--brand-text-strong)",
+                borderRadius: "50%",
+                animation: "spin 0.7s linear infinite",
+              }}
+            />
+            <span>Loading suggestions...</span>
+          </div>
+        ) : (
+          <>
+            {suggestions.map((item, index) => {
           const isIndiaPlace = item.listItemType === "india_place";
           const key = isIndiaPlace
             ? `india-${item.name}-${item.state}-${index}`
@@ -275,6 +304,33 @@ export default function LocalityAutocomplete({
             </button>
           );
         })}
+            {indiaSuggestionsLoading && suggestions.length > 0 && (
+              <div
+                style={{
+                  padding: "8px 16px",
+                  fontSize: "12px",
+                  color: "var(--brand-text-weak)",
+                  display: "flex",
+                  alignItems: "center",
+                  gap: "8px",
+                  fontFamily: "Open Sans",
+                }}
+              >
+                <span
+                  style={{
+                    width: "14px",
+                    height: "14px",
+                    border: "2px solid var(--brand-stroke-weak)",
+                    borderTopColor: "var(--brand-text-strong)",
+                    borderRadius: "50%",
+                    animation: "spin 0.7s linear infinite",
+                  }}
+                />
+                <span>Loading more...</span>
+              </div>
+            )}
+          </>
+        )}
       </div>
 
       {/* Footer hint */}

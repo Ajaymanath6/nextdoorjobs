@@ -73,6 +73,7 @@ const MapComponent = () => {
   const [showCollegeAutocomplete, setShowCollegeAutocomplete] = useState(false);
   const [localities, setLocalities] = useState([]);
   const [indiaSuggestions, setIndiaSuggestions] = useState([]);
+  const [indiaSuggestionsLoading, setIndiaSuggestionsLoading] = useState(false);
   const [jobTitles, setJobTitles] = useState([]);
   const [colleges, setColleges] = useState([]);
   const [isMapLoading, setIsMapLoading] = useState(false);
@@ -217,24 +218,54 @@ const MapComponent = () => {
 
   // Debounced fetch for all-India place suggestions (state/district/place)
   const indiaSearchDebounceRef = useRef(null);
+  const indiaSearchAbortRef = useRef(null);
+  const INDIA_SEARCH_CACHE_MAX = 20;
+  const indiaSearchCacheRef = useRef(new Map());
   useEffect(() => {
     const q = searchQuery?.trim() || "";
     if (q.length < 2) {
       setIndiaSuggestions([]);
+      setIndiaSuggestionsLoading(false);
       return;
     }
     if (indiaSearchDebounceRef.current) clearTimeout(indiaSearchDebounceRef.current);
     indiaSearchDebounceRef.current = setTimeout(() => {
-      fetch(`/api/india/search?q=${encodeURIComponent(q)}`)
+      const cached = indiaSearchCacheRef.current.get(q);
+      if (cached) {
+        setIndiaSuggestions(cached);
+        setIndiaSuggestionsLoading(false);
+        return;
+      }
+      const controller = new AbortController();
+      indiaSearchAbortRef.current = controller;
+      setIndiaSuggestionsLoading(true);
+      fetch(`/api/india/search?q=${encodeURIComponent(q)}`, { signal: controller.signal })
         .then((res) => res.json().catch(() => ({ suggestions: [] })))
         .then((data) => {
+          if (controller.signal.aborted) return;
           const list = data.suggestions || [];
-          setIndiaSuggestions(list.map((s) => ({ ...s, listItemType: "india_place" })));
+          const mapped = list.map((s) => ({ ...s, listItemType: "india_place" }));
+          setIndiaSuggestions(mapped);
+          const cache = indiaSearchCacheRef.current;
+          if (cache.size >= INDIA_SEARCH_CACHE_MAX) {
+            const firstKey = cache.keys().next().value;
+            if (firstKey !== undefined) cache.delete(firstKey);
+          }
+          cache.set(q, mapped);
         })
-        .catch(() => setIndiaSuggestions([]));
-    }, 300);
+        .catch((err) => {
+          if (err.name === "AbortError") return;
+          setIndiaSuggestions([]);
+        })
+        .finally(() => setIndiaSuggestionsLoading(false));
+    }, 200);
     return () => {
       if (indiaSearchDebounceRef.current) clearTimeout(indiaSearchDebounceRef.current);
+      if (indiaSearchAbortRef.current) {
+        indiaSearchAbortRef.current.abort();
+        indiaSearchAbortRef.current = null;
+      }
+      setIndiaSuggestionsLoading(false);
     };
   }, [searchQuery]);
 
@@ -2099,23 +2130,45 @@ const MapComponent = () => {
   };
 
   // Handle combined autocomplete select: India place (zoom) or Kerala locality (search)
-  const handlePlaceOrLocalitySelect = (item) => {
-    if (item.listItemType === "india_place" && item.lat != null && item.lon != null) {
-      setSearchQuery(item.state ? `${item.name}, ${item.state}` : item.name);
-      setShowAutocomplete(false);
-      setSelectedCollege(null);
-      setIsCollegeFilterActive(false);
-      if (collegeMarkerRef.current && mapInstanceRef.current) {
-        mapInstanceRef.current.removeLayer(collegeMarkerRef.current);
-        collegeMarkerRef.current = null;
-      }
-      const zoomLevel = item.type === "state" ? 7 : item.type === "district" ? 10 : 12;
-      if (mapInstanceRef.current) {
-        mapInstanceRef.current.flyTo([item.lat, item.lon], zoomLevel, { duration: 0.8 });
-      }
+  const handlePlaceOrLocalitySelect = async (item) => {
+    if (item.listItemType !== "india_place") {
+      handleLocalitySelect(item);
       return;
     }
-    handleLocalitySelect(item);
+    setSearchQuery(item.state ? `${item.name}, ${item.state}` : item.name);
+    setShowAutocomplete(false);
+    setSelectedCollege(null);
+    setIsCollegeFilterActive(false);
+    if (collegeMarkerRef.current && mapInstanceRef.current) {
+      mapInstanceRef.current.removeLayer(collegeMarkerRef.current);
+      collegeMarkerRef.current = null;
+    }
+    const zoomLevel = item.type === "state" ? 7 : item.type === "district" ? 10 : 12;
+    let lat = item.lat;
+    let lon = item.lon;
+    if (lat == null || lon == null) {
+      const query =
+        item.type === "state"
+          ? `${item.name}, India`
+          : item.type === "district"
+            ? `${item.name}, ${item.state}, India`
+            : `${item.name}, ${item.state || "India"}`;
+      try {
+        const res = await fetch(
+          `/api/geocode/forward?q=${encodeURIComponent(query)}`
+        );
+        const data = await res.json();
+        if (data?.lat != null && data?.lon != null) {
+          lat = data.lat;
+          lon = data.lon;
+        }
+      } catch (_) {
+        // Keep lat/lon null; skip zoom
+      }
+    }
+    if (lat != null && lon != null && mapInstanceRef.current) {
+      mapInstanceRef.current.flyTo([lat, lon], zoomLevel, { duration: 0.8 });
+    }
   };
 
   // Handle college selection from autocomplete
@@ -2603,6 +2656,7 @@ const MapComponent = () => {
                   width="100%"
                   localities={localities}
                   indiaSuggestions={indiaSuggestions}
+                  indiaSuggestionsLoading={indiaSuggestionsLoading}
                   searchQuery={searchQuery}
                   onSelect={handlePlaceOrLocalitySelect}
                 />
