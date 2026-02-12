@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useRef, useEffect } from "react";
+import { useState, useRef, useEffect, useMemo } from "react";
 import Fuse from "fuse.js";
 import themeClasses from "../../theme-utility-classes.json";
 
@@ -16,47 +16,44 @@ export default function LocalityAutocomplete({
   },
   width = "400px",
   localities = [],
+  indiaSuggestions = [],
   onSelect,
   searchQuery = "",
 }) {
   const filterClasses = themeClasses.components.filterDropdown;
   const brand = themeClasses.brand;
-  const [suggestions, setSuggestions] = useState([]);
   const [selectedIndex, setSelectedIndex] = useState(-1);
-  const fuseRef = useRef(null);
   const suggestionsListRef = useRef(null);
   const itemRefs = useRef([]);
 
-  // Initialize Fuse.js for fuzzy search
-  useEffect(() => {
-    if (localities.length > 0) {
-      fuseRef.current = new Fuse(localities, {
-        keys: ["localityName", "district", "pincode"],
-        threshold: 0.3, // Lower = more strict matching
-        distance: 100,
-        minMatchCharLength: 2,
-        includeScore: true,
-      });
-    }
-  }, [localities]);
+  const fuseOptions = useMemo(
+    () => ({
+      keys: ["localityName", "district", "pincode"],
+      threshold: 0.3,
+      distance: 100,
+      minMatchCharLength: 2,
+      includeScore: true,
+    }),
+    []
+  );
 
-  // Update suggestions when search query changes
-  useEffect(() => {
-    if (!searchQuery || searchQuery.trim().length < 2) {
-      setSuggestions([]);
-      setSelectedIndex(-1);
-      return;
-    }
+  // Derive suggestions: Fuse results (Kerala localities) + India place suggestions
+  const suggestions = useMemo(() => {
+    if (!searchQuery || searchQuery.trim().length < 2) return [];
+    const localityResults =
+      localities.length > 0
+        ? new Fuse(localities, fuseOptions)
+            .search(searchQuery)
+            .slice(0, 8)
+            .map((r) => r.item)
+        : [];
+    return [...localityResults, ...indiaSuggestions];
+  }, [searchQuery, indiaSuggestions, localities, fuseOptions]);
 
-    if (fuseRef.current) {
-      const results = fuseRef.current.search(searchQuery);
-      // Get top 8 results
-      const topResults = results.slice(0, 8).map((result) => result.item);
-      setSuggestions(topResults);
-      setSelectedIndex(-1); // Reset selection when suggestions change
-      itemRefs.current = [];
-    }
-  }, [searchQuery]);
+  const clampedIndex =
+    selectedIndex >= 0 && selectedIndex < suggestions.length
+      ? selectedIndex
+      : -1;
 
   const handleSelect = (locality) => {
     if (onSelect) {
@@ -67,20 +64,14 @@ export default function LocalityAutocomplete({
 
   // Handle keyboard navigation
   useEffect(() => {
-    if (!isOpen || suggestions.length === 0) {
-      setSelectedIndex(-1);
-      return;
-    }
+    if (!isOpen || suggestions.length === 0) return;
 
     const handleKeyDown = (e) => {
-      // Only handle arrow keys and enter when autocomplete is open
-      // Don't interfere with typing in the input
       if (e.key === "ArrowDown") {
         e.preventDefault();
         e.stopPropagation();
         setSelectedIndex((prev) => {
           const nextIndex = prev < suggestions.length - 1 ? prev + 1 : 0;
-          // Scroll into view
           setTimeout(() => {
             if (itemRefs.current[nextIndex] && suggestionsListRef.current) {
               itemRefs.current[nextIndex].scrollIntoView({
@@ -96,7 +87,6 @@ export default function LocalityAutocomplete({
         e.stopPropagation();
         setSelectedIndex((prev) => {
           const nextIndex = prev > 0 ? prev - 1 : suggestions.length - 1;
-          // Scroll into view
           setTimeout(() => {
             if (itemRefs.current[nextIndex] && suggestionsListRef.current) {
               itemRefs.current[nextIndex].scrollIntoView({
@@ -107,10 +97,10 @@ export default function LocalityAutocomplete({
           }, 0);
           return nextIndex;
         });
-      } else if (e.key === "Enter" && selectedIndex >= 0 && selectedIndex < suggestions.length) {
+      } else if (e.key === "Enter" && clampedIndex >= 0) {
         e.preventDefault();
         e.stopPropagation();
-        handleSelect(suggestions[selectedIndex]);
+        onSelect?.(suggestions[clampedIndex]);
       } else if (e.key === "Escape") {
         e.preventDefault();
         e.stopPropagation();
@@ -118,12 +108,9 @@ export default function LocalityAutocomplete({
       }
     };
 
-    // Add event listener with capture to catch events before they reach input
     document.addEventListener("keydown", handleKeyDown, true);
-    return () => {
-      document.removeEventListener("keydown", handleKeyDown, true);
-    };
-  }, [isOpen, suggestions, selectedIndex, onSelect, onClose]);
+    return () => document.removeEventListener("keydown", handleKeyDown, true);
+  }, [isOpen, suggestions, clampedIndex, onClose, onSelect]);
 
   if (!isOpen) return null;
 
@@ -167,66 +154,127 @@ export default function LocalityAutocomplete({
             }}
           >
             {searchQuery?.trim().length >= 2
-              ? "No localities found"
+              ? "No localities or places found"
               : "Keep typing to search"}
           </div>
-        ) : suggestions.map((locality, index) => (
-          <button
-            key={`${locality.pincode}-${index}`}
-            ref={(el) => {
-              if (el) itemRefs.current[index] = el;
-            }}
-            onClick={() => handleSelect(locality)}
-            className="hover:bg-brand-stroke-weak transition-colors duration-150"
-            style={{
-              fontFamily: "Open Sans",
-              padding: "10px 16px",
-              textAlign: "left",
-              border: "none",
-              background: selectedIndex === index ? "var(--brand-stroke-weak)" : "transparent",
-              cursor: "pointer",
-              display: "flex",
-              flexDirection: "column",
-              gap: "4px",
-            }}
-          >
-            {/* Locality Name */}
-            <div
-              style={{
-                fontSize: "14px",
-                fontWeight: 500,
-                color: "var(--brand-text-weak)",
-                lineHeight: "1.4",
+        ) : suggestions.map((item, index) => {
+          const isIndiaPlace = item.listItemType === "india_place";
+          const key = isIndiaPlace
+            ? `india-${item.name}-${item.state}-${index}`
+            : `${item.pincode}-${index}`;
+          return (
+            <button
+              key={key}
+              ref={(el) => {
+                if (el) itemRefs.current[index] = el;
               }}
-            >
-              {locality.localityName}
-            </div>
-            
-            {/* District and Pincode */}
-            <div
+              onClick={() => handleSelect(item)}
+              className="hover:bg-brand-stroke-weak transition-colors duration-150"
               style={{
-                fontSize: "12px",
+                fontFamily: "Open Sans",
+                padding: "10px 16px",
+                textAlign: "left",
+                border: "none",
+                background: clampedIndex === index ? "var(--brand-stroke-weak)" : "transparent",
+                cursor: "pointer",
                 display: "flex",
-                alignItems: "center",
-                gap: "8px",
-                color: "var(--brand-text-weak)",
+                flexDirection: "column",
+                gap: "4px",
               }}
             >
-              <span style={{ opacity: 0.7 }}>
-                {locality.district}
-              </span>
-              <span style={{ opacity: 0.4 }}>•</span>
-              <span
-                style={{
-                  fontWeight: 600,
-                  color: "var(--brand-text-strong)",
-                }}
-              >
-                {locality.pincode}
-              </span>
-            </div>
-          </button>
-        ))}
+              {isIndiaPlace ? (
+                <>
+                  <div
+                    style={{
+                      fontSize: "14px",
+                      fontWeight: 500,
+                      color: "var(--brand-text-weak)",
+                      lineHeight: "1.4",
+                    }}
+                  >
+                    {item.name}
+                  </div>
+                  <div
+                    style={{
+                      fontSize: "12px",
+                      display: "flex",
+                      alignItems: "center",
+                      gap: "8px",
+                      color: "var(--brand-text-weak)",
+                    }}
+                  >
+                    <span style={{ opacity: 0.7 }}>{item.state}</span>
+                    {item.district && (
+                      <>
+                        <span style={{ opacity: 0.4 }}>•</span>
+                        <span style={{ opacity: 0.7 }}>{item.district}</span>
+                      </>
+                    )}
+                    {item.pincode && (
+                      <>
+                        <span style={{ opacity: 0.4 }}>•</span>
+                        <span
+                          style={{
+                            fontWeight: 600,
+                            color: "var(--brand-text-strong)",
+                          }}
+                        >
+                          {item.pincode}
+                        </span>
+                      </>
+                    )}
+                    <span
+                      style={{
+                        fontSize: "11px",
+                        opacity: 0.6,
+                        textTransform: "capitalize",
+                      }}
+                    >
+                      {item.type === "state"
+                        ? "State"
+                        : item.type === "district"
+                          ? "District"
+                          : "Place"}
+                    </span>
+                  </div>
+                </>
+              ) : (
+                <>
+                  <div
+                    style={{
+                      fontSize: "14px",
+                      fontWeight: 500,
+                      color: "var(--brand-text-weak)",
+                      lineHeight: "1.4",
+                    }}
+                  >
+                    {item.localityName}
+                  </div>
+                  <div
+                    style={{
+                      fontSize: "12px",
+                      display: "flex",
+                      alignItems: "center",
+                      gap: "8px",
+                      color: "var(--brand-text-weak)",
+                    }}
+                  >
+                    <span style={{ opacity: 0.7 }}>{item.district}</span>
+                    <span style={{ opacity: 0.4 }}>•</span>
+                    <span
+                      style={{
+                        fontWeight: 600,
+                        color: "var(--brand-text-strong)",
+                      }}
+                    >
+                      {item.pincode}
+                    </span>
+                  </div>
+                </>
+              )}
+            </button>
+          );
+        })}
       </div>
 
       {/* Footer hint */}

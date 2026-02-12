@@ -72,6 +72,7 @@ const MapComponent = () => {
   const [showJobAutocomplete, setShowJobAutocomplete] = useState(false);
   const [showCollegeAutocomplete, setShowCollegeAutocomplete] = useState(false);
   const [localities, setLocalities] = useState([]);
+  const [indiaSuggestions, setIndiaSuggestions] = useState([]);
   const [jobTitles, setJobTitles] = useState([]);
   const [colleges, setColleges] = useState([]);
   const [isMapLoading, setIsMapLoading] = useState(false);
@@ -213,6 +214,29 @@ const MapComponent = () => {
         });
     }
   }, []);
+
+  // Debounced fetch for all-India place suggestions (state/district/place)
+  const indiaSearchDebounceRef = useRef(null);
+  useEffect(() => {
+    const q = searchQuery?.trim() || "";
+    if (q.length < 2) {
+      setIndiaSuggestions([]);
+      return;
+    }
+    if (indiaSearchDebounceRef.current) clearTimeout(indiaSearchDebounceRef.current);
+    indiaSearchDebounceRef.current = setTimeout(() => {
+      fetch(`/api/india/search?q=${encodeURIComponent(q)}`)
+        .then((res) => res.json().catch(() => ({ suggestions: [] })))
+        .then((data) => {
+          const list = data.suggestions || [];
+          setIndiaSuggestions(list.map((s) => ({ ...s, listItemType: "india_place" })));
+        })
+        .catch(() => setIndiaSuggestions([]));
+    }, 300);
+    return () => {
+      if (indiaSearchDebounceRef.current) clearTimeout(indiaSearchDebounceRef.current);
+    };
+  }, [searchQuery]);
 
   // Cleanup markers and lines on unmount
   useEffect(() => {
@@ -2074,6 +2098,26 @@ const MapComponent = () => {
     }, 200);
   };
 
+  // Handle combined autocomplete select: India place (zoom) or Kerala locality (search)
+  const handlePlaceOrLocalitySelect = (item) => {
+    if (item.listItemType === "india_place" && item.lat != null && item.lon != null) {
+      setSearchQuery(item.state ? `${item.name}, ${item.state}` : item.name);
+      setShowAutocomplete(false);
+      setSelectedCollege(null);
+      setIsCollegeFilterActive(false);
+      if (collegeMarkerRef.current && mapInstanceRef.current) {
+        mapInstanceRef.current.removeLayer(collegeMarkerRef.current);
+        collegeMarkerRef.current = null;
+      }
+      const zoomLevel = item.type === "state" ? 7 : item.type === "district" ? 10 : 12;
+      if (mapInstanceRef.current) {
+        mapInstanceRef.current.flyTo([item.lat, item.lon], zoomLevel, { duration: 0.8 });
+      }
+      return;
+    }
+    handleLocalitySelect(item);
+  };
+
   // Handle college selection from autocomplete
   const handleCollegeSelect = async (college) => {
     const selectedCollegeName = college.name;
@@ -2354,7 +2398,7 @@ const MapComponent = () => {
                   <button
                     type="button"
                     onClick={() => setShowSearchModeDropdown(!showSearchModeDropdown)}
-                    className={`h-[34px] w-[46px] flex items-center justify-center gap-0.5 p-1 rounded-lg border-r border-brand-stroke-border bg-transparent hover:bg-brand-bg-fill transition-colors shrink-0 ${searchMode ? "hover:bg-brand-bg-fill" : ""}`}
+                    className={`h-[34px] w-[46px] flex items-center justify-center gap-0.5 p-1 rounded-lg border-r border-brand-stroke-border hover:bg-brand-bg-fill transition-colors shrink-0 ${searchMode ? "bg-brand-bg-fill" : "bg-transparent"}`}
                     title={searchMode === "person" ? "Search for people" : "Search for jobs"}
                     aria-expanded={showSearchModeDropdown}
                     aria-haspopup="true"
@@ -2396,7 +2440,7 @@ const MapComponent = () => {
                   <button
                     type="button"
                     onClick={() => setSearchMode("person")}
-                    className={`p-2 border-0 ${searchBar["toggle-segment"]} ${searchMode === "person" ? searchBar["toggle-segment-active"] : ""} !rounded-l-md !rounded-r-none`}
+                    className={`p-2 border-0 ${searchBar["toggle-segment"]} ${searchMode === "person" ? searchBar["toggle-segment-active"] + " bg-brand-bg-fill" : ""} !rounded-l-md !rounded-r-none`}
                     title="Search for people"
                   >
                     <User
@@ -2558,8 +2602,9 @@ const MapComponent = () => {
                   }}
                   width="100%"
                   localities={localities}
+                  indiaSuggestions={indiaSuggestions}
                   searchQuery={searchQuery}
-                  onSelect={handleLocalitySelect}
+                  onSelect={handlePlaceOrLocalitySelect}
                 />
                 
                 {/* Job Title Autocomplete Dropdown */}
