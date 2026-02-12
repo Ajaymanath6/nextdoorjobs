@@ -35,7 +35,15 @@ export async function POST(request) {
     // Validation
     if (!name || !state || !district || !userId) {
       return NextResponse.json(
-        { error: "Name, state, district, and userId are required" },
+        { success: false, error: "Name, state, district, and userId are required" },
+        { status: 400 }
+      );
+    }
+
+    const userIdNum = parseInt(String(userId), 10);
+    if (Number.isNaN(userIdNum) || userIdNum < 1) {
+      return NextResponse.json(
+        { success: false, error: "Invalid user. Please sign in again." },
         { status: 400 }
       );
     }
@@ -58,12 +66,12 @@ export async function POST(request) {
 
     // Validate userId exists
     const user = await prisma.user.findUnique({
-      where: { id: parseInt(userId) },
+      where: { id: userIdNum },
     });
 
     if (!user) {
       return NextResponse.json(
-        { error: "User not found" },
+        { success: false, error: "User not found. Please complete onboarding sign-in first." },
         { status: 404 }
       );
     }
@@ -118,12 +126,11 @@ export async function POST(request) {
       }
     }
 
-    const userIdNum = parseInt(userId);
     const nameStr = name.toString();
 
     // Idempotent: return existing company if same user and name (e.g. "See your posting" retry)
     const existing = await prisma.company.findFirst({
-      where: { userId: userIdNum, name: nameStr },
+      where: { userId: userIdNum, name: nameStr.trim() },
     });
     let company;
     if (existing) {
@@ -170,6 +177,7 @@ export async function POST(request) {
     console.error("Error in company API:", error);
     return NextResponse.json(
       {
+        success: false,
         error: "Internal server error",
         details: process.env.NODE_ENV === "development" ? error.message : undefined,
       },

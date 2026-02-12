@@ -10,7 +10,6 @@ import {
   List,
   Filter,
   Return,
-  SendFilled,
   IbmWatsonDiscovery,
   Enterprise,
   Portfolio,
@@ -27,6 +26,7 @@ import LocalityAutocomplete from "./LocalityAutocomplete";
 import JobTitleAutocomplete from "./JobTitleAutocomplete";
 import CollegeAutocomplete from "./CollegeAutocomplete";
 import EmptyState from "./EmptyState";
+import { getStateCenter } from "../../lib/indiaStateCenters";
 // 10 Thrissur district coordinates for thank-you badges (from update-pincode-coordinates.js)
 const THRISSUR_BADGE_COORDINATES = [
   { lat: 10.5239, lon: 76.2123 },
@@ -74,6 +74,7 @@ const MapComponent = () => {
   const [localities, setLocalities] = useState([]);
   const [indiaSuggestions, setIndiaSuggestions] = useState([]);
   const [indiaSuggestionsLoading, setIndiaSuggestionsLoading] = useState(false);
+  const [cachedStateDistricts, setCachedStateDistricts] = useState([]);
   const [jobTitles, setJobTitles] = useState([]);
   const [colleges, setColleges] = useState([]);
   const [isMapLoading, setIsMapLoading] = useState(false);
@@ -223,14 +224,33 @@ const MapComponent = () => {
   const indiaSearchCacheRef = useRef(new Map());
   useEffect(() => {
     const q = searchQuery?.trim() || "";
+    const stateFilter = selectedFilterOption?.state || "";
     if (q.length < 2) {
       setIndiaSuggestions([]);
       setIndiaSuggestionsLoading(false);
       return;
     }
+    // Instant suggestions from preloaded districts when a state is selected
+    if (stateFilter && cachedStateDistricts.length > 0) {
+      const qLower = q.toLowerCase();
+      const filtered = cachedStateDistricts
+        .filter((d) => (d || "").toLowerCase().includes(qLower))
+        .slice(0, 12)
+        .map((name) => ({
+          type: "district",
+          name,
+          state: stateFilter,
+          district: name,
+          lat: null,
+          lon: null,
+          listItemType: "india_place",
+        }));
+      setIndiaSuggestions(filtered);
+    }
     if (indiaSearchDebounceRef.current) clearTimeout(indiaSearchDebounceRef.current);
     indiaSearchDebounceRef.current = setTimeout(() => {
-      const cached = indiaSearchCacheRef.current.get(q);
+      const cacheKey = q + "\0" + stateFilter;
+      const cached = indiaSearchCacheRef.current.get(cacheKey);
       if (cached) {
         setIndiaSuggestions(cached);
         setIndiaSuggestionsLoading(false);
@@ -239,7 +259,10 @@ const MapComponent = () => {
       const controller = new AbortController();
       indiaSearchAbortRef.current = controller;
       setIndiaSuggestionsLoading(true);
-      fetch(`/api/india/search?q=${encodeURIComponent(q)}`, { signal: controller.signal })
+      const url = stateFilter
+        ? `/api/india/search?q=${encodeURIComponent(q)}&state=${encodeURIComponent(stateFilter)}`
+        : `/api/india/search?q=${encodeURIComponent(q)}`;
+      fetch(url, { signal: controller.signal })
         .then((res) => res.json().catch(() => ({ suggestions: [] })))
         .then((data) => {
           if (controller.signal.aborted) return;
@@ -251,14 +274,14 @@ const MapComponent = () => {
             const firstKey = cache.keys().next().value;
             if (firstKey !== undefined) cache.delete(firstKey);
           }
-          cache.set(q, mapped);
+          cache.set(cacheKey, mapped);
         })
         .catch((err) => {
           if (err.name === "AbortError") return;
           setIndiaSuggestions([]);
         })
         .finally(() => setIndiaSuggestionsLoading(false));
-    }, 200);
+    }, 150);
     return () => {
       if (indiaSearchDebounceRef.current) clearTimeout(indiaSearchDebounceRef.current);
       if (indiaSearchAbortRef.current) {
@@ -267,7 +290,36 @@ const MapComponent = () => {
       }
       setIndiaSuggestionsLoading(false);
     };
-  }, [searchQuery]);
+  }, [searchQuery, selectedFilterOption?.state, cachedStateDistricts]);
+
+  // Pan map to selected state when user picks a state in the filter
+  useEffect(() => {
+    const stateName = selectedFilterOption?.state;
+    if (!stateName || !mapInstanceRef.current) return;
+    const result = getStateCenter(stateName);
+    if (result?.center) {
+      mapInstanceRef.current.flyTo(result.center, result.zoom, { duration: 0.8 });
+    }
+  }, [selectedFilterOption?.state]);
+
+  // Preload districts for selected state so suggestions can show faster
+  useEffect(() => {
+    const stateName = selectedFilterOption?.state;
+    if (!stateName || typeof stateName !== "string") {
+      setCachedStateDistricts([]);
+      return;
+    }
+    let cancelled = false;
+    fetch(`/api/india/districts?state=${encodeURIComponent(stateName)}`)
+      .then((res) => res.json().catch(() => ({ districts: [] })))
+      .then((data) => {
+        if (!cancelled && Array.isArray(data.districts)) setCachedStateDistricts(data.districts);
+      })
+      .catch(() => {
+        if (!cancelled) setCachedStateDistricts([]);
+      });
+    return () => { cancelled = true; };
+  }, [selectedFilterOption?.state]);
 
   // Cleanup markers and lines on unmount
   useEffect(() => {
@@ -2167,7 +2219,15 @@ const MapComponent = () => {
       }
     }
     if (lat != null && lon != null && mapInstanceRef.current) {
-      mapInstanceRef.current.flyTo([lat, lon], zoomLevel, { duration: 0.8 });
+      const map = mapInstanceRef.current;
+      setIsMapLoading(true);
+      const center = map.getCenter();
+      const currentZoom = map.getZoom();
+      map.flyTo(center, Math.max(5, currentZoom - 2), { duration: 0.4 });
+      map.once("moveend", () => {
+        map.flyTo([lat, lon], zoomLevel, { duration: 1.2 });
+        map.once("moveend", () => setIsMapLoading(false));
+      });
     }
   };
 
@@ -2493,23 +2553,23 @@ const MapComponent = () => {
                   <button
                     type="button"
                     onClick={() => setSearchMode("person")}
-                    className={`p-2 border-0 ${searchBar["toggle-segment"]} ${searchMode === "person" ? searchBar["toggle-segment-active"] + " bg-brand-bg-fill" : ""} !rounded-l-md !rounded-r-none`}
+                    className={`p-2 border-0 ${searchBar["toggle-segment"]} ${searchMode === "person" ? searchBar["toggle-segment-active"] : ""} !rounded-l-md !rounded-r-none`}
                     title="Search for people"
                   >
                     <User
                       size={20}
-                      className={`w-5 h-5 shrink-0 ${searchMode === "person" ? searchBar["toggle-segment-icon-active"] : searchBar["toggle-segment-icon"]}`}
+                      className={`w-5 h-5 shrink-0 ${searchMode === "person" ? searchBar["toggle-segment-icon-active"] + " text-brand" : searchBar["toggle-segment-icon"]}`}
                     />
                   </button>
                   <button
                     type="button"
                     onClick={() => setSearchMode("job")}
-                    className={`p-2 border-0 ${searchBar["toggle-segment"]} ${searchMode === "job" ? searchBar["toggle-segment-active"] + " bg-brand-bg-fill" : ""} !rounded-r-md !rounded-l-none`}
+                    className={`p-2 border-0 ${searchBar["toggle-segment"]} ${searchMode === "job" ? searchBar["toggle-segment-active"] : ""} !rounded-r-md !rounded-l-none`}
                     title="Search for jobs"
                   >
                     <Portfolio
                       size={20}
-                      className={`w-5 h-5 shrink-0 ${searchMode === "job" ? searchBar["toggle-segment-icon-active"] : searchBar["toggle-segment-icon"]}`}
+                      className={`w-5 h-5 shrink-0 ${searchMode === "job" ? searchBar["toggle-segment-icon-active"] + " text-brand" : searchBar["toggle-segment-icon"]}`}
                     />
                   </button>
                 </div>
@@ -2581,9 +2641,9 @@ const MapComponent = () => {
                   placeholder="Search for locality, pincode, job"
                 />
                 
-                {/* Right side: mobile = cross when typing else send; desktop = clear (when typing) + send + filter */}
+                {/* Right side: mobile = cross when typing; desktop = clear (when typing) + filter */}
                 <div className="absolute right-1.5 md:right-0 top-1/2 -translate-y-1/2 flex items-center justify-center gap-0 md:gap-0.5">
-                  {/* Mobile: cross when typing (clear), else send (disabled) */}
+                  {/* Mobile: cross when typing (clear) */}
                   {searchQuery?.trim() ? (
                     <button
                       type="button"
@@ -2596,11 +2656,7 @@ const MapComponent = () => {
                     >
                       <Close size={24} className="w-6 h-6 shrink-0 text-brand-stroke-strong" />
                     </button>
-                  ) : (
-                    <span className="md:hidden flex items-center justify-center p-1 opacity-50 pointer-events-none">
-                      <SendFilled size={24} className="w-6 h-6 shrink-0 text-brand-text-tertiary" />
-                    </span>
-                  )}
+                  ) : null}
                   {/* Desktop: cross (clear) when typing - click clears all search */}
                   {searchQuery?.trim() ? (
                     <button
@@ -2615,21 +2671,22 @@ const MapComponent = () => {
                       <Close size={24} className="w-6 h-6 shrink-0 text-brand-stroke-strong" />
                     </button>
                   ) : null}
-                  {/* Desktop: send button */}
-                  <button
-                    type="button"
-                    onClick={() => handleSearch()}
-                    disabled={!searchQuery?.trim()}
-                    className={`hidden md:flex items-center justify-center p-1 rounded border-0 bg-transparent transition-colors ${
-                      searchQuery?.trim() ? "hover:bg-brand-stroke-weak cursor-pointer" : "opacity-50 cursor-not-allowed"
-                    }`}
-                    aria-label="Search"
-                  >
-                    <SendFilled
-                      size={24}
-                      className={`w-6 h-6 shrink-0 ${searchQuery?.trim() ? "text-brand" : "text-brand-text-tertiary"}`}
-                    />
-                  </button>
+                  {/* State filter badge: show when a state is selected; click X to clear filter */}
+                  {selectedFilterOption?.state ? (
+                    <span className="hidden md:flex items-center gap-0.5 shrink-0 max-w-[140px] rounded-full bg-brand/10 border border-brand-stroke-weak px-2 py-1">
+                      <span className="truncate text-xs font-medium text-brand-text-strong" title={selectedFilterOption.state}>
+                        {selectedFilterOption.state}
+                      </span>
+                      <button
+                        type="button"
+                        onClick={() => setSelectedFilterOption(null)}
+                        className="shrink-0 p-0.5 rounded-full hover:bg-brand-stroke-weak transition-colors"
+                        aria-label="Clear state filter"
+                      >
+                        <Close size={14} className="w-3.5 h-3.5 text-brand-stroke-strong" />
+                      </button>
+                    </span>
+                  ) : null}
                   {/* Desktop: filter button inside search bar - no bg on hover, icon turns primary on hover */}
                   <button
                     type="button"
@@ -2698,6 +2755,22 @@ const MapComponent = () => {
 
               {/* Filter + Profile grouped. Mobile: filter button here. Desktop: filter is inside search input, this wrapper only holds dropdown (no width). */}
               <div className="flex items-center gap-0.5 md:gap-1 shrink-0">
+                {/* Mobile: state filter badge when selected */}
+                {selectedFilterOption?.state ? (
+                  <span className={`md:hidden flex items-center gap-0.5 shrink-0 max-w-[100px] rounded-full bg-brand/10 border border-brand-stroke-weak px-2 py-1 ${mobileSearchExpanded || showFilterDropdown ? "hidden" : ""}`}>
+                    <span className="truncate text-xs font-medium text-brand-text-strong" title={selectedFilterOption.state}>
+                      {selectedFilterOption.state}
+                    </span>
+                    <button
+                      type="button"
+                      onClick={() => setSelectedFilterOption(null)}
+                      className="shrink-0 p-0.5 rounded-full hover:bg-brand-stroke-weak transition-colors"
+                      aria-label="Clear state filter"
+                    >
+                      <Close size={14} className="w-3.5 h-3.5 text-brand-stroke-strong" />
+                    </button>
+                  </span>
+                ) : null}
                 {/* Filter Button (mobile only); on desktop filter is inside input. Wrapper md:w-0 so dropdown can still open. */}
                 <div className={`relative shrink-0 ${!mobileSearchExpanded && !showFilterDropdown ? "hidden" : ""} md:!flex md:w-0 md:min-w-0 md:overflow-visible`}>
                   <button

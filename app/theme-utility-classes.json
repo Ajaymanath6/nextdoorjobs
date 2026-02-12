@@ -79,7 +79,7 @@
       "distance-button-nowrap": "whitespace-nowrap",
       "toggle-wrapper": "flex rounded-md border border-brand-stroke-weak overflow-hidden shrink-0",
       "toggle-segment": "flex items-center justify-center p-2 rounded-md bg-brand-bg-white text-brand-text-strong hover:bg-brand-bg-fill transition-colors border-0",
-      "toggle-segment-active": "bg-brand-bg-fill",
+      "toggle-segment-active": "bg-brand/10",
       "toggle-segment-icon": "text-brand-stroke-strong",
       "toggle-segment-icon-active": "text-brand"
     },

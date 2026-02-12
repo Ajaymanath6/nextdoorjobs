@@ -141,21 +141,20 @@ export default function Sidebar({ activeItem = "jobs-near-you", onToggle, isOpen
         isOpen ? sidebar["container-expanded"] : sidebar["container-collapsed"]
       }`}
     >
-      {/* Logo & Toggle Section */}
+      {/* Logo & Toggle Section - same logo as chat header (/logo.svg) */}
       <div className={`${sidebar["logo-section"]} relative`}>
         <div className="flex items-center justify-between">
           {isOpen ? (
-            <div className="flex items-center space-x-3">
-              <div className={sidebar["logo-container"]}>
+            <div className="flex items-center min-w-0">
+              <div className="h-8 flex items-center justify-center shrink-0">
                 <Image
-                  src="/onlylogo.svg"
+                  src="/logo.svg"
                   alt="mapmyGig"
-                  width={24}
-                  height={24}
-                  className="w-6 h-6"
+                  width={0}
+                  height={32}
+                  className="h-8 w-auto"
                 />
               </div>
-              <h2 className={sidebar["logo-text"]}>mapmyGig</h2>
             </div>
           ) : (
             <button

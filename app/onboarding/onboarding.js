@@ -2,8 +2,8 @@
 
 import { useState, useEffect, useRef } from "react";
 import { useRouter } from "next/navigation";
-import { useUser } from '@clerk/nextjs';
-import { WatsonHealthRotate_360, List } from "@carbon/icons-react";
+import { useUser, useClerk } from "@clerk/nextjs";
+import { WatsonHealthRotate_360, List, UserAvatar, User, Settings, Logout } from "@carbon/icons-react";
 import ChatInterface from "../components/Onboarding/ChatInterface";
 import EmailAuthForm from "../components/Onboarding/EmailAuthForm";
 import StateDistrictSelector from "../components/Onboarding/StateDistrictSelector";
@@ -38,11 +38,15 @@ const JOB_FIELDS = {
 export default function OnboardingPage() {
   const router = useRouter();
   const { user: clerkUser, isLoaded: clerkLoaded } = useUser();
+  const { signOut } = useClerk();
   const [showAuth, setShowAuth] = useState(true);
   const [checkingAuth, setCheckingAuth] = useState(true);
   const [selectedLanguage, setSelectedLanguage] = useState("English");
   const [showLanguageDropdown, setShowLanguageDropdown] = useState(false);
+  const [showUserDropdown, setShowUserDropdown] = useState(false);
+  const [profileUserName, setProfileUserName] = useState("Profile");
   const languageDropdownRef = useRef(null);
+  const userDropdownRef = useRef(null);
 
   // Close language dropdown when clicking outside
   useEffect(() => {
@@ -60,6 +64,51 @@ export default function OnboardingPage() {
       document.removeEventListener("mousedown", handleClickOutside);
     };
   }, [showLanguageDropdown]);
+
+  // Close user dropdown when clicking outside
+  useEffect(() => {
+    const handleClickOutside = (event) => {
+      if (userDropdownRef.current && !userDropdownRef.current.contains(event.target)) {
+        setShowUserDropdown(false);
+      }
+    };
+    if (showUserDropdown) document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, [showUserDropdown]);
+
+  // Fetch profile display name for header
+  useEffect(() => {
+    const fetchProfile = async () => {
+      try {
+        const res = await fetch("/api/auth/me");
+        if (res.ok) {
+          const data = await res.json();
+          if (data.success && data.user) {
+            setProfileUserName(data.user.name || data.user.email || "Profile");
+          }
+        }
+      } catch (e) {
+        console.error("Error fetching user:", e);
+      }
+    };
+    fetchProfile();
+  }, []);
+
+  const handleProfileLogout = async () => {
+    setShowUserDropdown(false);
+    try {
+      if (signOut) await signOut();
+      await fetch("/api/auth/logout", { method: "POST" });
+      router.push("/");
+      window.location.reload();
+    } catch (e) {
+      console.error("Logout error:", e);
+      await fetch("/api/auth/logout", { method: "POST" });
+      router.push("/");
+      window.location.reload();
+    }
+  };
+
   const [chatMessages, setChatMessages] = useState([]);
   const [isLoading, setIsLoading] = useState(false);
   const [userData, setUserData] = useState(null);
@@ -1075,17 +1124,22 @@ export default function OnboardingPage() {
         companyResult = companyDataRes;
 
         if (companyResult.success && companyResult.company) break;
-        const errMsg = companyResult.error || "";
+        // In development, prefer API details (e.g. Prisma message) for debugging
+        const errorMessage = companyResult.details || companyResult.error || "Failed to create company";
+        if (process.env.NODE_ENV === "development" && companyResult.details) {
+          console.error("Company API error:", companyResult.details, companyResult);
+        }
         // Only retry without logo on server error (5xx), not on 400 – so we don't lose the uploaded logo
         if (companyResponse.status >= 500 && attempt === 0) {
           includeLogo = false;
           continue;
         }
-        throw new Error(companyResult.error || "Failed to create company");
+        throw new Error(errorMessage);
       }
 
       if (!companyResult?.success || !companyResult?.company?.id) {
-        throw new Error(companyResult?.error || "Failed to create company");
+        const err = companyResult?.details || companyResult?.error || "Failed to create company";
+        throw new Error(err);
       }
 
       const jobPayload = {
@@ -1382,6 +1436,55 @@ export default function OnboardingPage() {
                   </button>
                 </div>
               )}
+              </div>
+              {/* User profile - same pattern as Sidebar */}
+              <div className="relative" ref={userDropdownRef}>
+                <button
+                  type="button"
+                  onClick={() => setShowUserDropdown(!showUserDropdown)}
+                  className="p-2 rounded-lg hover:bg-gray-100 transition-colors flex items-center justify-center"
+                  aria-label="Profile menu"
+                  title={profileUserName}
+                >
+                  <UserAvatar size={24} style={{ color: "#575757" }} />
+                </button>
+                {showUserDropdown && (
+                  <div className="absolute right-0 mt-2 w-48 bg-white border border-brand-stroke-weak rounded-lg shadow-lg z-50">
+                    <div className="p-2">
+                      <button
+                        type="button"
+                        className="w-full text-left px-4 py-2 text-brand-text-strong hover:bg-brand-bg-fill rounded transition-colors flex items-center gap-2"
+                        onClick={() => {
+                          setShowUserDropdown(false);
+                          router.push("/profile");
+                        }}
+                      >
+                        <User size={20} className="text-brand-stroke-strong" />
+                        <span>Profile</span>
+                      </button>
+                      <button
+                        type="button"
+                        className="w-full text-left px-4 py-2 text-brand-text-strong hover:bg-brand-bg-fill rounded transition-colors flex items-center gap-2"
+                        onClick={() => {
+                          setShowUserDropdown(false);
+                          router.push("/settings");
+                        }}
+                      >
+                        <Settings size={20} className="text-brand-stroke-strong" />
+                        <span>Settings</span>
+                      </button>
+                      <div className="border-t border-brand-stroke-weak my-1" />
+                      <button
+                        type="button"
+                        className="w-full text-left px-4 py-2 text-brand-text-strong hover:bg-brand-bg-fill rounded transition-colors flex items-center gap-2"
+                        onClick={handleProfileLogout}
+                      >
+                        <Logout size={20} className="text-brand-stroke-strong" />
+                        <span>Logout</span>
+                      </button>
+                    </div>
+                  </div>
+                )}
               </div>
             </div>
           </div>

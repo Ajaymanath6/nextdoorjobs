@@ -122,7 +122,17 @@ export default function ChatInterface({ messages = [], onSendMessage, isLoading 
         {messages.map((message, index) => (
           <div key={index} className="w-full">
             {message.type === "jobList" ? (
-              <div className="flex justify-start">
+              <div className="flex items-start gap-2 justify-start">
+                <div className="flex-shrink-0 mt-1 flex items-center justify-center">
+                  <Image
+                    src="/onlylogo.svg"
+                    alt="Logo"
+                    width={28}
+                    height={28}
+                    className="w-7 h-7"
+                  />
+                </div>
+                <div className="flex flex-col gap-2 max-w-[80%]">
                 <div className="max-w-[85%] w-full rounded-lg border border-brand-stroke-weak bg-brand-bg-white px-4 py-3">
                   <p className="text-sm font-medium text-brand-text-strong mb-3" style={{ fontFamily: "Open Sans, sans-serif" }}>
                     Your job postings
@@ -151,6 +161,7 @@ export default function ChatInterface({ messages = [], onSendMessage, isLoading 
                       ))}
                     </ul>
                   )}
+                </div>
                 </div>
               </div>
             ) : (
@@ -277,21 +288,56 @@ export default function ChatInterface({ messages = [], onSendMessage, isLoading 
           </div>
         ))}
         {typingText && (
-          <div className="flex justify-start">
-            <div className="max-w-[80%] rounded-lg px-4 py-2 bg-brand-bg-fill text-brand-text-strong">
-              {typingText}
-              <span className="animate-pulse">|</span>
+          <div className="flex items-start gap-2 justify-start">
+            <div className="flex-shrink-0 mt-1 flex items-center justify-center">
+              <Image
+                src="/onlylogo.svg"
+                alt="Logo"
+                width={28}
+                height={28}
+                className="w-7 h-7"
+              />
+            </div>
+            <div className="flex flex-col gap-2 max-w-[80%]">
+              <div className="rounded-lg px-4 py-2 bg-brand-bg-fill text-brand-text-strong">
+                {typingText}
+                <span className="animate-pulse">|</span>
+              </div>
             </div>
           </div>
         )}
         {inlineComponent && (
-          <div className="flex justify-start" data-inline-component>
-            <div className="max-w-[80%] w-full">
+          <div className="flex items-start gap-2 justify-start" data-inline-component>
+            <div className="flex-shrink-0 mt-1 flex items-center justify-center">
+              <Image
+                src="/onlylogo.svg"
+                alt="Logo"
+                width={28}
+                height={28}
+                className="w-7 h-7"
+              />
+            </div>
+            <div className="flex flex-col gap-2 max-w-[80%] w-full">
               {inlineComponent}
             </div>
           </div>
         )}
-        {isLoading && !typingText && <TypingAnimation />}
+        {isLoading && !typingText && (
+          <div className="flex items-start gap-2 justify-start">
+            <div className="flex-shrink-0 mt-1 flex items-center justify-center">
+              <Image
+                src="/onlylogo.svg"
+                alt="Logo"
+                width={28}
+                height={28}
+                className="w-7 h-7"
+              />
+            </div>
+            <div className="flex flex-col gap-2 max-w-[80%]">
+              <TypingAnimation />
+            </div>
+          </div>
+        )}
         <div ref={messagesEndRef} />
       </div>
 

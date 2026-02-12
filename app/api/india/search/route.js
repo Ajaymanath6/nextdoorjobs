@@ -15,6 +15,12 @@ function normalize(str) {
   return (str || "").trim().toLowerCase().replace(/\s+/g, " ");
 }
 
+/** City alias -> { state, district, displayName } for suggestions when query matches city name. */
+const CITY_ALIASES = new Map([
+  ["kochi", { state: "Kerala", district: "Ernakulam", displayName: "Kochi" }],
+  ["cochin", { state: "Kerala", district: "Ernakulam", displayName: "Kochi" }],
+]);
+
 async function getStatesAndDistricts() {
   if (statesCache) return statesCache;
   const res = await fetch(DATA_URL, { next: { revalidate: 86400 } });
@@ -106,12 +112,14 @@ async function geocode(query) {
 export async function GET(request) {
   const { searchParams } = new URL(request.url);
   const q = searchParams.get("q");
+  const stateFilter = searchParams.get("state");
   if (!q || typeof q !== "string" || q.trim().length < 2) {
     return NextResponse.json({ suggestions: [] });
   }
 
   const query = q.trim();
   const queryNorm = normalize(query);
+  const stateFilterNorm = stateFilter && typeof stateFilter === "string" ? normalize(stateFilter.trim()) : null;
   const suggestions = [];
 
   try {
@@ -122,8 +130,11 @@ export async function GET(request) {
 
     const matchingStates = [];
     const matchingDistricts = [];
+    const statesToConsider = stateFilterNorm
+      ? statesData.filter((s) => normalize(s.state || "") === stateFilterNorm)
+      : statesData;
 
-    for (const s of statesData) {
+    for (const s of statesToConsider) {
       const stateName = s.state || "";
       const stateNorm = normalize(stateName);
       if (stateNorm.includes(queryNorm) || queryNorm.includes(stateNorm)) {
@@ -178,7 +189,27 @@ export async function GET(request) {
       });
     }
 
-    const placeQuery = `${query} India`;
+    const cityAlias = CITY_ALIASES.get(queryNorm);
+    if (cityAlias) {
+      const aliasStateNorm = normalize(cityAlias.state);
+      if (!stateFilterNorm || stateFilterNorm === aliasStateNorm) {
+        const key = `${aliasStateNorm}|${normalize(cityAlias.district)}`;
+        const pincode = districtToPincode.get(key) || null;
+        suggestions.push({
+          type: "district",
+          name: cityAlias.displayName,
+          state: cityAlias.state,
+          district: cityAlias.district,
+          lat: null,
+          lon: null,
+          ...(pincode && { pincode }),
+        });
+      }
+    }
+
+    const placeQuery = stateFilterNorm
+      ? `${query} ${stateFilter.trim()} India`
+      : `${query} India`;
     await delayForNominatim();
     const placeUrl = `https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(placeQuery)}&format=json&limit=5&countrycodes=in`;
     const placeRes = await fetch(placeUrl, {
@@ -193,6 +224,8 @@ export async function GET(request) {
         if (item.lat == null || item.lon == null) continue;
         const a = addr(item);
         const stateName = stateFromAddr(a);
+        const stateNormItem = normalize(stateName || "");
+        if (stateFilterNorm && stateNormItem !== stateFilterNorm) continue;
         const nameDisplay = item.display_name?.split(",")[0] || item.name || query;
         const postcode = a.postcode ? String(a.postcode).trim() : null;
         suggestions.push({

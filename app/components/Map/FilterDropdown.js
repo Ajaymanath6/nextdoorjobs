@@ -4,14 +4,7 @@ import { useState, useRef, useEffect } from "react";
 import { RiSearchLine } from "@remixicon/react";
 import themeClasses from "../../theme-utility-classes.json";
 
-// Countries data - Only India with Kerala
-const countries = [
-  {
-    name: "India",
-    flag: "🇮🇳",
-    states: ["Kerala"],
-  },
-];
+const COUNTRY_DISPLAY = { name: "India", flag: "🇮🇳" };
 
 export default function FilterDropdown({
   isOpen,
@@ -29,9 +22,19 @@ export default function FilterDropdown({
 }) {
   const filterClasses = themeClasses.components.filterDropdown;
   const [searchQuery, setSearchQuery] = useState("");
-  const [selectedCountry] = useState(countries[0]); // India by default, no changes needed
+  const [statesList, setStatesList] = useState([]);
   const [selectedState, setSelectedState] = useState(null);
   const searchInputRef = useRef(null);
+
+  // Fetch all Indian states on mount
+  useEffect(() => {
+    fetch("/api/india/states")
+      .then((res) => res.json())
+      .then((data) => {
+        if (Array.isArray(data.states)) setStatesList(data.states);
+      })
+      .catch(() => setStatesList([]));
+  }, []);
 
   // Initialize with selected option
   useEffect(() => {
@@ -55,18 +58,16 @@ export default function FilterDropdown({
   }, [isOpen]);
 
   // Filter states based on search
-  const filteredStates = selectedCountry?.states
-    ? selectedCountry.states.filter((state) =>
-        state.toLowerCase().includes(searchQuery.toLowerCase())
-      )
-    : [];
+  const filteredStates = statesList.filter((state) =>
+    state.toLowerCase().includes(searchQuery.toLowerCase())
+  );
 
   const handleStateSelect = (state) => {
     setSelectedState(state);
     if (onSelect) {
       onSelect({
-        label: `${state}, ${selectedCountry.name}`,
-        country: selectedCountry.name,
+        label: `${state}, ${COUNTRY_DISPLAY.name}`,
+        country: COUNTRY_DISPLAY.name,
         state: state,
       });
     }
@@ -95,9 +96,9 @@ export default function FilterDropdown({
     >
       {/* Country Display - India only, no dropdown */}
       <div className="flex items-center gap-2 px-3 py-2 border border-brand-stroke-border rounded-lg bg-brand-stroke-weak">
-        <span style={{ fontSize: "18px" }}>{selectedCountry.flag}</span>
+        <span style={{ fontSize: "18px" }}>{COUNTRY_DISPLAY.flag}</span>
         <span className={filterClasses["country-button-text"]}>
-          {selectedCountry.name}
+          {COUNTRY_DISPLAY.name}
         </span>
       </div>
 

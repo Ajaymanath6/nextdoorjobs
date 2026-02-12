@@ -84,12 +84,15 @@ export default function StateDistrictSelector({
       <input
         ref={inputRef}
         type="text"
-        value={displayValue}
+        value={isOpen ? searchQuery : displayValue}
         onChange={(e) => {
           setSearchQuery(e.target.value);
           setIsOpen(true);
         }}
-        onFocus={() => setIsOpen(true)}
+        onFocus={() => {
+          setSearchQuery(displayValue);
+          setIsOpen(true);
+        }}
         placeholder={placeholder}
         className="w-full px-4 py-2 border-brand-stroke-weak shadow-sm rounded-lg focus:outline-none focus:border-brand-text-strong hover:bg-brand-bg-fill bg-brand-bg-white text-brand-text-strong placeholder:text-brand-text-placeholder"
         style={{ fontFamily: "Open Sans, sans-serif", borderWidth: "1px" }}
