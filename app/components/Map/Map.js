@@ -26,7 +26,7 @@ import LocalityAutocomplete from "./LocalityAutocomplete";
 import JobTitleAutocomplete from "./JobTitleAutocomplete";
 import CollegeAutocomplete from "./CollegeAutocomplete";
 import EmptyState from "./EmptyState";
-import { getStateCenter } from "../../lib/indiaStateCenters";
+import { getStateCenter } from "../../../lib/indiaStateCenters";
 // 10 Thrissur district coordinates for thank-you badges (from update-pincode-coordinates.js)
 const THRISSUR_BADGE_COORDINATES = [
   { lat: 10.5239, lon: 76.2123 },
