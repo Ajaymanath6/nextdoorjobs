@@ -1330,9 +1330,9 @@ export default function OnboardingPage() {
       )}
       
       <div className="relative z-10 flex justify-center px-4" style={{ height: '100dvh', width: '100vw', margin: 0, padding: 0, paddingBottom: 'env(safe-area-inset-bottom, 0)' }}>
-        <div className="bg-white/95 backdrop-blur-sm rounded-lg overflow-hidden border border-[#E5E5E5] shadow-lg relative w-full max-w-4xl flex flex-col" style={{ height: '100%', margin: 0, padding: 0, minHeight: 0 }}>
-          {/* Header */}
-          <div className="bg-white/95 backdrop-blur-sm px-6 py-4 flex items-center justify-between border-b border-[#E5E5E5] relative z-10 flex-shrink-0">
+        <div className="bg-white/95 backdrop-blur-sm rounded-lg overflow-visible border border-[#E5E5E5] shadow-lg relative w-full max-w-4xl flex flex-col" style={{ height: '100%', margin: 0, padding: 0, minHeight: 0 }}>
+          {/* Header - overflow-visible and high z so dropdowns overlay chat */}
+          <div className="bg-white/95 backdrop-blur-sm px-6 py-4 flex items-center justify-between border-b border-[#E5E5E5] relative z-30 flex-shrink-0 overflow-visible">
             <div className="flex items-center gap-3">
               <button
                 onClick={() => router.push("/")}
@@ -1449,7 +1449,7 @@ export default function OnboardingPage() {
                   <UserAvatar size={24} style={{ color: "#575757" }} />
                 </button>
                 {showUserDropdown && (
-                  <div className="absolute right-0 mt-2 w-48 bg-white border border-brand-stroke-weak rounded-lg shadow-lg z-50">
+                  <div className="absolute right-0 mt-2 w-48 bg-white border border-brand-stroke-weak rounded-lg shadow-lg z-[200]">
                     <div className="p-2">
                       <button
                         type="button"
@@ -1489,8 +1489,8 @@ export default function OnboardingPage() {
             </div>
           </div>
 
-          {/* Content - Always show chat interface */}
-          <div className="flex-1 relative z-10 overflow-hidden">
+          {/* Content - Always show chat interface; overflow-hidden so only this area clips */}
+          <div className="flex-1 relative z-10 overflow-hidden rounded-b-lg min-h-0">
             <ChatInterface
               messages={chatMessages}
               onSendMessage={handleChatMessage}

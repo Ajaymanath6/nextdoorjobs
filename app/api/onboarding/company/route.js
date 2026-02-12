@@ -64,10 +64,24 @@ export async function POST(request) {
       );
     }
 
-    // Validate userId exists
-    const user = await prisma.user.findUnique({
-      where: { id: userIdNum },
-    });
+    // Validate userId exists (wrap in try/catch so connection/Prisma errors return safe 500)
+    let user;
+    try {
+      user = await prisma.user.findUnique({
+        where: { id: userIdNum },
+      });
+    } catch (dbError) {
+      const message = dbError?.message || String(dbError);
+      if (process.env.NODE_ENV === "development") {
+        console.error("Company API: user lookup failed", message);
+      } else {
+        console.error("Company API: user lookup failed");
+      }
+      return NextResponse.json(
+        { success: false, error: "Something went wrong. Please try again." },
+        { status: 500 }
+      );
+    }
 
     if (!user) {
       return NextResponse.json(
