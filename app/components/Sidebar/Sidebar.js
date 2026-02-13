@@ -26,6 +26,7 @@ export default function Sidebar({ activeItem = "jobs-near-you", onToggle, isOpen
   const { signOut } = useClerk();
   const [isOpen, setIsOpen] = useState(externalIsOpen !== undefined ? externalIsOpen : true);
   const [userEmail, setUserEmail] = useState("");
+  const [userAvatarUrl, setUserAvatarUrl] = useState("");
   const [showUserDropdown, setShowUserDropdown] = useState(false);
   const [dropdownPosition, setDropdownPosition] = useState({ left: 0, bottom: 0 });
   const [portalTarget, setPortalTarget] = useState(null);
@@ -72,6 +73,7 @@ export default function Sidebar({ activeItem = "jobs-near-you", onToggle, isOpen
           const data = await response.json();
           if (data.success && data.user) {
             setUserEmail(data.user.email || "");
+            setUserAvatarUrl(data.user.avatarUrl || "");
           }
         }
       } catch (error) {
@@ -80,6 +82,22 @@ export default function Sidebar({ activeItem = "jobs-near-you", onToggle, isOpen
     };
 
     fetchUser();
+  }, []);
+
+  useEffect(() => {
+    const onAvatarUpdated = () => {
+      fetch("/api/auth/me")
+        .then((res) => (res.ok ? res.json() : null))
+        .then((data) => {
+          if (data?.success && data.user) {
+            setUserEmail(data.user.email || "");
+            setUserAvatarUrl(data.user.avatarUrl || "");
+          }
+        })
+        .catch(() => {});
+    };
+    window.addEventListener("avatar-updated", onAvatarUpdated);
+    return () => window.removeEventListener("avatar-updated", onAvatarUpdated);
   }, []);
 
   // Portal root: outside layout so dropdown is never clipped by body/sidebar overflow
@@ -269,11 +287,19 @@ export default function Sidebar({ activeItem = "jobs-near-you", onToggle, isOpen
             aria-label="Profile menu"
             aria-expanded={showUserDropdown}
           >
-            <div className={sidebar["nav-icon-container"]}>
-              <UserAvatar
-                size={24}
-                style={{ color: "rgba(87, 87, 87, 1)" }}
-              />
+            <div className={`${sidebar["nav-icon-container"]} flex items-center justify-center shrink-0`}>
+              {userAvatarUrl ? (
+                <img
+                  src={userAvatarUrl}
+                  alt="Profile"
+                  className="h-7 w-7 rounded-full object-cover"
+                />
+              ) : (
+                <UserAvatar
+                  size={24}
+                  style={{ color: "rgba(87, 87, 87, 1)" }}
+                />
+              )}
             </div>
             <span className={`${sidebar["nav-text"]} truncate`} title={userEmail}>
               {userEmail || "—"}
@@ -287,11 +313,19 @@ export default function Sidebar({ activeItem = "jobs-near-you", onToggle, isOpen
             aria-label="Profile menu"
             aria-expanded={showUserDropdown}
           >
-            <div className={sidebar["nav-icon-container"]}>
-              <UserAvatar
-                size={24}
-                style={{ color: "rgba(87, 87, 87, 1)" }}
-              />
+            <div className={`${sidebar["nav-icon-container"]} flex items-center justify-center shrink-0`}>
+              {userAvatarUrl ? (
+                <img
+                  src={userAvatarUrl}
+                  alt="Profile"
+                  className="h-7 w-7 rounded-full object-cover"
+                />
+              ) : (
+                <UserAvatar
+                  size={24}
+                  style={{ color: "rgba(87, 87, 87, 1)" }}
+                />
+              )}
             </div>
           </button>
         )}

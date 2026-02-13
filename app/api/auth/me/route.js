@@ -30,6 +30,7 @@ export async function GET() {
               name: true,
               phone: true,
               avatarUrl: true,
+              avatarId: true,
               createdAt: true,
             },
           });
@@ -59,6 +60,7 @@ export async function GET() {
                 name: true,
                 phone: true,
                 avatarUrl: true,
+                avatarId: true,
                 createdAt: true,
               },
             });
@@ -102,6 +104,7 @@ export async function GET() {
         name: true,
         phone: true,
         avatarUrl: true,
+        avatarId: true,
         createdAt: true,
       },
     });

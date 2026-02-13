@@ -48,6 +48,7 @@ export default function OnboardingPage() {
   const [showSettingsModal, setShowSettingsModal] = useState(false);
   const [profileUserName, setProfileUserName] = useState("Profile");
   const [profileUserEmail, setProfileUserEmail] = useState("");
+  const [profileAvatarUrl, setProfileAvatarUrl] = useState("");
   const languageDropdownRef = useRef(null);
   const userDropdownRef = useRef(null);
 
@@ -88,6 +89,7 @@ export default function OnboardingPage() {
       if (data.success && data.user) {
         setProfileUserName(data.user.name || data.user.email || "Profile");
         setProfileUserEmail(data.user.email || "");
+        setProfileAvatarUrl(data.user.avatarUrl || "");
       }
     } catch (_) {
       // Network or parse error: keep defaults
@@ -1455,11 +1457,19 @@ export default function OnboardingPage() {
                     setShowUserDropdown(!showUserDropdown);
                     if (!showUserDropdown) fetchProfile();
                   }}
-                  className="p-2 rounded-lg hover:bg-gray-100 transition-colors flex items-center justify-center"
+                  className="p-2 rounded-lg hover:bg-gray-100 transition-colors flex items-center justify-center shrink-0"
                   aria-label="Profile menu"
                   title={profileUserEmail || profileUserName}
                 >
-                  <UserAvatar size={24} style={{ color: "#575757" }} />
+                  {profileAvatarUrl ? (
+                    <img
+                      src={profileAvatarUrl}
+                      alt="Profile"
+                      className="h-8 w-8 rounded-full object-cover border border-brand-stroke-weak"
+                    />
+                  ) : (
+                    <UserAvatar size={24} style={{ color: "#575757" }} />
+                  )}
                 </button>
                 {showUserDropdown && (
                   <div className="absolute right-0 mt-2 min-w-[16rem] max-w-[24rem] w-max bg-white border border-brand-stroke-weak rounded-lg shadow-lg z-[200]">
@@ -1527,6 +1537,7 @@ export default function OnboardingPage() {
               if (data?.success && data.user) {
                 setProfileUserName(data.user.name || data.user.email || "Profile");
                 setProfileUserEmail(data.user.email || "");
+                setProfileAvatarUrl(data.user.avatarUrl || "");
               }
             })
             .catch(() => {});
