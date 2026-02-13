@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useRouter } from "next/navigation";
 import { useClerk } from '@clerk/nextjs';
 import Image from "next/image";
@@ -16,6 +16,8 @@ import {
   Bullhorn,
   UserAvatar,
   EarthFilled,
+  User,
+  Settings,
 } from "@carbon/icons-react";
 
 export default function Sidebar({ activeItem = "jobs-near-you", onToggle, isOpen: externalIsOpen }) {
@@ -23,6 +25,8 @@ export default function Sidebar({ activeItem = "jobs-near-you", onToggle, isOpen
   const { signOut } = useClerk();
   const [isOpen, setIsOpen] = useState(externalIsOpen !== undefined ? externalIsOpen : true);
   const [userEmail, setUserEmail] = useState("");
+  const [showUserDropdown, setShowUserDropdown] = useState(false);
+  const profileRef = useRef(null);
 
   const sidebar = themeClasses.components.sidebar;
   const brand = themeClasses.brand;
@@ -75,6 +79,19 @@ export default function Sidebar({ activeItem = "jobs-near-you", onToggle, isOpen
     fetchUser();
   }, []);
 
+  // Close dropdown when clicking outside
+  useEffect(() => {
+    const handleClickOutside = (e) => {
+      if (profileRef.current && !profileRef.current.contains(e.target)) {
+        setShowUserDropdown(false);
+      }
+    };
+    if (showUserDropdown) {
+      document.addEventListener("mousedown", handleClickOutside);
+    }
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, [showUserDropdown]);
+
   // Handle logout
   const handleLogout = async () => {
     try {
@@ -94,6 +111,7 @@ export default function Sidebar({ activeItem = "jobs-near-you", onToggle, isOpen
       });
 
       if (response.ok) {
+        setShowUserDropdown(false);
         // Redirect to home page which will show auth overlay
         router.push("/");
         // Reload to clear any cached state
@@ -203,11 +221,15 @@ export default function Sidebar({ activeItem = "jobs-near-you", onToggle, isOpen
         </button>
       </div>
 
-      {/* User Profile Section - display only (no click action) */}
-      <div className={`p-2 pt-1`}>
+      {/* User Profile Section - click opens drop-up menu */}
+      <div className={`p-2 pt-1 relative`} ref={profileRef}>
         {isOpen ? (
-          <div
-            className={`${sidebar["nav-button"]} ${sidebar["nav-button-expanded"]} ${sidebar["user-button-expanded"]} cursor-default`}
+          <button
+            type="button"
+            onClick={() => setShowUserDropdown((v) => !v)}
+            className={`${sidebar["nav-button"]} ${sidebar["nav-button-expanded"]} ${sidebar["nav-button-hover"]} ${sidebar["user-button-expanded"]}`}
+            aria-label="Profile menu"
+            aria-expanded={showUserDropdown}
           >
             <div className={sidebar["nav-icon-container"]}>
               <UserAvatar
@@ -218,16 +240,60 @@ export default function Sidebar({ activeItem = "jobs-near-you", onToggle, isOpen
             <span className={`${sidebar["nav-text"]} truncate`} title={userEmail}>
               {userEmail || "—"}
             </span>
-          </div>
+          </button>
         ) : (
-          <div
-            className={`${sidebar["nav-button"]} ${sidebar["nav-button-collapsed"]} ${sidebar["user-button-collapsed"]}`}
+          <button
+            type="button"
+            onClick={() => setShowUserDropdown((v) => !v)}
+            className={`${sidebar["nav-button"]} ${sidebar["nav-button-collapsed"]} ${sidebar["nav-button-hover"]} ${sidebar["user-button-collapsed"]}`}
+            aria-label="Profile menu"
+            aria-expanded={showUserDropdown}
           >
             <div className={sidebar["nav-icon-container"]}>
               <UserAvatar
                 size={24}
                 style={{ color: "rgba(87, 87, 87, 1)" }}
               />
+            </div>
+          </button>
+        )}
+
+        {/* Drop-up menu - same content as onboarding user dropdown */}
+        {showUserDropdown && (
+          <div
+            className="absolute left-0 bottom-full mb-2 min-w-[16rem] max-w-[24rem] w-max rounded-lg border border-brand-stroke-border bg-brand-bg-white shadow-lg z-[100]"
+            role="menu"
+          >
+            <div className="p-2">
+              <div
+                className="flex items-center gap-2 px-4 py-2 text-sm text-brand-text-strong break-all border-b border-brand-stroke-weak mb-1"
+                title={userEmail || "Signed in"}
+              >
+                <User size={20} className="shrink-0 text-brand-stroke-strong" />
+                <span>{userEmail || "Signed in"}</span>
+              </div>
+              <button
+                type="button"
+                role="menuitem"
+                className="w-full text-left px-4 py-2 text-sm text-brand-text-strong hover:bg-brand-bg-fill rounded transition-colors flex items-center gap-2"
+                onClick={() => {
+                  setShowUserDropdown(false);
+                  router.push("/settings");
+                }}
+              >
+                <Settings size={20} className="text-brand-stroke-strong shrink-0" />
+                <span>Settings</span>
+              </button>
+              <div className="border-t border-brand-stroke-weak my-1" />
+              <button
+                type="button"
+                role="menuitem"
+                className="w-full text-left px-4 py-2 text-sm text-brand-text-strong hover:bg-brand-bg-fill rounded transition-colors flex items-center gap-2"
+                onClick={handleLogout}
+              >
+                <Logout size={20} className="text-brand-stroke-strong shrink-0" />
+                <span>Logout</span>
+              </button>
             </div>
           </div>
         )}
