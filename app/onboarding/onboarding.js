@@ -40,6 +40,10 @@ const GIG_FIELDS = {
   TITLE: "gig_title",
   DESCRIPTION: "gig_description",
   SERVICE_TYPE: "gig_service_type",
+  EXPECTED_SALARY: "gig_expected_salary",
+  EXPERIENCE: "gig_experience",
+  CUSTOMERS_TILL_DATE: "gig_customers_till_date",
+  LOCATION: "gig_location",
   STATE: "gig_state",
   DISTRICT: "gig_district",
   PINCODE: "gig_pincode",
@@ -451,19 +455,50 @@ export default function OnboardingPage() {
             break;
           case GIG_FIELDS.SERVICE_TYPE:
             setGigData((prev) => ({ ...prev, serviceType: value }));
-            await addAIMessage("Which state are you in?");
-            setCurrentField(GIG_FIELDS.STATE);
+            await addAIMessage("What's the expected salary for this gig? (Type amount or 'skip')");
+            setCurrentField(GIG_FIELDS.EXPECTED_SALARY);
+            break;
+          case GIG_FIELDS.EXPECTED_SALARY:
+            if (value.toLowerCase() !== "skip" && value) {
+              setGigData((prev) => ({ ...prev, expectedSalary: value }));
+            }
+            await addAIMessage("Tell us your experience with this gig (or 'skip').");
+            setCurrentField(GIG_FIELDS.EXPERIENCE);
+            break;
+          case GIG_FIELDS.EXPERIENCE:
+            if (value.toLowerCase() !== "skip" && value) {
+              setGigData((prev) => ({ ...prev, experienceWithGig: value }));
+            }
+            await addAIMessage("How many customers have you served till date? (Number or 'skip')");
+            setCurrentField(GIG_FIELDS.CUSTOMERS_TILL_DATE);
+            break;
+          case GIG_FIELDS.CUSTOMERS_TILL_DATE: {
+            if (value.toLowerCase() !== "skip" && value) {
+              const num = parseInt(value.replace(/\D/g, ""), 10);
+              if (!Number.isNaN(num) && num >= 0) {
+                setGigData((prev) => ({ ...prev, customersTillDate: num }));
+              }
+            }
+            await addAIMessage("Where are you located? You can get coordinates, enter them manually, or skip and choose state/district.");
+            setCurrentField(GIG_FIELDS.LOCATION);
             setInlineComponent(
-              <StateDistrictSelector
-                onStateSelect={(state) => {
-                  setGigData((prev) => ({ ...prev, state }));
+              <GetCoordinatesButton
+                isMobile={isMobile}
+                onCoordinatesReceived={(lat, lon) => {
+                  setGigData((prev) => ({ ...prev, latitude: lat, longitude: lon }));
                   setInlineComponent(null);
-                  handleGigStateSelected(state);
+                  handleGigCoordinatesReceived(lat, lon);
                 }}
-                selectedState={gigData?.state}
+                onSkip={() => {
+                  setInlineComponent(null);
+                  handleGigLocationSkipped();
+                }}
               />
             );
             setTimeout(() => scrollToInlineRef.current?.(), 150);
+            break;
+          }
+          case GIG_FIELDS.LOCATION:
             break;
           case GIG_FIELDS.STATE:
             break;
@@ -826,6 +861,110 @@ export default function OnboardingPage() {
     setIsLoading(false);
   };
 
+  const handleGigLocationSkipped = async () => {
+    setIsLoading(true);
+    await addAIMessage("Which state are you in?");
+    setCurrentField(GIG_FIELDS.STATE);
+    setInlineComponent(
+      <StateDistrictSelector
+        onStateSelect={(state) => {
+          setGigData((prev) => ({ ...prev, state }));
+          setInlineComponent(null);
+          handleGigStateSelected(state);
+        }}
+        selectedState={gigData?.state}
+      />
+    );
+    setIsLoading(false);
+    setTimeout(() => scrollToInlineRef.current?.(), 150);
+  };
+
+  const handleGigCoordinatesReceived = async (lat, lon) => {
+    setIsLoading(true);
+    let state = null;
+    let district = null;
+    let postcode = null;
+    try {
+      const res = await fetch(
+        `/api/geocode/reverse?lat=${encodeURIComponent(lat)}&lon=${encodeURIComponent(lon)}`
+      );
+      if (res.ok) {
+        const data = await res.json();
+        state = data.state ?? null;
+        district = data.district ?? null;
+        postcode = data.postcode ?? null;
+      }
+    } catch (_) {}
+    if (state) setGigData((prev) => ({ ...prev, state }));
+    if (district) setGigData((prev) => ({ ...prev, district }));
+
+    if (state && district) {
+      let pincodes = [];
+      try {
+        const pinRes = await fetch(
+          `/api/pincodes/by-district?district=${encodeURIComponent(district)}&state=${encodeURIComponent(state)}`
+        );
+        if (pinRes.ok) {
+          const { pincodes: list } = await pinRes.json();
+          pincodes = Array.isArray(list) ? list.slice(0, 8) : [];
+        }
+      } catch (_) {}
+      if (postcode && !pincodes.includes(postcode)) {
+        pincodes = [postcode, ...pincodes].slice(0, 8);
+      }
+      await addAIMessage(pincodes.length ? "What's your pincode? (Choose one or skip)" : "What's your pincode? (Type pincode or \"skip\")");
+      setCurrentField(GIG_FIELDS.PINCODE);
+      if (pincodes.length > 0) {
+        setInlineComponent(
+          <PincodeDropdown
+            pincodes={pincodes}
+            onSelect={(pincode) => {
+              setGigData((prev) => ({ ...prev, pincode }));
+              setInlineComponent(null);
+              handleGigSubmit({ pincode });
+            }}
+            onSkip={() => {
+              setInlineComponent(null);
+              handleGigSubmit({});
+            }}
+          />
+        );
+        setTimeout(() => scrollToInlineRef.current?.(), 150);
+      }
+    } else if (state) {
+      await addAIMessage(`State: ${state}. Which district?`);
+      setCurrentField(GIG_FIELDS.DISTRICT);
+      setInlineComponent(
+        <StateDistrictSelector
+          onDistrictSelect={(district) => {
+            setGigData((prev) => ({ ...prev, district }));
+            setInlineComponent(null);
+            handleGigDistrictSelected(district);
+          }}
+          selectedDistrict={gigData?.district}
+          selectedState={state}
+          showDistrict={true}
+        />
+      );
+      setTimeout(() => scrollToInlineRef.current?.(), 150);
+    } else {
+      await addAIMessage("Which state are you in?");
+      setCurrentField(GIG_FIELDS.STATE);
+      setInlineComponent(
+        <StateDistrictSelector
+          onStateSelect={(state) => {
+            setGigData((prev) => ({ ...prev, state }));
+            setInlineComponent(null);
+            handleGigStateSelected(state);
+          }}
+          selectedState={gigData?.state}
+        />
+      );
+      setTimeout(() => scrollToInlineRef.current?.(), 150);
+    }
+    setIsLoading(false);
+  };
+
   const handleGigStateSelected = async (state) => {
     setIsLoading(true);
     await addAIMessage(`State: ${state}. Which district?`);
@@ -893,9 +1032,9 @@ export default function OnboardingPage() {
     }
     setIsLoading(true);
     try {
-      let latitude = null;
-      let longitude = null;
-      if (g.pincode) {
+      let latitude = g.latitude != null && Number.isFinite(Number(g.latitude)) ? Number(g.latitude) : null;
+      let longitude = g.longitude != null && Number.isFinite(Number(g.longitude)) ? Number(g.longitude) : null;
+      if (latitude == null && longitude == null && g.pincode) {
         try {
           const res = await fetch(`/api/pincodes/by-pincode?pincode=${encodeURIComponent(g.pincode)}`);
           if (res.ok) {
@@ -914,6 +1053,9 @@ export default function OnboardingPage() {
           title: g.title.trim(),
           description: g.description?.trim() || undefined,
           serviceType: g.serviceType.trim(),
+          expectedSalary: g.expectedSalary?.trim() || undefined,
+          experienceWithGig: g.experienceWithGig?.trim() || undefined,
+          customersTillDate: typeof g.customersTillDate === "number" && g.customersTillDate >= 0 ? g.customersTillDate : undefined,
           state: g.state.trim(),
           district: g.district.trim(),
           pincode: g.pincode?.trim() || undefined,
@@ -1607,17 +1749,28 @@ export default function OnboardingPage() {
                 type="button"
                 onClick={async () => {
                   try {
-                    const res = await fetch("/api/onboarding/my-jobs");
-                    const data = await res.json().catch(() => ({}));
-                    const jobs = data.success ? (data.jobs || []) : [];
-                    setChatMessages((prev) => [...prev, { type: "jobList", jobs }]);
+                    if (userData?.accountType === "Individual") {
+                      const res = await fetch("/api/gigs?mine=1", { credentials: "same-origin" });
+                      const data = await res.json().catch(() => ({}));
+                      const gigs = data.success ? (data.gigs || []) : [];
+                      setChatMessages((prev) => [...prev, { type: "gigList", gigs }]);
+                    } else {
+                      const res = await fetch("/api/onboarding/my-jobs");
+                      const data = await res.json().catch(() => ({}));
+                      const jobs = data.success ? (data.jobs || []) : [];
+                      setChatMessages((prev) => [...prev, { type: "jobList", jobs }]);
+                    }
                   } catch (e) {
-                    console.error("Error fetching my jobs:", e);
-                    setChatMessages((prev) => [...prev, { type: "jobList", jobs: [] }]);
+                    console.error("Error fetching list:", e);
+                    if (userData?.accountType === "Individual") {
+                      setChatMessages((prev) => [...prev, { type: "gigList", gigs: [] }]);
+                    } else {
+                      setChatMessages((prev) => [...prev, { type: "jobList", jobs: [] }]);
+                    }
                   }
                 }}
                 className="p-2 rounded-lg hover:bg-gray-100 transition-colors"
-                title="Your job postings"
+                title={userData?.accountType === "Individual" ? "Your posted gigs" : "Your job postings"}
               >
                 <List size={20} style={{ color: "#575757" }} />
               </button>

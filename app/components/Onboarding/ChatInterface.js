@@ -165,6 +165,49 @@ export default function ChatInterface({ messages = [], onSendMessage, isLoading 
                 </div>
                 </div>
               </div>
+            ) : message.type === "gigList" ? (
+              <div className="flex items-start gap-2 justify-start">
+                <div className="flex-shrink-0 mt-1 flex items-center justify-center">
+                  <Image
+                    src="/onlylogo.svg"
+                    alt="Logo"
+                    width={28}
+                    height={28}
+                    className="w-7 h-7"
+                  />
+                </div>
+                <div className="flex flex-col gap-2 max-w-[80%]">
+                  <div className="max-w-[85%] w-full rounded-lg border border-brand-stroke-weak bg-brand-bg-white px-4 py-3">
+                    <p className="text-sm font-medium text-brand-text-strong mb-3" style={{ fontFamily: "Open Sans, sans-serif" }}>
+                      Your posted gigs
+                    </p>
+                    {(message.gigs || []).length === 0 ? (
+                      <p className="text-sm text-brand-text-weak" style={{ fontFamily: "Open Sans, sans-serif" }}>No gigs posted yet.</p>
+                    ) : (
+                      <ul className="space-y-2">
+                        {(message.gigs || []).map((gig) => (
+                          <li
+                            key={gig.id}
+                            className="flex items-center gap-2 py-2 border-b border-brand-stroke-weak last:border-b-0 last:pb-0 first:pt-0"
+                          >
+                            <div className="flex-1 min-w-0">
+                              <p className="text-sm font-medium text-brand-text-strong truncate" style={{ fontFamily: "Open Sans, sans-serif" }}>{gig.title}</p>
+                              <p className="text-xs text-brand-text-weak truncate mt-0.5" style={{ fontFamily: "Open Sans, sans-serif" }}>{gig.serviceType || ""}</p>
+                            </div>
+                            <button
+                              type="button"
+                              className="shrink-0 p-1 rounded hover:bg-brand-bg-fill text-brand-stroke-strong"
+                              aria-label="More options"
+                            >
+                              <OverflowMenuVertical size={20} />
+                            </button>
+                          </li>
+                        ))}
+                      </ul>
+                    )}
+                  </div>
+                </div>
+              </div>
             ) : (
             <div
               className={`flex items-start gap-2 ${

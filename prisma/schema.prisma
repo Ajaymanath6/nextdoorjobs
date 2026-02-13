@@ -201,16 +201,19 @@ model Gig {
   userId      Int      @map("user_id")
   title       String   @db.VarChar(255)
   description String?  @db.Text
-  serviceType String   @map("service_type") @db.VarChar(100)
-  state       String   @db.VarChar(100)
-  district    String   @db.VarChar(100)
-  pincode     String?  @db.VarChar(10)
-  locality    String?  @db.VarChar(255)
-  latitude    Float?
-  longitude   Float?
-  createdAt   DateTime @default(now()) @map("created_at")
-  updatedAt   DateTime @updatedAt @map("updated_at")
-  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  serviceType        String   @map("service_type") @db.VarChar(100)
+  expectedSalary     String?  @map("expected_salary") @db.VarChar(100)
+  experienceWithGig  String?  @map("experience_with_gig") @db.VarChar(255)
+  customersTillDate  Int?     @map("customers_till_date")
+  state              String   @db.VarChar(100)
+  district           String   @db.VarChar(100)
+  pincode            String?  @db.VarChar(10)
+  locality           String?  @db.VarChar(255)
+  latitude           Float?
+  longitude          Float?
+  createdAt          DateTime @default(now()) @map("created_at")
+  updatedAt          DateTime @updatedAt @map("updated_at")
+  user               User     @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@index([userId])
   @@index([state])

@@ -19,6 +19,9 @@ export async function POST(request) {
       title,
       description,
       serviceType,
+      expectedSalary,
+      experienceWithGig,
+      customersTillDate,
       state,
       district,
       pincode,
@@ -58,6 +61,13 @@ export async function POST(request) {
         title: title.trim(),
         description: description != null && String(description).trim() !== "" ? String(description).trim() : null,
         serviceType: serviceType.trim(),
+        expectedSalary: expectedSalary != null && String(expectedSalary).trim() !== "" ? String(expectedSalary).trim() : null,
+        experienceWithGig: experienceWithGig != null && String(experienceWithGig).trim() !== "" ? String(experienceWithGig).trim() : null,
+        customersTillDate: (() => {
+        if (typeof customersTillDate === "number" && Number.isInteger(customersTillDate) && customersTillDate >= 0) return customersTillDate;
+        if (typeof customersTillDate === "string" && /^\d+$/.test(customersTillDate.trim())) return parseInt(customersTillDate.trim(), 10);
+        return null;
+      })(),
         state: state.trim(),
         district: district.trim(),
         pincode: pincode != null && String(pincode).trim() !== "" ? String(pincode).trim() : null,
@@ -90,6 +100,25 @@ export async function POST(request) {
 export async function GET(request) {
   try {
     const { searchParams } = new URL(request.url);
+    const mine = searchParams.get("mine");
+
+    if (mine === "1") {
+      const user = await getCurrentUser();
+      if (!user?.id) {
+        return NextResponse.json({ success: false, error: "Unauthorized" }, { status: 401 });
+      }
+      const gigs = await prisma.gig.findMany({
+        where: { userId: user.id },
+        include: {
+          user: {
+            select: { id: true, name: true, avatarId: true, avatarUrl: true },
+          },
+        },
+        orderBy: { createdAt: "desc" },
+      });
+      return NextResponse.json({ success: true, gigs });
+    }
+
     const state = searchParams.get("state");
     const district = searchParams.get("district");
     const pincode = searchParams.get("pincode");
