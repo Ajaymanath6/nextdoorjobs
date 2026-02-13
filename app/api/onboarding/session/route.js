@@ -22,13 +22,20 @@ export async function POST() {
     const clerkUser = await currentUser();
     if (clerkUser) {
       const clerkId = clerkUser.id;
-      const avatarUrl = clerkUser.imageUrl || null;
+      const existing = await prisma.user.findUnique({
+        where: { id: user.id },
+        select: { avatarUrl: true },
+      });
+      const updateData = { clerkId };
+      // Only set avatarUrl from Clerk when user has none (e.g. first time). Never overwrite
+      // a user-chosen avatar (from Settings) with Clerk's imageUrl.
+      if (!existing?.avatarUrl?.trim()) {
+        const fromClerk = clerkUser.imageUrl?.trim() || null;
+        if (fromClerk) updateData.avatarUrl = fromClerk;
+      }
       await prisma.user.update({
         where: { id: user.id },
-        data: {
-          clerkId,
-          avatarUrl: avatarUrl && avatarUrl.trim() ? avatarUrl : null,
-        },
+        data: updateData,
       });
     }
 
