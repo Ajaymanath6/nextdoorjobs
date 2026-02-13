@@ -31,6 +31,7 @@ export async function GET() {
               phone: true,
               avatarUrl: true,
               avatarId: true,
+              accountType: true,
               createdAt: true,
             },
           });
@@ -61,6 +62,7 @@ export async function GET() {
                 phone: true,
                 avatarUrl: true,
                 avatarId: true,
+                accountType: true,
                 createdAt: true,
               },
             });
@@ -105,6 +107,7 @@ export async function GET() {
         phone: true,
         avatarUrl: true,
         avatarId: true,
+        accountType: true,
         createdAt: true,
       },
     });

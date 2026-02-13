@@ -1,13 +1,14 @@
 import { NextResponse } from "next/server";
 import { getCurrentUser } from "../../../lib/getCurrentUser";
 import { prisma } from "../../../lib/prisma";
+import { isValidAccountType } from "../../../lib/constants/accountTypes";
 
 const NAME_MAX_LENGTH = 255;
 
 /**
  * PATCH /api/profile
- * Update current user profile (e.g. display name).
- * Body: { name?: string }
+ * Update current user profile (e.g. display name, account type).
+ * Body: { name?: string, accountType?: "Company" | "Individual" }
  */
 export async function PATCH(request) {
   try {
@@ -20,29 +21,45 @@ export async function PATCH(request) {
     }
 
     const body = await request.json().catch(() => ({}));
-    const { name: rawName } = body;
+    const { name: rawName, accountType: rawAccountType } = body;
 
-    if (rawName === undefined) {
+    if (rawName === undefined && rawAccountType === undefined) {
       return NextResponse.json(
         { error: "No fields to update" },
         { status: 400 }
       );
     }
 
-    const name =
-      typeof rawName === "string"
-        ? rawName.trim().slice(0, NAME_MAX_LENGTH)
-        : "";
+    const updateData = {};
+    if (rawName !== undefined) {
+      const name =
+        typeof rawName === "string"
+          ? rawName.trim().slice(0, NAME_MAX_LENGTH)
+          : "";
+      updateData.name = name || user.name;
+    }
+    if (rawAccountType !== undefined) {
+      const accountType =
+        typeof rawAccountType === "string" ? rawAccountType.trim() : "";
+      if (!isValidAccountType(accountType)) {
+        return NextResponse.json(
+          { error: "Invalid accountType" },
+          { status: 400 }
+        );
+      }
+      updateData.accountType = accountType;
+    }
 
     const updated = await prisma.user.update({
       where: { id: user.id },
-      data: { name: name || user.name },
+      data: updateData,
       select: {
         id: true,
         email: true,
         name: true,
         phone: true,
         avatarUrl: true,
+        accountType: true,
         createdAt: true,
       },
     });

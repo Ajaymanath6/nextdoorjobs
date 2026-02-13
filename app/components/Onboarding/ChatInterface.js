@@ -5,7 +5,7 @@ import Image from "next/image";
 import { Screen, Document, Enterprise, Save, Location, Add, OverflowMenuVertical } from "@carbon/icons-react";
 import TypingAnimation from "./TypingAnimation";
 
-export default function ChatInterface({ messages = [], onSendMessage, isLoading = false, inlineComponent = null, typingText = null, onScrollRequest, onSave, onViewOnMap, onStartNext, showFindOrPostButtons = false, onFindJob, onPostGig }) {
+export default function ChatInterface({ messages = [], onSendMessage, isLoading = false, inlineComponent = null, typingText = null, onScrollRequest, onSave, onViewOnMap, onStartNext, showFindOrPostButtons = false, accountType, onFindJob, onPostGig }) {
   const messagesEndRef = useRef(null);
   const inputRef = useRef(null);
   const messagesContainerRef = useRef(null);
@@ -214,22 +214,24 @@ export default function ChatInterface({ messages = [], onSendMessage, isLoading 
                     </div>
                   )}
                 </div>
-                {/* Find a job / Post a gig - show after first welcome message only */}
-                {message.type === "ai" && index === 0 && showFindOrPostButtons && onFindJob && onPostGig && (
+                {/* Find a job / Post a gig (Individual) or Post your job (Company) - show after first welcome message only */}
+                {message.type === "ai" && index === 0 && showFindOrPostButtons && (accountType === "Company" ? onPostGig : (onFindJob && onPostGig)) && (
                   <div className="flex flex-col gap-2 mt-2">
                     <p className="text-sm text-brand-text-weak" style={{ fontFamily: "Open Sans, sans-serif" }}>
-                      Do you want to find a job or post a gig?
+                      {accountType === "Company" ? "Post your job to get started." : "Do you want to find a job or post a gig?"}
                     </p>
                     <div className="flex flex-wrap gap-2">
-                      <button
-                        type="button"
-                        onClick={onFindJob}
-                        className="flex items-center gap-2 px-4 py-2.5 bg-brand-bg-white text-brand-text-strong hover:bg-brand-bg-fill rounded-md text-sm font-medium transition-colors border border-brand-stroke-weak"
-                        style={{ fontFamily: "Open Sans, sans-serif" }}
-                      >
-                        <Location size={16} className="text-brand-stroke-strong" />
-                        <span>Find a job</span>
-                      </button>
+                      {accountType !== "Company" && (
+                        <button
+                          type="button"
+                          onClick={onFindJob}
+                          className="flex items-center gap-2 px-4 py-2.5 bg-brand-bg-white text-brand-text-strong hover:bg-brand-bg-fill rounded-md text-sm font-medium transition-colors border border-brand-stroke-weak"
+                          style={{ fontFamily: "Open Sans, sans-serif" }}
+                        >
+                          <Location size={16} className="text-brand-stroke-strong" />
+                          <span>Find a job</span>
+                        </button>
+                      )}
                       <button
                         type="button"
                         onClick={onPostGig}
@@ -237,7 +239,7 @@ export default function ChatInterface({ messages = [], onSendMessage, isLoading 
                         style={{ fontFamily: "Open Sans, sans-serif" }}
                       >
                         <Add size={16} className="text-brand-stroke-strong" />
-                        <span>Post a gig</span>
+                        <span>{accountType === "Company" ? "Post your job" : "Post a gig"}</span>
                       </button>
                     </div>
                   </div>

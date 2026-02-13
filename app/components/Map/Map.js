@@ -28,6 +28,7 @@ import JobTitleAutocomplete from "./JobTitleAutocomplete";
 import CollegeAutocomplete from "./CollegeAutocomplete";
 import EmptyState from "./EmptyState";
 import { getStateCenter } from "../../../lib/indiaStateCenters";
+import { getAvatarUrlById } from "../../../lib/avatars";
 // 10 Thrissur district coordinates for thank-you badges (from update-pincode-coordinates.js)
 const THRISSUR_BADGE_COORDINATES = [
   { lat: 10.5239, lon: 76.2123 },
@@ -134,9 +135,13 @@ const MapComponent = () => {
 
   // Search bar mode toggle: "person" (users) or "job" (suitcase) - UI only for now
   const [searchMode, setSearchMode] = useState("job");
-  // Last district from locality search; used to show Thrissur badges only in person mode
+  // Last district/state from locality search; used for Thrissur badges and for gig workers fetch
   const [lastSearchedDistrict, setLastSearchedDistrict] = useState(null);
+  const [lastSearchedState, setLastSearchedState] = useState(null);
   const showThrissurBadges = searchMode === "person" && lastSearchedDistrict === "Thrissur";
+  const [gigs, setGigs] = useState([]);
+  const gigMarkersRef = useRef([]);
+  const gigClusterGroupRef = useRef(null);
   const thrissurBadgeMarkersRef = useRef([]);
   const [mobileSearchExpanded, setMobileSearchExpanded] = useState(false);
   const [showSearchModeDropdown, setShowSearchModeDropdown] = useState(false);
@@ -536,6 +541,83 @@ const MapComponent = () => {
     mapInstanceRef.current.addLayer(clusterGroup);
   };
 
+  // Render gig worker markers (avatar icon, popup with title + user name)
+  const renderGigMarkers = (gigsToRender) => {
+    if (!mapInstanceRef.current || !window.L) return;
+
+    const L = window.L;
+
+    if (gigClusterGroupRef.current && mapInstanceRef.current) {
+      mapInstanceRef.current.removeLayer(gigClusterGroupRef.current);
+      gigClusterGroupRef.current = null;
+    }
+    gigMarkersRef.current = [];
+
+    const withCoords = (gigsToRender || []).filter(
+      (g) =>
+        g.latitude != null &&
+        g.longitude != null &&
+        Number.isFinite(Number(g.latitude)) &&
+        Number.isFinite(Number(g.longitude))
+    );
+    if (withCoords.length === 0) return;
+
+    const clusterGroup = L.markerClusterGroup({
+      chunkedLoading: true,
+      maxClusterRadius: 80,
+      showCoverageOnHover: false,
+      iconCreateFunction: function (cluster) {
+        const count = cluster.getChildCount();
+        return L.divIcon({
+          html: `<div style="background-color:#0f62fe;color:white;border-radius:50%;width:40px;height:40px;display:flex;align-items:center;justify-content:center;font-weight:bold;font-size:14px;border:3px solid white;box-shadow:0 2px 8px rgba(0,0,0,0.3);">${count}</div>`,
+          className: "marker-cluster-gig",
+          iconSize: L.point(40, 40),
+        });
+      },
+    });
+
+    withCoords.forEach((gig, index) => {
+      const lat = Number(gig.latitude);
+      const lon = Number(gig.longitude);
+      const avatarUrl = gig.user?.avatarId
+        ? getAvatarUrlById(gig.user.avatarId)
+        : gig.user?.avatarUrl || "/avatars/avatar1.png";
+      const size = 44;
+      const icon = L.divIcon({
+        html: `<div style="width:${size}px;height:${size}px;border-radius:50%;overflow:hidden;border:2px solid #fff;box-shadow:0 2px 6px rgba(0,0,0,0.2);display:flex;align-items:center;justify-content:center;background:#e5e5e5;"><img src="${avatarUrl}" alt="" style="width:100%;height:100%;object-fit:cover;" onerror="this.src='/avatars/avatar1.png'" /></div>`,
+        className: "gig-marker",
+        iconSize: [size, size],
+        iconAnchor: [size / 2, size / 2],
+      });
+      const marker = L.marker([lat, lon], { icon, zIndexOffset: 2000 + index });
+      const userName = gig.user?.name || "Gig worker";
+      const popupContent = `
+        <div style="font-family: 'Open Sans', sans-serif; padding: 6px; min-width: 140px;">
+          <div style="font-weight: 600; font-size: 14px; color: #0A0A0A;">${(gig.title || "").replace(/</g, "&lt;")}</div>
+          <div style="font-size: 12px; color: #575757;">${(gig.serviceType || "").replace(/</g, "&lt;")}</div>
+          <div style="font-size: 11px; color: #737373; margin-top: 4px;">${(userName || "").replace(/</g, "&lt;")}</div>
+        </div>
+      `;
+      marker.bindPopup(popupContent, { className: "gig-popup" });
+      clusterGroup.addLayer(marker);
+      gigMarkersRef.current.push(marker);
+    });
+
+    mapInstanceRef.current.addLayer(clusterGroup);
+    gigClusterGroupRef.current = clusterGroup;
+  };
+
+  // Clear gig markers when switching to job mode
+  useEffect(() => {
+    if (searchMode !== "job" || !mapInstanceRef.current) return;
+    if (gigClusterGroupRef.current) {
+      mapInstanceRef.current.removeLayer(gigClusterGroupRef.current);
+      gigClusterGroupRef.current = null;
+    }
+    gigMarkersRef.current = [];
+    setGigs([]);
+  }, [searchMode]);
+
   // Perform district-level zoom (state → district, stops at district)
   const performDistrictZoom = (dbData, showNoCompaniesMessage = false) => {
     if (!mapInstanceRef.current || !window.L) return;
@@ -609,13 +691,13 @@ const MapComponent = () => {
   };
 
   // Perform multi-stage zoom animation for locality search with database data
-  const performLocalitySearchWithDBData = (dbData, localityData) => {
+  const performLocalitySearchWithDBData = (dbData, localityData, searchMode = "job") => {
     if (!mapInstanceRef.current || !window.L) return;
 
     const L = window.L;
-    const companies = localityData.companies;
-    const state = dbData.state; // "Kerala"
-    const district = dbData.district; // "Thrissur"
+    const companies = localityData.companies || [];
+    const state = dbData.state || "";
+    const district = dbData.district || "";
 
     // Use database coordinates if available, otherwise fall back to locations.json
     const hasCoordinates = dbData.latitude && dbData.longitude;
@@ -652,15 +734,31 @@ const MapComponent = () => {
             easeLinearity: 0.25,
           });
 
-          // After final zoom, render company markers
+          // After final zoom, render company or gig markers by mode
           mapInstanceRef.current.once("moveend", () => {
-            renderCompanyMarkers(companies);
-            
-            // Hide loading after markers are added
-            setTimeout(() => {
-              setIsFindingJobs(false);
-              setIsMapLoading(false);
-            }, 300); // Small delay to ensure markers are visible
+            if (searchMode === "person") {
+              const params = new URLSearchParams();
+              if (state) params.set("state", state);
+              if (district) params.set("district", district);
+              fetch(`/api/gigs?${params.toString()}`)
+                .then((r) => r.json())
+                .then((data) => {
+                  if (data.success && Array.isArray(data.gigs)) {
+                    setGigs(data.gigs);
+                    renderGigMarkers(data.gigs);
+                  }
+                })
+                .finally(() => {
+                  setIsFindingJobs(false);
+                  setIsMapLoading(false);
+                });
+            } else {
+              renderCompanyMarkers(companies);
+              setTimeout(() => {
+                setIsFindingJobs(false);
+                setIsMapLoading(false);
+              }, 300);
+            }
           });
         });
       }, 500); // Small delay between stages
@@ -1219,6 +1317,34 @@ const MapComponent = () => {
               mapInstanceRef.current.flyTo([lat, lng], 15);
             }
           }, 400);
+        }
+      }
+    } catch (_) {}
+
+    // Zoom to gig coords when arriving from onboarding "View on map" after posting a gig
+    try {
+      const gigRaw = typeof window !== "undefined" ? sessionStorage.getItem("zoomToGigCoords") : null;
+      if (gigRaw && mapInstanceRef.current) {
+        const payload = JSON.parse(gigRaw);
+        const lat = payload.lat;
+        const lng = payload.lng;
+        if (typeof lat === "number" && typeof lng === "number") {
+          sessionStorage.removeItem("zoomToGigCoords");
+          setSearchMode("person");
+          fetch("/api/gigs")
+            .then((r) => r.json())
+            .then((data) => {
+              if (data.success && Array.isArray(data.gigs)) {
+                setGigs(data.gigs);
+                renderGigMarkers(data.gigs);
+              }
+            })
+            .catch(() => {});
+          setTimeout(() => {
+            if (mapInstanceRef.current) {
+              mapInstanceRef.current.flyTo([lat, lng], 14);
+            }
+          }, 500);
         }
       }
     } catch (_) {}
@@ -1871,6 +1997,7 @@ const MapComponent = () => {
           
           if (!response.ok) {
             setLastSearchedDistrict(null);
+            setLastSearchedState(null);
             // Clear all loading states first
             setIsMapLoading(false);
             setIsFindingJobs(false);
@@ -1914,6 +2041,7 @@ const MapComponent = () => {
           const dbData = await response.json();
           console.log("Found locality in database:", dbData);
           setLastSearchedDistrict(dbData.district ?? null);
+          setLastSearchedState(dbData.state ?? null);
 
           // Step 2: Get company data from locations.json using pincode/locality
           const localityData = getLocalityDataByPincode(
@@ -1933,8 +2061,27 @@ const MapComponent = () => {
           if (localityData.companies && localityData.companies.length > 0) {
             setIsMapLoading(false);
             setIsFindingJobs(true);  // Change to "Finding jobs..." before zoom
-            // Step 3: Perform multi-stage zoom with database info and show companies
-            performLocalitySearchWithDBData(dbData, localityData);
+            // Step 3: Perform multi-stage zoom with database info and show companies or gigs
+            performLocalitySearchWithDBData(dbData, localityData, searchMode);
+          } else if (searchMode === "person") {
+            setIsMapLoading(false);
+            setIsFindingJobs(true);
+            performDistrictZoom(dbData, false);
+            const params = new URLSearchParams();
+            if (dbData.state) params.set("state", dbData.state);
+            if (dbData.district) params.set("district", dbData.district);
+            fetch(`/api/gigs?${params.toString()}`)
+              .then((r) => r.json())
+              .then((data) => {
+                if (data.success && Array.isArray(data.gigs)) {
+                  setGigs(data.gigs);
+                  renderGigMarkers(data.gigs);
+                }
+              })
+              .finally(() => {
+                setIsFindingJobs(false);
+                setIsMapLoading(false);
+              });
           } else {
             console.log(`No companies found for locality: ${dbData.localityName}`);
             setIsMapLoading(false);
@@ -1944,6 +2091,7 @@ const MapComponent = () => {
           }
         } catch (error) {
           setLastSearchedDistrict(null);
+          setLastSearchedState(null);
           setIsMapLoading(false);
           setIsFindingJobs(false);
           console.error("Error searching locality:", error);

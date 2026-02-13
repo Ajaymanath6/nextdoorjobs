@@ -69,6 +69,11 @@ enum FundingSeries {
   Bootstrapped
 }
 
+enum AccountType {
+  Company
+  Individual
+}
+
 enum JobCategory {
   EngineeringSoftwareQA
   DataScienceAnalytics
@@ -100,13 +105,16 @@ model User {
   clerkId             String?               @unique @map("clerk_id") @db.VarChar(255)
   avatarUrl           String?               @map("avatar_url") @db.VarChar(500)
   avatarId            String?               @map("avatar_id") @db.VarChar(50)
+  accountType         AccountType?         @map("account_type")
   createdAt           DateTime              @default(now()) @map("created_at")
   updatedAt           DateTime              @updatedAt @map("updated_at")
   companies           Company[]
   onboardingSessions  OnboardingSession[]
+  gigs                Gig[]
 
   @@index([email])
   @@index([clerkId])
+  @@index([accountType])
   @@map("users")
 }
 
@@ -186,4 +194,27 @@ model OnboardingConversation {
   @@index([onboardingSessionId])
   @@index([onboardingSessionId, orderIndex])
   @@map("onboarding_conversations")
+}
+
+model Gig {
+  id          Int      @id @default(autoincrement())
+  userId      Int      @map("user_id")
+  title       String   @db.VarChar(255)
+  description String?  @db.Text
+  serviceType String   @map("service_type") @db.VarChar(100)
+  state       String   @db.VarChar(100)
+  district    String   @db.VarChar(100)
+  pincode     String?  @db.VarChar(10)
+  locality    String?  @db.VarChar(255)
+  latitude    Float?
+  longitude   Float?
+  createdAt   DateTime @default(now()) @map("created_at")
+  updatedAt   DateTime @updatedAt @map("updated_at")
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([state])
+  @@index([district])
+  @@index([pincode])
+  @@map("gigs")
 }
