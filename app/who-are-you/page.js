@@ -5,9 +5,27 @@ import { useRouter } from "next/navigation";
 import { useAuth } from "@clerk/nextjs";
 import themeClasses from "../theme-utility-classes.json";
 import { ACCOUNT_TYPES } from "../../lib/constants/accountTypes";
-import { Enterprise, UserAvatar } from "@carbon/icons-react";
 
 const brand = themeClasses.brand;
+const PRIMARY = "#F84416";
+
+function UserDuotoneIcon({ size = 28 }) {
+  return (
+    <svg xmlns="http://www.w3.org/2000/svg" width={size} height={size} viewBox="0 0 256 256" fill={PRIMARY} className="shrink-0">
+      <path d="M192,96a64,64,0,1,1-64-64A64,64,0,0,1,192,96Z" opacity="0.2" />
+      <path d="M230.92,212c-15.23-26.33-38.7-45.21-66.09-54.16a72,72,0,1,0-73.66,0C63.78,166.78,40.31,185.66,25.08,212a8,8,0,1,0,13.85,8c18.84-32.56,52.14-52,89.07-52s70.23,19.44,89.07,52a8,8,0,1,0,13.85-8ZM72,96a56,56,0,1,1,56,56A56.06,56.06,0,0,1,72,96Z" />
+    </svg>
+  );
+}
+
+function BuildingOfficeDuotoneIcon({ size = 28 }) {
+  return (
+    <svg xmlns="http://www.w3.org/2000/svg" width={size} height={size} viewBox="0 0 256 256" fill={PRIMARY} className="shrink-0">
+      <path d="M176,40V216H136V160H88v56H48V40Z" opacity="0.2" />
+      <path d="M248,208H232V96a8,8,0,0,0,0-16H184V48a8,8,0,0,0,0-16H40a8,8,0,0,0,0,16V208H24a8,8,0,0,0,0,16H248a8,8,0,0,0,0-16ZM216,96V208H184V96ZM56,48H168V208H144V160a8,8,0,0,0-8-8H88a8,8,0,0,0-8,8v48H56Zm72,160H96V168h32ZM72,80a8,8,0,0,1,8-8H96a8,8,0,0,1,0,16H80A8,8,0,0,1,72,80Zm48,0a8,8,0,0,1,8-8h16a8,8,0,0,1,0,16H128A8,8,0,0,1,120,80ZM72,120a8,8,0,0,1,8-8H96a8,8,0,0,1,0,16H80A8,8,0,0,1,72,120Zm48,0a8,8,0,0,1,8-8h16a8,8,0,0,1,0,16H128A8,8,0,0,1,120,120Z" />
+    </svg>
+  );
+}
 
 export default function WhoAreYouPage() {
   const router = useRouter();
@@ -119,15 +137,15 @@ export default function WhoAreYouPage() {
               type="button"
               disabled={submitting}
               onClick={() => handleSelect(value)}
-              className="flex items-center gap-4 p-6 rounded-xl bg-brand-bg-white/95 hover:bg-brand-bg-white transition-colors text-left disabled:opacity-50 disabled:cursor-not-allowed shadow-md"
+              className="flex items-center gap-4 p-6 rounded-xl bg-brand-bg-white/95 hover:bg-brand-bg-white transition-colors text-left disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer shadow-md"
             >
               <div className="shrink-0 w-14 h-14 rounded-full bg-brand-bg-fill flex items-center justify-center">
-              {value === "Company" ? (
-                <Enterprise size={28} className="text-brand-stroke-strong" />
-              ) : (
-                <UserAvatar size={28} className="text-brand-stroke-strong" />
-              )}
-            </div>
+                {value === "Company" ? (
+                  <BuildingOfficeDuotoneIcon size={28} />
+                ) : (
+                  <UserDuotoneIcon size={28} />
+                )}
+              </div>
             <div>
               <span className={`block font-semibold text-base ${brand.text.strong}`}>
                 {label}
