@@ -28,6 +28,7 @@ function clerkFapiProxy(req: Request) {
 // Define public routes that don't require authentication
 const isPublicRoute = createRouteMatcher([
   '/onboarding',
+  '/who-are-you',
   '/api/auth/signin',
   '/api/auth/login',
   '/api/auth/register',
@@ -50,12 +51,12 @@ const clerkHandler = clerkMiddleware(async (auth, req) => {
     const { userId } = await auth();
     const path = req.nextUrl.pathname;
 
-    // When app loads at root: unauthenticated users see onboarding (Clerk signup) first
+    // When app loads at root: unauthenticated users see onboarding; signed-in users go to who-are-you first
     if (path === '/') {
       if (!userId) {
         return NextResponse.redirect(new URL('/onboarding', req.url));
       }
-      return NextResponse.next();
+      return NextResponse.redirect(new URL('/who-are-you', req.url));
     }
 
     // Protect all other routes except public ones

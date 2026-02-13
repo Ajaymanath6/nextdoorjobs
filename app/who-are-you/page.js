@@ -43,7 +43,9 @@ export default function WhoAreYouPage() {
         credentials: "same-origin",
       });
       if (res.ok) {
-        router.push("/onboarding");
+        setTimeout(() => {
+          router.push("/onboarding");
+        }, 2000);
       } else {
         const err = await res.json().catch(() => ({}));
         alert(err?.error || "Failed to save. Try again.");
@@ -67,29 +69,60 @@ export default function WhoAreYouPage() {
     );
   }
 
+  if (submitting) {
+    return (
+      <div
+        className="min-h-screen flex flex-col items-center justify-center px-4 py-8"
+        style={{
+          fontFamily: "Open Sans, sans-serif",
+          backgroundImage: "url(/account-type-bg.png)",
+          backgroundSize: "cover",
+          backgroundPosition: "center",
+          backgroundRepeat: "no-repeat",
+        }}
+      >
+        <div
+          className="rounded-full h-12 w-12 border-4 loading-spinner mx-auto mb-4"
+          style={{ borderColor: "rgba(0,0,0,0.1)", borderTopColor: "#F84416" }}
+        />
+        <p className="text-gray-600" style={{ fontFamily: "Open Sans, sans-serif" }}>
+          Loading...
+        </p>
+      </div>
+    );
+  }
+
   return (
     <div
-      className="min-h-screen flex flex-col items-center justify-center bg-brand-bg-fill px-4 py-8"
-      style={{ fontFamily: "Open Sans, sans-serif" }}
+      className="min-h-screen flex flex-col items-center justify-center px-4 py-8 relative"
+      style={{
+        fontFamily: "Open Sans, sans-serif",
+        backgroundImage: "url(/account-type-bg.png)",
+        backgroundSize: "cover",
+        backgroundPosition: "center",
+        backgroundRepeat: "no-repeat",
+      }}
     >
-      <h1
-        className={`text-2xl font-semibold ${brand.text.strong} mb-2 text-center`}
-      >
-        Who are you?
-      </h1>
-      <p className={`text-sm ${brand.text.weak} mb-8 text-center max-w-md`}>
-        Choose how you want to use mapmyGig.
-      </p>
-      <div className="flex flex-col sm:flex-row gap-4 w-full max-w-lg">
-        {ACCOUNT_TYPES.map(({ value, label }) => (
-          <button
-            key={value}
-            type="button"
-            disabled={submitting}
-            onClick={() => handleSelect(value)}
-            className="flex items-center gap-4 p-6 rounded-xl border-2 border-brand-stroke-border bg-brand-bg-white hover:border-brand hover:bg-brand-stroke-weak transition-colors text-left disabled:opacity-50 disabled:cursor-not-allowed"
-          >
-            <div className="shrink-0 w-14 h-14 rounded-full bg-brand-bg-fill flex items-center justify-center border border-brand-stroke-weak">
+      <div className="absolute inset-0 bg-white/40" aria-hidden="true" />
+      <div className="relative z-10 flex flex-col items-center w-full max-w-lg">
+        <h1
+          className={`text-2xl font-semibold ${brand.text.strong} mb-2 text-center`}
+        >
+          Who are you?
+        </h1>
+        <p className={`text-sm ${brand.text.weak} mb-8 text-center max-w-md`}>
+          Choose how you want to use mapmyGig.
+        </p>
+        <div className="flex flex-col sm:flex-row gap-4 w-full">
+          {ACCOUNT_TYPES.map(({ value, label }) => (
+            <button
+              key={value}
+              type="button"
+              disabled={submitting}
+              onClick={() => handleSelect(value)}
+              className="flex items-center gap-4 p-6 rounded-xl bg-brand-bg-white/95 hover:bg-brand-bg-white transition-colors text-left disabled:opacity-50 disabled:cursor-not-allowed shadow-md"
+            >
+              <div className="shrink-0 w-14 h-14 rounded-full bg-brand-bg-fill flex items-center justify-center">
               {value === "Company" ? (
                 <Enterprise size={28} className="text-brand-stroke-strong" />
               ) : (
@@ -113,6 +146,7 @@ export default function WhoAreYouPage() {
             </div>
           </button>
         ))}
+        </div>
       </div>
     </div>
   );
