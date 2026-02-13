@@ -17,27 +17,57 @@ export async function GET() {
       const clerkUser = await currentUser();
       
       if (clerkUser) {
-        const email = clerkUser.emailAddresses[0]?.emailAddress;
-        
+        const email =
+          clerkUser.primaryEmailAddress?.emailAddress ||
+          clerkUser.emailAddresses?.[0]?.emailAddress;
         if (email) {
-          // Get user from database
-          const user = await prisma.user.findUnique({
-            where: { email: email.toLowerCase().trim() },
+          const emailNorm = email.toLowerCase().trim();
+          let user = await prisma.user.findUnique({
+            where: { email: emailNorm },
             select: {
               id: true,
               email: true,
               name: true,
               phone: true,
+              avatarUrl: true,
               createdAt: true,
             },
           });
 
-          if (user) {
-            return NextResponse.json({
-              success: true,
-              user,
+          if (!user) {
+            const derivedName =
+              clerkUser.firstName && clerkUser.lastName
+                ? `${clerkUser.firstName} ${clerkUser.lastName}`.trim()
+                : (clerkUser.firstName || clerkUser.username || "").trim();
+            const fallbackName = emailNorm.split("@")[0] || "User";
+            const name =
+              (derivedName && derivedName !== "User") ? derivedName : fallbackName;
+            user = await prisma.user.create({
+              data: {
+                email: emailNorm,
+                name,
+                phone: null,
+                clerkId: clerkUser.id,
+                avatarUrl:
+                  clerkUser.imageUrl && String(clerkUser.imageUrl).trim()
+                    ? String(clerkUser.imageUrl).trim()
+                    : null,
+              },
+              select: {
+                id: true,
+                email: true,
+                name: true,
+                phone: true,
+                avatarUrl: true,
+                createdAt: true,
+              },
             });
           }
+
+          return NextResponse.json({
+            success: true,
+            user,
+          });
         }
       }
     }
@@ -71,6 +101,7 @@ export async function GET() {
         email: true,
         name: true,
         phone: true,
+        avatarUrl: true,
         createdAt: true,
       },
     });

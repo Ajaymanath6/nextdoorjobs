@@ -3,8 +3,9 @@
 import { useState, useEffect, useRef } from "react";
 import { useRouter } from "next/navigation";
 import { useUser, useClerk } from "@clerk/nextjs";
-import { WatsonHealthRotate_360, List, UserAvatar, User, Settings, Logout } from "@carbon/icons-react";
+import { WatsonHealthRotate_360, List, UserAvatar, User, Settings, Logout, EarthFilled, Chat } from "@carbon/icons-react";
 import ChatInterface from "../components/Onboarding/ChatInterface";
+import SettingsModal from "../components/SettingsModal";
 import EmailAuthForm from "../components/Onboarding/EmailAuthForm";
 import StateDistrictSelector from "../components/Onboarding/StateDistrictSelector";
 import LogoPicker from "../components/Onboarding/LogoPicker";
@@ -44,7 +45,9 @@ export default function OnboardingPage() {
   const [selectedLanguage, setSelectedLanguage] = useState("English");
   const [showLanguageDropdown, setShowLanguageDropdown] = useState(false);
   const [showUserDropdown, setShowUserDropdown] = useState(false);
+  const [showSettingsModal, setShowSettingsModal] = useState(false);
   const [profileUserName, setProfileUserName] = useState("Profile");
+  const [profileUserEmail, setProfileUserEmail] = useState("");
   const languageDropdownRef = useRef(null);
   const userDropdownRef = useRef(null);
 
@@ -76,21 +79,22 @@ export default function OnboardingPage() {
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, [showUserDropdown]);
 
-  // Fetch profile display name for header
-  useEffect(() => {
-    const fetchProfile = async () => {
-      try {
-        const res = await fetch("/api/auth/me");
-        if (res.ok) {
-          const data = await res.json();
-          if (data.success && data.user) {
-            setProfileUserName(data.user.name || data.user.email || "Profile");
-          }
-        }
-      } catch (e) {
-        console.error("Error fetching user:", e);
+  // Fetch profile (name + email from Clerk/DB) for header and dropdown
+  const fetchProfile = async () => {
+    try {
+      const res = await fetch("/api/auth/me", { credentials: "same-origin" });
+      if (!res.ok) return;
+      const data = await res.json().catch(() => ({}));
+      if (data.success && data.user) {
+        setProfileUserName(data.user.name || data.user.email || "Profile");
+        setProfileUserEmail(data.user.email || "");
       }
-    };
+    } catch (_) {
+      // Network or parse error: keep defaults
+    }
+  };
+
+  useEffect(() => {
     fetchProfile();
   }, []);
 
@@ -187,10 +191,12 @@ export default function OnboardingPage() {
       if (!email) return;
 
       (async () => {
+        const displayNameForWelcome = (u) =>
+          (u?.name?.trim()) || (u?.email ? u.email.split("@")[0] : "there");
         const setWelcome = (user) => {
           setUserData(user);
           setChatMessages([
-            { type: "ai", text: `Hi ${user.name || "there"}! 👋 Welcome to mapmyGig.` },
+            { type: "ai", text: `Hi ${displayNameForWelcome(user)}! 👋 Welcome to mapmyGig.` },
           ]);
         };
         try {
@@ -248,11 +254,13 @@ export default function OnboardingPage() {
       const result = await response.json();
       if (result.success) {
         setUserData(result.user);
-        // Initialize chat with welcome message
+        const welcomeName =
+          result.user.name?.trim() ||
+          (result.user.email ? result.user.email.split("@")[0] : "there");
         setChatMessages([
           {
             type: "ai",
-            text: `Hi ${result.user.name || "there"}! 👋 Welcome to mapmyGig.`,
+            text: `Hi ${welcomeName}! 👋 Welcome to mapmyGig.`,
           },
         ]);
         setShowAuth(false);
@@ -273,10 +281,13 @@ export default function OnboardingPage() {
     setOnboardingSessionId(null);
     conversationOrderRef.current = 0;
     if (userData) {
+      const welcomeName =
+        userData.name?.trim() ||
+        (userData.email ? userData.email.split("@")[0] : "there");
       setChatMessages([
         {
           type: "ai",
-          text: `Hi ${userData.name || "there"}! 👋 Welcome to mapmyGig.`,
+          text: `Hi ${welcomeName}! 👋 Welcome to mapmyGig.`,
         },
       ]);
     } else {
@@ -1334,25 +1345,24 @@ export default function OnboardingPage() {
           {/* Header - overflow-visible and high z so dropdowns overlay chat */}
           <div className="bg-white/95 backdrop-blur-sm px-6 py-4 flex items-center justify-between border-b border-[#E5E5E5] relative z-30 flex-shrink-0 overflow-visible">
             <div className="flex items-center gap-3">
-              <button
-                onClick={() => router.push("/")}
-                className="p-2 rounded-lg hover:bg-gray-100 transition-colors"
-                title="Back to home"
-              >
-                <svg
-                  width="20"
-                  height="20"
-                  viewBox="0 0 24 24"
-                  fill="none"
-                  stroke="currentColor"
-                  strokeWidth="2"
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  style={{ color: "#575757" }}
+              {/* Globe | Chat toggle - same as map search bar; Chat selected here */}
+              <div className="bg-white border border-[#E5E5E5] overflow-hidden rounded-full shrink-0">
+                <button
+                  type="button"
+                  onClick={() => router.push("/")}
+                  aria-label="Map view"
+                  className="p-2 border-0 rounded-l-full rounded-r-none bg-transparent hover:bg-gray-50 transition-colors"
                 >
-                  <path d="M19 12H5M12 19l-7-7 7-7" />
-                </svg>
-              </button>
+                  <EarthFilled size={20} className="w-5 h-5 shrink-0 text-[#575757]" />
+                </button>
+                <button
+                  type="button"
+                  aria-label="Chat"
+                  className="p-2 border-0 rounded-r-full rounded-l-none bg-brand/10 transition-colors"
+                >
+                  <Chat size={20} className="w-5 h-5 shrink-0 text-brand" />
+                </button>
+              </div>
             </div>
             <div className="flex items-center gap-3">
               <button
@@ -1441,33 +1451,29 @@ export default function OnboardingPage() {
               <div className="relative" ref={userDropdownRef}>
                 <button
                   type="button"
-                  onClick={() => setShowUserDropdown(!showUserDropdown)}
+                  onClick={() => {
+                    setShowUserDropdown(!showUserDropdown);
+                    if (!showUserDropdown) fetchProfile();
+                  }}
                   className="p-2 rounded-lg hover:bg-gray-100 transition-colors flex items-center justify-center"
                   aria-label="Profile menu"
-                  title={profileUserName}
+                  title={profileUserEmail || profileUserName}
                 >
                   <UserAvatar size={24} style={{ color: "#575757" }} />
                 </button>
                 {showUserDropdown && (
-                  <div className="absolute right-0 mt-2 w-48 bg-white border border-brand-stroke-weak rounded-lg shadow-lg z-[200]">
+                  <div className="absolute right-0 mt-2 min-w-[16rem] max-w-[24rem] w-max bg-white border border-brand-stroke-weak rounded-lg shadow-lg z-[200]">
                     <div className="p-2">
+                      <div className="flex items-center gap-2 px-4 py-2 text-sm text-brand-text-strong break-all border-b border-brand-stroke-weak mb-1" title={profileUserEmail || "Signed in"}>
+                        <User size={20} className="shrink-0 text-brand-stroke-strong" />
+                        <span>{profileUserEmail || "Signed in"}</span>
+                      </div>
                       <button
                         type="button"
                         className="w-full text-left px-4 py-2 text-brand-text-strong hover:bg-brand-bg-fill rounded transition-colors flex items-center gap-2"
                         onClick={() => {
                           setShowUserDropdown(false);
-                          router.push("/profile");
-                        }}
-                      >
-                        <User size={20} className="text-brand-stroke-strong" />
-                        <span>Profile</span>
-                      </button>
-                      <button
-                        type="button"
-                        className="w-full text-left px-4 py-2 text-brand-text-strong hover:bg-brand-bg-fill rounded transition-colors flex items-center gap-2"
-                        onClick={() => {
-                          setShowUserDropdown(false);
-                          router.push("/settings");
+                          setShowSettingsModal(true);
                         }}
                       >
                         <Settings size={20} className="text-brand-stroke-strong" />
@@ -1510,6 +1516,22 @@ export default function OnboardingPage() {
           </div>
         </div>
       </div>
+
+      <SettingsModal
+        isOpen={showSettingsModal}
+        onClose={() => {
+          setShowSettingsModal(false);
+          fetch("/api/auth/me", { credentials: "same-origin" })
+            .then((res) => (res.ok ? res.json() : null))
+            .then((data) => {
+              if (data?.success && data.user) {
+                setProfileUserName(data.user.name || data.user.email || "Profile");
+                setProfileUserEmail(data.user.email || "");
+              }
+            })
+            .catch(() => {});
+        }}
+      />
     </div>
   );
 }

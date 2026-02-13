@@ -18,7 +18,7 @@ import {
   ArrowLeft,
   ChevronDown,
   Close,
-  IbmLpa,
+  Chat,
 } from "@carbon/icons-react";
 import { RiArrowDownSLine } from "@remixicon/react";
 import FilterDropdown from "./FilterDropdown";
@@ -2838,6 +2838,27 @@ const MapComponent = () => {
                     <UserAvatar size={24} className="text-brand-stroke-strong w-6 h-6 shrink-0" />
                   </button>
                 </div>
+
+                {/* View toggle: Globe (map) | Chat (onboarding) - inside search bar, right end, desktop only; bg-white, fully rounded */}
+                <div className="hidden md:flex items-center shrink-0 ml-1">
+                  <div className="flex bg-white border border-brand-stroke-border overflow-hidden rounded-full shrink-0">
+                    <button
+                      type="button"
+                      aria-label="Map view"
+                      className={`p-2 border-0 ${searchBar["toggle-segment"]} ${searchBar["toggle-segment-active"]} !rounded-l-full !rounded-r-none`}
+                    >
+                      <EarthFilled size={20} className={`w-5 h-5 shrink-0 ${searchBar["toggle-segment-icon-active"]} text-brand`} />
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => router.push("/onboarding")}
+                      aria-label="Chat / onboarding"
+                      className={`p-2 border-0 ${searchBar["toggle-segment"]} !rounded-r-full !rounded-l-none`}
+                    >
+                      <Chat size={20} className={`w-5 h-5 shrink-0 ${searchBar["toggle-segment-icon"]}`} />
+                    </button>
+                  </div>
+                </div>
               </div>
 
               {/* Mobile: bottom sheet */}
@@ -2859,27 +2880,6 @@ const MapComponent = () => {
               >
                 <Return size={20} className={searchBar["return-button-icon"]} />
               </button> */}
-            </div>
-          </div>
-
-          {/* View toggle: Globe (map) | Chat (onboarding) - outside search bar, desktop only */}
-          <div className="hidden md:flex items-center shrink-0">
-            <div className={`${searchBar["toggle-wrapper"]} border border-brand-stroke-border overflow-hidden rounded-full`}>
-              <button
-                type="button"
-                aria-label="Map view"
-                className={`p-2 border-0 ${searchBar["toggle-segment"]} ${searchBar["toggle-segment-active"]} rounded-l-full rounded-r-none`}
-              >
-                <EarthFilled size={20} className={`w-5 h-5 shrink-0 ${searchBar["toggle-segment-icon-active"]} text-brand`} />
-              </button>
-              <button
-                type="button"
-                onClick={() => router.push("/onboarding")}
-                aria-label="Chat / onboarding"
-                className={`p-2 border-0 ${searchBar["toggle-segment"]} rounded-r-full rounded-l-none`}
-              >
-                <IbmLpa size={20} className={`w-5 h-5 shrink-0 ${searchBar["toggle-segment-icon"]}`} />
-              </button>
             </div>
           </div>
 

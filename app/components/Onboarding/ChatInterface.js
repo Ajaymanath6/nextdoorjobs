@@ -108,9 +108,10 @@ export default function ChatInterface({ messages = [], onSendMessage, isLoading 
             <Image
               src="/logo.svg"
               alt="mapmyGig"
-              width={0}
+              width={128}
               height={32}
               className="h-8 w-auto"
+              style={{ width: "auto", height: "2rem" }}
             />
           </div>
         </div>

@@ -55,8 +55,24 @@ export default function RootLayout({ children }) {
     return content;
   }
 
+  // If Clerk Frontend API uses a custom domain (e.g. clerk.mapmygig.com) that doesn't serve the script,
+  // load clerk-js from a CDN so auth still works.
+  const clerkJSUrl =
+    process.env.NEXT_PUBLIC_CLERK_JS_URL ||
+    "https://unpkg.com/@clerk/clerk-js@5/dist/clerk.browser.js";
+
+  // Send FAPI requests through our app's /__clerk proxy so custom domain is not required.
+  const baseUrl = process.env.NEXT_PUBLIC_APP_URL || "";
+  const proxyUrl =
+    process.env.NEXT_PUBLIC_CLERK_PROXY_URL ||
+    (baseUrl ? `${baseUrl.replace(/\/$/, "")}/__clerk` : "");
+
   return (
-    <ClerkProvider publishableKey={publishableKey}>
+    <ClerkProvider
+      publishableKey={publishableKey}
+      clerkJSUrl={clerkJSUrl}
+      proxyUrl={proxyUrl}
+    >
       {content}
     </ClerkProvider>
   );

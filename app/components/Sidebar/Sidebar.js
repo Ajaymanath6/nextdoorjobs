@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { useClerk } from '@clerk/nextjs';
 import Image from "next/image";
@@ -9,25 +9,20 @@ import {
   Home,
   Document,
   Archive,
-  SidePanelClose,
+  OpenPanelLeft,
   SidePanelOpen,
-  User,
   Logout,
   ThumbsUpDouble,
-  Settings,
   Bullhorn,
   UserAvatar,
   EarthFilled,
-  IbmLpa,
 } from "@carbon/icons-react";
 
 export default function Sidebar({ activeItem = "jobs-near-you", onToggle, isOpen: externalIsOpen }) {
   const router = useRouter();
   const { signOut } = useClerk();
   const [isOpen, setIsOpen] = useState(externalIsOpen !== undefined ? externalIsOpen : true);
-  const [showUserDropdown, setShowUserDropdown] = useState(false);
-  const [userName, setUserName] = useState("Profile");
-  const userDropdownRef = useRef(null);
+  const [userEmail, setUserEmail] = useState("");
 
   const sidebar = themeClasses.components.sidebar;
   const brand = themeClasses.brand;
@@ -48,23 +43,6 @@ export default function Sidebar({ activeItem = "jobs-near-you", onToggle, isOpen
     }
   };
 
-  // Close dropdown when clicking outside
-  useEffect(() => {
-    const handleClickOutside = (event) => {
-      if (userDropdownRef.current && !userDropdownRef.current.contains(event.target)) {
-        setShowUserDropdown(false);
-      }
-    };
-
-    if (showUserDropdown) {
-      document.addEventListener("mousedown", handleClickOutside);
-    }
-
-    return () => {
-      document.removeEventListener("mousedown", handleClickOutside);
-    };
-  }, [showUserDropdown]);
-
   // Navigation items
   const navigationItems = [
     { id: "home", label: "Home", icon: Home, route: "/" },
@@ -78,10 +56,6 @@ export default function Sidebar({ activeItem = "jobs-near-you", onToggle, isOpen
     router.push(route);
   };
 
-  const handleUserClick = () => {
-    setShowUserDropdown(!showUserDropdown);
-  };
-
   // Fetch current user info
   useEffect(() => {
     const fetchUser = async () => {
@@ -90,7 +64,7 @@ export default function Sidebar({ activeItem = "jobs-near-you", onToggle, isOpen
         if (response.ok) {
           const data = await response.json();
           if (data.success && data.user) {
-            setUserName(data.user.name || data.user.email || "Profile");
+            setUserEmail(data.user.email || "");
           }
         }
       } catch (error) {
@@ -120,8 +94,6 @@ export default function Sidebar({ activeItem = "jobs-near-you", onToggle, isOpen
       });
 
       if (response.ok) {
-        // Close dropdown
-        setShowUserDropdown(false);
         // Redirect to home page which will show auth overlay
         router.push("/");
         // Reload to clear any cached state
@@ -141,18 +113,19 @@ export default function Sidebar({ activeItem = "jobs-near-you", onToggle, isOpen
         isOpen ? sidebar["container-expanded"] : sidebar["container-collapsed"]
       }`}
     >
-      {/* Logo & Toggle Section - same logo as chat header (/logo.svg) */}
+      {/* Logo & Toggle Section - small logo; right icon (OpenPanelLeft) when panel open */}
       <div className={`${sidebar["logo-section"]} relative`}>
         <div className="flex items-center justify-between">
           {isOpen ? (
             <div className="flex items-center min-w-0">
-              <div className="h-8 flex items-center justify-center shrink-0">
+              <div className="h-6 flex items-center justify-center shrink-0">
                 <Image
                   src="/logo.svg"
                   alt="mapmyGig"
-                  width={0}
-                  height={32}
-                  className="h-8 w-auto"
+                  width={96}
+                  height={24}
+                  className="h-6 w-auto"
+                  style={{ width: "auto", height: "1.5rem" }}
                 />
               </div>
             </div>
@@ -172,7 +145,7 @@ export default function Sidebar({ activeItem = "jobs-near-you", onToggle, isOpen
               className={sidebar["toggle-button"]}
               aria-label="Close sidebar"
             >
-              <SidePanelClose size={20} style={{ color: "rgba(87, 87, 87, 1)" }} />
+              <OpenPanelLeft size={20} style={{ color: "rgba(87, 87, 87, 1)" }} />
             </button>
           )}
         </div>
@@ -212,24 +185,6 @@ export default function Sidebar({ activeItem = "jobs-near-you", onToggle, isOpen
         </ul>
       </nav>
 
-      {/* Onboarding Section */}
-      <div className="p-2 pb-1">
-        <button
-          onClick={() => handleNavigation("/onboarding")}
-          className={`${sidebar["nav-button"]} ${
-            isOpen ? sidebar["nav-button-expanded"] : sidebar["nav-button-collapsed"]
-          } ${sidebar["nav-button-hover"]}`}
-        >
-          <div className={sidebar["nav-icon-container"]}>
-            <IbmLpa
-              size={24}
-              style={{ color: "rgba(87, 87, 87, 1)" }}
-            />
-          </div>
-          {isOpen && <span className={sidebar["nav-text"]}>Onboarding</span>}
-        </button>
-      </div>
-
       {/* What's New Section */}
       <div className="p-2 pt-1 pb-1">
         <button
@@ -248,12 +203,11 @@ export default function Sidebar({ activeItem = "jobs-near-you", onToggle, isOpen
         </button>
       </div>
 
-      {/* User Profile Section */}
-      <div className={`p-2 pt-1 relative`} ref={userDropdownRef}>
+      {/* User Profile Section - display only (no click action) */}
+      <div className={`p-2 pt-1`}>
         {isOpen ? (
-          <button
-            onClick={handleUserClick}
-            className={`${sidebar["nav-button"]} ${sidebar["nav-button-expanded"]} ${sidebar["nav-button-hover"]} ${sidebar["user-button-expanded"]}`}
+          <div
+            className={`${sidebar["nav-button"]} ${sidebar["nav-button-expanded"]} ${sidebar["user-button-expanded"]} cursor-default`}
           >
             <div className={sidebar["nav-icon-container"]}>
               <UserAvatar
@@ -261,54 +215,19 @@ export default function Sidebar({ activeItem = "jobs-near-you", onToggle, isOpen
                 style={{ color: "rgba(87, 87, 87, 1)" }}
               />
             </div>
-            <span className={sidebar["nav-text"]}>{userName}</span>
-          </button>
+            <span className={`${sidebar["nav-text"]} truncate`} title={userEmail}>
+              {userEmail || "—"}
+            </span>
+          </div>
         ) : (
-          <button
-            onClick={handleUserClick}
-            className={`${sidebar["nav-button"]} ${sidebar["nav-button-collapsed"]} ${sidebar["nav-button-hover"]} ${sidebar["user-button-collapsed"]}`}
+          <div
+            className={`${sidebar["nav-button"]} ${sidebar["nav-button-collapsed"]} ${sidebar["user-button-collapsed"]}`}
           >
             <div className={sidebar["nav-icon-container"]}>
-              <Logout
+              <UserAvatar
                 size={24}
                 style={{ color: "rgba(87, 87, 87, 1)" }}
               />
-            </div>
-          </button>
-        )}
-
-        {/* User Dropdown */}
-        {showUserDropdown && (
-          <div className="absolute bottom-full left-0 mb-2 w-48 bg-brand-bg-white border border-brand-stroke-border rounded-lg shadow-lg z-50">
-            <div className="p-2">
-              <button
-                className="w-full text-left px-4 py-2 text-brand-stroke-strong hover:bg-brand-stroke-weak rounded transition-colors flex items-center space-x-2"
-                onClick={() => {
-                  setShowUserDropdown(false);
-                  router.push("/profile");
-                }}
-              >
-                <User size={20} />
-                <span>Profile</span>
-              </button>
-              <button
-                className="w-full text-left px-4 py-2 text-brand-stroke-strong hover:bg-brand-stroke-weak rounded transition-colors flex items-center space-x-2"
-                onClick={() => {
-                  setShowUserDropdown(false);
-                  router.push("/settings");
-                }}
-              >
-                <Settings size={20} />
-                <span>Settings</span>
-              </button>
-              <div className="border-t border-brand-stroke-border my-1" />
-              <button
-                className="w-full text-left px-4 py-2 text-brand-stroke-strong hover:bg-brand-stroke-weak rounded transition-colors flex items-center space-x-2"
-                onClick={handleLogout}
-              >
-                <Logout size={20} />
-                <span>Logout</span>
-              </button>
             </div>
           </div>
         )}
