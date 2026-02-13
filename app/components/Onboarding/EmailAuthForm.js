@@ -42,6 +42,9 @@ export default function EmailAuthForm({ onSubmit, isLoading = false }) {
   return (
     <div className="mx-auto" style={{ width: "100%", maxWidth: "400px", boxSizing: "border-box" }}>
       <div className="bg-white rounded-lg shadow-lg p-8 border border-[#E5E5E5]" style={{ width: "100%" }}>
+        {/* Clerk CAPTCHA widget container - required for Smart CAPTCHA bot protection */}
+        <div id="clerk-captcha" style={{ display: "none" }} />
+        
         {/* Logo and Title */}
         <div className="flex flex-col items-center mb-6">
           <div className="flex items-center justify-center mb-3">

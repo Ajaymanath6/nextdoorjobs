@@ -72,14 +72,20 @@ const clerkHandler = clerkMiddleware(async (auth, req) => {
             if (user?.accountType) {
               return NextResponse.next();
             }
+            // If user exists but accountType is null/empty, redirect to who-are-you
+            if (user && (user.accountType === null || user.accountType === '')) {
+              return NextResponse.redirect(new URL('/who-are-you', req.url));
+            }
           }
         }
       } catch (err) {
-        // If DB lookup fails, redirect to who-are-you to be safe
+        // If DB lookup fails, allow access to map (graceful degradation)
+        // The client-side code will handle redirecting if needed
         console.error("[proxy] Error checking accountType:", err instanceof Error ? err.message : String(err));
+        return NextResponse.next();
       }
-      // No accountType set or error - redirect to who-are-you
-      return NextResponse.redirect(new URL('/who-are-you', req.url));
+      // If we can't determine accountType status, allow access (client will handle redirect if needed)
+      return NextResponse.next();
     }
 
     // Protect all other routes except public ones

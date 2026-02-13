@@ -40,6 +40,8 @@ export default function RootLayout({ children }) {
           overflow: 'hidden'
         }}
       >
+        {/* Clerk CAPTCHA widget container - required for Smart CAPTCHA bot protection */}
+        <div id="clerk-captcha" style={{ display: "none" }} />
         {children}
       </body>
     </html>
