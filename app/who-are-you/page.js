@@ -103,7 +103,6 @@ export default function WhoAreYouPage() {
         backgroundRepeat: "no-repeat",
       }}
     >
-      <div className="absolute inset-0 bg-white/40" aria-hidden="true" />
       <div className="relative z-10 flex flex-col items-center w-full max-w-lg">
         <h1
           className={`text-2xl font-semibold ${brand.text.strong} mb-2 text-center`}
