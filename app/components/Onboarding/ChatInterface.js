@@ -2,10 +2,13 @@
 
 import { useEffect, useRef, useState } from "react";
 import Image from "next/image";
+import { useRouter } from "next/navigation";
 import { Screen, Document, Enterprise, Save, Location, Add, OverflowMenuVertical } from "@carbon/icons-react";
 import TypingAnimation from "./TypingAnimation";
+import { getAvatarUrlById } from "../../../lib/avatars";
 
 export default function ChatInterface({ messages = [], onSendMessage, isLoading = false, inlineComponent = null, typingText = null, onScrollRequest, onSave, onViewOnMap, onStartNext, showFindOrPostButtons = false, accountType, onFindJob, onPostGig }) {
+  const router = useRouter();
   const messagesEndRef = useRef(null);
   const inputRef = useRef(null);
   const messagesContainerRef = useRef(null);
@@ -16,6 +19,23 @@ export default function ChatInterface({ messages = [], onSendMessage, isLoading 
   const [showSavedFilesDropdown, setShowSavedFilesDropdown] = useState(false);
   const [savedFiles, setSavedFiles] = useState([]);
   const savedFilesDropdownRef = useRef(null);
+
+  const handleViewGigOnMap = (gig) => {
+    if (gig.latitude != null && gig.longitude != null) {
+      if (typeof sessionStorage !== "undefined") {
+        sessionStorage.setItem(
+          "zoomToGigCoords",
+          JSON.stringify({
+            lat: gig.latitude,
+            lng: gig.longitude,
+            state: gig.state || null,
+            district: gig.district || null,
+          })
+        );
+      }
+      router.push("/");
+    }
+  };
 
   const openDeviceFilePicker = () => {
     if (fileInputRef.current) fileInputRef.current.click();
@@ -176,8 +196,8 @@ export default function ChatInterface({ messages = [], onSendMessage, isLoading 
                     className="w-7 h-7"
                   />
                 </div>
-                <div className="flex flex-col gap-2 max-w-[80%]">
-                  <div className="max-w-[85%] w-full rounded-lg border border-brand-stroke-weak bg-brand-bg-white px-4 py-3">
+                <div className="flex flex-col gap-2 w-full">
+                  <div className="w-full rounded-lg border border-brand-stroke-weak bg-brand-bg-white px-4 py-3">
                     <p className="text-sm font-medium text-brand-text-strong mb-3" style={{ fontFamily: "Open Sans, sans-serif" }}>
                       Your posted gigs
                     </p>
@@ -185,24 +205,49 @@ export default function ChatInterface({ messages = [], onSendMessage, isLoading 
                       <p className="text-sm text-brand-text-weak" style={{ fontFamily: "Open Sans, sans-serif" }}>No gigs posted yet.</p>
                     ) : (
                       <ul className="space-y-2">
-                        {(message.gigs || []).map((gig) => (
-                          <li
-                            key={gig.id}
-                            className="flex items-center gap-2 py-2 border-b border-brand-stroke-weak last:border-b-0 last:pb-0 first:pt-0"
-                          >
-                            <div className="flex-1 min-w-0">
-                              <p className="text-sm font-medium text-brand-text-strong truncate" style={{ fontFamily: "Open Sans, sans-serif" }}>{gig.title}</p>
-                              <p className="text-xs text-brand-text-weak truncate mt-0.5" style={{ fontFamily: "Open Sans, sans-serif" }}>{gig.serviceType || ""}</p>
-                            </div>
-                            <button
-                              type="button"
-                              className="shrink-0 p-1 rounded hover:bg-brand-bg-fill text-brand-stroke-strong"
-                              aria-label="More options"
+                        {(message.gigs || []).map((gig) => {
+                          const avatarUrl = gig.user?.avatarId
+                            ? getAvatarUrlById(gig.user.avatarId)
+                            : gig.user?.avatarUrl || "/avatars/avatar1.png";
+                          const hasCoordinates = gig.latitude != null && gig.longitude != null && Number.isFinite(Number(gig.latitude)) && Number.isFinite(Number(gig.longitude));
+                          
+                          return (
+                            <li
+                              key={gig.id}
+                              className="flex items-center gap-3 py-2 border-b border-brand-stroke-weak last:border-b-0 last:pb-0 first:pt-0"
                             >
-                              <OverflowMenuVertical size={20} />
-                            </button>
-                          </li>
-                        ))}
+                              {/* User Avatar on Left */}
+                              <div className="flex-shrink-0">
+                                <Image
+                                  src={avatarUrl}
+                                  alt={gig.user?.name || "User"}
+                                  width={40}
+                                  height={40}
+                                  className="w-10 h-10 rounded-full object-cover border-2 border-brand-stroke-weak"
+                                />
+                              </div>
+                              {/* Gig Details in Center */}
+                              <div className="flex-1 min-w-0">
+                                <p className="text-sm font-medium text-brand-text-strong truncate" style={{ fontFamily: "Open Sans, sans-serif" }}>{gig.title}</p>
+                                <p className="text-xs text-brand-text-weak truncate mt-0.5" style={{ fontFamily: "Open Sans, sans-serif" }}>{gig.serviceType || ""}</p>
+                              </div>
+                              {/* See this gig on map button on Right */}
+                              {hasCoordinates ? (
+                                <button
+                                  type="button"
+                                  onClick={() => handleViewGigOnMap(gig)}
+                                  className="shrink-0 flex items-center gap-1.5 px-3 py-1.5 bg-brand text-white hover:bg-brand-hover rounded-md text-xs font-medium transition-colors"
+                                  style={{ fontFamily: "Open Sans, sans-serif" }}
+                                >
+                                  <Location size={14} />
+                                  <span>See on map</span>
+                                </button>
+                              ) : (
+                                <div className="shrink-0 w-0" />
+                              )}
+                            </li>
+                          );
+                        })}
                       </ul>
                     )}
                   </div>

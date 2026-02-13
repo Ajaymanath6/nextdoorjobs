@@ -635,6 +635,30 @@ const MapComponent = () => {
     setGigs([]);
   }, [searchMode]);
 
+  // Fetch gigs when switching to person mode if location context exists
+  useEffect(() => {
+    if (searchMode !== "person" || !mapInstanceRef.current) return;
+    
+    // If we have a last searched location, fetch gigs for that area
+    if (lastSearchedState || lastSearchedDistrict) {
+      const params = new URLSearchParams();
+      if (lastSearchedState) params.set("state", lastSearchedState);
+      if (lastSearchedDistrict) params.set("district", lastSearchedDistrict);
+      
+      fetch(`/api/gigs?${params.toString()}`)
+        .then((r) => r.json())
+        .then((data) => {
+          if (data.success && Array.isArray(data.gigs)) {
+            setGigs(data.gigs);
+            renderGigMarkers(data.gigs);
+          }
+        })
+        .catch((err) => {
+          console.error("Error fetching gigs:", err);
+        });
+    }
+  }, [searchMode, lastSearchedState, lastSearchedDistrict]);
+
   // Perform district-level zoom (state → district, stops at district)
   const performDistrictZoom = (dbData, showNoCompaniesMessage = false) => {
     if (!mapInstanceRef.current || !window.L) return;
@@ -642,6 +666,10 @@ const MapComponent = () => {
     const L = window.L;
     const state = dbData.state; // "Kerala"
     const district = dbData.district; // "Thrissur"
+    
+    // Set location context for future mode switches
+    if (state) setLastSearchedState(state);
+    if (district) setLastSearchedDistrict(district);
 
     // Use database coordinates if available, otherwise use default
     const hasCoordinates = dbData.latitude && dbData.longitude;
@@ -715,6 +743,10 @@ const MapComponent = () => {
     const companies = localityData.companies || [];
     const state = dbData.state || "";
     const district = dbData.district || "";
+    
+    // Set location context for future mode switches
+    if (state) setLastSearchedState(state);
+    if (district) setLastSearchedDistrict(district);
 
     // Use database coordinates if available, otherwise fall back to locations.json
     const hasCoordinates = dbData.latitude && dbData.longitude;
@@ -1345,10 +1377,23 @@ const MapComponent = () => {
         const payload = JSON.parse(gigRaw);
         const lat = payload.lat;
         const lng = payload.lng;
+        const state = payload.state;
+        const district = payload.district;
         if (typeof lat === "number" && typeof lng === "number") {
           sessionStorage.removeItem("zoomToGigCoords");
           setSearchMode("person");
-          fetch("/api/gigs")
+          
+          // Set location context for future mode switches
+          if (state) setLastSearchedState(state);
+          if (district) setLastSearchedDistrict(district);
+          
+          // Fetch gigs filtered by location if available, otherwise fetch all
+          const params = new URLSearchParams();
+          if (state) params.set("state", state);
+          if (district) params.set("district", district);
+          const url = params.toString() ? `/api/gigs?${params.toString()}` : "/api/gigs";
+          
+          fetch(url)
             .then((r) => r.json())
             .then((data) => {
               if (data.success && Array.isArray(data.gigs)) {

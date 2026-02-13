@@ -923,6 +923,8 @@ export default function OnboardingPage() {
               lat: result.gig.latitude,
               lng: result.gig.longitude,
               view: "gig_workers",
+              state: result.gig.state || null,
+              district: result.gig.district || null,
             })
           );
         }
