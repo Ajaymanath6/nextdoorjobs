@@ -1,5 +1,6 @@
-import { clerkMiddleware, createRouteMatcher } from '@clerk/nextjs/server';
+import { clerkMiddleware, createRouteMatcher, currentUser } from '@clerk/nextjs/server';
 import { NextResponse } from 'next/server';
+import { prisma } from './lib/prisma';
 
 /** Proxy Frontend API requests to Clerk so custom domain (clerk.mapmygig.com) is not required. */
 function clerkFapiProxy(req: Request) {
@@ -51,11 +52,33 @@ const clerkHandler = clerkMiddleware(async (auth, req) => {
     const { userId } = await auth();
     const path = req.nextUrl.pathname;
 
-    // When app loads at root: unauthenticated users see onboarding; signed-in users go to who-are-you first
+    // When app loads at root: unauthenticated users see onboarding; signed-in users check accountType
     if (path === '/') {
       if (!userId) {
         return NextResponse.redirect(new URL('/onboarding', req.url));
       }
+      // Check if user has accountType set - if yes, allow map access; if no, redirect to who-are-you
+      try {
+        const clerkUser = await currentUser();
+        if (clerkUser) {
+          const email = clerkUser.emailAddresses[0]?.emailAddress;
+          if (email) {
+            const emailNorm = email.toLowerCase().trim();
+            const user = await prisma.user.findUnique({
+              where: { email: emailNorm },
+              select: { accountType: true },
+            });
+            // If accountType is set, allow access to map (/)
+            if (user?.accountType) {
+              return NextResponse.next();
+            }
+          }
+        }
+      } catch (err) {
+        // If DB lookup fails, redirect to who-are-you to be safe
+        console.error("[proxy] Error checking accountType:", err instanceof Error ? err.message : String(err));
+      }
+      // No accountType set or error - redirect to who-are-you
       return NextResponse.redirect(new URL('/who-are-you', req.url));
     }
 

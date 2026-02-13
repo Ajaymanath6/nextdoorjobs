@@ -1075,6 +1075,7 @@ export default function OnboardingPage() {
             type: "ai",
             text: "🎉 Your gig has been posted! You can view it on the map in the \"Gig workers\" view.",
             isFinalMessage: true,
+            isGigSuccess: true,
           },
         ]);
         if (result.gig.latitude != null && result.gig.longitude != null && typeof sessionStorage !== "undefined") {

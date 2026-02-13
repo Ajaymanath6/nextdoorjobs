@@ -311,7 +311,7 @@ export default function ChatInterface({ messages = [], onSendMessage, isLoading 
                             style={{ fontFamily: "Open Sans, sans-serif" }}
                           >
                             <Location size={16} />
-                            <span>See your posting on the map</span>
+                            <span>{message.isGigSuccess ? "See your gig on the map" : "See your posting on the map"}</span>
                           </button>
                         )}
                         {onStartNext && (

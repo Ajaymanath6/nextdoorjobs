@@ -591,14 +591,31 @@ const MapComponent = () => {
       });
       const marker = L.marker([lat, lon], { icon, zIndexOffset: 2000 + index });
       const userName = gig.user?.name || "Gig worker";
+      const userAvatarUrl = gig.user?.avatarId
+        ? getAvatarUrlById(gig.user.avatarId)
+        : gig.user?.avatarUrl || "/avatars/avatar1.png";
+      const escapeHtml = (str) => (str || "").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
       const popupContent = `
-        <div style="font-family: 'Open Sans', sans-serif; padding: 6px; min-width: 140px;">
-          <div style="font-weight: 600; font-size: 14px; color: #0A0A0A;">${(gig.title || "").replace(/</g, "&lt;")}</div>
-          <div style="font-size: 12px; color: #575757;">${(gig.serviceType || "").replace(/</g, "&lt;")}</div>
-          <div style="font-size: 11px; color: #737373; margin-top: 4px;">${(userName || "").replace(/</g, "&lt;")}</div>
+        <div style="font-family: 'Open Sans', sans-serif; padding: 12px; min-width: 280px; max-width: 320px;">
+          <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 12px;">
+            <img src="${userAvatarUrl}" alt="${escapeHtml(userName)}" style="width: 40px; height: 40px; border-radius: 50%; object-fit: cover; border: 2px solid #E5E5E5;" onerror="this.src='/avatars/avatar1.png'" />
+            <div>
+              <div style="font-weight: 600; font-size: 16px; color: #0A0A0A;">${escapeHtml(gig.title || "")}</div>
+              <div style="font-size: 13px; color: #737373;">${escapeHtml(userName)}</div>
+            </div>
+          </div>
+          ${gig.description ? `<div style="font-size: 13px; color: #1A1A1A; margin-bottom: 10px; line-height: 1.5;">${escapeHtml(gig.description)}</div>` : ""}
+          <div style="font-size: 13px; color: #575757; margin-bottom: 8px;"><strong>Service:</strong> ${escapeHtml(gig.serviceType || "")}</div>
+          ${gig.expectedSalary ? `<div style="font-size: 13px; color: #575757; margin-bottom: 8px;"><strong>Expected Salary:</strong> ${escapeHtml(gig.expectedSalary)}</div>` : ""}
+          ${gig.experienceWithGig ? `<div style="font-size: 13px; color: #575757; margin-bottom: 8px;"><strong>Experience:</strong> ${escapeHtml(gig.experienceWithGig)}</div>` : ""}
+          ${gig.customersTillDate != null ? `<div style="font-size: 13px; color: #575757; margin-bottom: 8px;"><strong>Customers Served:</strong> ${gig.customersTillDate}</div>` : ""}
+          <div style="font-size: 12px; color: #737373; margin-top: 10px; padding-top: 10px; border-top: 1px solid #E5E5E5;">
+            <div><strong>Location:</strong> ${escapeHtml(gig.district || "")}${gig.state ? `, ${escapeHtml(gig.state)}` : ""}</div>
+            ${gig.pincode ? `<div style="margin-top: 4px;">Pincode: ${escapeHtml(gig.pincode)}</div>` : ""}
+          </div>
         </div>
       `;
-      marker.bindPopup(popupContent, { className: "gig-popup" });
+      marker.bindPopup(popupContent, { className: "gig-popup", maxWidth: 320 });
       clusterGroup.addLayer(marker);
       gigMarkersRef.current.push(marker);
     });
