@@ -1,6 +1,7 @@
 "use client";
 
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useLayoutEffect, useRef } from "react";
+import { createPortal } from "react-dom";
 import { useRouter } from "next/navigation";
 import { useClerk } from '@clerk/nextjs';
 import Image from "next/image";
@@ -26,6 +27,8 @@ export default function Sidebar({ activeItem = "jobs-near-you", onToggle, isOpen
   const [isOpen, setIsOpen] = useState(externalIsOpen !== undefined ? externalIsOpen : true);
   const [userEmail, setUserEmail] = useState("");
   const [showUserDropdown, setShowUserDropdown] = useState(false);
+  const [dropdownPosition, setDropdownPosition] = useState({ left: 0, bottom: 0 });
+  const [portalTarget, setPortalTarget] = useState(null);
   const profileRef = useRef(null);
 
   const sidebar = themeClasses.components.sidebar;
@@ -79,10 +82,45 @@ export default function Sidebar({ activeItem = "jobs-near-you", onToggle, isOpen
     fetchUser();
   }, []);
 
-  // Close dropdown when clicking outside
+  // Portal root: outside layout so dropdown is never clipped by body/sidebar overflow
+  useEffect(() => {
+    const root = document.createElement("div");
+    root.id = "sidebar-dropdown-portal-root";
+    root.setAttribute("aria-hidden", "true");
+    root.style.cssText =
+      "position:fixed;inset:0;z-index:99999;pointer-events:none;overflow:visible;";
+    document.body.appendChild(root);
+    setPortalTarget(root);
+    return () => {
+      if (root.parentNode) root.parentNode.removeChild(root);
+      setPortalTarget(null);
+    };
+  }, []);
+
+  // Position dropdown as overlay (above sidebar) and close on outside click
+  const updateDropdownPosition = () => {
+    if (!profileRef.current) return;
+    const rect = profileRef.current.getBoundingClientRect();
+    const gapAbove = 8;
+    setDropdownPosition({
+      left: rect.left + 4,
+      bottom: window.innerHeight - rect.top + gapAbove,
+    });
+  };
+
+  useLayoutEffect(() => {
+    if (!showUserDropdown) return;
+    updateDropdownPosition();
+    const handleResize = () => updateDropdownPosition();
+    window.addEventListener("resize", handleResize);
+    return () => window.removeEventListener("resize", handleResize);
+  }, [showUserDropdown]);
+
   useEffect(() => {
     const handleClickOutside = (e) => {
       if (profileRef.current && !profileRef.current.contains(e.target)) {
+        const portalEl = document.getElementById("sidebar-dropdown-portal");
+        if (portalEl?.contains(e.target)) return;
         setShowUserDropdown(false);
       }
     };
@@ -258,11 +296,24 @@ export default function Sidebar({ activeItem = "jobs-near-you", onToggle, isOpen
           </button>
         )}
 
-        {/* Drop-up menu - same content as onboarding user dropdown */}
-        {showUserDropdown && (
+        {/* Drop-up menu rendered as overlay via portal so it is not clipped by sidebar */}
+      </div>
+
+      {portalTarget &&
+        showUserDropdown &&
+        createPortal(
           <div
-            className="absolute left-0 bottom-full mb-2 min-w-[16rem] max-w-[24rem] w-max rounded-lg border border-brand-stroke-border bg-brand-bg-white shadow-lg z-[100]"
+            id="sidebar-dropdown-portal"
             role="menu"
+            className="min-w-[16rem] max-w-[24rem] w-max overflow-y-auto rounded-lg border border-brand-stroke-border bg-brand-bg-white shadow-lg"
+            style={{
+              position: "fixed",
+              left: dropdownPosition.left,
+              bottom: dropdownPosition.bottom,
+              zIndex: 100000,
+              pointerEvents: "auto",
+              maxHeight: "min(70vh, 320px)",
+            }}
           >
             <div className="p-2">
               <div
@@ -295,9 +346,9 @@ export default function Sidebar({ activeItem = "jobs-near-you", onToggle, isOpen
                 <span>Logout</span>
               </button>
             </div>
-          </div>
+          </div>,
+          portalTarget
         )}
-      </div>
     </aside>
   );
 }
