@@ -36,18 +36,7 @@ const JOB_FIELDS = {
   DESCRIPTION: "job_description",
 };
 
-const GIG_FIELDS = {
-  TITLE: "gig_title",
-  DESCRIPTION: "gig_description",
-  SERVICE_TYPE: "gig_service_type",
-  EXPECTED_SALARY: "gig_expected_salary",
-  EXPERIENCE: "gig_experience",
-  CUSTOMERS_TILL_DATE: "gig_customers_till_date",
-  LOCATION: "gig_location",
-  STATE: "gig_state",
-  DISTRICT: "gig_district",
-  PINCODE: "gig_pincode",
-};
+// GIG_FIELDS removed - Company-only onboarding
 
 export default function OnboardingPage() {
   const router = useRouter();
@@ -133,14 +122,13 @@ export default function OnboardingPage() {
   const [userData, setUserData] = useState(null);
   const [companyData, setCompanyData] = useState(null);
   const [jobData, setJobData] = useState(null);
-  const [currentField, setCurrentField] = useState(GIG_FIELDS.TITLE);
-  // Company flow removed - Individual-only onboarding
+  const [currentField, setCurrentField] = useState(COMPANY_FIELDS.NAME);
+  const [collectingCompany, setCollectingCompany] = useState(true);
   const [inlineComponent, setInlineComponent] = useState(null);
   const [typingText, setTypingText] = useState("");
   const [isTyping, setIsTyping] = useState(false);
   const [hasChosenPostGig, setHasChosenPostGig] = useState(false);
-  const [collectingGig, setCollectingGig] = useState(false);
-  const [gigData, setGigData] = useState(null);
+  // Gig-related states removed - Company-only onboarding
   const [onboardingSessionId, setOnboardingSessionId] = useState(null);
   const [isMobile, setIsMobile] = useState(false);
   const [isNavigatingToMap, setIsNavigatingToMap] = useState(false);
@@ -161,10 +149,10 @@ export default function OnboardingPage() {
     onboardingSessionIdRef.current = onboardingSessionId;
   }, [onboardingSessionId]);
 
-  // Guard: Redirect Company users to /onboarding.org
+  // Guard: Redirect Individual users to /onboarding
   useEffect(() => {
-    if (userData && userData.accountType === "Company") {
-      router.replace("/onboarding.org");
+    if (userData && userData.accountType === "Individual") {
+      router.replace("/onboarding");
     }
   }, [userData, router]);
 
@@ -219,8 +207,8 @@ export default function OnboardingPage() {
           (u?.name?.trim()) || (u?.email ? u.email.split("@")[0] : "there");
         const setWelcome = (user) => {
           setUserData(user);
-          // Individual-only welcome message
-          const welcomeText = `Hi ${displayNameForWelcome(user)}! 👋 Welcome to mapmyGig.`;
+          // Company-only welcome message
+          const welcomeText = `Hi ${displayNameForWelcome(user)}! 👋 Post your job opening and reach job seekers.`;
           setChatMessages([{ type: "ai", text: welcomeText }]);
         };
         try {
@@ -325,34 +313,28 @@ export default function OnboardingPage() {
   // Reset chat function
   const handleResetChat = () => {
     setHasChosenPostGig(false);
-    setCollectingGig(false);
-    setGigData(null);
     setOnboardingSessionId(null);
     conversationOrderRef.current = 0;
     if (userData) {
       const welcomeName =
         userData.name?.trim() ||
         (userData.email ? userData.email.split("@")[0] : "there");
-      // Individual-only welcome message
-      const welcomeText = `Hi ${welcomeName}! 👋 Welcome to mapmyGig.`;
+      const welcomeText = `Hi ${welcomeName}! 👋 Post your job opening and reach job seekers.`;
       setChatMessages([{ type: "ai", text: welcomeText }]);
     } else {
       setChatMessages([]);
     }
-    setGigData(null);
-    setCurrentField(GIG_FIELDS.TITLE);
+    setCompanyData(null);
+    setJobData(null);
+    setCurrentField(COMPANY_FIELDS.NAME);
+    setCollectingCompany(true);
   };
 
-  // User chose "Find a job" → go to map view
-  const handleFindJob = () => {
-    router.push("/");
-  };
-
-  // User chose "Post a gig" (Individual only)
+  // User chose "Post your job" (Company only)
   const handlePostGig = async () => {
     if (!userData) return;
-    if (userData.accountType !== "Individual") {
-      router.replace("/onboarding.org");
+    if (userData.accountType !== "Company") {
+      router.replace("/onboarding");
       return;
     }
     if (userData.id == null && clerkUser && !clerkUser.emailAddresses?.[0]?.emailAddress) {
@@ -361,10 +343,36 @@ export default function OnboardingPage() {
     }
     setHasChosenPostGig(true);
 
-    setCollectingGig(true);
-    setGigData({});
-    setCurrentField(GIG_FIELDS.TITLE);
-    await addAIMessage("What's the title of your gig? (e.g. Singing, Custom purses, Teaching)");
+    try {
+      if (clerkUser) {
+        const email = clerkUser.emailAddresses[0]?.emailAddress;
+        if (email) {
+          await fetch("/api/onboarding/user", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              email,
+              name: clerkUser.firstName && clerkUser.lastName
+                ? `${clerkUser.firstName} ${clerkUser.lastName}`
+                : clerkUser.firstName || clerkUser.username || "User",
+              clerkId: clerkUser.id,
+              avatarUrl: clerkUser.imageUrl || undefined,
+            }),
+          });
+        }
+      }
+      const sessionRes = await fetch("/api/onboarding/session", { method: "POST" });
+      const sessionData = await sessionRes.json();
+      if (sessionData.success && sessionData.sessionId) {
+        setOnboardingSessionId(sessionData.sessionId);
+        onboardingSessionIdRef.current = sessionData.sessionId;
+        conversationOrderRef.current = 0;
+      }
+    } catch (err) {
+      console.error("Error starting onboarding session:", err);
+    }
+
+    await addAIMessage("I'll help you post a job opening. What's your company name?");
   };
 
   // Extract value from message
@@ -404,7 +412,7 @@ export default function OnboardingPage() {
     setIsLoading(true);
 
     setTimeout(async () => {
-      // Ignore messages until user has chosen "Post a gig"
+      // Ignore messages until user has chosen "Post your job"
       if (!hasChosenPostGig) {
         setIsLoading(false);
         return;
@@ -414,84 +422,145 @@ export default function OnboardingPage() {
         await saveConversation(stepKey, lastAIText, message);
       }
 
-      // Individual gig flow only
-      if (collectingGig) {
+      // Gig flow removed - Company-only onboarding
+
+      if (collectingCompany) {
+        // Collecting company information
         const value = extractValue(message);
+
         switch (currentField) {
-          case GIG_FIELDS.TITLE:
-            setGigData((prev) => ({ ...prev, title: value }));
-            await addAIMessage(`Got it! Title: "${value}". Add a short description (optional — type "skip" to skip).`);
-            setCurrentField(GIG_FIELDS.DESCRIPTION);
-            break;
-          case GIG_FIELDS.DESCRIPTION:
-            if (value.toLowerCase() !== "skip" && value) {
-              setGigData((prev) => ({ ...prev, description: value }));
-            }
-            await addAIMessage("What type of service is this? (e.g. Singing, Tailor, Teaching)");
-            setCurrentField(GIG_FIELDS.SERVICE_TYPE);
-            break;
-          case GIG_FIELDS.SERVICE_TYPE:
-            setGigData((prev) => ({ ...prev, serviceType: value }));
-            await addAIMessage("What's the expected salary for this gig? (Type amount or 'skip')");
-            setCurrentField(GIG_FIELDS.EXPECTED_SALARY);
-            break;
-          case GIG_FIELDS.EXPECTED_SALARY:
-            if (value.toLowerCase() !== "skip" && value) {
-              setGigData((prev) => ({ ...prev, expectedSalary: value }));
-            }
-            await addAIMessage("Tell us your experience with this gig (or 'skip').");
-            setCurrentField(GIG_FIELDS.EXPERIENCE);
-            break;
-          case GIG_FIELDS.EXPERIENCE:
-            if (value.toLowerCase() !== "skip" && value) {
-              setGigData((prev) => ({ ...prev, experienceWithGig: value }));
-            }
-            await addAIMessage("How many customers have you served till date? (Number or 'skip')");
-            setCurrentField(GIG_FIELDS.CUSTOMERS_TILL_DATE);
-            break;
-          case GIG_FIELDS.CUSTOMERS_TILL_DATE: {
-            if (value.toLowerCase() !== "skip" && value) {
-              const num = parseInt(value.replace(/\D/g, ""), 10);
-              if (!Number.isNaN(num) && num >= 0) {
-                setGigData((prev) => ({ ...prev, customersTillDate: num }));
-              }
-            }
-            await addAIMessage("Where are you located? You can get coordinates, enter them manually, or skip and choose state/district.");
-            setCurrentField(GIG_FIELDS.LOCATION);
+          case COMPANY_FIELDS.NAME:
+            setCompanyData((prev) => ({ ...prev, name: value }));
+            await addAIMessage(`Got it! Your company name is "${value}". Add a logo for your company (optional).`);
+            setCurrentField(COMPANY_FIELDS.LOGO);
             setInlineComponent(
-              <GetCoordinatesButton
-                isMobile={isMobile}
-                onCoordinatesReceived={(lat, lon) => {
-                  setGigData((prev) => ({ ...prev, latitude: lat, longitude: lon }));
+              <LogoPicker
+                onLogoSelected={(file) => {
+                  const previewUrl = URL.createObjectURL(file);
+                  setCompanyData((prev) => ({ ...prev, logo: file, logoPreviewUrl: previewUrl }));
                   setInlineComponent(null);
-                  handleGigCoordinatesReceived(lat, lon);
+                  handleLogoSelected(file, previewUrl);
                 }}
                 onSkip={() => {
                   setInlineComponent(null);
-                  handleGigLocationSkipped();
+                  handleLogoSkipped();
                 }}
               />
             );
-            setTimeout(() => scrollToInlineRef.current?.(), 150);
             break;
-          }
-          case GIG_FIELDS.LOCATION:
+
+          case COMPANY_FIELDS.LOGO:
+            // Handled by LogoPicker callback; if user types, treat as skip
             break;
-          case GIG_FIELDS.STATE:
+
+          case COMPANY_FIELDS.STATE:
+            // This case is handled by StateDistrictSelector callback
             break;
-          case GIG_FIELDS.DISTRICT:
+
+          case COMPANY_FIELDS.DISTRICT:
+            setCompanyData((prev) => ({ ...prev, district: value }));
+            await addAIMessage(`Great! District: ${value}. Do you have a company website URL?`);
+            setCurrentField(COMPANY_FIELDS.WEBSITE);
+            setInlineComponent(
+              <UrlInput
+                onUrlSubmit={(url) => {
+                  setCompanyData((prev) => ({ ...prev, websiteUrl: url }));
+                  setInlineComponent(null);
+                  handleWebsiteSubmitted(url);
+                }}
+                placeholder="Enter website URL or click skip..."
+              />
+            );
             break;
-          case GIG_FIELDS.PINCODE:
+
+          case COMPANY_FIELDS.WEBSITE:
+            // This case is handled by UrlInput callback
+            break;
+
+          case COMPANY_FIELDS.FUNDING:
+            // This case is handled by FundingSeriesBadges callback
+            break;
+
+          case COMPANY_FIELDS.LOCATION:
+            // This case is handled by GetCoordinatesButton callback
+            // But also allow manual input
             if (value.toLowerCase() !== "skip" && value) {
-              setGigData((prev) => ({ ...prev, pincode: value }));
+              // Try to parse lat,lon or lat lon
+              const coords = value.split(/[,\s]+/).map(v => v.trim()).filter(v => v);
+              if (coords.length >= 2) {
+                setCompanyData((prev) => ({
+                  ...prev,
+                  latitude: coords[0],
+                  longitude: coords[1],
+                }));
+                await addAIMessage(`Coordinates saved! What's the pincode? (Type "skip" if not available)`);
+                setCurrentField(COMPANY_FIELDS.PINCODE);
+              } else {
+                await addAIMessage(`Please provide both latitude and longitude separated by comma (e.g., 10.5276, 76.2144) or use the button above`);
+                setIsLoading(false);
+                return;
+              }
+            } else {
+              await addAIMessage(`No problem! What's the pincode? (Type "skip" if not available)`);
+              setCurrentField(COMPANY_FIELDS.PINCODE);
             }
-            await handleGigSubmit();
             break;
-          default:
+
+          case COMPANY_FIELDS.PINCODE:
+            if (value.toLowerCase() !== "skip" && value) {
+              setCompanyData((prev) => ({ ...prev, pincode: value }));
+            }
+            // Move to job fields
+            setCollectingCompany(false);
+            setCurrentField(JOB_FIELDS.TITLE);
+            await addAIMessage(`Excellent! Company information collected. Now let's add the job position details. What's the job title?`);
             break;
         }
-        setIsLoading(false);
-        return;
+      } else {
+        // Collecting job information
+        const value = extractValue(message);
+
+        switch (currentField) {
+          case JOB_FIELDS.TITLE:
+            setJobData((prev) => ({ ...prev, title: value }));
+            await addAIMessage(`Job title: ${value}. How many years of experience are required?`);
+            setCurrentField(JOB_FIELDS.YEARS);
+            setInlineComponent(
+              <ExperienceRangeSelect
+                onSelect={(years) => {
+                  setJobData((prev) => ({ ...prev, yearsRequired: years }));
+                  setInlineComponent(null);
+                  handleExperienceSelected(years);
+                }}
+                selectedValue={jobData?.yearsRequired}
+              />
+            );
+            break;
+
+          case JOB_FIELDS.YEARS:
+            // Handled by ExperienceRangeSelect callback
+            break;
+
+          case JOB_FIELDS.SALARY:
+            // Handled by SalaryRangeBadges callback
+            break;
+
+          case JOB_FIELDS.DESCRIPTION:
+            setJobData((prev) => ({ ...prev, jobDescription: value }));
+            await addAIMessage(`Perfect! I have all the information. Let me submit your job posting...`);
+            // Mark this message as final to show action buttons
+            setChatMessages((prev) => {
+              const updated = [...prev];
+              if (updated.length > 0 && updated[updated.length - 1].type === "ai") {
+                updated[updated.length - 1] = {
+                  ...updated[updated.length - 1],
+                  isFinalMessage: true,
+                };
+              }
+              return updated;
+            });
+            break;
+        }
       }
 
       setIsLoading(false);
@@ -699,249 +768,7 @@ export default function OnboardingPage() {
     setIsLoading(false);
   };
 
-  const handleGigLocationSkipped = async () => {
-    setIsLoading(true);
-    await addAIMessage("Which state are you in?");
-    setCurrentField(GIG_FIELDS.STATE);
-    setInlineComponent(
-      <StateDistrictSelector
-        onStateSelect={(state) => {
-          setGigData((prev) => ({ ...prev, state }));
-          setInlineComponent(null);
-          handleGigStateSelected(state);
-        }}
-        selectedState={gigData?.state}
-      />
-    );
-    setIsLoading(false);
-    setTimeout(() => scrollToInlineRef.current?.(), 150);
-  };
-
-  const handleGigCoordinatesReceived = async (lat, lon) => {
-    setIsLoading(true);
-    let state = null;
-    let district = null;
-    let postcode = null;
-    try {
-      const res = await fetch(
-        `/api/geocode/reverse?lat=${encodeURIComponent(lat)}&lon=${encodeURIComponent(lon)}`
-      );
-      if (res.ok) {
-        const data = await res.json();
-        state = data.state ?? null;
-        district = data.district ?? null;
-        postcode = data.postcode ?? null;
-      }
-    } catch (_) {}
-    if (state) setGigData((prev) => ({ ...prev, state }));
-    if (district) setGigData((prev) => ({ ...prev, district }));
-
-    if (state && district) {
-      let pincodes = [];
-      try {
-        const pinRes = await fetch(
-          `/api/pincodes/by-district?district=${encodeURIComponent(district)}&state=${encodeURIComponent(state)}`
-        );
-        if (pinRes.ok) {
-          const { pincodes: list } = await pinRes.json();
-          pincodes = Array.isArray(list) ? list.slice(0, 8) : [];
-        }
-      } catch (_) {}
-      if (postcode && !pincodes.includes(postcode)) {
-        pincodes = [postcode, ...pincodes].slice(0, 8);
-      }
-      await addAIMessage(pincodes.length ? "What's your pincode? (Choose one or skip)" : "What's your pincode? (Type pincode or \"skip\")");
-      setCurrentField(GIG_FIELDS.PINCODE);
-      if (pincodes.length > 0) {
-        setInlineComponent(
-          <PincodeDropdown
-            pincodes={pincodes}
-            onSelect={(pincode) => {
-              setGigData((prev) => ({ ...prev, pincode }));
-              setInlineComponent(null);
-              handleGigSubmit({ pincode });
-            }}
-            onSkip={() => {
-              setInlineComponent(null);
-              handleGigSubmit({});
-            }}
-          />
-        );
-        setTimeout(() => scrollToInlineRef.current?.(), 150);
-      }
-    } else if (state) {
-      await addAIMessage(`State: ${state}. Which district?`);
-      setCurrentField(GIG_FIELDS.DISTRICT);
-      setInlineComponent(
-        <StateDistrictSelector
-          onDistrictSelect={(district) => {
-            setGigData((prev) => ({ ...prev, district }));
-            setInlineComponent(null);
-            handleGigDistrictSelected(district);
-          }}
-          selectedDistrict={gigData?.district}
-          selectedState={state}
-          showDistrict={true}
-        />
-      );
-      setTimeout(() => scrollToInlineRef.current?.(), 150);
-    } else {
-      await addAIMessage("Which state are you in?");
-      setCurrentField(GIG_FIELDS.STATE);
-      setInlineComponent(
-        <StateDistrictSelector
-          onStateSelect={(state) => {
-            setGigData((prev) => ({ ...prev, state }));
-            setInlineComponent(null);
-            handleGigStateSelected(state);
-          }}
-          selectedState={gigData?.state}
-        />
-      );
-      setTimeout(() => scrollToInlineRef.current?.(), 150);
-    }
-    setIsLoading(false);
-  };
-
-  const handleGigStateSelected = async (state) => {
-    setIsLoading(true);
-    await addAIMessage(`State: ${state}. Which district?`);
-    setCurrentField(GIG_FIELDS.DISTRICT);
-    setInlineComponent(
-      <StateDistrictSelector
-        onDistrictSelect={(district) => {
-          setGigData((prev) => ({ ...prev, district }));
-          setInlineComponent(null);
-          handleGigDistrictSelected(district);
-        }}
-        selectedDistrict={gigData?.district}
-        selectedState={state}
-        showDistrict={true}
-      />
-    );
-    setIsLoading(false);
-    setTimeout(() => scrollToInlineRef.current?.(), 150);
-  };
-
-  const handleGigDistrictSelected = async (district) => {
-    setIsLoading(true);
-    let pincodes = [];
-    try {
-      const state = gigData?.state || "";
-      const pinRes = await fetch(
-        `/api/pincodes/by-district?district=${encodeURIComponent(district)}&state=${encodeURIComponent(state)}`
-      );
-      if (pinRes.ok) {
-        const { pincodes: list } = await pinRes.json();
-        pincodes = Array.isArray(list) ? list.slice(0, 8) : [];
-      }
-    } catch (_) {}
-    await addAIMessage(pincodes.length ? "What's your pincode? (Choose one or skip)" : "What's your pincode? (Type pincode or \"skip\")");
-    setCurrentField(GIG_FIELDS.PINCODE);
-    if (pincodes.length > 0) {
-      setInlineComponent(
-        <PincodeDropdown
-          pincodes={pincodes}
-          onSelect={(pincode) => {
-            setGigData((prev) => ({ ...prev, pincode }));
-            setInlineComponent(null);
-            handleGigSubmit({ pincode });
-          }}
-          onSkip={() => {
-            setInlineComponent(null);
-            handleGigSubmit({});
-          }}
-        />
-      );
-      setTimeout(() => scrollToInlineRef.current?.(), 150);
-    }
-    setIsLoading(false);
-  };
-
-  const handleGigSubmit = async (overrides = {}) => {
-    const g = { ...gigData, ...overrides };
-    if (!g?.title?.trim() || !g?.serviceType?.trim() || !g?.state?.trim() || !g?.district?.trim()) {
-      setChatMessages((prev) => [
-        ...prev,
-        { type: "ai", text: "Please complete title, service type, state and district. You can try again." },
-      ]);
-      setIsLoading(false);
-      return;
-    }
-    setIsLoading(true);
-    try {
-      let latitude = g.latitude != null && Number.isFinite(Number(g.latitude)) ? Number(g.latitude) : null;
-      let longitude = g.longitude != null && Number.isFinite(Number(g.longitude)) ? Number(g.longitude) : null;
-      if (latitude == null && longitude == null && g.pincode) {
-        try {
-          const res = await fetch(`/api/pincodes/by-pincode?pincode=${encodeURIComponent(g.pincode)}`);
-          if (res.ok) {
-            const data = await res.json();
-            if (data.pincode?.latitude != null && data.pincode?.longitude != null) {
-              latitude = data.pincode.latitude;
-              longitude = data.pincode.longitude;
-            }
-          }
-        } catch (_) {}
-      }
-      const response = await fetch("/api/gigs", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          title: g.title.trim(),
-          description: g.description?.trim() || undefined,
-          serviceType: g.serviceType.trim(),
-          expectedSalary: g.expectedSalary?.trim() || undefined,
-          experienceWithGig: g.experienceWithGig?.trim() || undefined,
-          customersTillDate: typeof g.customersTillDate === "number" && g.customersTillDate >= 0 ? g.customersTillDate : undefined,
-          state: g.state.trim(),
-          district: g.district.trim(),
-          pincode: g.pincode?.trim() || undefined,
-          locality: g.locality?.trim() || undefined,
-          latitude,
-          longitude,
-        }),
-      });
-      const result = await response.json().catch(() => ({}));
-      if (result.success && result.gig) {
-        setCollectingGig(false);
-        setGigData(null);
-        setCurrentField(COMPANY_FIELDS.NAME);
-        setChatMessages((prev) => [
-          ...prev,
-          {
-            type: "ai",
-            text: "🎉 Your gig has been posted! You can view it on the map in the \"Gig workers\" view.",
-            isFinalMessage: true,
-            isGigSuccess: true,
-          },
-        ]);
-        if (result.gig.latitude != null && result.gig.longitude != null && typeof sessionStorage !== "undefined") {
-          sessionStorage.setItem(
-            "zoomToGigCoords",
-            JSON.stringify({
-              lat: result.gig.latitude,
-              lng: result.gig.longitude,
-              view: "gig_workers",
-            })
-          );
-        }
-      } else {
-        setChatMessages((prev) => [
-          ...prev,
-          { type: "ai", text: `Sorry, we couldn't post your gig. ${result.error || "Please try again."}` },
-        ]);
-      }
-    } catch (err) {
-      console.error("Gig submit error:", err);
-      setChatMessages((prev) => [
-        ...prev,
-        { type: "ai", text: `Something went wrong. ${err?.message || "Please try again."}` },
-      ]);
-    } finally {
-      setIsLoading(false);
-    }
-  };
+  // Gig-related functions removed - Company-only onboarding
 
   // Handle coordinates received
   const handleCoordinatesReceived = async (lat, lon) => {
@@ -1139,11 +966,6 @@ export default function OnboardingPage() {
   // Handle view on map - submit first, then pass coordinates to map and show pindrop.
   // If submit fails we still navigate with coords when we have them so the pin always shows (user can retry save from chat).
   const handleViewOnMap = async () => {
-    if (typeof sessionStorage !== "undefined" && sessionStorage.getItem("zoomToGigCoords")) {
-      setIsNavigatingToMap(true);
-      setTimeout(() => router.push("/"), 2000);
-      return;
-    }
     const needSubmit = !jobData?.id || !companyData?.id;
     let submittedCompany = null;
     if (needSubmit) {
@@ -1588,28 +1410,17 @@ export default function OnboardingPage() {
                 type="button"
                 onClick={async () => {
                   try {
-                    if (userData?.accountType === "Individual") {
-                      const res = await fetch("/api/gigs?mine=1", { credentials: "same-origin" });
-                      const data = await res.json().catch(() => ({}));
-                      const gigs = data.success ? (data.gigs || []) : [];
-                      setChatMessages((prev) => [...prev, { type: "gigList", gigs }]);
-                    } else {
-                      const res = await fetch("/api/onboarding/my-jobs");
-                      const data = await res.json().catch(() => ({}));
-                      const jobs = data.success ? (data.jobs || []) : [];
-                      setChatMessages((prev) => [...prev, { type: "jobList", jobs }]);
-                    }
+                    const res = await fetch("/api/onboarding/my-jobs");
+                    const data = await res.json().catch(() => ({}));
+                    const jobs = data.success ? (data.jobs || []) : [];
+                    setChatMessages((prev) => [...prev, { type: "jobList", jobs }]);
                   } catch (e) {
                     console.error("Error fetching list:", e);
-                    if (userData?.accountType === "Individual") {
-                      setChatMessages((prev) => [...prev, { type: "gigList", gigs: [] }]);
-                    } else {
-                      setChatMessages((prev) => [...prev, { type: "jobList", jobs: [] }]);
-                    }
+                    setChatMessages((prev) => [...prev, { type: "jobList", jobs: [] }]);
                   }
                 }}
                 className="p-2 rounded-lg hover:bg-gray-100 transition-colors"
-                title={userData?.accountType === "Individual" ? "Your posted gigs" : "Your job postings"}
+                title="Your job postings"
               >
                 <List size={20} style={{ color: "#575757" }} />
               </button>
@@ -1741,8 +1552,7 @@ export default function OnboardingPage() {
               onViewOnMap={handleViewOnMap}
               onStartNext={handleStartNext}
               showFindOrPostButtons={chatMessages.length === 1 && !hasChosenPostGig}
-              accountType={userData?.accountType}
-              onFindJob={handleFindJob}
+              accountType="Company"
               onPostGig={handlePostGig}
             />
           </div>

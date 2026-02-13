@@ -29,6 +29,7 @@ function clerkFapiProxy(req: Request) {
 // Define public routes that don't require authentication
 const isPublicRoute = createRouteMatcher([
   '/onboarding',
+  '/onboarding.org',
   '/who-are-you',
   '/api/auth/signin',
   '/api/auth/login',

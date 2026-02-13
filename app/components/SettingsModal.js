@@ -163,9 +163,16 @@ export default function SettingsModal({ isOpen, onClose }) {
                 <p className={brand.text.weak}>Loading…</p>
               ) : activeSection === "general" ? (
                 <div className="space-y-4">
-                  <h2 className={`text-base font-semibold ${brand.text.strong}`}>
-                    My Account
-                  </h2>
+                  <div className="flex items-center gap-2">
+                    <h2 className={`text-base font-semibold ${brand.text.strong}`}>
+                      My Account
+                    </h2>
+                    {user?.accountType && user.accountType.trim() !== "" && (
+                      <span className="text-xs font-medium" style={{ color: "#F84416" }}>
+                        {user.accountType === "Individual" ? "Gig/Jobseeker" : user.accountType}
+                      </span>
+                    )}
+                  </div>
 
                   {/* Profile picture - label left, avatar + Change photo right */}
                   <div className="flex items-center justify-between gap-4 py-2">
@@ -192,7 +199,8 @@ export default function SettingsModal({ isOpen, onClose }) {
                         setAvatarError(null);
                         setShowAvatarModal(true);
                       }}
-                        className="text-sm font-medium text-brand-stroke-strong hover:text-brand underline underline-offset-2"
+                        className="text-sm font-medium text-brand underline underline-offset-2 hover:opacity-80"
+                        style={{ color: brand.color || "#F84416" }}
                       >
                         Change photo
                       </button>

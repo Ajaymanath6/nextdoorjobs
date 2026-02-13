@@ -62,7 +62,8 @@ export default function WhoAreYouPage() {
       });
       if (res.ok) {
         setTimeout(() => {
-          router.push("/onboarding");
+          const targetRoute = value === "Company" ? "/onboarding.org" : "/onboarding";
+          router.push(targetRoute);
         }, 2000);
       } else {
         const err = await res.json().catch(() => ({}));
