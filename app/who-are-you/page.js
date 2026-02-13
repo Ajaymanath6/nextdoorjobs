@@ -4,7 +4,7 @@ import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { useAuth } from "@clerk/nextjs";
 import themeClasses from "../theme-utility-classes.json";
-import { ACCOUNT_TYPES } from "../lib/constants/accountTypes";
+import { ACCOUNT_TYPES } from "../../lib/constants/accountTypes";
 import { Enterprise, UserAvatar } from "@carbon/icons-react";
 
 const brand = themeClasses.brand;
