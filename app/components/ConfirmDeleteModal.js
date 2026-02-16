@@ -50,9 +50,8 @@ export default function ConfirmDeleteModal({
           </button>
           <button
             type="button"
-            onClick={() => {
-              onConfirm();
-              onClose();
+            onClick={async () => {
+              await onConfirm();
             }}
             className="px-4 py-2 rounded-lg bg-red-600 text-white hover:bg-red-700 transition-colors text-sm font-medium"
           >

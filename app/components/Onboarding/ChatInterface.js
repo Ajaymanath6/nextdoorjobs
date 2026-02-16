@@ -706,17 +706,29 @@ export default function ChatInterface({ messages = [], onSendMessage, isLoading 
               method: "DELETE",
               credentials: "same-origin",
             });
-            if (res.ok) {
-              // Still call parent callback to refresh map markers
+            const data = await res.json().catch(() => ({ success: false }));
+            
+            if (res.ok && data.success) {
+              // Trigger map refresh via custom event (map listens for this)
+              if (typeof window !== "undefined") {
+                window.dispatchEvent(new CustomEvent("gigDeleted", { detail: { gigId: gigToDelete.id } }));
+              }
+              // Call parent callback to refresh chat list
               onGigDeleted?.();
             } else {
-              // If delete failed, refetch to restore correct state
+              // If delete failed, restore the gig in the list
+              const errorMsg = data.error || "Failed to delete gig";
+              console.error("Delete failed:", errorMsg);
+              // Refetch to restore correct state
               onGigDeleted?.();
+              // Optionally show error to user
+              alert(`Failed to delete gig: ${errorMsg}`);
             }
           } catch (err) {
             console.error("Delete failed:", err);
             // Refetch on error to restore correct state
             onGigDeleted?.();
+            alert("Failed to delete gig. Please try again.");
           } finally {
             setDeletingGigId(null);
             setGigToDelete(null);

@@ -613,9 +613,11 @@ const MapComponent = () => {
             width: ${size}px;
             height: ${size}px;
             border-radius: 50%;
-            background: linear-gradient(145deg, #f2f2f2 0%, #e8e8e8 50%, #e0e0e0 100%);
-            border: 1px solid rgba(0,0,0,0.08);
-            box-shadow: inset 0 1px 2px rgba(255,255,255,0.6), 0 2px 8px rgba(0,0,0,0.08);
+            background: rgba(255, 255, 255, 0.45);
+            backdrop-filter: blur(8px);
+            -webkit-backdrop-filter: blur(8px);
+            border: 1px solid rgba(255,255,255,0.6);
+            box-shadow: inset 0 1px 2px rgba(255,255,255,0.4), 0 2px 8px rgba(0,0,0,0.08);
             display: flex;
             align-items: center;
             justify-content: center;
@@ -729,27 +731,11 @@ const MapComponent = () => {
     setGigs([]);
   }, [searchMode]);
 
-  // Fetch gigs when switching to person mode (with or without location context)
+  // Fetch all gigs when in person mode (person icon = show all gigs; location filter only when user does a place search)
   useEffect(() => {
     if (searchMode !== "person" || !mapInstanceRef.current) return;
 
-    if (lastSearchedState || lastSearchedDistrict) {
-      const params = new URLSearchParams();
-      if (lastSearchedState) params.set("state", lastSearchedState);
-      if (lastSearchedDistrict) params.set("district", lastSearchedDistrict);
-      fetch(`/api/gigs?${params.toString()}`)
-        .then((r) => r.json())
-        .then((data) => {
-          if (data.success && Array.isArray(data.gigs)) {
-            setGigs(data.gigs);
-            renderGigMarkers(data.gigs);
-          }
-        })
-        .catch((err) => {
-          console.error("Error fetching gigs:", err);
-        });
-    } else {
-      // No location context: fetch all gigs so other users see all gigs on the map
+    const fetchGigs = () => {
       fetch("/api/gigs")
         .then((r) => r.json())
         .then((data) => {
@@ -761,8 +747,22 @@ const MapComponent = () => {
         .catch((err) => {
           console.error("Error fetching gigs:", err);
         });
-    }
-  }, [searchMode, lastSearchedState, lastSearchedDistrict]);
+    };
+
+    fetchGigs();
+
+    // Listen for gig deletion events to refresh the map
+    const handleGigDeleted = () => {
+      if (searchMode === "person" && mapInstanceRef.current) {
+        fetchGigs();
+      }
+    };
+
+    window.addEventListener("gigDeleted", handleGigDeleted);
+    return () => {
+      window.removeEventListener("gigDeleted", handleGigDeleted);
+    };
+  }, [searchMode, mapReady]);
 
   // Perform district-level zoom (state → district, stops at district)
   const performDistrictZoom = (dbData, showNoCompaniesMessage = false) => {
