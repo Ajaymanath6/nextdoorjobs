@@ -3133,17 +3133,19 @@ const MapComponent = () => {
                     <button
                       type="button"
                       aria-label="Map view"
-                      className={`p-2 border-0 ${searchBar["toggle-segment"]} ${searchBar["toggle-segment-active"]} !rounded-l-full !rounded-r-none`}
+                      className={`flex items-center gap-1.5 px-3 py-2 border-0 ${searchBar["toggle-segment"]} ${searchBar["toggle-segment-active"]} !rounded-l-full !rounded-r-none`}
                     >
                       <EarthFilled size={20} className={`w-5 h-5 shrink-0 ${searchBar["toggle-segment-icon-active"]} text-brand`} />
+                      <span className={`text-sm font-medium ${searchBar["toggle-segment-icon-active"]}`}>Map</span>
                     </button>
                     <button
                       type="button"
                       onClick={() => router.push("/onboarding")}
                       aria-label="Chat / onboarding"
-                      className={`p-2 border-0 ${searchBar["toggle-segment"]} !rounded-r-full !rounded-l-none`}
+                      className={`flex items-center gap-1.5 px-3 py-2 border-0 ${searchBar["toggle-segment"]} !rounded-r-full !rounded-l-none`}
                     >
                       <Chat size={20} className={`w-5 h-5 shrink-0 ${searchBar["toggle-segment-icon"]}`} />
+                      <span className={`text-sm font-medium ${searchBar["toggle-segment-icon"]}`}>Chat</span>
                     </button>
                   </div>
                 </div>

@@ -1884,16 +1884,18 @@ setCurrentField(GIG_FIELDS.CUSTOMERS_TILL_DATE);
                     router.push("/");
                   }}
                   aria-label="Map view"
-                  className="p-2 border-0 rounded-l-full rounded-r-none bg-transparent hover:bg-gray-50 transition-colors"
+                  className="flex items-center gap-1.5 px-3 py-2 border-0 rounded-l-full rounded-r-none bg-transparent hover:bg-gray-50 transition-colors"
                 >
                   <EarthFilled size={20} className="w-5 h-5 shrink-0 text-[#575757]" />
+                  <span className="text-sm font-medium text-[#575757]">Map</span>
                 </button>
                 <button
                   type="button"
                   aria-label="Chat"
-                  className="p-2 border-0 rounded-r-full rounded-l-none bg-brand/10 transition-colors"
+                  className="flex items-center gap-1.5 px-3 py-2 border-0 rounded-r-full rounded-l-none bg-brand/10 transition-colors"
                 >
                   <Chat size={20} className="w-5 h-5 shrink-0 text-brand" />
+                  <span className="text-sm font-medium text-brand">Chat</span>
                 </button>
               </div>
             </div>
@@ -2083,6 +2085,22 @@ setCurrentField(GIG_FIELDS.CUSTOMERS_TILL_DATE);
               onFindJob={handleFindJob}
               onPostGig={handlePostGig}
               onGigDeleted={async () => {
+                try {
+                  const res = await fetch("/api/gigs?mine=1", { credentials: "same-origin" });
+                  const data = await res.json().catch(() => ({}));
+                  const gigs = data.success ? (data.gigs || []) : [];
+                  setChatMessages((prev) => {
+                    const idx = prev.map((m, i) => (m.type === "gigList" ? i : -1)).filter((i) => i >= 0).pop();
+                    if (idx == null) return prev;
+                    const next = [...prev];
+                    next[idx] = { type: "gigList", gigs };
+                    return next;
+                  });
+                } catch (e) {
+                  console.error("Error refreshing gig list:", e);
+                }
+              }}
+              onGigEdited={async () => {
                 try {
                   const res = await fetch("/api/gigs?mine=1", { credentials: "same-origin" });
                   const data = await res.json().catch(() => ({}));

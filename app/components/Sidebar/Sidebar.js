@@ -21,7 +21,7 @@ import {
   Settings,
 } from "@carbon/icons-react";
 
-export default function Sidebar({ activeItem = "jobs-near-you", onToggle, isOpen: externalIsOpen }) {
+export default function Sidebar({ activeItem = "jobs-near-you", onToggle, isOpen: externalIsOpen, onOpenSettings }) {
   const router = useRouter();
   const { signOut } = useClerk();
   const [isOpen, setIsOpen] = useState(externalIsOpen !== undefined ? externalIsOpen : true);
@@ -59,6 +59,8 @@ export default function Sidebar({ activeItem = "jobs-near-you", onToggle, isOpen
     { id: "manage-jds", label: "Manage JDs", icon: Archive, route: "/manage-jds" },
     { id: "jobs-near-you", label: "Jobs Near You", icon: EarthFilled, route: "/jobs-near-you" },
   ];
+
+  const isDev = process.env.NODE_ENV !== "production";
 
   const handleNavigation = (route) => {
     router.push(route);
@@ -231,12 +233,14 @@ export default function Sidebar({ activeItem = "jobs-near-you", onToggle, isOpen
           {navigationItems.map((item) => {
             const IconComponent = item.icon;
             const isActive = activeItem === item.id;
-            const isDisabled = !isActive && item.id !== "jobs-near-you";
+            const isComingSoon = !isDev && item.id !== "jobs-near-you";
+            const isDisabled = isComingSoon || (!isActive && item.id !== "jobs-near-you");
             return (
               <li key={item.id}>
                 <button
                   onClick={() => !isDisabled && handleNavigation(item.route)}
                   disabled={isDisabled}
+                  title={isComingSoon ? "Coming soon" : undefined}
                   className={`${sidebar["nav-button"]} ${
                     isOpen ? sidebar["nav-button-expanded"] : sidebar["nav-button-collapsed"]
                   } ${isActive ? sidebar["nav-button-active"] : sidebar["nav-button-hover"]} ${
@@ -262,10 +266,12 @@ export default function Sidebar({ activeItem = "jobs-near-you", onToggle, isOpen
       {/* What's New Section */}
       <div className="p-2 pt-1 pb-1">
         <button
-          onClick={() => handleNavigation("/roadmap")}
+          onClick={isDev ? () => handleNavigation("/roadmap") : undefined}
+          disabled={!isDev}
+          title={isDev ? "What's New" : "Coming soon"}
           className={`${sidebar["nav-button"]} ${
             isOpen ? sidebar["nav-button-expanded"] : sidebar["nav-button-collapsed"]
-          } ${sidebar["nav-button-hover"]}`}
+          } ${sidebar["nav-button-hover"]} ${!isDev ? "opacity-50 cursor-not-allowed" : ""}`}
         >
           <div className={sidebar["nav-icon-container"]}>
             <Bullhorn
@@ -363,7 +369,7 @@ export default function Sidebar({ activeItem = "jobs-near-you", onToggle, isOpen
                 className="w-full text-left px-4 py-2 text-sm text-brand-text-strong hover:bg-brand-bg-fill rounded transition-colors flex items-center gap-2"
                 onClick={() => {
                   setShowUserDropdown(false);
-                  router.push("/settings");
+                  onOpenSettings?.();
                 }}
               >
                 <Settings size={20} className="text-brand-stroke-strong shrink-0" />

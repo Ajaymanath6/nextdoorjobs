@@ -1,13 +1,17 @@
 "use client";
 
+import { useState } from "react";
 import Sidebar from "../components/Sidebar/Sidebar";
 import InputField from "../components/InputField";
+import SettingsModal from "../components/SettingsModal";
 
 export default function RoadmapPage() {
+  const [showSettingsModal, setShowSettingsModal] = useState(false);
+
   return (
     <div className="flex h-screen overflow-hidden bg-brand-bg-fill">
       {/* Sidebar - Left Side */}
-      <Sidebar activeItem="roadmap" />
+      <Sidebar activeItem="roadmap" onOpenSettings={() => setShowSettingsModal(true)} />
 
       {/* Main Content - Right Side */}
       <main className="flex-1 overflow-y-auto bg-brand-bg-fill">
@@ -89,6 +93,11 @@ export default function RoadmapPage() {
           </div>
         </div>
       </main>
+
+      <SettingsModal
+        isOpen={showSettingsModal}
+        onClose={() => setShowSettingsModal(false)}
+      />
     </div>
   );
 }

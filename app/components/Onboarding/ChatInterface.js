@@ -3,12 +3,13 @@
 import { useEffect, useRef, useState } from "react";
 import Image from "next/image";
 import { useRouter } from "next/navigation";
-import { Screen, Document, Enterprise, Save, Location, Add, OverflowMenuVertical, TrashCan } from "@carbon/icons-react";
+import { Screen, Document, Enterprise, Save, Location, Add, OverflowMenuVertical, TrashCan, Edit } from "@carbon/icons-react";
 import TypingAnimation from "./TypingAnimation";
 import { getAvatarUrlById } from "../../../lib/avatars";
 import ConfirmDeleteModal from "../ConfirmDeleteModal";
+import EditGigModal from "./EditGigModal";
 
-export default function ChatInterface({ messages = [], onSendMessage, isLoading = false, inlineComponent = null, typingText = null, onScrollRequest, onSave, onViewOnMap, onStartNext, showFindOrPostButtons = false, accountType, onFindJob, onPostGig, onGigDeleted }) {
+export default function ChatInterface({ messages = [], onSendMessage, isLoading = false, inlineComponent = null, typingText = null, onScrollRequest, onSave, onViewOnMap, onStartNext, showFindOrPostButtons = false, accountType, onFindJob, onPostGig, onGigDeleted, onGigEdited }) {
   const router = useRouter();
   const messagesEndRef = useRef(null);
   const inputRef = useRef(null);
@@ -23,6 +24,8 @@ export default function ChatInterface({ messages = [], onSendMessage, isLoading 
   const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false);
   const [gigToDelete, setGigToDelete] = useState(null);
   const [deletingGigId, setDeletingGigId] = useState(null);
+  const [editModalOpen, setEditModalOpen] = useState(false);
+  const [gigToEdit, setGigToEdit] = useState(null);
 
   const handleViewGigOnMap = (gig) => {
     if (gig.latitude != null && gig.longitude != null) {
@@ -242,7 +245,7 @@ export default function ChatInterface({ messages = [], onSendMessage, isLoading 
                                   })}
                                 </p>
                               </div>
-                              {/* See on map + Delete on Right */}
+                              {/* See on map + Edit + Delete on Right */}
                               <div className="shrink-0 flex items-center gap-1.5">
                                 {hasCoordinates ? (
                                   <button
@@ -253,6 +256,20 @@ export default function ChatInterface({ messages = [], onSendMessage, isLoading 
                                   >
                                     <Location size={14} />
                                     <span>See on map</span>
+                                  </button>
+                                ) : null}
+                                {onGigEdited ? (
+                                  <button
+                                    type="button"
+                                    onClick={() => {
+                                      setGigToEdit(gig);
+                                      setEditModalOpen(true);
+                                    }}
+                                    className="p-1.5 rounded-md text-brand-text-weak hover:bg-brand-bg-fill hover:text-brand-stroke-strong transition-colors"
+                                    title="Edit gig"
+                                    aria-label="Edit gig"
+                                  >
+                                    <Edit size={18} />
                                   </button>
                                 ) : null}
                                 {onGigDeleted ? (
@@ -723,6 +740,18 @@ export default function ChatInterface({ messages = [], onSendMessage, isLoading 
         }}
         title="Delete this gig?"
         message="This will remove the gig from all instances, database, and the map. This cannot be undone."
+      />
+
+      <EditGigModal
+        isOpen={editModalOpen}
+        onClose={() => {
+          setEditModalOpen(false);
+          setGigToEdit(null);
+        }}
+        gig={gigToEdit}
+        onSaved={() => {
+          onGigEdited?.();
+        }}
       />
     </div>
   );
