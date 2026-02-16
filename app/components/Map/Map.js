@@ -29,29 +29,6 @@ import CollegeAutocomplete from "./CollegeAutocomplete";
 import EmptyState from "./EmptyState";
 import { getStateCenter } from "../../../lib/indiaStateCenters";
 import { getAvatarUrlById } from "../../../lib/avatars";
-// 10 Thrissur district coordinates for thank-you badges (from update-pincode-coordinates.js)
-const THRISSUR_BADGE_COORDINATES = [
-  { lat: 10.5239, lon: 76.2123 },
-  { lat: 10.5361, lon: 76.2023 },
-  { lat: 10.5303, lon: 76.1912 },
-  { lat: 10.5208, lon: 76.2014 },
-  { lat: 10.528, lon: 76.225 },
-  { lat: 10.5015, lon: 76.2234 },
-  { lat: 10.503, lon: 76.2105 },
-  { lat: 10.5476, lon: 76.2285 },
-  { lat: 10.554, lon: 76.216 },
-  { lat: 10.512, lon: 76.178 },
-];
-
-// Logo paths for Irinjalakuda companies (jobs mode): order matches locations.json
-const IRINJALAKUDA_LOGO_URLS = [
-  "/chatgpt.png",
-  "/elevenlabs.png",
-  "/gemni.png",
-  "/whisper.png",
-  "/claude.png",
-];
-
 // Import CSS files (Next.js handles these)
 import "leaflet/dist/leaflet.css";
 import "leaflet.markercluster/dist/MarkerCluster.css";
@@ -135,14 +112,12 @@ const MapComponent = () => {
 
   // Search bar mode toggle: "person" (users) or "job" (suitcase) - UI only for now
   const [searchMode, setSearchMode] = useState("job");
-  // Last district/state from locality search; used for Thrissur badges and for gig workers fetch
+  // Last district/state from locality search (e.g. for gig workers fetch)
   const [lastSearchedDistrict, setLastSearchedDistrict] = useState(null);
   const [lastSearchedState, setLastSearchedState] = useState(null);
-  const showThrissurBadges = searchMode === "person" && lastSearchedDistrict === "Thrissur";
   const [gigs, setGigs] = useState([]);
   const gigMarkersRef = useRef([]);
   const gigClusterGroupRef = useRef(null);
-  const thrissurBadgeMarkersRef = useRef([]);
   const [mobileSearchExpanded, setMobileSearchExpanded] = useState(false);
   const [showSearchModeDropdown, setShowSearchModeDropdown] = useState(false);
   const searchModeDropdownRef = useRef(null);
@@ -464,40 +439,9 @@ const MapComponent = () => {
     });
     clusterGroupRef.current = clusterGroup;
 
-    const isIrinjalakudaJobs =
-      searchMode === "job" &&
-      companies.length === 5 &&
-      companies[0]?.locality === "Irinjalakuda";
-
     // Create markers for each company
     companies.forEach((company, index) => {
       const companyName = company.company_name || company.name;
-
-      if (isIrinjalakudaJobs) {
-        const logoUrl = company.logoPath || company.logoUrl || null;
-        const customIcon = createGeminiJobIcon(L, 50, logoUrl);
-        const marker = L.marker([company.latitude, company.longitude], {
-          icon: customIcon,
-          zIndexOffset: 1000 + index,
-          opacity: 1,
-        });
-        marker.companyData = company;
-        const tooltipContent = `
-          <div style="font-family: 'Open Sans', sans-serif; padding: 6px 8px; min-width: 120px;">
-            <div style="font-weight: 600; font-size: 13px; color: #0A0A0A; margin-bottom: 4px;">${companyName}</div>
-            <div style="font-size: 12px; color: #1A1A1A;">${company.type || ""}</div>
-          </div>
-        `;
-        marker.bindTooltip(tooltipContent, {
-          direction: "top",
-          permanent: false,
-          className: "company-tooltip",
-        });
-        clusterGroup.addLayer(marker);
-        companyMarkersRef.current.push(marker);
-        return;
-      }
-
       const logoUrl = company.logoPath || company.logoUrl || null;
       const customIcon = createGeminiJobIcon(L, 50, logoUrl);
 
@@ -1182,19 +1126,6 @@ const MapComponent = () => {
     });
   };
 
-  // Circular company icon for Irinjalakuda (jobs mode): image + light gray border
-  const createCircularCompanyIcon = (L, imageUrl, size = 50) => {
-    const lightGrayBorder = "#d1d5db";
-    const html = `<div class="company-marker company-marker-circular" style="position:relative;width:${size}px;height:${size}px;border-radius:50%;border:2px solid ${lightGrayBorder};overflow:hidden;display:flex;align-items:center;justify-content:center;cursor:pointer;transition:transform 0.2s ease,box-shadow 0.2s ease;box-shadow:0 2px 8px rgba(0,0,0,0.12);"><img src="${imageUrl}" alt="" style="width:100%;height:100%;object-fit:cover;" /></div>`;
-    return L.divIcon({
-      html,
-      className: "custom-pindrop-marker",
-      iconSize: [size, size],
-      iconAnchor: [size / 2, size],
-      popupAnchor: [0, -size - 10],
-    });
-  };
-
   // Job posting pindrop: round, primary border, shadow; optional logoUrl (else gemni.png). onerror fallback when logo fails to load.
   const PRIMARY_BORDER = "#F84416";
   const DEFAULT_LOGO = "/gemni.png";
@@ -1299,46 +1230,6 @@ const MapComponent = () => {
       }
     };
   }, [isClient]);
-
-  // Thrissur thank-you badges as Leaflet markers (no jump on zoom, same as company markers)
-  const THRISSUR_BADGE_LOGO_URL =
-    "https://vucvdpamtrjkzmubwlts.supabase.co/storage/v1/object/public/users/user_2zMtrqo9RMaaIn4f8F2z3oeY497/avatar.png";
-  useEffect(() => {
-    if (!showThrissurBadges) {
-      const map = mapInstanceRef.current;
-      if (map && thrissurBadgeMarkersRef.current.length > 0) {
-        thrissurBadgeMarkersRef.current.forEach((marker) => {
-          map.removeLayer(marker);
-        });
-        thrissurBadgeMarkersRef.current = [];
-      }
-      return;
-    }
-    const map = mapInstanceRef.current;
-    if (!map || typeof window === "undefined" || !window.L) return;
-    const L = window.L;
-    const size = 90;
-    const logoSize = 36;
-    const html = `<div style="width:${size}px;height:${size}px;border-radius:50%;display:flex;align-items:center;justify-content:center;background:transparent;pointer-events:none;"><img src="${THRISSUR_BADGE_LOGO_URL}" alt="" style="width:${logoSize}px;height:${logoSize}px;border-radius:50%;object-fit:cover;box-shadow:0 2px 8px rgba(0,0,0,0.15);" onerror="this.src='https://placehold.co/96x96/27272a/ffffff?text=Logo'" /></div>`;
-    const icon = L.divIcon({
-      html,
-      className: "thrissur-thankyou-badge",
-      iconSize: [size, size],
-      iconAnchor: [size / 2, size / 2],
-    });
-    const markers = THRISSUR_BADGE_COORDINATES.map(({ lat, lon }) => {
-      const marker = L.marker([lat, lon], { icon });
-      marker.addTo(map);
-      return marker;
-    });
-    thrissurBadgeMarkersRef.current = markers;
-    return () => {
-      markers.forEach((marker) => {
-        if (map.hasLayer(marker)) map.removeLayer(marker);
-      });
-      thrissurBadgeMarkersRef.current = [];
-    };
-  }, [showThrissurBadges]);
 
   // Add markers when locations data and map are ready (companies only; no home)
   useEffect(() => {
