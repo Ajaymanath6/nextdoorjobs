@@ -437,12 +437,16 @@ export default function OnboardingPage() {
             setInlineComponent(
               <ServiceTypeSelector
                 onSelect={async (serviceType) => {
+                  // Add user message showing the selection
+                  setChatMessages((prev) => [...prev, { type: "user", text: serviceType }]);
                   setGigData((prev) => ({ ...prev, serviceType }));
                   setInlineComponent(null);
                   await addAIMessage("What's the expected salary for this gig?");
                   setInlineComponent(
                     <SalaryInput
                       onSubmit={async (salary) => {
+                        // Add user message showing the selection
+                        setChatMessages((prev) => [...prev, { type: "user", text: salary }]);
                         setGigData((prev) => ({ ...prev, expectedSalary: salary }));
                         setInlineComponent(null);
                         await addAIMessage("Tell us your years of experience with this gig.");
@@ -499,11 +503,15 @@ export default function OnboardingPage() {
                   setTimeout(() => scrollToInlineRef.current?.(), 150);
                 }}
                 onSkip={async () => {
+                  // Add user message for skip
+                  setChatMessages((prev) => [...prev, { type: "user", text: "skip" }]);
                   setInlineComponent(null);
                   await addAIMessage("What's the expected salary for this gig?");
                   setInlineComponent(
                     <SalaryInput
                       onSubmit={async (salary) => {
+                        // Add user message showing the selection
+                        setChatMessages((prev) => [...prev, { type: "user", text: salary }]);
                         setGigData((prev) => ({ ...prev, expectedSalary: salary }));
                         setInlineComponent(null);
                         await addAIMessage("Tell us your years of experience with this gig.");
@@ -572,6 +580,8 @@ export default function OnboardingPage() {
             setInlineComponent(
               <SalaryInput
                 onSubmit={async (salary) => {
+                  // Add user message showing the selection
+                  setChatMessages((prev) => [...prev, { type: "user", text: salary }]);
                   setGigData((prev) => ({ ...prev, expectedSalary: salary }));
                   setInlineComponent(null);
                   await addAIMessage("Tell us your years of experience with this gig.");
@@ -598,6 +608,8 @@ setCurrentField(GIG_FIELDS.CUSTOMERS_TILL_DATE);
                   setTimeout(() => scrollToInlineRef.current?.(), 150);
                 }}
                 onSkip={async () => {
+                  // Add user message for skip
+                  setChatMessages((prev) => [...prev, { type: "user", text: "skip" }]);
                   setInlineComponent(null);
                   await addAIMessage("Tell us your years of experience with this gig.");
                   setInlineComponent(
