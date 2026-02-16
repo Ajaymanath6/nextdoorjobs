@@ -81,7 +81,7 @@ export default function AddHomeModal({ isOpen, onClose, onSaved, initialHome }) 
   const [saving, setSaving] = useState(false);
   const [saveError, setSaveError] = useState(null);
 
-  const inputClass = "w-full px-4 py-2 border border-brand-stroke-weak rounded-lg focus:outline-none focus:border-brand focus:ring-1 text-sm";
+  const inputClass = "w-full px-4 py-2 border border-brand-stroke-strong rounded-lg focus:outline-none focus:border-brand focus:ring-1 text-sm text-brand-text-strong placeholder:text-brand-text-placeholder";
   const buttonClass = "w-full px-4 py-3 bg-brand text-white rounded-lg hover:opacity-90 transition-colors font-medium disabled:opacity-50 disabled:cursor-not-allowed text-sm";
   const fontStyle = { fontFamily: "Open Sans, sans-serif", fontSize: "14px" };
 

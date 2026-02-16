@@ -1876,7 +1876,7 @@ setCurrentField(GIG_FIELDS.CUSTOMERS_TILL_DATE);
           <div className="bg-white/95 backdrop-blur-sm px-6 py-4 flex items-center justify-between border-b border-[#E5E5E5] relative z-30 flex-shrink-0 overflow-visible">
             <div className="flex items-center gap-3">
               {/* Globe | Chat toggle - same as map search bar; Chat selected here */}
-              <div className="bg-white border border-[#E5E5E5] overflow-hidden rounded-md shrink-0">
+              <div className="bg-white border border-[#E5E5E5] overflow-hidden rounded-full shrink-0">
                 <button
                   type="button"
                   onClick={() => {
@@ -1884,7 +1884,7 @@ setCurrentField(GIG_FIELDS.CUSTOMERS_TILL_DATE);
                     router.push("/");
                   }}
                   aria-label="Map view"
-                  className="flex items-center gap-1.5 px-3 py-2 border-0 rounded-l-md rounded-r-none bg-transparent hover:bg-gray-50 transition-colors"
+                  className="flex items-center gap-1.5 px-3 py-2 border-0 rounded-l-full rounded-r-none bg-transparent hover:bg-gray-50 transition-colors"
                 >
                   <ArrowLeft size={16} className="w-4 h-4 shrink-0 text-[#575757]" />
                   <EarthFilled size={20} className="w-5 h-5 shrink-0 text-[#575757]" />
@@ -1893,7 +1893,7 @@ setCurrentField(GIG_FIELDS.CUSTOMERS_TILL_DATE);
                 <button
                   type="button"
                   aria-label="Chat"
-                  className="flex items-center gap-1.5 px-3 py-2 border-0 rounded-r-md rounded-l-none bg-brand/10 transition-colors"
+                  className="flex items-center gap-1.5 px-3 py-2 border-0 rounded-r-full rounded-l-none bg-brand/10 transition-colors"
                 >
                   <Chat size={20} className="w-5 h-5 shrink-0 text-brand" />
                   <span className="text-sm font-medium text-brand">Chat</span>
