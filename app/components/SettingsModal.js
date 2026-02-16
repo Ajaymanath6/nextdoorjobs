@@ -32,6 +32,7 @@ export default function SettingsModal({ isOpen, onClose }) {
   const [avatarUploading, setAvatarUploading] = useState(false);
   const [avatarError, setAvatarError] = useState(null);
   const [addEmailValue, setAddEmailValue] = useState("");
+  const fileInputRef = useRef(null);
 
   useEffect(() => {
     if (!isOpen) return;
@@ -367,7 +368,24 @@ export default function SettingsModal({ isOpen, onClose }) {
               <Close size={20} className="text-brand-stroke-strong" />
             </button>
           </div>
+          <input
+            ref={fileInputRef}
+            type="file"
+            accept="image/*"
+            className="hidden"
+            onChange={handleFileInputChange}
+          />
           <div className="grid grid-cols-3 gap-3">
+            <button
+              type="button"
+              disabled={avatarSaving || avatarUploading}
+              onClick={() => fileInputRef.current?.click()}
+              className="w-full aspect-square rounded-full border-2 border-dashed border-brand-stroke-border hover:border-brand hover:bg-brand-bg-fill flex items-center justify-center transition-colors focus:outline-none focus:ring-2 focus:ring-brand disabled:opacity-50"
+              title="Upload photo from device"
+              aria-label="Upload photo from device"
+            >
+              <Add size={28} className="text-brand-stroke-strong" />
+            </button>
             {AVATARS.map((avatar) => (
               <button
                 key={avatar.id}
