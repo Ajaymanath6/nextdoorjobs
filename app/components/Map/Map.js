@@ -23,6 +23,7 @@ import {
 import { RiArrowDownSLine } from "@remixicon/react";
 import FilterDropdown from "./FilterDropdown";
 import FilterBottomSheet from "./FilterBottomSheet";
+import GigFilterDropdown from "./GigFilterDropdown";
 import LocalityAutocomplete from "./LocalityAutocomplete";
 import JobTitleAutocomplete from "./JobTitleAutocomplete";
 import CollegeAutocomplete from "./CollegeAutocomplete";
@@ -121,6 +122,10 @@ const MapComponent = () => {
   const [mobileSearchExpanded, setMobileSearchExpanded] = useState(false);
   const [showSearchModeDropdown, setShowSearchModeDropdown] = useState(false);
   const searchModeDropdownRef = useRef(null);
+  const [selectedGigType, setSelectedGigType] = useState(null);
+  const [showGigFilterDropdown, setShowGigFilterDropdown] = useState(false);
+  const gigFilterDropdownRef = useRef(null);
+  const gigFilterButtonRef = useRef(null);
 
   // Parse response as JSON safely (avoids "Unexpected token '<'" when server returns HTML)
   const parseJsonResponse = async (response) => {
@@ -497,7 +502,13 @@ const MapComponent = () => {
     }
     gigMarkersRef.current = [];
 
-    const withCoords = (gigsToRender || []).filter(
+    // Filter by selected gig type if one is selected
+    let filteredGigs = gigsToRender || [];
+    if (selectedGigType) {
+      filteredGigs = filteredGigs.filter(g => g.serviceType === selectedGigType);
+    }
+
+    const withCoords = filteredGigs.filter(
       (g) =>
         g.latitude != null &&
         g.longitude != null &&
@@ -634,14 +645,14 @@ const MapComponent = () => {
         : "";
       const popupContent = `
         <div style="font-family: 'Open Sans', sans-serif; padding: 12px; min-width: 280px; max-width: 320px;">
-          <div style="display: flex; align-items: flex-start; gap: 8px; margin-bottom: 12px;">
-            <div style="flex-shrink: 0; display: flex; flex-direction: column; align-items: center;">
-              <img src="${userAvatarUrl}" alt="${escapeHtml(userName)}" style="width: 40px; height: 40px; border-radius: 50%; object-fit: cover; border: 2px solid #E5E5E5;" onerror="this.src='/avatars/avatar1.png'" />
-              ${serviceBadge}
+          <div style="display: flex; align-items: flex-start; gap: 12px; margin-bottom: 12px;">
+            <div style="flex-shrink: 0;">
+              <img src="${userAvatarUrl}" alt="${escapeHtml(userName)}" style="width: 60px; height: 60px; border-radius: 50%; object-fit: cover; border: 3px solid #E5E5E5;" onerror="this.src='/avatars/avatar1.png'" />
             </div>
             <div style="flex: 1; min-width: 0;">
-              <div style="font-weight: 600; font-size: 16px; color: #0A0A0A;">${escapeHtml(gig.title || "")}</div>
-              <div style="font-size: 13px; color: #737373;">${escapeHtml(userName)}</div>
+              <div style="font-weight: 600; font-size: 17px; color: #0A0A0A; margin-bottom: 4px;">${escapeHtml(gig.title || "")}</div>
+              <div style="font-size: 14px; color: #737373; margin-bottom: 6px;">${escapeHtml(userName)}</div>
+              ${serviceBadge}
             </div>
           </div>
           ${gig.description ? `<div style="font-size: 13px; color: #1A1A1A; margin-bottom: 10px; line-height: 1.5;">${escapeHtml(gig.description)}</div>` : ""}
@@ -673,7 +684,15 @@ const MapComponent = () => {
     }
     gigMarkersRef.current = [];
     setGigs([]);
+    setSelectedGigType(null); // Clear filter when switching modes
   }, [searchMode]);
+
+  // Re-render gigs when filter changes
+  useEffect(() => {
+    if (searchMode === "person" && gigs.length > 0 && mapInstanceRef.current) {
+      renderGigMarkers(gigs);
+    }
+  }, [selectedGigType]);
 
   // Fetch all gigs when in person mode (person icon = show all gigs; location filter only when user does a place search)
   useEffect(() => {
@@ -2263,6 +2282,28 @@ const MapComponent = () => {
     };
   }, [showFilterDropdown]);
 
+  // Close gig filter dropdown when clicking outside
+  useEffect(() => {
+    const handleClickOutside = (event) => {
+      if (
+        gigFilterDropdownRef.current &&
+        !gigFilterDropdownRef.current.contains(event.target) &&
+        gigFilterButtonRef.current &&
+        !gigFilterButtonRef.current.contains(event.target)
+      ) {
+        setShowGigFilterDropdown(false);
+      }
+    };
+
+    if (showGigFilterDropdown) {
+      document.addEventListener("mousedown", handleClickOutside);
+    }
+
+    return () => {
+      document.removeEventListener("mousedown", handleClickOutside);
+    };
+  }, [showGigFilterDropdown]);
+
   // Close search mode dropdown when clicking outside (mobile)
   useEffect(() => {
     const handleClickOutside = (event) => {
@@ -3044,6 +3085,39 @@ const MapComponent = () => {
                     <UserAvatar size={24} className="text-brand-stroke-strong w-6 h-6 shrink-0" />
                   </button>
                 </div>
+
+                {/* Gig filter button - desktop only, only visible in person mode */}
+                {searchMode === "person" && (
+                  <div className="hidden md:flex items-center shrink-0 ml-1 relative">
+                    <button
+                      ref={gigFilterButtonRef}
+                      type="button"
+                      onClick={() => setShowGigFilterDropdown(!showGigFilterDropdown)}
+                      className="flex items-center gap-1.5 px-3 py-1.5 bg-brand-bg-white border border-brand-stroke-weak text-brand-text-strong hover:bg-brand-bg-fill rounded-md text-sm font-medium transition-colors"
+                      style={{ fontFamily: "Open Sans" }}
+                      aria-label="Filter by service type"
+                    >
+                      <Filter size={16} className="shrink-0" />
+                      <span>{selectedGigType || "All Gigs"}</span>
+                      <RiArrowDownSLine size={16} className="shrink-0" />
+                    </button>
+                    <GigFilterDropdown
+                      isOpen={showGigFilterDropdown}
+                      onClose={() => setShowGigFilterDropdown(false)}
+                      dropdownRef={gigFilterDropdownRef}
+                      position={{
+                        top: "100%",
+                        bottom: "auto",
+                        right: "0",
+                        left: "auto",
+                        marginTop: "8px",
+                      }}
+                      width="300px"
+                      selectedGigType={selectedGigType}
+                      onSelect={(type) => setSelectedGigType(type)}
+                    />
+                  </div>
+                )}
 
                 {/* View toggle: Globe (map) | Chat (onboarding) - inside search bar, right end, desktop only; bg-white, fully rounded */}
                 <div className="hidden md:flex items-center shrink-0 ml-1">

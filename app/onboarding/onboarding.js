@@ -295,39 +295,40 @@ export default function OnboardingPage() {
 
   // Restore chat state from localStorage when userData is available
   useEffect(() => {
-    if (userData && chatMessages.length === 0) {
-      // Only restore if we have userData and chat is empty (initial load)
-      const userId = userData?.id || userData?.email || "anonymous";
-      try {
-        const saved = localStorage.getItem(`onboarding_chat_state_${userId}`);
-        if (!saved) return;
-        const state = JSON.parse(saved);
-        // Only restore if same user and state is recent (within 24 hours)
-        if (state.userId === userId && Date.now() - state.timestamp < 24 * 60 * 60 * 1000) {
-          if (state.chatMessages?.length > 0) {
-            setChatMessages(state.chatMessages);
-          }
-          if (state.hasChosenPostGig !== undefined) {
-            setHasChosenPostGig(state.hasChosenPostGig);
-          }
-          if (state.collectingGig !== undefined) {
-            setCollectingGig(state.collectingGig);
-          }
-          if (state.gigData) {
-            setGigData(state.gigData);
-          }
-          if (state.currentField) {
-            setCurrentField(state.currentField);
-          }
-          if (state.onboardingSessionId) {
-            setOnboardingSessionId(state.onboardingSessionId);
-          }
+    if (!userData) return;
+    
+    const userId = userData?.id || userData?.email || "anonymous";
+    try {
+      const saved = localStorage.getItem(`onboarding_chat_state_${userId}`);
+      if (!saved) return;
+      
+      const state = JSON.parse(saved);
+      // Only restore if same user and state is recent (within 24 hours)
+      if (state.userId === userId && Date.now() - state.timestamp < 24 * 60 * 60 * 1000) {
+        // Always restore saved state, regardless of current chatMessages length
+        if (state.chatMessages?.length > 0) {
+          setChatMessages(state.chatMessages);
         }
-      } catch (e) {
-        console.error("Failed to restore chat state:", e);
+        if (state.hasChosenPostGig !== undefined) {
+          setHasChosenPostGig(state.hasChosenPostGig);
+        }
+        if (state.collectingGig !== undefined) {
+          setCollectingGig(state.collectingGig);
+        }
+        if (state.gigData) {
+          setGigData(state.gigData);
+        }
+        if (state.currentField) {
+          setCurrentField(state.currentField);
+        }
+        if (state.onboardingSessionId) {
+          setOnboardingSessionId(state.onboardingSessionId);
+        }
       }
+    } catch (e) {
+      console.error("Failed to restore chat state:", e);
     }
-  }, [userData, chatMessages.length]);
+  }, [userData]);
 
   // Handle email authentication
   const handleEmailAuth = async ({ email, name, password }) => {
