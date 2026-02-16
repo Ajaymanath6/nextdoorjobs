@@ -15,6 +15,9 @@ import ExperienceRangeSelect from "../components/Onboarding/ExperienceRangeSelec
 import SalaryRangeBadges from "../components/Onboarding/SalaryRangeBadges";
 import GetCoordinatesButton from "../components/Onboarding/GetCoordinatesButton";
 import PincodeDropdown from "../components/Onboarding/PincodeDropdown";
+import ServiceTypeSelector from "../components/Onboarding/ServiceTypeSelector";
+import SalaryInput from "../components/Onboarding/SalaryInput";
+import ExperienceInput from "../components/Onboarding/ExperienceInput";
 
 // Field collection states
 const COMPANY_FIELDS = {
@@ -432,24 +435,56 @@ export default function OnboardingPage() {
             setCurrentField(GIG_FIELDS.SERVICE_TYPE);
             break;
           case GIG_FIELDS.SERVICE_TYPE:
-            setGigData((prev) => ({ ...prev, serviceType: value }));
-            await addAIMessage("What's the expected salary for this gig? (Type amount or 'skip')");
-            setCurrentField(GIG_FIELDS.EXPECTED_SALARY);
-            break;
+            await addAIMessage("What type of service is this? Choose from the list or enter your own.");
+            setInlineComponent(
+              <ServiceTypeSelector
+                onSelect={(serviceType) => {
+                  setGigData((prev) => ({ ...prev, serviceType }));
+                  setInlineComponent(null);
+                  setCurrentField(GIG_FIELDS.EXPECTED_SALARY);
+                }}
+                onSkip={() => {
+                  setInlineComponent(null);
+                  setCurrentField(GIG_FIELDS.EXPECTED_SALARY);
+                }}
+              />
+            );
+            setTimeout(() => scrollToInlineRef.current?.(), 150);
+            return;
           case GIG_FIELDS.EXPECTED_SALARY:
-            if (value.toLowerCase() !== "skip" && value) {
-              setGigData((prev) => ({ ...prev, expectedSalary: value }));
-            }
-            await addAIMessage("Tell us your experience with this gig (or 'skip').");
-            setCurrentField(GIG_FIELDS.EXPERIENCE);
-            break;
+            await addAIMessage("What's the expected salary for this gig?");
+            setInlineComponent(
+              <SalaryInput
+                onSubmit={(salary) => {
+                  setGigData((prev) => ({ ...prev, expectedSalary: salary }));
+                  setInlineComponent(null);
+                  setCurrentField(GIG_FIELDS.EXPERIENCE);
+                }}
+                onSkip={() => {
+                  setInlineComponent(null);
+                  setCurrentField(GIG_FIELDS.EXPERIENCE);
+                }}
+              />
+            );
+            setTimeout(() => scrollToInlineRef.current?.(), 150);
+            return;
           case GIG_FIELDS.EXPERIENCE:
-            if (value.toLowerCase() !== "skip" && value) {
-              setGigData((prev) => ({ ...prev, experienceWithGig: value }));
-            }
-            await addAIMessage("How many customers have you served till date? (Number or 'skip')");
-            setCurrentField(GIG_FIELDS.CUSTOMERS_TILL_DATE);
-            break;
+            await addAIMessage("Tell us your years of experience with this gig.");
+            setInlineComponent(
+              <ExperienceInput
+                onSubmit={(experience) => {
+                  setGigData((prev) => ({ ...prev, experienceWithGig: experience }));
+                  setInlineComponent(null);
+                  setCurrentField(GIG_FIELDS.CUSTOMERS_TILL_DATE);
+                }}
+                onSkip={() => {
+                  setInlineComponent(null);
+                  setCurrentField(GIG_FIELDS.CUSTOMERS_TILL_DATE);
+                }}
+              />
+            );
+            setTimeout(() => scrollToInlineRef.current?.(), 150);
+            return;
           case GIG_FIELDS.CUSTOMERS_TILL_DATE: {
             if (value.toLowerCase() !== "skip" && value) {
               const num = parseInt(value.replace(/\D/g, ""), 10);
@@ -738,6 +773,13 @@ export default function OnboardingPage() {
     if (state) setGigData((prev) => ({ ...prev, state }));
     if (district) setGigData((prev) => ({ ...prev, district }));
 
+    // Show location summary
+    if (district && state) {
+      await addAIMessage(`District: ${district}, State: ${state}`);
+    } else if (state) {
+      await addAIMessage(`State: ${state}`);
+    }
+
     if (state && district) {
       let pincodes = [];
       try {
@@ -759,11 +801,12 @@ export default function OnboardingPage() {
           <PincodeDropdown
             pincodes={pincodes}
             onSelect={(pincode) => {
-              setGigData((prev) => ({ ...prev, pincode }));
+              setGigData((prev) => ({ ...prev, pincode, latitude: Number(lat), longitude: Number(lon) }));
               setInlineComponent(null);
               handleGigSubmit({ pincode });
             }}
             onSkip={() => {
+              setGigData((prev) => ({ ...prev, latitude: Number(lat), longitude: Number(lon) }));
               setInlineComponent(null);
               handleGigSubmit({});
             }}
@@ -1631,7 +1674,7 @@ export default function OnboardingPage() {
                 className={`p-2 rounded-lg border border-brand-stroke-border transition-colors ${listViewActive ? "bg-brand-bg-fill" : "bg-brand-bg-white hover:bg-brand-bg-fill"}`}
                 title={userData?.accountType === "Individual" ? "Your posted gigs" : "Your job postings"}
               >
-                <List size={20} style={{ color: listViewActive ? "var(--brand)" : "#575757" }} />
+                <List size={20} className="text-brand-text-strong" />
               </button>
               <div className="relative" ref={languageDropdownRef}>
               <button

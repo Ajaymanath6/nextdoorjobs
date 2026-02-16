@@ -22,6 +22,7 @@ export default function ChatInterface({ messages = [], onSendMessage, isLoading 
   const savedFilesDropdownRef = useRef(null);
   const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false);
   const [gigToDelete, setGigToDelete] = useState(null);
+  const [deletingGigId, setDeletingGigId] = useState(null);
 
   const handleViewGigOnMap = (gig) => {
     if (gig.latitude != null && gig.longitude != null) {
@@ -233,6 +234,13 @@ export default function ChatInterface({ messages = [], onSendMessage, isLoading 
                               <div className="flex-1 min-w-0">
                                 <p className="text-sm font-medium text-brand-text-strong truncate" style={{ fontFamily: "Open Sans, sans-serif" }}>{gig.title}</p>
                                 <p className="text-xs text-brand-text-weak truncate mt-0.5" style={{ fontFamily: "Open Sans, sans-serif" }}>{gig.serviceType || ""}</p>
+                                <p className="text-xs text-brand-text-weak mt-0.5" style={{ fontFamily: "Open Sans, sans-serif" }}>
+                                  Posted: {new Date(gig.createdAt).toLocaleDateString('en-IN', { 
+                                    day: 'numeric', 
+                                    month: 'short', 
+                                    year: 'numeric' 
+                                  })}
+                                </p>
                               </div>
                               {/* See on map + Delete on Right */}
                               <div className="shrink-0 flex items-center gap-1.5">
@@ -254,11 +262,16 @@ export default function ChatInterface({ messages = [], onSendMessage, isLoading 
                                       setGigToDelete(gig);
                                       setDeleteConfirmOpen(true);
                                     }}
-                                    className="p-1.5 rounded-md text-brand-text-weak hover:bg-red-50 hover:text-red-600 transition-colors"
+                                    disabled={deletingGigId === gig.id}
+                                    className="p-1.5 rounded-md text-brand-text-weak hover:bg-red-50 hover:text-red-600 transition-colors disabled:opacity-50 relative"
                                     title="Delete gig"
                                     aria-label="Delete gig"
                                   >
-                                    <TrashCan size={18} />
+                                    {deletingGigId === gig.id ? (
+                                      <div className="w-[18px] h-[18px] border-2 border-red-600 border-t-transparent rounded-full animate-spin" />
+                                    ) : (
+                                      <TrashCan size={18} />
+                                    )}
                                   </button>
                                 ) : null}
                               </div>
@@ -672,16 +685,22 @@ export default function ChatInterface({ messages = [], onSendMessage, isLoading 
         }}
         onConfirm={async () => {
           if (!gigToDelete) return;
+          setDeletingGigId(gigToDelete.id);
+          setDeleteConfirmOpen(false);
           try {
             const res = await fetch(`/api/gigs/${gigToDelete.id}`, {
               method: "DELETE",
               credentials: "same-origin",
             });
-            if (res.ok) onGigDeleted?.();
+            if (res.ok) {
+              onGigDeleted?.();
+            }
           } catch (err) {
             console.error("Delete failed:", err);
+          } finally {
+            setDeletingGigId(null);
+            setGigToDelete(null);
           }
-          setGigToDelete(null);
         }}
         title="Delete this gig?"
         message="This will remove the gig from all instances, database, and the map. This cannot be undone."

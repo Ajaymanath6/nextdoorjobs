@@ -567,11 +567,95 @@ const MapComponent = () => {
       maxClusterRadius: 80,
       showCoverageOnHover: false,
       iconCreateFunction: function (cluster) {
-        const count = cluster.getChildCount();
+        const markers = cluster.getAllChildMarkers();
+        const count = markers.length;
+        
+        // Get up to 4 unique avatars from the markers
+        const avatars = [];
+        const seen = new Set();
+        
+        for (const marker of markers) {
+          if (avatars.length >= 4) break;
+          const gig = marker.options.gigData;
+          const avatarUrl = gig?.user?.avatarId 
+            ? getAvatarUrlById(gig.user.avatarId) 
+            : gig?.user?.avatarUrl || '/avatars/avatar1.png';
+          
+          if (!seen.has(avatarUrl)) {
+            avatars.push(avatarUrl);
+            seen.add(avatarUrl);
+          }
+        }
+        
+        // Calculate bubble size based on count
+        const baseSize = 50;
+        const size = Math.min(baseSize + (count * 2), 100);
+        
+        // Create bubble HTML with avatars
+        const avatarSize = size / 3;
+        const avatarHTML = avatars.map((url, i) => {
+          const positions = [
+            { top: '15%', left: '50%', transform: 'translateX(-50%)' }, // top
+            { bottom: '15%', left: '20%' }, // bottom-left
+            { bottom: '15%', right: '20%' }, // bottom-right
+            { top: '50%', left: '50%', transform: 'translate(-50%, -50%)' } // center
+          ];
+          const pos = positions[i] || positions[3];
+          
+          return `
+            <img 
+              src="${url}" 
+              style="
+                position: absolute;
+                width: ${avatarSize}px;
+                height: ${avatarSize}px;
+                border-radius: 50%;
+                border: 2px solid white;
+                object-fit: cover;
+                ${Object.entries(pos).map(([k, v]) => `${k}: ${v};`).join('')}
+              "
+              onerror="this.src='/avatars/avatar1.png'"
+            />
+          `;
+        }).join('');
+        
+        const html = `
+          <div style="
+            position: relative;
+            background: linear-gradient(135deg, rgba(15, 98, 254, 0.9) 0%, rgba(15, 98, 254, 0.7) 100%);
+            border-radius: 50%;
+            width: ${size}px;
+            height: ${size}px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border: 3px solid white;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+            backdrop-filter: blur(10px);
+          ">
+            ${avatarHTML}
+            ${count > 4 ? `
+              <div style="
+                position: absolute;
+                bottom: 5px;
+                right: 5px;
+                background: rgba(0, 0, 0, 0.7);
+                color: white;
+                border-radius: 10px;
+                padding: 2px 6px;
+                font-size: 10px;
+                font-weight: bold;
+              ">
+                +${count - 4}
+              </div>
+            ` : ''}
+          </div>
+        `;
+        
         return L.divIcon({
-          html: `<div style="background-color:#0f62fe;color:white;border-radius:50%;width:40px;height:40px;display:flex;align-items:center;justify-content:center;font-weight:bold;font-size:14px;border:3px solid white;box-shadow:0 2px 8px rgba(0,0,0,0.3);">${count}</div>`,
-          className: "marker-cluster-gig",
-          iconSize: L.point(40, 40),
+          html: html,
+          className: 'marker-cluster-gig-bubble',
+          iconSize: L.point(size, size),
         });
       },
     });
@@ -589,7 +673,11 @@ const MapComponent = () => {
         iconSize: [size, size],
         iconAnchor: [size / 2, size / 2],
       });
-      const marker = L.marker([lat, lon], { icon, zIndexOffset: 2000 + index });
+      const marker = L.marker([lat, lon], { 
+        icon, 
+        zIndexOffset: 2000 + index,
+        gigData: gig // Pass gig data to marker for cluster access
+      });
       const userName = gig.user?.name || "Gig worker";
       const userAvatarUrl = gig.user?.avatarId
         ? getAvatarUrlById(gig.user.avatarId)
