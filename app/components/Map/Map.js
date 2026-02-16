@@ -9,6 +9,7 @@ import {
   EarthFilled,
   List,
   Filter,
+  Location,
   Return,
   IbmWatsonDiscovery,
   Enterprise,
@@ -2829,7 +2830,7 @@ const MapComponent = () => {
                       type="button"
                       onClick={() => searchMode === "person" && setShowGigFilterDropdown(!showGigFilterDropdown)}
                       disabled={searchMode !== "person"}
-                      className={`flex items-center gap-1.5 px-3 py-1.5 border rounded-md text-sm font-medium transition-colors shrink-0 ${
+                      className={`flex items-center gap-1.5 px-3 py-1.5 border rounded-full text-sm font-medium transition-colors shrink-0 ${
                         searchMode === "person"
                           ? "bg-brand-bg-white border-brand-stroke-weak text-brand-text-strong hover:bg-brand-bg-fill cursor-pointer"
                           : "bg-brand-bg-fill border-brand-stroke-weak text-brand-text-placeholder cursor-not-allowed opacity-70"
@@ -2863,8 +2864,8 @@ const MapComponent = () => {
                 </div>
               </div>
 
-              {/* Search Input with Autocomplete - reduced max width to leave room for gig filter, overflow-visible so dropdown is not clipped */}
-              <div className="relative flex-1 min-w-0 max-w-[420px] overflow-visible">
+              {/* Search Input with Autocomplete - overflow-visible so dropdown is not clipped */}
+              <div className="relative flex-1 min-w-0 overflow-visible">
                 {/* Back arrow - mobile only when search expanded */}
                 <button
                   type="button"
@@ -2975,15 +2976,15 @@ const MapComponent = () => {
                       </button>
                     </span>
                   ) : null}
-                  {/* Desktop: filter button inside search bar - no bg on hover, icon turns primary on hover */}
+                  {/* Desktop: location filter button inside search bar - no bg on hover, icon turns primary on hover */}
                   <button
                     type="button"
                     onMouseDown={(e) => e.preventDefault()}
                     onClick={() => setShowFilterDropdown(!showFilterDropdown)}
                     className="group hidden md:flex items-center justify-center p-1.5 rounded border-0 bg-transparent hover:bg-transparent transition-colors shrink-0"
-                    aria-label="Filter"
+                    aria-label="Location filter"
                   >
-                    <Filter size={24} className="text-brand-stroke-strong group-hover:text-brand w-6 h-6 shrink-0 transition-colors" />
+                    <Location size={24} className="text-brand-stroke-strong group-hover:text-brand w-6 h-6 shrink-0 transition-colors" />
                   </button>
                 </div>
                 
@@ -3067,9 +3068,9 @@ const MapComponent = () => {
                     onMouseDown={(e) => e.preventDefault()}
                     onClick={() => setShowFilterDropdown(!showFilterDropdown)}
                     className="group h-[34px] w-[34px] md:hidden flex items-center justify-center p-1.5 rounded-lg border-0 bg-transparent hover:bg-transparent transition-colors shrink-0"
-                    aria-label="Filter"
+                    aria-label="Location filter"
                   >
-                    <Filter size={24} className="text-brand-stroke-strong group-hover:text-brand w-6 h-6 shrink-0 transition-colors" />
+                    <Location size={24} className="text-brand-stroke-strong group-hover:text-brand w-6 h-6 shrink-0 transition-colors" />
                   </button>
 
                   {/* Desktop: dropdown */}
