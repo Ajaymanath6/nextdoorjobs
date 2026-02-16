@@ -21,7 +21,7 @@ export default function EmailAuthForm({ onSubmit, isLoading = false }) {
       const redirectUrl = origin
         ? `${origin}/api/auth/callback/clerk`
         : "/api/auth/callback/clerk";
-      const redirectUrlComplete = origin ? `${origin}/onboarding` : "/onboarding";
+      const redirectUrlComplete = origin ? `${origin}/auth-redirect` : "/auth-redirect";
       await signIn.authenticateWithRedirect({
         strategy: "oauth_google",
         redirectUrl,

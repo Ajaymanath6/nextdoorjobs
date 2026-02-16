@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { getCurrentUser } from "../../../../lib/getCurrentUser";
-import { prisma } from "../../../../lib/prisma";
+import { userService } from "../../../../lib/services/user.service";
 import { AVATAR_IDS, getAvatarUrlById } from "../../../../lib/avatars";
 
 /**
@@ -31,10 +31,7 @@ export async function POST(request) {
 
     const avatarUrl = getAvatarUrlById(avatarId);
 
-    await prisma.user.update({
-      where: { id: user.id },
-      data: { avatarId, avatarUrl },
-    });
+    await userService.updateAvatar(user.id, avatarId, avatarUrl);
 
     return new Response(null, { status: 200 });
   } catch (error) {

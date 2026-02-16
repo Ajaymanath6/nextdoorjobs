@@ -6,6 +6,7 @@ import { useRouter } from "next/navigation";
 import { Screen, Document, Enterprise, Save, Location, Add, OverflowMenuVertical, TrashCan } from "@carbon/icons-react";
 import TypingAnimation from "./TypingAnimation";
 import { getAvatarUrlById } from "../../../lib/avatars";
+import ConfirmDeleteModal from "../ConfirmDeleteModal";
 
 export default function ChatInterface({ messages = [], onSendMessage, isLoading = false, inlineComponent = null, typingText = null, onScrollRequest, onSave, onViewOnMap, onStartNext, showFindOrPostButtons = false, accountType, onFindJob, onPostGig, onGigDeleted }) {
   const router = useRouter();
@@ -19,6 +20,8 @@ export default function ChatInterface({ messages = [], onSendMessage, isLoading 
   const [showSavedFilesDropdown, setShowSavedFilesDropdown] = useState(false);
   const [savedFiles, setSavedFiles] = useState([]);
   const savedFilesDropdownRef = useRef(null);
+  const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false);
+  const [gigToDelete, setGigToDelete] = useState(null);
 
   const handleViewGigOnMap = (gig) => {
     if (gig.latitude != null && gig.longitude != null) {
@@ -247,15 +250,9 @@ export default function ChatInterface({ messages = [], onSendMessage, isLoading 
                                 {onGigDeleted ? (
                                   <button
                                     type="button"
-                                    onClick={async () => {
-                                      try {
-                                        const res = await fetch(`/api/gigs/${gig.id}`, { method: "DELETE", credentials: "same-origin" });
-                                        if (res.ok) {
-                                          onGigDeleted();
-                                        }
-                                      } catch (e) {
-                                        console.error("Delete gig failed:", e);
-                                      }
+                                    onClick={() => {
+                                      setGigToDelete(gig);
+                                      setDeleteConfirmOpen(true);
                                     }}
                                     className="p-1.5 rounded-md text-brand-text-weak hover:bg-red-50 hover:text-red-600 transition-colors"
                                     title="Delete gig"
@@ -666,6 +663,29 @@ export default function ChatInterface({ messages = [], onSendMessage, isLoading 
           </button>
         </form>
       </div>
+
+      <ConfirmDeleteModal
+        isOpen={deleteConfirmOpen}
+        onClose={() => {
+          setDeleteConfirmOpen(false);
+          setGigToDelete(null);
+        }}
+        onConfirm={async () => {
+          if (!gigToDelete) return;
+          try {
+            const res = await fetch(`/api/gigs/${gigToDelete.id}`, {
+              method: "DELETE",
+              credentials: "same-origin",
+            });
+            if (res.ok) onGigDeleted?.();
+          } catch (err) {
+            console.error("Delete failed:", err);
+          }
+          setGigToDelete(null);
+        }}
+        title="Delete this gig?"
+        message="This will remove the gig from all instances, database, and the map. This cannot be undone."
+      />
     </div>
   );
 }

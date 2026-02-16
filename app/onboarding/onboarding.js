@@ -1590,7 +1590,23 @@ export default function OnboardingPage() {
               <button
                 type="button"
                 onClick={async () => {
-                  setListViewActive(true);
+                  const newState = !listViewActive;
+                  setListViewActive(newState);
+                  
+                  if (!newState) {
+                    // Toggling off - remove the last gigList/jobList message
+                    setChatMessages((prev) => {
+                      const lastIndex = prev.map((m, i) => 
+                        (m.type === "gigList" || m.type === "jobList") ? i : -1
+                      ).filter(i => i >= 0).pop();
+                      
+                      if (lastIndex == null) return prev;
+                      return prev.filter((_, i) => i !== lastIndex);
+                    });
+                    return;
+                  }
+                  
+                  // Toggling on - fetch and show list
                   try {
                     if (userData?.accountType === "Individual") {
                       const res = await fetch("/api/gigs?mine=1", { credentials: "same-origin" });
@@ -1612,7 +1628,7 @@ export default function OnboardingPage() {
                     }
                   }
                 }}
-                className={`p-2 rounded-lg transition-colors ${listViewActive ? "bg-brand/10 ring-2 ring-brand border border-brand" : "hover:bg-gray-100"}`}
+                className={`p-2 rounded-lg border border-brand-stroke-border transition-colors ${listViewActive ? "bg-brand-bg-fill" : "bg-brand-bg-white hover:bg-brand-bg-fill"}`}
                 title={userData?.accountType === "Individual" ? "Your posted gigs" : "Your job postings"}
               >
                 <List size={20} style={{ color: listViewActive ? "var(--brand)" : "#575757" }} />

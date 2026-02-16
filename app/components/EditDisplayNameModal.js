@@ -136,7 +136,7 @@ export default function EditDisplayNameModal({
             type="button"
             onClick={handleSave}
             disabled={saving}
-            className={`inline-flex items-center gap-2 rounded-lg px-4 py-2 text-sm font-medium transition-colors border border-brand-stroke-border text-brand-text-strong hover:bg-brand-bg-fill disabled:opacity-50`}
+            className={`inline-flex items-center gap-2 rounded-lg px-4 py-2 text-sm font-medium transition-colors bg-brand-text-strong text-white hover:opacity-90 disabled:opacity-50`}
           >
             Save
             <ArrowRight size={20} className="shrink-0" />

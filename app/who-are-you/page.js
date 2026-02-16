@@ -3,6 +3,7 @@
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { useAuth } from "@clerk/nextjs";
+import Head from "next/head";
 import themeClasses from "../theme-utility-classes.json";
 import { ACCOUNT_TYPES } from "../../lib/constants/accountTypes";
 
@@ -43,7 +44,7 @@ export default function WhoAreYouPage() {
       .then((res) => (res.ok ? res.json() : null))
       .then((data) => {
         if (data?.success && data.user?.accountType) {
-          router.replace("/onboarding");
+          router.replace("/");
           return;
         }
         setChecking(false);
@@ -62,8 +63,7 @@ export default function WhoAreYouPage() {
       });
       if (res.ok) {
         setTimeout(() => {
-          const targetRoute = value === "Company" ? "/onboarding.org" : "/onboarding";
-          router.push(targetRoute);
+          router.push("/");
         }, 2000);
       } else {
         const err = await res.json().catch(() => ({}));
@@ -79,19 +79,55 @@ export default function WhoAreYouPage() {
 
   if (!isLoaded || checking) {
     return (
-      <div
-        className="min-h-screen flex items-center justify-center bg-brand-bg-fill"
-        style={{ fontFamily: "Open Sans, sans-serif" }}
-      >
-        <p className={brand.text.weak}>Loading…</p>
-      </div>
+      <>
+        <Head>
+          <link rel="preload" href="/account-type-bg.png" as="image" />
+        </Head>
+        <div
+          className="min-h-screen flex items-center justify-center bg-brand-bg-fill"
+          style={{ fontFamily: "Open Sans, sans-serif" }}
+        >
+          <p className={brand.text.weak}>Loading…</p>
+        </div>
+      </>
     );
   }
 
   if (submitting) {
     return (
+      <>
+        <Head>
+          <link rel="preload" href="/account-type-bg.png" as="image" />
+        </Head>
+        <div
+          className="min-h-screen flex flex-col items-center justify-center px-4 py-8"
+          style={{
+            fontFamily: "Open Sans, sans-serif",
+            backgroundImage: "url(/account-type-bg.png)",
+            backgroundSize: "cover",
+            backgroundPosition: "center",
+            backgroundRepeat: "no-repeat",
+          }}
+        >
+          <div
+            className="rounded-full h-12 w-12 border-4 loading-spinner mx-auto mb-4"
+            style={{ borderColor: "rgba(0,0,0,0.1)", borderTopColor: "#F84416" }}
+          />
+          <p className="text-gray-600" style={{ fontFamily: "Open Sans, sans-serif" }}>
+            Loading...
+          </p>
+        </div>
+      </>
+    );
+  }
+
+  return (
+    <>
+      <Head>
+        <link rel="preload" href="/account-type-bg.png" as="image" />
+      </Head>
       <div
-        className="min-h-screen flex flex-col items-center justify-center px-4 py-8"
+        className="min-h-screen flex flex-col items-center justify-center px-4 py-8 relative"
         style={{
           fontFamily: "Open Sans, sans-serif",
           backgroundImage: "url(/account-type-bg.png)",
@@ -100,28 +136,6 @@ export default function WhoAreYouPage() {
           backgroundRepeat: "no-repeat",
         }}
       >
-        <div
-          className="rounded-full h-12 w-12 border-4 loading-spinner mx-auto mb-4"
-          style={{ borderColor: "rgba(0,0,0,0.1)", borderTopColor: "#F84416" }}
-        />
-        <p className="text-gray-600" style={{ fontFamily: "Open Sans, sans-serif" }}>
-          Loading...
-        </p>
-      </div>
-    );
-  }
-
-  return (
-    <div
-      className="min-h-screen flex flex-col items-center justify-center px-4 py-8 relative"
-      style={{
-        fontFamily: "Open Sans, sans-serif",
-        backgroundImage: "url(/account-type-bg.png)",
-        backgroundSize: "cover",
-        backgroundPosition: "center",
-        backgroundRepeat: "no-repeat",
-      }}
-    >
       <div className="relative z-10 flex flex-col items-center w-full max-w-lg">
         <h1
           className={`text-2xl font-semibold ${brand.text.strong} mb-2 text-center`}
@@ -167,5 +181,6 @@ export default function WhoAreYouPage() {
         </div>
       </div>
     </div>
+    </>
   );
 }
