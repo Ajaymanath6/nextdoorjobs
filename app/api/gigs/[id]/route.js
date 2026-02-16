@@ -13,12 +13,13 @@ export async function DELETE(request, { params }) {
       return NextResponse.json({ success: false, error: "Unauthorized" }, { status: 401 });
     }
 
-    const id = Number(params?.id);
-    if (Number.isNaN(id) || id < 1) {
+    const { id } = await params;
+    const idNum = Number(id);
+    if (Number.isNaN(idNum) || idNum < 1) {
       return NextResponse.json({ success: false, error: "Invalid gig ID" }, { status: 400 });
     }
 
-    const result = await gigService.deleteGig(id, user.id);
+    const result = await gigService.deleteGig(idNum, user.id);
     if (!result) {
       return NextResponse.json(
         { success: false, error: "Gig not found or you are not the owner" },

@@ -293,6 +293,42 @@ export default function OnboardingPage() {
     return () => clearTimeout(t);
   }, [clerkUser, clerkLoaded]);
 
+  // Restore chat state from localStorage when userData is available
+  useEffect(() => {
+    if (userData && chatMessages.length === 0) {
+      // Only restore if we have userData and chat is empty (initial load)
+      const userId = userData?.id || userData?.email || "anonymous";
+      try {
+        const saved = localStorage.getItem(`onboarding_chat_state_${userId}`);
+        if (!saved) return;
+        const state = JSON.parse(saved);
+        // Only restore if same user and state is recent (within 24 hours)
+        if (state.userId === userId && Date.now() - state.timestamp < 24 * 60 * 60 * 1000) {
+          if (state.chatMessages?.length > 0) {
+            setChatMessages(state.chatMessages);
+          }
+          if (state.hasChosenPostGig !== undefined) {
+            setHasChosenPostGig(state.hasChosenPostGig);
+          }
+          if (state.collectingGig !== undefined) {
+            setCollectingGig(state.collectingGig);
+          }
+          if (state.gigData) {
+            setGigData(state.gigData);
+          }
+          if (state.currentField) {
+            setCurrentField(state.currentField);
+          }
+          if (state.onboardingSessionId) {
+            setOnboardingSessionId(state.onboardingSessionId);
+          }
+        }
+      } catch (e) {
+        console.error("Failed to restore chat state:", e);
+      }
+    }
+  }, [userData, chatMessages.length]);
+
   // Handle email authentication
   const handleEmailAuth = async ({ email, name, password }) => {
     setIsLoading(true);
@@ -327,6 +363,27 @@ export default function OnboardingPage() {
     }
   };
 
+  // Save chat state to localStorage
+  const saveChatState = () => {
+    if (typeof window === "undefined") return;
+    const userId = userData?.id || userData?.email || "anonymous";
+    const state = {
+      chatMessages,
+      hasChosenPostGig,
+      collectingGig,
+      gigData,
+      currentField,
+      onboardingSessionId,
+      timestamp: Date.now(),
+      userId,
+    };
+    try {
+      localStorage.setItem(`onboarding_chat_state_${userId}`, JSON.stringify(state));
+    } catch (e) {
+      console.error("Failed to save chat state:", e);
+    }
+  };
+
   // Reset chat function
   const handleResetChat = () => {
     setHasChosenPostGig(false);
@@ -346,6 +403,15 @@ export default function OnboardingPage() {
     }
     setGigData(null);
     setCurrentField(GIG_FIELDS.TITLE);
+    // Clear saved state
+    if (typeof window !== "undefined" && userData) {
+      const userId = userData?.id || userData?.email || "anonymous";
+      try {
+        localStorage.removeItem(`onboarding_chat_state_${userId}`);
+      } catch (e) {
+        console.error("Failed to clear chat state:", e);
+      }
+    }
   };
 
   // User chose "Find a job" → go to map view
@@ -1812,7 +1878,10 @@ setCurrentField(GIG_FIELDS.CUSTOMERS_TILL_DATE);
               <div className="bg-white border border-[#E5E5E5] overflow-hidden rounded-full shrink-0">
                 <button
                   type="button"
-                  onClick={() => router.push("/")}
+                  onClick={() => {
+                    saveChatState();
+                    router.push("/");
+                  }}
                   aria-label="Map view"
                   className="p-2 border-0 rounded-l-full rounded-r-none bg-transparent hover:bg-gray-50 transition-colors"
                 >

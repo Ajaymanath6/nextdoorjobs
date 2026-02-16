@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import Modal from "./Modal";
 import {
   Close,
@@ -9,6 +9,7 @@ import {
   DataConnected,
   SettingsAdjust,
   Edit,
+  Add,
 } from "@carbon/icons-react";
 import EditDisplayNameModal from "./EditDisplayNameModal";
 import themeClasses from "../theme-utility-classes.json";
@@ -93,6 +94,78 @@ export default function SettingsModal({ isOpen, onClose }) {
     } finally {
       setAvatarSaving(false);
     }
+  };
+
+  const handleAvatarUpload = async (file) => {
+    setAvatarUploading(true);
+    setAvatarError(null);
+    try {
+      // Step 1: Upload to imgbb via API
+      const formData = new FormData();
+      formData.append('image', file);
+      
+      const uploadRes = await fetch("/api/profile/avatar/upload", {
+        method: "POST",
+        body: formData,
+        credentials: "same-origin",
+      });
+
+      const uploadData = await uploadRes.json().catch(() => ({}));
+      
+      if (!uploadRes.ok || !uploadData.success || !uploadData.url) {
+        const errorMsg = uploadData.error || `Upload failed (${uploadRes.status})`;
+        setAvatarError(errorMsg);
+        return;
+      }
+
+      // Step 2: Save avatar URL
+      const saveRes = await fetch("/api/profile/avatar", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ avatarUrl: uploadData.url }),
+        credentials: "same-origin",
+      });
+
+      if (saveRes.ok) {
+        setShowAvatarModal(false);
+        refreshUser();
+        if (typeof window !== "undefined") {
+          window.dispatchEvent(new CustomEvent("avatar-updated"));
+        }
+      } else {
+        const errBody = await saveRes.json().catch(() => ({}));
+        const msg = errBody?.details || errBody?.error || `Save failed (${saveRes.status})`;
+        setAvatarError(msg);
+      }
+    } catch (e) {
+      if (process.env.NODE_ENV === "development") {
+        console.error("Failed to upload avatar", e);
+      }
+      setAvatarError("Network or server error. Try again.");
+    } finally {
+      setAvatarUploading(false);
+    }
+  };
+
+  const handleFileInputChange = (e) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    
+    // Validate file type
+    if (!file.type.startsWith('image/')) {
+      setAvatarError("Please select an image file");
+      return;
+    }
+    
+    // Validate file size (5MB)
+    if (file.size > 5 * 1024 * 1024) {
+      setAvatarError("File size must be less than 5MB");
+      return;
+    }
+
+    handleAvatarUpload(file);
+    // Reset input so same file can be selected again
+    e.target.value = '';
   };
 
   const displayName =
@@ -281,7 +354,7 @@ export default function SettingsModal({ isOpen, onClose }) {
             <button
               type="button"
               onClick={() => {
-                if (!avatarSaving) {
+                if (!avatarSaving && !avatarUploading) {
                   setAvatarError(null);
                   setShowAvatarModal(false);
                 }
@@ -309,8 +382,10 @@ export default function SettingsModal({ isOpen, onClose }) {
               </button>
             ))}
           </div>
-          {avatarSaving && (
-            <p className={`mt-4 text-sm ${brand.text.weak}`}>Saving…</p>
+          {(avatarSaving || avatarUploading) && (
+            <p className={`mt-4 text-sm ${brand.text.weak}`}>
+              {avatarUploading ? "Uploading…" : "Saving…"}
+            </p>
           )}
           {avatarError && (
             <p className="mt-4 text-sm text-red-600" role="alert">
