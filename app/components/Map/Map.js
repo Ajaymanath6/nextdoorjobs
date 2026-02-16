@@ -17,15 +17,19 @@ import {
   User,
   UserAvatar,
   ArrowLeft,
+  ArrowRight,
   ChevronDown,
   Close,
   Chat,
+  Home,
+  Add,
 } from "@carbon/icons-react";
 import { RiArrowDownSLine } from "@remixicon/react";
 import FilterDropdown from "./FilterDropdown";
 import FilterBottomSheet from "./FilterBottomSheet";
 import GigFilterDropdown from "./GigFilterDropdown";
 import LocalityAutocomplete from "./LocalityAutocomplete";
+import AddHomeModal from "./AddHomeModal";
 import JobTitleAutocomplete from "./JobTitleAutocomplete";
 import CollegeAutocomplete from "./CollegeAutocomplete";
 import EmptyState from "./EmptyState";
@@ -35,6 +39,18 @@ import { getAvatarUrlById } from "../../../lib/avatars";
 import "leaflet/dist/leaflet.css";
 import "leaflet.markercluster/dist/MarkerCluster.css";
 import "leaflet.markercluster/dist/MarkerCluster.Default.css";
+
+function haversineKm(lat1, lon1, lat2, lon2) {
+  const R = 6371;
+  const dLat = ((lat2 - lat1) * Math.PI) / 180;
+  const dLon = ((lon2 - lon1) * Math.PI) / 180;
+  const a =
+    Math.sin(dLat / 2) ** 2 +
+    Math.cos((lat1 * Math.PI) / 180) *
+      Math.cos((lat2 * Math.PI) / 180) *
+      Math.sin(dLon / 2) ** 2;
+  return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+}
 
 // Dynamic import of Leaflet to avoid SSR issues
 const MapComponent = () => {
@@ -128,6 +144,16 @@ const MapComponent = () => {
   const gigFilterDropdownRef = useRef(null);
   const gigFilterButtonRef = useRef(null);
 
+  // Home location (from profile)
+  const [homeLocation, setHomeLocation] = useState(null);
+  const [showSuggestionsDropdown, setShowSuggestionsDropdown] = useState(false);
+  const [showAddHomeModal, setShowAddHomeModal] = useState(false);
+  const homeSuggestionsRef = useRef(null);
+  const [showDistanceFromHome, setShowDistanceFromHome] = useState(false);
+  const [selectedGigForDistance, setSelectedGigForDistance] = useState(null);
+  const homeMarkerRef = useRef(null);
+  const homeToGigLineRef = useRef(null);
+
   // Parse response as JSON safely (avoids "Unexpected token '<'" when server returns HTML)
   const parseJsonResponse = async (response) => {
     const text = await response.text();
@@ -138,6 +164,24 @@ const MapComponent = () => {
       return null;
     }
   };
+
+  // Fetch user profile for home location
+  useEffect(() => {
+    fetch("/api/profile", { credentials: "same-origin" })
+      .then((r) => r.ok ? r.json() : null)
+      .then((data) => {
+        if (data?.success && data.user?.homeLatitude != null && data.user?.homeLongitude != null) {
+          setHomeLocation({
+            homeLatitude: data.user.homeLatitude,
+            homeLongitude: data.user.homeLongitude,
+            homeLocality: data.user.homeLocality,
+            homeDistrict: data.user.homeDistrict,
+            homeState: data.user.homeState,
+          });
+        }
+      })
+      .catch(() => {});
+  }, []);
 
   // Load locations data (client-side only)
   useEffect(() => {
@@ -503,10 +547,28 @@ const MapComponent = () => {
     }
     gigMarkersRef.current = [];
 
-    // Filter by selected gig type if one is selected
+    const gigMatchesFilter = (gig, filterType) => {
+      if (!filterType) return true;
+      const st = (gig.serviceType || "").toLowerCase();
+      const title = (gig.title || "").toLowerCase();
+      const filter = filterType.toLowerCase();
+      const filterWords = filterType.toLowerCase().split(/[\s&,]+/).filter(Boolean);
+      if (st === filter) return true;
+      if (st && st.includes(filter)) return true;
+      if (st && filter.includes(st)) return true;
+      if (filterWords.some((w) => {
+        if (title.includes(w)) return true;
+        if (w === "tutoring" && title.includes("tutor")) return true;
+        if (w === "tutor" && title.includes("tution")) return true;
+        return false;
+      })) return true;
+      return false;
+    };
+
+    // Filter by selected gig type if one is selected (matches serviceType and title)
     let filteredGigs = gigsToRender || [];
     if (selectedGigType) {
-      filteredGigs = filteredGigs.filter(g => g.serviceType === selectedGigType);
+      filteredGigs = filteredGigs.filter((g) => gigMatchesFilter(g, selectedGigType));
     }
 
     const withCoords = filteredGigs.filter(
@@ -618,6 +680,12 @@ const MapComponent = () => {
       },
     });
 
+    const hasHome =
+      homeLocation?.homeLatitude != null &&
+      homeLocation?.homeLongitude != null &&
+      Number.isFinite(Number(homeLocation.homeLatitude)) &&
+      Number.isFinite(Number(homeLocation.homeLongitude));
+
     withCoords.forEach((gig, index) => {
       const lat = Number(gig.latitude);
       const lon = Number(gig.longitude);
@@ -625,10 +693,25 @@ const MapComponent = () => {
         ? getAvatarUrlById(gig.user.avatarId)
         : gig.user?.avatarUrl || "/avatars/avatar1.png";
       const size = 44;
+      const isThisSelected =
+        selectedGigForDistance?.id === gig.id && hasHome;
+      const distanceKm =
+        isThisSelected && hasHome
+          ? haversineKm(
+              homeLocation.homeLatitude,
+              homeLocation.homeLongitude,
+              lat,
+              lon
+            ).toFixed(1)
+          : null;
+      const distanceBadgeHtml =
+        distanceKm != null
+          ? `<div style="position:absolute;bottom:-20px;left:50%;transform:translateX(-50%);background:#0A0A0A;color:white;border-radius:4px;padding:2px 6px;font-size:10px;font-weight:600;white-space:nowrap;font-family:'Open Sans',sans-serif;">${distanceKm} km</div>`
+          : "";
       const icon = L.divIcon({
-        html: `<div style="width:${size}px;height:${size}px;border-radius:50%;overflow:hidden;border:2px solid #fff;box-shadow:0 2px 6px rgba(0,0,0,0.2);display:flex;align-items:center;justify-content:center;background:#e5e5e5;"><img src="${avatarUrl}" alt="" style="width:100%;height:100%;object-fit:cover;" onerror="this.src='/avatars/avatar1.png'" /></div>`,
+        html: `<div style="position:relative;"><div style="width:${size}px;height:${size}px;border-radius:50%;overflow:hidden;border:2px solid #fff;box-shadow:0 2px 6px rgba(0,0,0,0.2);display:flex;align-items:center;justify-content:center;background:#e5e5e5;"><img src="${avatarUrl}" alt="" style="width:100%;height:100%;object-fit:cover;" onerror="this.src='/avatars/avatar1.png'" /></div>${distanceBadgeHtml}</div>`,
         className: "gig-marker",
-        iconSize: [size, size],
+        iconSize: [size, 64],
         iconAnchor: [size / 2, size / 2],
       });
       const marker = L.marker([lat, lon], { 
@@ -665,9 +748,40 @@ const MapComponent = () => {
             <div><strong>Location:</strong> ${escapeHtml(gig.district || "")}${gig.state ? `, ${escapeHtml(gig.state)}` : ""}</div>
             ${gig.pincode ? `<div style="margin-top: 4px;">Pincode: ${escapeHtml(gig.pincode)}</div>` : ""}
           </div>
+          <div style="margin-top: 10px; padding-top: 10px; border-top: 1px solid #E5E5E5;">
+            ${
+              hasHome
+                ? `<button type="button" data-action="see-distance" data-gig-id="${gig.id}" style="display:flex;align-items:center;gap:6px;padding:6px 10px;background:rgba(15,98,254,0.1);color:#0f62fe;border:none;border-radius:6px;font-size:13px;font-weight:500;cursor:pointer;font-family:'Open Sans',sans-serif;width:100%;justify-content:center;">
+              <svg width="16" height="16" viewBox="0 0 32 32" fill="currentColor"><path d="M16 4L4 14v14h8v-8h8v8h8V14L16 4z"/></svg>
+              See how far from your home
+            </button>`
+                : `<button type="button" data-action="add-home" style="display:flex;align-items:center;gap:6px;padding:6px 10px;background:rgba(15,98,254,0.1);color:#0f62fe;border:none;border-radius:6px;font-size:13px;font-weight:500;cursor:pointer;font-family:'Open Sans',sans-serif;width:100%;justify-content:center;">
+              <svg width="16" height="16" viewBox="0 0 32 32" fill="currentColor"><path d="M17 15V8h-2v7H8v2h7v7h2v-7h7v-2h-7z"/></svg>
+              Add home to see distance
+            </button>`
+            }
+          </div>
         </div>
       `;
       marker.bindPopup(popupContent, { className: "gig-popup", maxWidth: 320 });
+      marker.on("popupopen", () => {
+        const el = marker.getPopup()?.getElement();
+        if (!el) return;
+        const seeBtn = el.querySelector('[data-action="see-distance"]');
+        if (seeBtn) {
+          seeBtn.onclick = () => {
+            setSelectedGigForDistance(gig);
+            setShowDistanceFromHome(true);
+          };
+        }
+        const addBtn = el.querySelector('[data-action="add-home"]');
+        if (addBtn) {
+          addBtn.onclick = () => {
+            setSelectedGigForDistance(gig);
+            setShowAddHomeModal(true);
+          };
+        }
+      });
       clusterGroup.addLayer(marker);
       gigMarkersRef.current.push(marker);
     });
@@ -688,12 +802,12 @@ const MapComponent = () => {
     setSelectedGigType(null); // Clear filter when switching modes
   }, [searchMode]);
 
-  // Re-render gigs when filter changes
+  // Re-render gigs when filter, selected gig for distance, or home changes
   useEffect(() => {
     if (searchMode === "person" && gigs.length > 0 && mapInstanceRef.current) {
       renderGigMarkers(gigs);
     }
-  }, [selectedGigType]);
+  }, [selectedGigType, selectedGigForDistance, homeLocation]);
 
   // Fetch all gigs when in person mode (person icon = show all gigs; location filter only when user does a place search)
   useEffect(() => {
@@ -2260,6 +2374,89 @@ const MapComponent = () => {
     }
   }, [isCollegeFilterActive, selectedCollege]);
 
+  // Home marker and dotted line to selected gig
+  useEffect(() => {
+    if (!mapInstanceRef.current || !window.L || searchMode !== "person") return;
+
+    const L = window.L;
+    const hasHome =
+      homeLocation?.homeLatitude != null &&
+      homeLocation?.homeLongitude != null &&
+      Number.isFinite(Number(homeLocation.homeLatitude)) &&
+      Number.isFinite(Number(homeLocation.homeLongitude));
+
+    // Remove existing home marker
+    if (homeMarkerRef.current) {
+      mapInstanceRef.current.removeLayer(homeMarkerRef.current);
+      homeMarkerRef.current = null;
+    }
+    // Remove existing home-to-gig line
+    if (homeToGigLineRef.current) {
+      mapInstanceRef.current.removeLayer(homeToGigLineRef.current);
+      homeToGigLineRef.current = null;
+    }
+
+    if (!showDistanceFromHome || !hasHome) return;
+
+    const homeLat = Number(homeLocation.homeLatitude);
+    const homeLon = Number(homeLocation.homeLongitude);
+
+    // Add home marker
+    const homeIcon = L.divIcon({
+      html: `<div style="width:36px;height:36px;border-radius:50%;background:#fff;border:2px solid #0f62fe;display:flex;align-items:center;justify-content:center;box-shadow:0 2px 6px rgba(0,0,0,0.2);"><svg width="18" height="18" viewBox="0 0 32 32" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M16 4L4 14v14h8v-8h8v8h8V14L16 4z" fill="#0f62fe"/></svg></div>`,
+      className: "home-marker",
+      iconSize: [36, 36],
+      iconAnchor: [18, 18],
+    });
+    const marker = L.marker([homeLat, homeLon], {
+      icon: homeIcon,
+      zIndexOffset: 1900,
+    })
+      .addTo(mapInstanceRef.current)
+      .bindTooltip("Home", { permanent: false, direction: "top" });
+    homeMarkerRef.current = marker;
+
+    // Add dotted line to selected gig
+    const gig = selectedGigForDistance;
+    if (
+      gig?.latitude != null &&
+      gig?.longitude != null &&
+      Number.isFinite(Number(gig.latitude)) &&
+      Number.isFinite(Number(gig.longitude))
+    ) {
+      const gigCoords = [Number(gig.latitude), Number(gig.longitude)];
+      const line = L.polyline(
+        [
+          [homeLat, homeLon],
+          gigCoords,
+        ],
+        {
+          color: "#0A0A0A",
+          weight: 2,
+          opacity: 0.6,
+          dashArray: "5, 5",
+        }
+      ).addTo(mapInstanceRef.current);
+      homeToGigLineRef.current = line;
+    }
+
+    return () => {
+      if (homeMarkerRef.current && mapInstanceRef.current) {
+        mapInstanceRef.current.removeLayer(homeMarkerRef.current);
+        homeMarkerRef.current = null;
+      }
+      if (homeToGigLineRef.current && mapInstanceRef.current) {
+        mapInstanceRef.current.removeLayer(homeToGigLineRef.current);
+        homeToGigLineRef.current = null;
+      }
+    };
+  }, [
+    showDistanceFromHome,
+    homeLocation,
+    selectedGigForDistance,
+    searchMode,
+  ]);
+
   // Handle click outside filter dropdown (do not close when click is inside filter modal)
   useEffect(() => {
     const handleClickOutside = (event) => {
@@ -2325,7 +2522,7 @@ const MapComponent = () => {
     };
   }, [showSearchModeDropdown]);
 
-  // Close autocomplete when clicking outside
+  // Close autocomplete and suggestions when clicking outside
   useEffect(() => {
     const handleClickOutside = (event) => {
       if (
@@ -2354,16 +2551,25 @@ const MapComponent = () => {
       ) {
         setShowCollegeAutocomplete(false);
       }
+
+      if (
+        homeSuggestionsRef.current &&
+        !homeSuggestionsRef.current.contains(event.target) &&
+        searchInputRef.current &&
+        !searchInputRef.current.contains(event.target)
+      ) {
+        setShowSuggestionsDropdown(false);
+      }
     };
 
-    if (showAutocomplete || showJobAutocomplete || showCollegeAutocomplete) {
+    if (showAutocomplete || showJobAutocomplete || showCollegeAutocomplete || showSuggestionsDropdown) {
       document.addEventListener("mousedown", handleClickOutside);
     }
 
     return () => {
       document.removeEventListener("mousedown", handleClickOutside);
     };
-  }, [showAutocomplete, showJobAutocomplete, showCollegeAutocomplete]);
+  }, [showAutocomplete, showJobAutocomplete, showCollegeAutocomplete, showSuggestionsDropdown]);
 
   // Show autocomplete when user types
   const handleSearchInputChange = (e) => {
@@ -2378,24 +2584,20 @@ const MapComponent = () => {
     
     // Show autocomplete if query is at least 2 characters
     if (value.trim().length >= 2) {
+      setShowSuggestionsDropdown(false);
       // Check query type in priority order: job > college > locality
       const isJobQuery = isJobSearchQuery(value);
       const isCollegeQuery = isCollegeSearchQuery(value);
       
-      console.log("🔍 Search input change:", { value, isJobQuery, isCollegeQuery, jobTitlesCount: jobTitles.length, collegesCount: colleges.length });
-      
       if (isJobQuery) {
-        console.log("✅ Showing job autocomplete");
         setShowJobAutocomplete(true);
         setShowAutocomplete(false);
         setShowCollegeAutocomplete(false);
       } else if (isCollegeQuery) {
-        console.log("✅ Showing college autocomplete");
         setShowCollegeAutocomplete(true);
         setShowAutocomplete(false);
         setShowJobAutocomplete(false);
       } else {
-        console.log("✅ Showing locality autocomplete");
         setShowAutocomplete(true);
         setShowJobAutocomplete(false);
         setShowCollegeAutocomplete(false);
@@ -2404,6 +2606,11 @@ const MapComponent = () => {
       setShowAutocomplete(false);
       setShowJobAutocomplete(false);
       setShowCollegeAutocomplete(false);
+      if (value.trim().length === 0) {
+        setShowSuggestionsDropdown(true);
+      } else {
+        setShowSuggestionsDropdown(false);
+      }
     }
   };
 
@@ -2897,15 +3104,20 @@ const MapComponent = () => {
                         setShowJobAutocomplete(true);
                         setShowCollegeAutocomplete(false);
                         setShowAutocomplete(false);
+                        setShowSuggestionsDropdown(false);
                       } else if (isCollegeSearchQuery(searchQuery)) {
                         setShowCollegeAutocomplete(true);
                         setShowJobAutocomplete(false);
                         setShowAutocomplete(false);
+                        setShowSuggestionsDropdown(false);
                       } else {
                         setShowAutocomplete(true);
                         setShowJobAutocomplete(false);
                         setShowCollegeAutocomplete(false);
+                        setShowSuggestionsDropdown(false);
                       }
+                    } else if (searchQuery.trim().length === 0) {
+                      setShowSuggestionsDropdown(true);
                     }
                   }}
                   onBlur={() => setMobileSearchExpanded(false)}
@@ -2988,6 +3200,58 @@ const MapComponent = () => {
                   </button>
                 </div>
                 
+                {/* Home / Add home suggestions - when search empty and focused */}
+                {showSuggestionsDropdown && (
+                  <div
+                    ref={homeSuggestionsRef}
+                    className="absolute left-0 right-0 top-full mt-2 z-[1001] rounded-lg border border-brand-stroke-border bg-brand-bg-white shadow-lg overflow-hidden"
+                    style={{ fontFamily: "Open Sans" }}
+                  >
+                    {homeLocation ? (
+                      <div className="flex items-center justify-between gap-3 px-4 py-3 hover:bg-brand-bg-fill transition-colors">
+                        <div className="flex items-center gap-3 min-w-0 flex-1">
+                          <div className="shrink-0 w-9 h-9 rounded-full bg-brand/10 flex items-center justify-center">
+                            <Home size={20} className="text-brand" />
+                          </div>
+                          <div className="min-w-0">
+                            <div className="font-medium text-brand-text-strong">Home</div>
+                            <div className="text-sm text-brand-text-weak truncate">
+                              {[homeLocation.homeDistrict, homeLocation.homeState].filter(Boolean).join(", ") || "Location set"}
+                            </div>
+                          </div>
+                        </div>
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setShowAddHomeModal(true);
+                            setShowSuggestionsDropdown(false);
+                          }}
+                          className="shrink-0 text-sm font-medium text-brand hover:underline"
+                        >
+                          Edit
+                        </button>
+                      </div>
+                    ) : (
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setShowAddHomeModal(true);
+                          setShowSuggestionsDropdown(false);
+                        }}
+                        className="w-full flex items-center gap-3 px-4 py-3 hover:bg-brand-bg-fill transition-colors text-left"
+                      >
+                        <div className="shrink-0 w-9 h-9 rounded-full bg-brand/10 flex items-center justify-center">
+                          <Add size={20} className="text-brand" />
+                        </div>
+                        <span className="font-medium text-brand-text-strong">Add home</span>
+                      </button>
+                    )}
+                    <div className="px-4 py-2 text-xs text-brand-text-weak border-t border-brand-stroke-weak">
+                      Keep typing to search for locality, job, or college
+                    </div>
+                  </div>
+                )}
+
                 {/* Autocomplete Dropdown */}
                 <LocalityAutocomplete
                   isOpen={showAutocomplete}
@@ -3127,13 +3391,40 @@ const MapComponent = () => {
                   </button>
                 </div>
 
-                {/* View toggle: Globe (map) | Chat (onboarding) - inside search bar, right end, desktop only; bg-white, fully rounded */}
+                {/* Home distance badge - when user has home, toggle show distance */}
+                {homeLocation && searchMode === "person" && (
+                  <button
+                    type="button"
+                    onClick={() => setShowDistanceFromHome((v) => !v)}
+                    className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-full border border-brand-stroke-border bg-brand-bg-white hover:bg-brand-bg-fill transition-colors shrink-0"
+                    title={showDistanceFromHome ? "Hide distance" : "Show distance from home"}
+                  >
+                    <Home size={18} className="text-brand shrink-0" />
+                    {showDistanceFromHome &&
+                    selectedGigForDistance?.latitude != null &&
+                    selectedGigForDistance?.longitude != null ? (
+                      <span className="text-xs font-medium text-brand-text-strong">
+                        {haversineKm(
+                          homeLocation.homeLatitude,
+                          homeLocation.homeLongitude,
+                          selectedGigForDistance.latitude,
+                          selectedGigForDistance.longitude
+                        ).toFixed(1)}{" "}
+                        km
+                      </span>
+                    ) : (
+                      <span className="text-xs font-medium text-brand-text-weak">Home</span>
+                    )}
+                  </button>
+                )}
+
+                {/* View toggle: Globe (map) | Chat (onboarding) - inside search bar, right end, desktop only; rounded-md to match Person/Job toggle */}
                 <div className="hidden md:flex items-center shrink-0 ml-1">
-                  <div className="flex bg-white border border-brand-stroke-border overflow-hidden rounded-full shrink-0">
+                  <div className="flex bg-white border border-brand-stroke-border overflow-hidden rounded-md shrink-0">
                     <button
                       type="button"
                       aria-label="Map view"
-                      className={`flex items-center gap-1.5 px-3 py-2 border-0 ${searchBar["toggle-segment"]} ${searchBar["toggle-segment-active"]} !rounded-l-full !rounded-r-none`}
+                      className={`flex items-center gap-1.5 px-3 py-2 border-0 ${searchBar["toggle-segment"]} ${searchBar["toggle-segment-active"]} !rounded-l-md !rounded-r-none`}
                     >
                       <EarthFilled size={20} className={`w-5 h-5 shrink-0 ${searchBar["toggle-segment-icon-active"]} text-brand`} />
                       <span className={`text-sm font-medium ${searchBar["toggle-segment-icon-active"]}`}>Map</span>
@@ -3142,10 +3433,11 @@ const MapComponent = () => {
                       type="button"
                       onClick={() => router.push("/onboarding")}
                       aria-label="Chat / onboarding"
-                      className={`flex items-center gap-1.5 px-3 py-2 border-0 ${searchBar["toggle-segment"]} !rounded-r-full !rounded-l-none`}
+                      className={`flex items-center gap-1.5 px-3 py-2 border-0 ${searchBar["toggle-segment"]} !rounded-r-md !rounded-l-none`}
                     >
                       <Chat size={20} className={`w-5 h-5 shrink-0 ${searchBar["toggle-segment-icon"]}`} />
                       <span className={`text-sm font-medium ${searchBar["toggle-segment-icon"]}`}>Chat</span>
+                      <ArrowRight size={16} className={`w-4 h-4 shrink-0 ${searchBar["toggle-segment-icon"]}`} />
                     </button>
                   </div>
                 </div>
@@ -3294,6 +3586,23 @@ const MapComponent = () => {
           </div>
         </div>
       </div>
+
+      <AddHomeModal
+        isOpen={showAddHomeModal}
+        onClose={() => setShowAddHomeModal(false)}
+        onSaved={(user) => {
+          if (user?.homeLatitude != null && user?.homeLongitude != null) {
+            setHomeLocation({
+              homeLatitude: user.homeLatitude,
+              homeLongitude: user.homeLongitude,
+              homeLocality: user.homeLocality,
+              homeDistrict: user.homeDistrict,
+              homeState: user.homeState,
+            });
+          }
+        }}
+        initialHome={homeLocation}
+      />
     </div>
   );
 };

@@ -48,8 +48,8 @@ export async function GET() {
 
 /**
  * PATCH /api/profile
- * Update current user profile (e.g. display name, account type).
- * Body: { name?: string, accountType?: "Company" | "Individual" }
+ * Update current user profile (e.g. display name, account type, home location).
+ * Body: { name?: string, accountType?: "Company" | "Individual", homeLatitude?: number, homeLongitude?: number, homeLocality?: string, homeDistrict?: string, homeState?: string }
  */
 export async function PATCH(request) {
   try {
@@ -62,9 +62,26 @@ export async function PATCH(request) {
     }
 
     const body = await request.json().catch(() => ({}));
-    const { name: rawName, accountType: rawAccountType } = body;
+    const {
+      name: rawName,
+      accountType: rawAccountType,
+      homeLatitude: rawHomeLatitude,
+      homeLongitude: rawHomeLongitude,
+      homeLocality: rawHomeLocality,
+      homeDistrict: rawHomeDistrict,
+      homeState: rawHomeState,
+    } = body;
 
-    if (rawName === undefined && rawAccountType === undefined) {
+    const hasUpdate =
+      rawName !== undefined ||
+      rawAccountType !== undefined ||
+      rawHomeLatitude !== undefined ||
+      rawHomeLongitude !== undefined ||
+      rawHomeLocality !== undefined ||
+      rawHomeDistrict !== undefined ||
+      rawHomeState !== undefined;
+
+    if (!hasUpdate) {
       return NextResponse.json(
         { error: "No fields to update" },
         { status: 400 }
@@ -95,6 +112,24 @@ export async function PATCH(request) {
         );
       }
       updateData.accountType = accountType;
+    }
+
+    if (rawHomeLatitude !== undefined) {
+      const val = typeof rawHomeLatitude === "number" ? rawHomeLatitude : parseFloat(rawHomeLatitude);
+      updateData.homeLatitude = Number.isFinite(val) ? val : null;
+    }
+    if (rawHomeLongitude !== undefined) {
+      const val = typeof rawHomeLongitude === "number" ? rawHomeLongitude : parseFloat(rawHomeLongitude);
+      updateData.homeLongitude = Number.isFinite(val) ? val : null;
+    }
+    if (rawHomeLocality !== undefined) {
+      updateData.homeLocality = typeof rawHomeLocality === "string" ? rawHomeLocality.trim().slice(0, 255) || null : null;
+    }
+    if (rawHomeDistrict !== undefined) {
+      updateData.homeDistrict = typeof rawHomeDistrict === "string" ? rawHomeDistrict.trim().slice(0, 100) || null : null;
+    }
+    if (rawHomeState !== undefined) {
+      updateData.homeState = typeof rawHomeState === "string" ? rawHomeState.trim().slice(0, 100) || null : null;
     }
 
     // Use service layer with cache invalidation
