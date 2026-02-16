@@ -18,6 +18,7 @@ import PincodeDropdown from "../components/Onboarding/PincodeDropdown";
 import ServiceTypeSelector from "../components/Onboarding/ServiceTypeSelector";
 import SalaryInput from "../components/Onboarding/SalaryInput";
 import ExperienceInput from "../components/Onboarding/ExperienceInput";
+import ProfileBubbleBackground from "../components/Onboarding/ProfileBubbleBackground";
 
 // Field collection states
 const COMPANY_FIELDS = {
@@ -1512,23 +1513,21 @@ export default function OnboardingPage() {
   // Show email authentication overlay (only after checking auth to avoid flash)
   if (showAuth) {
     return (
-      <div 
-        className="min-h-screen relative overflow-hidden"
+      <div
+        className="fixed inset-0 w-full h-full overflow-hidden"
         style={{
-          backgroundImage: 'url(/back.png)',
-          backgroundSize: 'cover',
-          backgroundPosition: 'center',
-          backgroundRepeat: 'no-repeat',
-          backgroundColor: '#f5f5f5', // Fallback color
+          backgroundImage: "url(/back.png)",
+          backgroundSize: "cover",
+          backgroundPosition: "center",
+          backgroundRepeat: "no-repeat",
+          backgroundColor: "#f5f5f5",
         }}
       >
-        {/* Overlay with blur */}
-        <div
-          className="absolute inset-0 z-10 flex items-center justify-center p-4"
-          style={{
-            backdropFilter: "blur(3px)",
-          }}
-        >
+        {/* Animated bubble background above the image */}
+        <ProfileBubbleBackground />
+        
+        {/* Sign-up modal overlay */}
+        <div className="absolute inset-0 z-10 flex items-center justify-center p-4">
           <EmailAuthForm onSubmit={handleEmailAuth} isLoading={isLoading} />
         </div>
       </div>

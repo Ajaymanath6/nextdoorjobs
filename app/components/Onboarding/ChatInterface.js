@@ -687,16 +687,36 @@ export default function ChatInterface({ messages = [], onSendMessage, isLoading 
           if (!gigToDelete) return;
           setDeletingGigId(gigToDelete.id);
           setDeleteConfirmOpen(false);
+          
+          // Remove from local list immediately for instant UI feedback
+          setChatMessages((prev) => {
+            return prev.map((msg) => {
+              if (msg.type === "gigList") {
+                return {
+                  ...msg,
+                  gigs: msg.gigs.filter((g) => g.id !== gigToDelete.id)
+                };
+              }
+              return msg;
+            });
+          });
+          
           try {
             const res = await fetch(`/api/gigs/${gigToDelete.id}`, {
               method: "DELETE",
               credentials: "same-origin",
             });
             if (res.ok) {
+              // Still call parent callback to refresh map markers
+              onGigDeleted?.();
+            } else {
+              // If delete failed, refetch to restore correct state
               onGigDeleted?.();
             }
           } catch (err) {
             console.error("Delete failed:", err);
+            // Refetch on error to restore correct state
+            onGigDeleted?.();
           } finally {
             setDeletingGigId(null);
             setGigToDelete(null);
