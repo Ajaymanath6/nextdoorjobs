@@ -155,70 +155,86 @@ export default function ProfileBubbleBackground() {
           sway * 0.6,
           this.tailEndY
         );
-        ctx.strokeStyle = `hsla(${hue}, 40%, 60%, 0.2)`;
+        ctx.strokeStyle = "hsla(0, 0%, 70%, 0.2)";
         ctx.lineWidth = 1.2;
         ctx.stroke();
 
-        // Glow
-        const glow = ctx.createRadialGradient(0, 0, this.r * 0.8, 0, 0, this.r * 1.6);
-        glow.addColorStop(0, `hsla(${hue}, 60%, 50%, 0.08)`);
-        glow.addColorStop(1, `hsla(${hue}, 60%, 50%, 0)`);
-        ctx.fillStyle = glow;
+        // Outer soft shadow behind bubble
+        ctx.save();
+        ctx.shadowColor = "rgba(0, 0, 0, 0.12)";
+        ctx.shadowBlur = 14;
+        ctx.fillStyle = "rgba(0, 0, 0, 0.04)";
         ctx.beginPath();
-        ctx.arc(0, 0, this.r * 1.6, 0, Math.PI * 2);
+        ctx.arc(0, 0, this.r * 0.98, 0, Math.PI * 2);
         ctx.fill();
+        ctx.shadowBlur = 0;
+        ctx.restore();
 
-        // Bubble
-        const grad = ctx.createRadialGradient(
-          -this.r * 0.25,
-          -this.r * 0.3,
-          this.r * 0.1,
-          0,
-          0,
-          this.r
-        );
-        grad.addColorStop(0, `hsla(${hue}, 50%, 75%, 0.35)`);
-        grad.addColorStop(0.5, `hsla(${hue}, 45%, 40%, 0.25)`);
-        grad.addColorStop(1, `hsla(${hue}, 55%, 25%, 0.3)`);
-        ctx.fillStyle = grad;
-        ctx.globalAlpha = 0.9;
+        // Bubble - transparent glass fill
+        ctx.globalAlpha = 0.4;
+        ctx.fillStyle = "rgba(255, 255, 255, 1)";
         ctx.beginPath();
         ctx.arc(0, 0, this.r, 0, Math.PI * 2);
         ctx.fill();
-        ctx.strokeStyle = `hsla(${hue}, 50%, 70%, 0.3)`;
-        ctx.lineWidth = 1.5;
-        ctx.stroke();
+        ctx.globalAlpha = 1;
 
-        // Highlight
+        // Inset shadow (darker bottom-right)
+        const insetGrad = ctx.createRadialGradient(
+          -this.r * 0.2,
+          -this.r * 0.2,
+          0,
+          this.r * 0.5,
+          this.r * 0.5,
+          this.r * 1.2
+        );
+        insetGrad.addColorStop(0, "rgba(255, 255, 255, 0)");
+        insetGrad.addColorStop(0.6, "rgba(0, 0, 0, 0.03)");
+        insetGrad.addColorStop(1, "rgba(0, 0, 0, 0.06)");
+        ctx.fillStyle = insetGrad;
         ctx.beginPath();
-        ctx.arc(-this.r * 0.25, -this.r * 0.3, this.r * 0.3, 0, Math.PI * 2);
-        ctx.fillStyle = `hsla(0, 0%, 100%, 0.18)`;
+        ctx.arc(0, 0, this.r, 0, Math.PI * 2);
         ctx.fill();
 
-        // Avatar image or initials fallback
-        const img = imageCache.get(this.profile.avatar);
-        if (img && img.complete) {
-          ctx.save();
-          ctx.beginPath();
-          ctx.arc(0, 0, this.r * 0.75, 0, Math.PI * 2);
-          ctx.clip();
+        // Border - light white edge
+        ctx.strokeStyle = "rgba(255, 255, 255, 0.6)";
+        ctx.lineWidth = 1;
+        ctx.beginPath();
+        ctx.arc(0, 0, this.r, 0, Math.PI * 2);
+        ctx.stroke();
 
-          const imgSize = this.r * 1.5;
+        // Glossy reflection - top-left (like ::after in reference)
+        ctx.beginPath();
+        ctx.ellipse(-this.r * 0.25, -this.r * 0.3, this.r * 0.3, this.r * 0.2, -0.8, 0, Math.PI * 2);
+        ctx.fillStyle = "rgba(255, 255, 255, 0.5)";
+        ctx.fill();
+
+        // Avatar with dark green border #1a4d4a
+        const img = imageCache.get(this.profile.avatar);
+        const avatarRadius = this.r * 0.65;
+        ctx.save();
+        ctx.beginPath();
+        ctx.arc(0, 0, avatarRadius, 0, Math.PI * 2);
+        ctx.clip();
+        if (img && img.complete) {
+          const imgSize = this.r * 1.3;
           ctx.drawImage(img, -imgSize / 2, -imgSize / 2, imgSize, imgSize);
-          ctx.restore();
         } else {
-          // Fallback to initials if image not loaded
-          ctx.globalAlpha = 1;
-          ctx.fillStyle = `hsl(${hue}, 70%, 85%)`;
-          ctx.font = `bold ${this.r * 0.65}px system-ui, -apple-system, sans-serif`;
+          ctx.fillStyle = `hsl(${hue}, 70%, 88%)`;
+          ctx.font = `bold ${this.r * 0.55}px system-ui, -apple-system, sans-serif`;
           ctx.textAlign = "center";
           ctx.textBaseline = "middle";
           ctx.fillText(this.profile.initials, 0, 1);
         }
+        ctx.restore();
+        ctx.strokeStyle = "#1a4d4a";
+        ctx.lineWidth = Math.max(2, this.r * 0.08);
+        ctx.beginPath();
+        ctx.arc(0, 0, avatarRadius, 0, Math.PI * 2);
+        ctx.stroke();
 
-        // Name
+        // Name - subtle gray
         ctx.globalAlpha = 1;
-        ctx.fillStyle = `hsla(${hue}, 50%, 80%, 0.6)`;
+        ctx.fillStyle = "hsla(0, 0%, 40%, 0.8)";
         ctx.font = `${Math.max(9, this.r * 0.28)}px system-ui, sans-serif`;
         ctx.textAlign = "center";
         ctx.textBaseline = "middle";

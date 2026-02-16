@@ -587,64 +587,64 @@ const MapComponent = () => {
           }
         }
         
-        // Calculate bubble size based on count
-        const baseSize = 50;
+        // Light bubble size
+        const baseSize = 56;
         const size = Math.min(baseSize + (count * 2), 100);
-        
-        // Create bubble HTML with avatars
-        const avatarSize = size / 3;
-        const avatarHTML = avatars.map((url, i) => {
-          const positions = [
-            { top: '15%', left: '50%', transform: 'translateX(-50%)' }, // top
-            { bottom: '15%', left: '20%' }, // bottom-left
-            { bottom: '15%', right: '20%' }, // bottom-right
-            { top: '50%', left: '50%', transform: 'translate(-50%, -50%)' } // center
-          ];
-          const pos = positions[i] || positions[3];
-          
-          return `
-            <img 
-              src="${url}" 
-              style="
-                position: absolute;
-                width: ${avatarSize}px;
-                height: ${avatarSize}px;
-                border-radius: 50%;
-                border: 2px solid white;
-                object-fit: cover;
-                ${Object.entries(pos).map(([k, v]) => `${k}: ${v};`).join('')}
-              "
-              onerror="this.src='/avatars/avatar1.png'"
-            />
-          `;
-        }).join('');
-        
+        const padding = 10;
+
+        // 2x2 grid: always 4 cells, fill with avatars (empty if fewer than 4)
+        const avatarCells = [];
+        for (let i = 0; i < 4; i++) {
+          const url = avatars[i];
+          if (url) {
+            avatarCells.push(`
+              <div style="width:100%;height:100%;min-width:0;min-height:0;display:flex;align-items:center;justify-content:center;border-radius:50%;overflow:hidden;">
+                <img src="${url}" alt="" style="width:100%;height:100%;object-fit:cover;border:1px solid rgba(0,0,0,0.06);" onerror="this.src='/avatars/avatar1.png'" />
+              </div>
+            `);
+          } else {
+            avatarCells.push('<div style="width:100%;height:100%;"></div>');
+          }
+        }
+
         const html = `
           <div style="
             position: relative;
-            background: linear-gradient(135deg, rgba(15, 98, 254, 0.9) 0%, rgba(15, 98, 254, 0.7) 100%);
-            border-radius: 50%;
             width: ${size}px;
             height: ${size}px;
+            border-radius: 50%;
+            background: linear-gradient(145deg, #f2f2f2 0%, #e8e8e8 50%, #e0e0e0 100%);
+            border: 1px solid rgba(0,0,0,0.08);
+            box-shadow: inset 0 1px 2px rgba(255,255,255,0.6), 0 2px 8px rgba(0,0,0,0.08);
             display: flex;
             align-items: center;
             justify-content: center;
-            border: 3px solid white;
-            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
-            backdrop-filter: blur(10px);
+            padding: ${padding}px;
+            box-sizing: border-box;
           ">
-            ${avatarHTML}
+            <div style="
+              display: grid;
+              grid-template-columns: 1fr 1fr;
+              grid-template-rows: 1fr 1fr;
+              gap: 4px;
+              width: 100%;
+              height: 100%;
+              min-width: 0;
+              min-height: 0;
+            ">
+              ${avatarCells.join('')}
+            </div>
             ${count > 4 ? `
               <div style="
                 position: absolute;
-                bottom: 5px;
-                right: 5px;
-                background: rgba(0, 0, 0, 0.7);
+                bottom: 4px;
+                right: 4px;
+                background: rgba(0, 0, 0, 0.55);
                 color: white;
                 border-radius: 10px;
                 padding: 2px 6px;
                 font-size: 10px;
-                font-weight: bold;
+                font-weight: 600;
               ">
                 +${count - 4}
               </div>
@@ -683,17 +683,23 @@ const MapComponent = () => {
         ? getAvatarUrlById(gig.user.avatarId)
         : gig.user?.avatarUrl || "/avatars/avatar1.png";
       const escapeHtml = (str) => (str || "").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
+      const serviceBadge = gig.serviceType
+        ? `<span style="display: inline-block; margin-top: 6px; padding: 4px 10px; border-radius: 9999px; font-size: 12px; font-weight: 500; color: #0f62fe; background: rgba(15, 98, 254, 0.12); white-space: nowrap;">${escapeHtml(gig.serviceType)}</span>`
+        : "";
       const popupContent = `
         <div style="font-family: 'Open Sans', sans-serif; padding: 12px; min-width: 280px; max-width: 320px;">
-          <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 12px;">
-            <img src="${userAvatarUrl}" alt="${escapeHtml(userName)}" style="width: 40px; height: 40px; border-radius: 50%; object-fit: cover; border: 2px solid #E5E5E5;" onerror="this.src='/avatars/avatar1.png'" />
-            <div>
+          <div style="display: flex; align-items: flex-start; gap: 8px; margin-bottom: 12px;">
+            <div style="flex-shrink: 0; display: flex; flex-direction: column; align-items: center;">
+              <img src="${userAvatarUrl}" alt="${escapeHtml(userName)}" style="width: 40px; height: 40px; border-radius: 50%; object-fit: cover; border: 2px solid #E5E5E5;" onerror="this.src='/avatars/avatar1.png'" />
+              ${serviceBadge}
+            </div>
+            <div style="flex: 1; min-width: 0;">
               <div style="font-weight: 600; font-size: 16px; color: #0A0A0A;">${escapeHtml(gig.title || "")}</div>
               <div style="font-size: 13px; color: #737373;">${escapeHtml(userName)}</div>
             </div>
           </div>
           ${gig.description ? `<div style="font-size: 13px; color: #1A1A1A; margin-bottom: 10px; line-height: 1.5;">${escapeHtml(gig.description)}</div>` : ""}
-          <div style="font-size: 13px; color: #575757; margin-bottom: 8px;"><strong>Service:</strong> ${escapeHtml(gig.serviceType || "")}</div>
+          <div style="font-size: 13px; color: #575757; margin-bottom: 8px;"><strong>Service:</strong> ${escapeHtml(gig.serviceType || "—")}</div>
           ${gig.expectedSalary ? `<div style="font-size: 13px; color: #575757; margin-bottom: 8px;"><strong>Expected Salary:</strong> ${escapeHtml(gig.expectedSalary)}</div>` : ""}
           ${gig.experienceWithGig ? `<div style="font-size: 13px; color: #575757; margin-bottom: 8px;"><strong>Experience:</strong> ${escapeHtml(gig.experienceWithGig)}</div>` : ""}
           ${gig.customersTillDate != null ? `<div style="font-size: 13px; color: #575757; margin-bottom: 8px;"><strong>Customers Served:</strong> ${gig.customersTillDate}</div>` : ""}

@@ -432,59 +432,236 @@ export default function OnboardingPage() {
             if (value.toLowerCase() !== "skip" && value) {
               setGigData((prev) => ({ ...prev, description: value }));
             }
-            await addAIMessage("What type of service is this? (e.g. Singing, Tailor, Teaching)");
-            setCurrentField(GIG_FIELDS.SERVICE_TYPE);
-            break;
-          case GIG_FIELDS.SERVICE_TYPE:
             await addAIMessage("What type of service is this? Choose from the list or enter your own.");
+            setCurrentField(GIG_FIELDS.SERVICE_TYPE);
             setInlineComponent(
               <ServiceTypeSelector
-                onSelect={(serviceType) => {
+                onSelect={async (serviceType) => {
                   setGigData((prev) => ({ ...prev, serviceType }));
                   setInlineComponent(null);
+                  await addAIMessage("What's the expected salary for this gig?");
+                  setInlineComponent(
+                    <SalaryInput
+                      onSubmit={async (salary) => {
+                        setGigData((prev) => ({ ...prev, expectedSalary: salary }));
+                        setInlineComponent(null);
+                        await addAIMessage("Tell us your years of experience with this gig.");
+                        setInlineComponent(
+                          <ExperienceInput
+                            onSubmit={async (experience) => {
+                              setGigData((prev) => ({ ...prev, experienceWithGig: experience }));
+                              setInlineComponent(null);
+                              await addAIMessage("How many customers have you served till date? (Number or 'skip')");
+                              setCurrentField(GIG_FIELDS.CUSTOMERS_TILL_DATE);
+                              setIsLoading(false);
+                              setTimeout(() => scrollToInlineRef.current?.(), 150);
+                            }}
+                            onSkip={async () => {
+                              setInlineComponent(null);
+                              await addAIMessage("How many customers have you served till date? (Number or 'skip')");
+                              setCurrentField(GIG_FIELDS.CUSTOMERS_TILL_DATE);
+                              setIsLoading(false);
+                              setTimeout(() => scrollToInlineRef.current?.(), 150);
+                            }}
+                          />
+                        );
+                        setCurrentField(GIG_FIELDS.EXPERIENCE);
+                        setTimeout(() => scrollToInlineRef.current?.(), 150);
+                      }}
+                      onSkip={async () => {
+                        setInlineComponent(null);
+                        await addAIMessage("Tell us your years of experience with this gig.");
+                        setInlineComponent(
+                          <ExperienceInput
+                            onSubmit={async (experience) => {
+                              setGigData((prev) => ({ ...prev, experienceWithGig: experience }));
+                              setInlineComponent(null);
+                              await addAIMessage("How many customers have you served till date? (Number or 'skip')");
+                              setCurrentField(GIG_FIELDS.CUSTOMERS_TILL_DATE);
+                              setIsLoading(false);
+                              setTimeout(() => scrollToInlineRef.current?.(), 150);
+                            }}
+                            onSkip={async () => {
+                              setInlineComponent(null);
+                              await addAIMessage("How many customers have you served till date? (Number or 'skip')");
+                              setCurrentField(GIG_FIELDS.CUSTOMERS_TILL_DATE);
+                              setIsLoading(false);
+                              setTimeout(() => scrollToInlineRef.current?.(), 150);
+                            }}
+                          />
+                        );
+                        setCurrentField(GIG_FIELDS.EXPERIENCE);
+                        setTimeout(() => scrollToInlineRef.current?.(), 150);
+                      }}
+                    />
+                  );
                   setCurrentField(GIG_FIELDS.EXPECTED_SALARY);
+                  setTimeout(() => scrollToInlineRef.current?.(), 150);
                 }}
-                onSkip={() => {
+                onSkip={async () => {
                   setInlineComponent(null);
+                  await addAIMessage("What's the expected salary for this gig?");
+                  setInlineComponent(
+                    <SalaryInput
+                      onSubmit={async (salary) => {
+                        setGigData((prev) => ({ ...prev, expectedSalary: salary }));
+                        setInlineComponent(null);
+                        await addAIMessage("Tell us your years of experience with this gig.");
+                        setInlineComponent(
+                          <ExperienceInput
+                            onSubmit={async (experience) => {
+                              setGigData((prev) => ({ ...prev, experienceWithGig: experience }));
+                              setInlineComponent(null);
+                              await addAIMessage("How many customers have you served till date? (Number or 'skip')");
+                              setCurrentField(GIG_FIELDS.CUSTOMERS_TILL_DATE);
+                              setIsLoading(false);
+                              setTimeout(() => scrollToInlineRef.current?.(), 150);
+                            }}
+                            onSkip={async () => {
+                              setInlineComponent(null);
+                              await addAIMessage("How many customers have you served till date? (Number or 'skip')");
+                              setCurrentField(GIG_FIELDS.CUSTOMERS_TILL_DATE);
+                              setIsLoading(false);
+                              setTimeout(() => scrollToInlineRef.current?.(), 150);
+                            }}
+                          />
+                        );
+                        setCurrentField(GIG_FIELDS.EXPERIENCE);
+                        setTimeout(() => scrollToInlineRef.current?.(), 150);
+                      }}
+                      onSkip={async () => {
+                        setInlineComponent(null);
+                        await addAIMessage("Tell us your years of experience with this gig.");
+                        setInlineComponent(
+                          <ExperienceInput
+                            onSubmit={async (experience) => {
+                              setGigData((prev) => ({ ...prev, experienceWithGig: experience }));
+                              setInlineComponent(null);
+                              await addAIMessage("How many customers have you served till date? (Number or 'skip')");
+                              setCurrentField(GIG_FIELDS.CUSTOMERS_TILL_DATE);
+                              setIsLoading(false);
+                              setTimeout(() => scrollToInlineRef.current?.(), 150);
+                            }}
+                            onSkip={async () => {
+                              setInlineComponent(null);
+                              await addAIMessage("How many customers have you served till date? (Number or 'skip')");
+                              setCurrentField(GIG_FIELDS.CUSTOMERS_TILL_DATE);
+                              setIsLoading(false);
+                              setTimeout(() => scrollToInlineRef.current?.(), 150);
+                            }}
+                          />
+                        );
+                        setCurrentField(GIG_FIELDS.EXPERIENCE);
+                        setTimeout(() => scrollToInlineRef.current?.(), 150);
+                      }}
+                    />
+                  );
                   setCurrentField(GIG_FIELDS.EXPECTED_SALARY);
+                  setTimeout(() => scrollToInlineRef.current?.(), 150);
                 }}
               />
             );
             setTimeout(() => scrollToInlineRef.current?.(), 150);
+            setIsLoading(false);
             return;
-          case GIG_FIELDS.EXPECTED_SALARY:
+          case GIG_FIELDS.SERVICE_TYPE:
+            if (value && value.trim()) {
+              setGigData((prev) => ({ ...prev, serviceType: value.trim() }));
+            }
             await addAIMessage("What's the expected salary for this gig?");
             setInlineComponent(
               <SalaryInput
-                onSubmit={(salary) => {
+                onSubmit={async (salary) => {
                   setGigData((prev) => ({ ...prev, expectedSalary: salary }));
                   setInlineComponent(null);
-                  setCurrentField(GIG_FIELDS.EXPERIENCE);
+                  await addAIMessage("Tell us your years of experience with this gig.");
+                  setInlineComponent(
+                    <ExperienceInput
+                      onSubmit={async (experience) => {
+                        setGigData((prev) => ({ ...prev, experienceWithGig: experience }));
+                        setInlineComponent(null);
+                        await addAIMessage("How many customers have you served till date? (Number or 'skip')");
+setCurrentField(GIG_FIELDS.CUSTOMERS_TILL_DATE);
+                            setIsLoading(false);
+                            setTimeout(() => scrollToInlineRef.current?.(), 150);
+                      }}
+                      onSkip={async () => {
+                        setInlineComponent(null);
+                        await addAIMessage("How many customers have you served till date? (Number or 'skip')");
+setCurrentField(GIG_FIELDS.CUSTOMERS_TILL_DATE);
+                            setIsLoading(false);
+                            setTimeout(() => scrollToInlineRef.current?.(), 150);
+                      }}
+                    />
+                  );
+                  setCurrentField(GIG_FIELDS.EXPECTED_SALARY);
+                  setTimeout(() => scrollToInlineRef.current?.(), 150);
                 }}
-                onSkip={() => {
+                onSkip={async () => {
                   setInlineComponent(null);
-                  setCurrentField(GIG_FIELDS.EXPERIENCE);
+                  await addAIMessage("Tell us your years of experience with this gig.");
+                  setInlineComponent(
+                    <ExperienceInput
+                      onSubmit={async (experience) => {
+                        setGigData((prev) => ({ ...prev, experienceWithGig: experience }));
+                        setInlineComponent(null);
+                        await addAIMessage("How many customers have you served till date? (Number or 'skip')");
+setCurrentField(GIG_FIELDS.CUSTOMERS_TILL_DATE);
+                            setIsLoading(false);
+                            setTimeout(() => scrollToInlineRef.current?.(), 150);
+                      }}
+                      onSkip={async () => {
+                        setInlineComponent(null);
+                        await addAIMessage("How many customers have you served till date? (Number or 'skip')");
+setCurrentField(GIG_FIELDS.CUSTOMERS_TILL_DATE);
+                            setIsLoading(false);
+                            setTimeout(() => scrollToInlineRef.current?.(), 150);
+                      }}
+                    />
+                  );
+                  setCurrentField(GIG_FIELDS.EXPECTED_SALARY);
+                  setTimeout(() => scrollToInlineRef.current?.(), 150);
                 }}
               />
             );
+            setCurrentField(GIG_FIELDS.EXPECTED_SALARY);
             setTimeout(() => scrollToInlineRef.current?.(), 150);
             return;
-          case GIG_FIELDS.EXPERIENCE:
+          case GIG_FIELDS.EXPECTED_SALARY:
+            if (value.toLowerCase() !== "skip" && value) {
+              setGigData((prev) => ({ ...prev, expectedSalary: value }));
+            }
             await addAIMessage("Tell us your years of experience with this gig.");
             setInlineComponent(
               <ExperienceInput
-                onSubmit={(experience) => {
+                onSubmit={async (experience) => {
                   setGigData((prev) => ({ ...prev, experienceWithGig: experience }));
                   setInlineComponent(null);
-                  setCurrentField(GIG_FIELDS.CUSTOMERS_TILL_DATE);
+                  await addAIMessage("How many customers have you served till date? (Number or 'skip')");
+setCurrentField(GIG_FIELDS.CUSTOMERS_TILL_DATE);
+                            setIsLoading(false);
+                            setTimeout(() => scrollToInlineRef.current?.(), 150);
                 }}
-                onSkip={() => {
+                onSkip={async () => {
                   setInlineComponent(null);
-                  setCurrentField(GIG_FIELDS.CUSTOMERS_TILL_DATE);
+                  await addAIMessage("How many customers have you served till date? (Number or 'skip')");
+setCurrentField(GIG_FIELDS.CUSTOMERS_TILL_DATE);
+                            setIsLoading(false);
+                            setTimeout(() => scrollToInlineRef.current?.(), 150);
                 }}
               />
             );
+            setCurrentField(GIG_FIELDS.EXPERIENCE);
             setTimeout(() => scrollToInlineRef.current?.(), 150);
+            setIsLoading(false);
+            return;
+          case GIG_FIELDS.EXPERIENCE:
+            if (value.toLowerCase() !== "skip" && value) {
+              setGigData((prev) => ({ ...prev, experienceWithGig: value }));
+            }
+            await addAIMessage("How many customers have you served till date? (Number or 'skip')");
+            setCurrentField(GIG_FIELDS.CUSTOMERS_TILL_DATE);
+            setIsLoading(false);
             return;
           case GIG_FIELDS.CUSTOMERS_TILL_DATE: {
             if (value.toLowerCase() !== "skip" && value) {
@@ -802,14 +979,16 @@ export default function OnboardingPage() {
           <PincodeDropdown
             pincodes={pincodes}
             onSelect={(pincode) => {
+              setChatMessages((prev) => [...prev, { type: "user", text: pincode }]);
               setGigData((prev) => ({ ...prev, pincode, latitude: Number(lat), longitude: Number(lon) }));
               setInlineComponent(null);
-              handleGigSubmit({ pincode });
+              handleGigSubmit({ pincode, state, district, latitude: Number(lat), longitude: Number(lon) });
             }}
             onSkip={() => {
+              setChatMessages((prev) => [...prev, { type: "user", text: "skip" }]);
               setGigData((prev) => ({ ...prev, latitude: Number(lat), longitude: Number(lon) }));
               setInlineComponent(null);
-              handleGigSubmit({});
+              handleGigSubmit({ state, district, latitude: Number(lat), longitude: Number(lon) });
             }}
           />
         );
@@ -889,11 +1068,13 @@ export default function OnboardingPage() {
         <PincodeDropdown
           pincodes={pincodes}
           onSelect={(pincode) => {
+            setChatMessages((prev) => [...prev, { type: "user", text: pincode }]);
             setGigData((prev) => ({ ...prev, pincode }));
             setInlineComponent(null);
             handleGigSubmit({ pincode });
           }}
           onSkip={() => {
+            setChatMessages((prev) => [...prev, { type: "user", text: "skip" }]);
             setInlineComponent(null);
             handleGigSubmit({});
           }}
@@ -906,18 +1087,31 @@ export default function OnboardingPage() {
 
   const handleGigSubmit = async (overrides = {}) => {
     const g = { ...gigData, ...overrides };
-    if (!g?.title?.trim() || !g?.serviceType?.trim() || !g?.state?.trim() || !g?.district?.trim()) {
+    const hasTitle = Boolean(g?.title?.trim());
+    const hasServiceType = Boolean(g?.serviceType?.trim());
+    const hasStateDistrict = Boolean(g?.state?.trim() && g?.district?.trim());
+    let latitude = g.latitude != null && Number.isFinite(Number(g.latitude)) ? Number(g.latitude) : null;
+    let longitude = g.longitude != null && Number.isFinite(Number(g.longitude)) ? Number(g.longitude) : null;
+    const hasCoords = latitude != null && longitude != null;
+
+    if (!hasTitle || !hasServiceType) {
       setChatMessages((prev) => [
         ...prev,
-        { type: "ai", text: "Please complete title, service type, state and district. You can try again." },
+        { type: "ai", text: "Please complete title and service type. You can try again." },
+      ]);
+      setIsLoading(false);
+      return;
+    }
+    if (!hasStateDistrict && !hasCoords) {
+      setChatMessages((prev) => [
+        ...prev,
+        { type: "ai", text: "Please complete state and district, or set your location (coordinates). You can try again." },
       ]);
       setIsLoading(false);
       return;
     }
     setIsLoading(true);
     try {
-      let latitude = g.latitude != null && Number.isFinite(Number(g.latitude)) ? Number(g.latitude) : null;
-      let longitude = g.longitude != null && Number.isFinite(Number(g.longitude)) ? Number(g.longitude) : null;
       if (latitude == null && longitude == null && g.pincode) {
         try {
           const res = await fetch(`/api/pincodes/by-pincode?pincode=${encodeURIComponent(g.pincode)}`);
@@ -940,8 +1134,8 @@ export default function OnboardingPage() {
           expectedSalary: g.expectedSalary?.trim() || undefined,
           experienceWithGig: g.experienceWithGig?.trim() || undefined,
           customersTillDate: typeof g.customersTillDate === "number" && g.customersTillDate >= 0 ? g.customersTillDate : undefined,
-          state: g.state.trim(),
-          district: g.district.trim(),
+          state: (g.state || "").trim(),
+          district: (g.district || "").trim(),
           pincode: g.pincode?.trim() || undefined,
           locality: g.locality?.trim() || undefined,
           latitude,
