@@ -29,6 +29,7 @@ export default function SettingsModal({ isOpen, onClose }) {
   const [showEditNameModal, setShowEditNameModal] = useState(false);
   const [showAvatarModal, setShowAvatarModal] = useState(false);
   const [avatarSaving, setAvatarSaving] = useState(false);
+  const [avatarUploading, setAvatarUploading] = useState(false);
   const [avatarError, setAvatarError] = useState(null);
   const [addEmailValue, setAddEmailValue] = useState("");
 
@@ -115,6 +116,7 @@ export default function SettingsModal({ isOpen, onClose }) {
       if (!uploadRes.ok || !uploadData.success || !uploadData.url) {
         const errorMsg = uploadData.error || `Upload failed (${uploadRes.status})`;
         setAvatarError(errorMsg);
+        setAvatarUploading(false);
         return;
       }
 
@@ -341,7 +343,7 @@ export default function SettingsModal({ isOpen, onClose }) {
         onSaved={handleSavedName}
       />
 
-      <Modal isOpen={showAvatarModal} onClose={() => !avatarSaving && setShowAvatarModal(false)}>
+      <Modal isOpen={showAvatarModal} onClose={() => !avatarSaving && !avatarUploading && setShowAvatarModal(false)}>
         <div
           className="fixed left-1/2 top-1/2 z-[1003] w-full max-w-md -translate-x-1/2 -translate-y-1/2 rounded-lg border border-brand-stroke-border bg-brand-bg-white p-6 shadow-lg"
           style={{ fontFamily: "Open Sans, sans-serif" }}
@@ -370,7 +372,7 @@ export default function SettingsModal({ isOpen, onClose }) {
               <button
                 key={avatar.id}
                 type="button"
-                disabled={avatarSaving}
+                disabled={avatarSaving || avatarUploading}
                 onClick={() => handleSelectAvatar(avatar)}
                 className="w-full aspect-square rounded-full overflow-hidden border-2 border-brand-stroke-border hover:border-brand focus:outline-none focus:ring-2 focus:ring-brand disabled:opacity-50"
               >
