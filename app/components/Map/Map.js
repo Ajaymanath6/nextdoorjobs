@@ -725,7 +725,7 @@ const MapComponent = () => {
         : gig.user?.avatarUrl || "/avatars/avatar1.png";
       const escapeHtml = (str) => (str || "").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
       const serviceBadge = gig.serviceType
-        ? `<span style="display: inline-block; margin-top: 6px; padding: 4px 10px; border-radius: 9999px; font-size: 12px; font-weight: 500; color: #0f62fe; background: rgba(15, 98, 254, 0.12); white-space: nowrap;">${escapeHtml(gig.serviceType)}</span>`
+        ? `<span style="display: inline-block; margin-top: 6px; padding: 4px 10px; border-radius: 9999px; font-size: 12px; font-weight: 500; color: #1A1A1A; background: #F5F5F5; white-space: nowrap;">${escapeHtml(gig.serviceType)}</span>`
         : "";
       const popupContent = `
         <div style="font-family: 'Open Sans', sans-serif; padding: 12px; min-width: 280px; max-width: 320px;">
@@ -751,11 +751,11 @@ const MapComponent = () => {
           <div style="margin-top: 10px; padding-top: 10px; border-top: 1px solid #E5E5E5;">
             ${
               hasHome
-                ? `<button type="button" data-action="see-distance" data-gig-id="${gig.id}" style="display:flex;align-items:center;gap:6px;padding:6px 10px;background:rgba(15,98,254,0.1);color:#0f62fe;border:none;border-radius:6px;font-size:13px;font-weight:500;cursor:pointer;font-family:'Open Sans',sans-serif;width:100%;justify-content:center;">
+                ? `<button type="button" data-action="see-distance" data-gig-id="${gig.id}" style="display:flex;align-items:center;gap:6px;padding:6px 10px;background:#F5F5F5;color:#1A1A1A;border:1px solid #E5E5E5;border-radius:6px;font-size:13px;font-weight:500;cursor:pointer;font-family:'Open Sans',sans-serif;width:100%;justify-content:center;">
               <svg width="16" height="16" viewBox="0 0 32 32" fill="currentColor"><path d="M16 4L4 14v14h8v-8h8v8h8V14L16 4z"/></svg>
               See how far from your home
             </button>`
-                : `<button type="button" data-action="add-home" style="display:flex;align-items:center;gap:6px;padding:6px 10px;background:rgba(15,98,254,0.1);color:#0f62fe;border:none;border-radius:6px;font-size:13px;font-weight:500;cursor:pointer;font-family:'Open Sans',sans-serif;width:100%;justify-content:center;">
+                : `<button type="button" data-action="add-home" style="display:flex;align-items:center;gap:6px;padding:6px 10px;background:#F5F5F5;color:#1A1A1A;border:1px solid #E5E5E5;border-radius:6px;font-size:13px;font-weight:500;cursor:pointer;font-family:'Open Sans',sans-serif;width:100%;justify-content:center;">
               <svg width="16" height="16" viewBox="0 0 32 32" fill="currentColor"><path d="M17 15V8h-2v7H8v2h7v7h2v-7h7v-2h-7z"/></svg>
               Add home to see distance
             </button>`
