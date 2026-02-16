@@ -557,11 +557,11 @@ const MapComponent = () => {
             width: ${size}px;
             height: ${size}px;
             border-radius: 50%;
-            background: rgba(255, 255, 255, 0.32);
-            backdrop-filter: blur(8px);
-            -webkit-backdrop-filter: blur(8px);
-            border: 1px solid rgba(255,255,255,0.6);
-            box-shadow: 0 4px 14px rgba(0, 0, 0, 0.12), inset 2px 2px 6px rgba(0, 0, 0, 0.04), inset -3px -3px 8px rgba(255, 255, 255, 0.2);
+            background: rgba(255, 255, 255, 0.15);
+            backdrop-filter: blur(6px);
+            -webkit-backdrop-filter: blur(6px);
+            border: 1px solid rgba(255, 255, 255, 0.4);
+            box-shadow: inset 0 20px 30px rgba(255, 255, 255, 0.3), inset 10px 0 20px rgba(0, 0, 0, 0.02), inset -10px -20px 30px rgba(0, 0, 0, 0.05), 0 15px 35px rgba(0, 0, 0, 0.08);
             display: flex;
             align-items: center;
             justify-content: center;

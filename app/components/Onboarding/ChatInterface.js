@@ -687,20 +687,7 @@ export default function ChatInterface({ messages = [], onSendMessage, isLoading 
           if (!gigToDelete) return;
           setDeletingGigId(gigToDelete.id);
           setDeleteConfirmOpen(false);
-          
-          // Remove from local list immediately for instant UI feedback
-          setChatMessages((prev) => {
-            return prev.map((msg) => {
-              if (msg.type === "gigList") {
-                return {
-                  ...msg,
-                  gigs: msg.gigs.filter((g) => g.id !== gigToDelete.id)
-                };
-              }
-              return msg;
-            });
-          });
-          
+
           try {
             const res = await fetch(`/api/gigs/${gigToDelete.id}`, {
               method: "DELETE",
