@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { getCurrentUser } from "../../../lib/getCurrentUser";
-import { prisma } from "../../../lib/prisma";
+import { userService } from "../../../lib/services/user.service";
 import { isValidAccountType } from "../../../lib/constants/accountTypes";
 
 const NAME_MAX_LENGTH = 255;
@@ -19,19 +19,8 @@ export async function GET() {
       );
     }
 
-    const fullUser = await prisma.user.findUnique({
-      where: { id: user.id },
-      select: {
-        id: true,
-        email: true,
-        name: true,
-        phone: true,
-        avatarUrl: true,
-        avatarId: true,
-        accountType: true,
-        createdAt: true,
-      },
-    });
+    // Use service layer with caching
+    const fullUser = await userService.getUserById(user.id);
 
     if (!fullUser) {
       return NextResponse.json(
@@ -90,10 +79,7 @@ export async function PATCH(request) {
           : "";
       // Get current user name from database if name is empty
       if (!name) {
-        const currentUser = await prisma.user.findUnique({
-          where: { id: user.id },
-          select: { name: true },
-        });
+        const currentUser = await userService.getUserById(user.id, { select: { name: true } });
         updateData.name = currentUser?.name || "";
       } else {
         updateData.name = name;
@@ -111,19 +97,8 @@ export async function PATCH(request) {
       updateData.accountType = accountType;
     }
 
-    const updated = await prisma.user.update({
-      where: { id: user.id },
-      data: updateData,
-      select: {
-        id: true,
-        email: true,
-        name: true,
-        phone: true,
-        avatarUrl: true,
-        accountType: true,
-        createdAt: true,
-      },
-    });
+    // Use service layer with cache invalidation
+    const updated = await userService.updateUser(user.id, updateData);
 
     return NextResponse.json({
       success: true,

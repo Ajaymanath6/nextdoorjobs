@@ -3,11 +3,11 @@
 import { useEffect, useRef, useState } from "react";
 import Image from "next/image";
 import { useRouter } from "next/navigation";
-import { Screen, Document, Enterprise, Save, Location, Add, OverflowMenuVertical } from "@carbon/icons-react";
+import { Screen, Document, Enterprise, Save, Location, Add, OverflowMenuVertical, TrashCan } from "@carbon/icons-react";
 import TypingAnimation from "./TypingAnimation";
 import { getAvatarUrlById } from "../../../lib/avatars";
 
-export default function ChatInterface({ messages = [], onSendMessage, isLoading = false, inlineComponent = null, typingText = null, onScrollRequest, onSave, onViewOnMap, onStartNext, showFindOrPostButtons = false, accountType, onFindJob, onPostGig }) {
+export default function ChatInterface({ messages = [], onSendMessage, isLoading = false, inlineComponent = null, typingText = null, onScrollRequest, onSave, onViewOnMap, onStartNext, showFindOrPostButtons = false, accountType, onFindJob, onPostGig, onGigDeleted }) {
   const router = useRouter();
   const messagesEndRef = useRef(null);
   const inputRef = useRef(null);
@@ -231,20 +231,40 @@ export default function ChatInterface({ messages = [], onSendMessage, isLoading 
                                 <p className="text-sm font-medium text-brand-text-strong truncate" style={{ fontFamily: "Open Sans, sans-serif" }}>{gig.title}</p>
                                 <p className="text-xs text-brand-text-weak truncate mt-0.5" style={{ fontFamily: "Open Sans, sans-serif" }}>{gig.serviceType || ""}</p>
                               </div>
-                              {/* See this gig on map button on Right */}
-                              {hasCoordinates ? (
-                                <button
-                                  type="button"
-                                  onClick={() => handleViewGigOnMap(gig)}
-                                  className="shrink-0 flex items-center gap-1.5 px-3 py-1.5 bg-brand text-white hover:bg-brand-hover rounded-md text-xs font-medium transition-colors"
-                                  style={{ fontFamily: "Open Sans, sans-serif" }}
-                                >
-                                  <Location size={14} />
-                                  <span>See on map</span>
-                                </button>
-                              ) : (
-                                <div className="shrink-0 w-0" />
-                              )}
+                              {/* See on map + Delete on Right */}
+                              <div className="shrink-0 flex items-center gap-1.5">
+                                {hasCoordinates ? (
+                                  <button
+                                    type="button"
+                                    onClick={() => handleViewGigOnMap(gig)}
+                                    className="flex items-center gap-1.5 px-3 py-1.5 bg-brand text-white hover:bg-brand-hover rounded-md text-xs font-medium transition-colors"
+                                    style={{ fontFamily: "Open Sans, sans-serif" }}
+                                  >
+                                    <Location size={14} />
+                                    <span>See on map</span>
+                                  </button>
+                                ) : null}
+                                {onGigDeleted ? (
+                                  <button
+                                    type="button"
+                                    onClick={async () => {
+                                      try {
+                                        const res = await fetch(`/api/gigs/${gig.id}`, { method: "DELETE", credentials: "same-origin" });
+                                        if (res.ok) {
+                                          onGigDeleted();
+                                        }
+                                      } catch (e) {
+                                        console.error("Delete gig failed:", e);
+                                      }
+                                    }}
+                                    className="p-1.5 rounded-md text-brand-text-weak hover:bg-red-50 hover:text-red-600 transition-colors"
+                                    title="Delete gig"
+                                    aria-label="Delete gig"
+                                  >
+                                    <TrashCan size={18} />
+                                  </button>
+                                ) : null}
+                              </div>
                             </li>
                           );
                         })}

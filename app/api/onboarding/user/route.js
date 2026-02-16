@@ -1,7 +1,6 @@
 import { NextResponse } from "next/server";
 import { cookies } from "next/headers";
-import { prisma } from "../../../../lib/prisma";
-import bcrypt from "bcryptjs";
+import { onboardingService } from "../../../../lib/services/onboarding.service";
 
 /**
  * POST /api/onboarding/user
@@ -21,93 +20,21 @@ export async function POST(request) {
       );
     }
 
-    // Validate email format
-    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-    if (!emailRegex.test(email)) {
-      return NextResponse.json(
-        { error: "Invalid email format" },
-        { status: 400 }
-      );
-    }
-
-    // Validate password if provided
-    if (password && password.length < 6) {
-      return NextResponse.json(
-        { error: "Password must be at least 6 characters long" },
-        { status: 400 }
-      );
-    }
-
-    // Check if user exists
-    let user = await prisma.user.findUnique({
-      where: { email },
-    });
-
-    if (user) {
-      // Prepare update data
-      const updateData = {};
-      if (name !== user.name) {
-        updateData.name = name;
-      }
-      if (phone !== user.phone) {
-        updateData.phone = phone || null;
-      }
-      if (clerkId !== undefined && clerkId !== user.clerkId) {
-        updateData.clerkId = clerkId || null;
-      }
-      if (avatarUrl !== undefined && avatarUrl !== user.avatarUrl) {
-        updateData.avatarUrl = avatarUrl || null;
-      }
-      // Update password if provided
-      if (password) {
-        const saltRounds = 10;
-        updateData.passwordHash = await bcrypt.hash(password, saltRounds);
-      }
-
-      // Update user if there are changes
-      if (Object.keys(updateData).length > 0) {
-        user = await prisma.user.update({
-          where: { email },
-          data: updateData,
-        });
-      }
-
-      return NextResponse.json({
-        success: true,
-        user: {
-          id: user.id,
-          email: user.email,
-          name: user.name,
-          phone: user.phone,
-        },
-        message: "User retrieved successfully",
-      });
-    }
-
-    // Create new user
-    const userData = {
+    // Use OnboardingService to create or update user
+    const result = await onboardingService.createOrUpdateUser({
       email,
       name,
-      phone: phone || null,
-      clerkId: clerkId && String(clerkId).trim() ? String(clerkId).trim() : null,
-      avatarUrl: avatarUrl && String(avatarUrl).trim() ? String(avatarUrl).trim() : null,
-    };
-
-    // Hash password if provided
-    if (password) {
-      const saltRounds = 10;
-      userData.passwordHash = await bcrypt.hash(password, saltRounds);
-    }
-
-    user = await prisma.user.create({
-      data: userData,
+      password,
+      phone,
+      clerkId,
+      avatarUrl,
     });
 
-    if (password) {
+    // Set session cookie if session token was created
+    if (result.sessionToken) {
       try {
-        const sessionToken = `${user.id}-${Date.now()}-${Math.random().toString(36).substring(7)}`;
         const cookieStore = await cookies();
-        cookieStore.set("session_token", sessionToken, {
+        cookieStore.set("session_token", result.sessionToken, {
           httpOnly: true,
           secure: process.env.NODE_ENV === "production",
           sameSite: "lax",
@@ -121,22 +48,17 @@ export async function POST(request) {
 
     return NextResponse.json({
       success: true,
-      user: {
-        id: user.id,
-        email: user.email,
-        name: user.name,
-        phone: user.phone,
-      },
-      message: "User created successfully",
+      user: result.user,
+      message: result.isNew ? "User created successfully" : "User retrieved successfully",
     });
   } catch (error) {
     console.error("Error in user API:", error);
     return NextResponse.json(
       {
-        error: "Internal server error",
+        error: error.message || "Internal server error",
         details: process.env.NODE_ENV === "development" ? error.message : undefined,
       },
-      { status: 500 }
+      { status: error.message.includes('Invalid') || error.message.includes('required') ? 400 : 500 }
     );
   }
 }
@@ -159,16 +81,10 @@ export async function GET(request) {
       );
     }
 
-    const email = emailParam.toLowerCase().trim();
-
-    let user = await prisma.user.findUnique({
-      where: { email },
-      select: {
-        id: true,
-        email: true,
-        name: true,
-        phone: true,
-      },
+    // Use OnboardingService to get user
+    const user = await onboardingService.getUserByEmail(emailParam, {
+      clerkId,
+      avatarUrl,
     });
 
     if (!user) {
@@ -178,33 +94,9 @@ export async function GET(request) {
       );
     }
 
-    // Optionally update Clerk linkage when found by email (best-effort; do not 500 if update fails)
-    const clerkIdStr = clerkId != null && String(clerkId).trim() ? String(clerkId).trim() : null;
-    const avatarUrlStr = avatarUrl != null && String(avatarUrl).trim() ? String(avatarUrl).trim() : null;
-    if (clerkIdStr || avatarUrlStr) {
-      try {
-        const updateData = {};
-        if (clerkIdStr) updateData.clerkId = clerkIdStr;
-        if (avatarUrlStr) updateData.avatarUrl = avatarUrlStr;
-        if (Object.keys(updateData).length > 0) {
-          await prisma.user.update({
-            where: { email },
-            data: updateData,
-          });
-        }
-      } catch (updateErr) {
-        console.error("Error updating Clerk linkage in user GET:", updateErr);
-      }
-    }
-
     return NextResponse.json({
       success: true,
-      user: {
-        id: user.id,
-        email: user.email,
-        name: user.name,
-        phone: user.phone,
-      },
+      user,
     });
   } catch (error) {
     console.error("Error in user GET API:", error);

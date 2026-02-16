@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { prisma } from "../../../../lib/prisma";
+import { locationService } from "../../../../lib/services/location.service";
 
 /**
  * GET /api/pincodes/by-district?district=Thrissur&state=Kerala
@@ -15,18 +15,9 @@ export async function GET(request) {
   }
 
   try {
-    const rows = await prisma.pincode.findMany({
-      where: {
-        district: { equals: district.trim(), mode: "insensitive" },
-        state: { equals: state.trim(), mode: "insensitive" },
-      },
-      distinct: ["pincode"],
-      select: { pincode: true },
-      take: 4,
-      orderBy: { pincode: "asc" },
-    });
-
-    const pincodes = rows.map((r) => r.pincode);
+    // Use LocationService with Redis caching (1 hour TTL)
+    const pincodes = await locationService.getPincodesByDistrict(district, state, 4);
+    
     return NextResponse.json({ pincodes });
   } catch (error) {
     console.error("Pincodes by-district error:", error?.message);

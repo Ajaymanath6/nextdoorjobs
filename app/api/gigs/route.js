@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { getCurrentUser } from "../../../lib/getCurrentUser";
-import { prisma } from "../../../lib/prisma";
+import { gigService } from "../../../lib/services/gig.service";
 
 /**
  * POST /api/gigs
@@ -55,32 +55,28 @@ export async function POST(request) {
       );
     }
 
-    const gig = await prisma.gig.create({
-      data: {
-        userId: user.id,
-        title: title.trim(),
-        description: description != null && String(description).trim() !== "" ? String(description).trim() : null,
-        serviceType: serviceType.trim(),
-        expectedSalary: expectedSalary != null && String(expectedSalary).trim() !== "" ? String(expectedSalary).trim() : null,
-        experienceWithGig: experienceWithGig != null && String(experienceWithGig).trim() !== "" ? String(experienceWithGig).trim() : null,
-        customersTillDate: (() => {
+    // Prepare data for service
+    const gigData = {
+      title: title.trim(),
+      description: description != null && String(description).trim() !== "" ? String(description).trim() : null,
+      serviceType: serviceType.trim(),
+      expectedSalary: expectedSalary != null && String(expectedSalary).trim() !== "" ? String(expectedSalary).trim() : null,
+      experienceWithGig: experienceWithGig != null && String(experienceWithGig).trim() !== "" ? String(experienceWithGig).trim() : null,
+      customersTillDate: (() => {
         if (typeof customersTillDate === "number" && Number.isInteger(customersTillDate) && customersTillDate >= 0) return customersTillDate;
         if (typeof customersTillDate === "string" && /^\d+$/.test(customersTillDate.trim())) return parseInt(customersTillDate.trim(), 10);
         return null;
       })(),
-        state: state.trim(),
-        district: district.trim(),
-        pincode: pincode != null && String(pincode).trim() !== "" ? String(pincode).trim() : null,
-        locality: locality != null && String(locality).trim() !== "" ? String(locality).trim() : null,
-        latitude: typeof latitude === "number" && Number.isFinite(latitude) ? latitude : null,
-        longitude: typeof longitude === "number" && Number.isFinite(longitude) ? longitude : null,
-      },
-      include: {
-        user: {
-          select: { id: true, name: true, avatarId: true, avatarUrl: true },
-        },
-      },
-    });
+      state: state.trim(),
+      district: district.trim(),
+      pincode: pincode != null && String(pincode).trim() !== "" ? String(pincode).trim() : null,
+      locality: locality != null && String(locality).trim() !== "" ? String(locality).trim() : null,
+      latitude: typeof latitude === "number" && Number.isFinite(latitude) ? latitude : null,
+      longitude: typeof longitude === "number" && Number.isFinite(longitude) ? longitude : null,
+    };
+
+    // Use service layer
+    const gig = await gigService.createGig(user.id, gigData);
 
     return NextResponse.json({ success: true, gig });
   } catch (err) {
@@ -107,37 +103,19 @@ export async function GET(request) {
       if (!user?.id) {
         return NextResponse.json({ success: false, error: "Unauthorized" }, { status: 401 });
       }
-      const gigs = await prisma.gig.findMany({
-        where: { userId: user.id },
-        include: {
-          user: {
-            select: { id: true, name: true, avatarId: true, avatarUrl: true },
-          },
-        },
-        orderBy: { createdAt: "desc" },
-      });
+      // Use service layer with caching
+      const gigs = await gigService.getUserGigs(user.id);
       return NextResponse.json({ success: true, gigs });
     }
 
-    const state = searchParams.get("state");
-    const district = searchParams.get("district");
-    const pincode = searchParams.get("pincode");
+    const filters = {
+      state: searchParams.get("state"),
+      district: searchParams.get("district"),
+      pincode: searchParams.get("pincode"),
+    };
 
-    const where = {};
-    if (state && state.trim()) where.state = { equals: state.trim(), mode: "insensitive" };
-    if (district && district.trim()) where.district = { equals: district.trim(), mode: "insensitive" };
-    if (pincode && pincode.trim()) where.pincode = pincode.trim();
-
-    const gigs = await prisma.gig.findMany({
-      where: Object.keys(where).length ? where : undefined,
-      include: {
-        user: {
-          select: { id: true, name: true, avatarId: true, avatarUrl: true },
-        },
-      },
-      orderBy: { createdAt: "desc" },
-    });
-
+    // Use service layer with caching
+    const gigs = await gigService.getGigsByLocation(filters);
     return NextResponse.json({ success: true, gigs });
   } catch (err) {
     console.error("GET /api/gigs error:", err);

@@ -144,6 +144,7 @@ export default function OnboardingPage() {
   const [onboardingSessionId, setOnboardingSessionId] = useState(null);
   const [isMobile, setIsMobile] = useState(false);
   const [isNavigatingToMap, setIsNavigatingToMap] = useState(false);
+  const [listViewActive, setListViewActive] = useState(false);
   const onboardingSessionIdRef = useRef(null);
   const conversationOrderRef = useRef(0);
   const lastAIMessageTextRef = useRef("");
@@ -719,6 +720,7 @@ export default function OnboardingPage() {
 
   const handleGigCoordinatesReceived = async (lat, lon) => {
     setIsLoading(true);
+    await addAIMessage(`Coordinates received: ${Number(lat).toFixed(6)}, ${Number(lon).toFixed(6)}`);
     let state = null;
     let district = null;
     let postcode = null;
@@ -1142,8 +1144,7 @@ export default function OnboardingPage() {
   // If submit fails we still navigate with coords when we have them so the pin always shows (user can retry save from chat).
   const handleViewOnMap = async () => {
     if (typeof sessionStorage !== "undefined" && sessionStorage.getItem("zoomToGigCoords")) {
-      setIsNavigatingToMap(true);
-      setTimeout(() => router.push("/"), 2000);
+      router.push("/");
       return;
     }
     const needSubmit = !jobData?.id || !companyData?.id;
@@ -1589,6 +1590,7 @@ export default function OnboardingPage() {
               <button
                 type="button"
                 onClick={async () => {
+                  setListViewActive(true);
                   try {
                     if (userData?.accountType === "Individual") {
                       const res = await fetch("/api/gigs?mine=1", { credentials: "same-origin" });
@@ -1610,10 +1612,10 @@ export default function OnboardingPage() {
                     }
                   }
                 }}
-                className="p-2 rounded-lg hover:bg-gray-100 transition-colors"
+                className={`p-2 rounded-lg transition-colors ${listViewActive ? "bg-brand/10 ring-2 ring-brand border border-brand" : "hover:bg-gray-100"}`}
                 title={userData?.accountType === "Individual" ? "Your posted gigs" : "Your job postings"}
               >
-                <List size={20} style={{ color: "#575757" }} />
+                <List size={20} style={{ color: listViewActive ? "var(--brand)" : "#575757" }} />
               </button>
               <div className="relative" ref={languageDropdownRef}>
               <button
@@ -1746,6 +1748,22 @@ export default function OnboardingPage() {
               accountType={userData?.accountType}
               onFindJob={handleFindJob}
               onPostGig={handlePostGig}
+              onGigDeleted={async () => {
+                try {
+                  const res = await fetch("/api/gigs?mine=1", { credentials: "same-origin" });
+                  const data = await res.json().catch(() => ({}));
+                  const gigs = data.success ? (data.gigs || []) : [];
+                  setChatMessages((prev) => {
+                    const idx = prev.map((m, i) => (m.type === "gigList" ? i : -1)).filter((i) => i >= 0).pop();
+                    if (idx == null) return prev;
+                    const next = [...prev];
+                    next[idx] = { type: "gigList", gigs };
+                    return next;
+                  });
+                } catch (e) {
+                  console.error("Error refreshing gig list:", e);
+                }
+              }}
             />
           </div>
         </div>

@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { prisma } from "../../../../lib/prisma";
 import { handleFileUpload } from "../../../../lib/fileUpload";
+import { companyService } from "../../../../lib/services/company.service";
 
 /**
  * POST /api/onboarding/company
@@ -48,22 +49,6 @@ export async function POST(request) {
       );
     }
 
-    // Validate coordinates
-    const lat = latitude ? parseFloat(latitude) : null;
-    const lon = longitude ? parseFloat(longitude) : null;
-    if (lat !== null && (isNaN(lat) || lat < -90 || lat > 90)) {
-      return NextResponse.json(
-        { error: "Invalid latitude. Must be between -90 and 90" },
-        { status: 400 }
-      );
-    }
-    if (lon !== null && (isNaN(lon) || lon < -180 || lon > 180)) {
-      return NextResponse.json(
-        { error: "Invalid longitude. Must be between -180 and 180" },
-        { status: 400 }
-      );
-    }
-
     // Validate userId exists (wrap in try/catch so connection/Prisma errors return safe 500)
     let user;
     try {
@@ -104,71 +89,39 @@ export async function POST(request) {
       logoPath = uploadResult.path;
     }
 
-    // Validate funding series if provided
-    const validFundingSeries = [
-      "Seed",
-      "SeriesA",
-      "SeriesB",
-      "SeriesC",
-      "SeriesD",
-      "SeriesE",
-      "IPO",
-      "Bootstrapped",
-    ];
-    const fundingSeriesValue =
-      fundingSeries && validFundingSeries.includes(fundingSeries)
-        ? fundingSeries
-        : null;
+    const nameStr = name.toString();
 
-    // Validate website URL format if provided
-    let websiteUrlValue = null;
-    if (websiteUrl && websiteUrl.toString().trim()) {
-      const urlString = websiteUrl.toString().trim();
-      // Basic URL validation
+    // Idempotent: return existing company if same user and name
+    const existing = await companyService.findCompanyByUserAndName(userIdNum, nameStr);
+    let company;
+    
+    if (existing) {
+      // Update logo if new one provided
+      if (logoPath) {
+        company = await companyService.updateCompany(existing.id, { logoPath });
+      } else {
+        company = existing;
+      }
+    } else {
+      // Create new company using CompanyService
       try {
-        // Add protocol if missing
-        const urlWithProtocol = urlString.startsWith("http://") || urlString.startsWith("https://")
-          ? urlString
-          : `https://${urlString}`;
-        new URL(urlWithProtocol);
-        websiteUrlValue = urlWithProtocol;
-      } catch (urlError) {
+        company = await companyService.createCompany(userIdNum, {
+          name: nameStr,
+          logoPath,
+          websiteUrl,
+          fundingSeries,
+          latitude,
+          longitude,
+          state,
+          district,
+          pincode,
+        });
+      } catch (serviceError) {
         return NextResponse.json(
-          { error: "Invalid website URL format" },
+          { success: false, error: serviceError.message },
           { status: 400 }
         );
       }
-    }
-
-    const nameStr = name.toString();
-
-    // Idempotent: return existing company if same user and name (e.g. "See your posting" retry)
-    const existing = await prisma.company.findFirst({
-      where: { userId: userIdNum, name: nameStr.trim() },
-    });
-    let company;
-    if (existing) {
-      company = logoPath
-        ? await prisma.company.update({
-            where: { id: existing.id },
-            data: { logoPath },
-          })
-        : existing;
-    } else {
-      company = await prisma.company.create({
-        data: {
-          name: nameStr,
-          logoPath,
-          websiteUrl: websiteUrlValue,
-          fundingSeries: fundingSeriesValue,
-          latitude: lat,
-          longitude: lon,
-          state: state.toString(),
-          district: district.toString(),
-          pincode: pincode ? pincode.toString() : null,
-          userId: userIdNum,
-        },
-      });
     }
 
     return NextResponse.json({

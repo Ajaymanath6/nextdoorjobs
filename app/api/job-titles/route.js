@@ -1,59 +1,18 @@
 import { NextResponse } from "next/server";
-import { prisma } from "../../../lib/prisma";
+import { jobService } from "../../../lib/services/job.service";
 
-// Simple in-memory cache for job titles
-let jobTitlesCache = null;
-let cacheTimestamp = null;
-const CACHE_TTL = 60 * 60 * 1000; // 1 hour
-
+/**
+ * GET /api/job-titles
+ * Get all job titles with optional search query
+ * Query params: ?q=search_term
+ */
 export async function GET(request) {
   try {
     const { searchParams } = new URL(request.url);
     const query = searchParams.get("q");
 
-    // Check if cache is valid
-    if (jobTitlesCache && cacheTimestamp && Date.now() - cacheTimestamp < CACHE_TTL) {
-      console.log("✅ Using cached job titles");
-      
-      // If query is provided, filter the cached results
-      if (query && query.trim()) {
-        const normalizedQuery = query.toLowerCase().trim();
-        const filtered = jobTitlesCache.filter(job => 
-          job.title.toLowerCase().includes(normalizedQuery)
-        );
-        return NextResponse.json(filtered);
-      }
-      
-      return NextResponse.json(jobTitlesCache);
-    }
-
-    // Fetch from database
-    console.log("🔍 Fetching job titles from database...");
-    const jobTitles = await prisma.jobTitle.findMany({
-      select: {
-        id: true,
-        title: true,
-        category: true,
-      },
-      orderBy: {
-        title: 'asc',
-      },
-    });
-
-    // Update cache
-    jobTitlesCache = jobTitles;
-    cacheTimestamp = Date.now();
-
-    console.log(`✅ Loaded ${jobTitles.length} job titles`);
-
-    // If query is provided, filter the results
-    if (query && query.trim()) {
-      const normalizedQuery = query.toLowerCase().trim();
-      const filtered = jobTitles.filter(job => 
-        job.title.toLowerCase().includes(normalizedQuery)
-      );
-      return NextResponse.json(filtered);
-    }
+    // Use JobService with Redis caching
+    const jobTitles = await jobService.getAllJobTitles(query);
 
     return NextResponse.json(jobTitles);
   } catch (error) {
@@ -67,7 +26,3 @@ export async function GET(request) {
     );
   }
 }
-
-
-
-

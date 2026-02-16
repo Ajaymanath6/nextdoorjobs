@@ -635,17 +635,28 @@ const MapComponent = () => {
     setGigs([]);
   }, [searchMode]);
 
-  // Fetch gigs when switching to person mode if location context exists
+  // Fetch gigs when switching to person mode (with or without location context)
   useEffect(() => {
     if (searchMode !== "person" || !mapInstanceRef.current) return;
-    
-    // If we have a last searched location, fetch gigs for that area
+
     if (lastSearchedState || lastSearchedDistrict) {
       const params = new URLSearchParams();
       if (lastSearchedState) params.set("state", lastSearchedState);
       if (lastSearchedDistrict) params.set("district", lastSearchedDistrict);
-      
       fetch(`/api/gigs?${params.toString()}`)
+        .then((r) => r.json())
+        .then((data) => {
+          if (data.success && Array.isArray(data.gigs)) {
+            setGigs(data.gigs);
+            renderGigMarkers(data.gigs);
+          }
+        })
+        .catch((err) => {
+          console.error("Error fetching gigs:", err);
+        });
+    } else {
+      // No location context: fetch all gigs so other users see all gigs on the map
+      fetch("/api/gigs")
         .then((r) => r.json())
         .then((data) => {
           if (data.success && Array.isArray(data.gigs)) {
