@@ -19,7 +19,8 @@ const EXT_TO_MIME = {
  */
 export async function GET(request, { params }) {
   try {
-    const filename = params?.filename;
+    const resolvedParams = await params;
+    const filename = resolvedParams?.filename;
     if (!filename || typeof filename !== "string") {
       return NextResponse.json({ error: "Missing filename" }, { status: 400 });
     }

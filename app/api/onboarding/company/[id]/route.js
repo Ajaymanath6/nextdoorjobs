@@ -18,7 +18,8 @@ export async function GET(request, { params }) {
       );
     }
 
-    const companyId = parseInt(params.id);
+    const resolvedParams = await params;
+    const companyId = parseInt(resolvedParams.id);
     if (isNaN(companyId)) {
       return NextResponse.json(
         { success: false, error: "Invalid company ID" },
@@ -87,7 +88,8 @@ export async function PATCH(request, { params }) {
       );
     }
 
-    const companyId = parseInt(params.id);
+    const resolvedParams = await params;
+    const companyId = parseInt(resolvedParams.id);
     if (isNaN(companyId)) {
       return NextResponse.json(
         { success: false, error: "Invalid company ID" },

@@ -1906,14 +1906,18 @@ export default function OnboardingPage() {
               <button
                 type="button"
                 onClick={async () => {
+                  console.log('📋 Fetching job list from /api/onboarding/my-jobs');
                   try {
                     const res = await fetch("/api/onboarding/my-jobs");
+                    console.log('📡 Job list API response status:', res.status);
                     const data = await res.json().catch(() => ({}));
+                    console.log('📊 Job list data:', data);
                     const jobs = data.success ? (data.jobs || []) : [];
+                    console.log('✅ Jobs to display:', jobs.length);
                     setJobCount(jobs.length);
                     setChatMessages((prev) => [...prev, { type: "jobList", jobs }]);
                   } catch (e) {
-                    console.error("Error fetching list:", e);
+                    console.error("❌ Error fetching list:", e);
                     setChatMessages((prev) => [...prev, { type: "jobList", jobs: [] }]);
                   }
                 }}

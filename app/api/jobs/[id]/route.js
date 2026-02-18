@@ -13,7 +13,8 @@ export async function DELETE(request, { params }) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
-    const jobId = parseInt(params.id);
+    const resolvedParams = await params;
+    const jobId = parseInt(resolvedParams.id);
     
     if (isNaN(jobId)) {
       return NextResponse.json({ error: "Invalid job ID" }, { status: 400 });
@@ -70,7 +71,8 @@ export async function PATCH(request, { params }) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
-    const jobId = parseInt(params.id);
+    const resolvedParams = await params;
+    const jobId = parseInt(resolvedParams.id);
     
     if (isNaN(jobId)) {
       return NextResponse.json({ error: "Invalid job ID" }, { status: 400 });

@@ -3,7 +3,9 @@ import { prisma } from "../../../../../lib/prisma";
 
 export async function GET(request, { params }) {
   try {
-    const companyId = parseInt(params.id);
+    // In Next.js 15+, params is a promise and needs to be awaited
+    const resolvedParams = await params;
+    const companyId = parseInt(resolvedParams.id);
     
     if (isNaN(companyId)) {
       return NextResponse.json(
