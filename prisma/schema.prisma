@@ -156,6 +156,12 @@ model JobPosition {
   salaryMin           Int?                 @map("salary_min")
   salaryMax           Int?                 @map("salary_max")
   jobDescription      String               @db.Text
+  remoteType          String?              @map("remote_type") @db.VarChar(50)
+  assistRelocation    Boolean?             @default(false) @map("assist_relocation")
+  seniorityLevel      String?              @map("seniority_level") @db.VarChar(50)
+  teamSize            String?              @map("team_size") @db.VarChar(50)
+  perks               String[]             @default([])
+  holidays            String?              @db.Text
   companyId           Int
   isActive            Boolean              @default(true) @map("is_active")
   createdAt           DateTime             @default(now()) @map("created_at")

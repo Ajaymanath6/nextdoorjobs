@@ -17,6 +17,7 @@ import { AVATARS } from "../../lib/avatars";
 
 const SECTIONS = [
   { id: "general", label: "General", icon: Settings },
+  { id: "company", label: "Company Details", icon: Receipt },
   { id: "subscription", label: "Subscription", icon: Receipt },
   { id: "integration", label: "Integration", icon: DataConnected, disabled: true },
   { id: "other", label: "Other", icon: SettingsAdjust, disabled: true },
@@ -32,7 +33,14 @@ export default function SettingsModal({ isOpen, onClose }) {
   const [avatarUploading, setAvatarUploading] = useState(false);
   const [avatarError, setAvatarError] = useState(null);
   const [addEmailValue, setAddEmailValue] = useState("");
+  const [companies, setCompanies] = useState([]);
+  const [selectedCompany, setSelectedCompany] = useState(null);
+  const [companyLoading, setCompanyLoading] = useState(false);
+  const [showCompanyLogoModal, setShowCompanyLogoModal] = useState(false);
+  const [companyLogoUploading, setCompanyLogoUploading] = useState(false);
+  const [companyLogoError, setCompanyLogoError] = useState(null);
   const fileInputRef = useRef(null);
+  const companyLogoInputRef = useRef(null);
 
   useEffect(() => {
     if (!isOpen) return;
@@ -40,12 +48,40 @@ export default function SettingsModal({ isOpen, onClose }) {
     fetch("/api/auth/me", { credentials: "same-origin" })
       .then((res) => (res.ok ? res.json() : null))
       .then((data) => {
-        if (data?.success && data.user) setUser(data.user);
-        else setUser(null);
+        if (data?.success && data.user) {
+          setUser(data.user);
+          // Fetch companies if user is a Company account
+          if (data.user.accountType === "Company") {
+            fetchCompanies();
+          }
+        } else {
+          setUser(null);
+        }
       })
       .catch(() => setUser(null))
       .finally(() => setLoading(false));
   }, [isOpen]);
+
+  const fetchCompanies = async () => {
+    setCompanyLoading(true);
+    try {
+      const res = await fetch("/api/onboarding/company", { credentials: "same-origin" });
+      if (res.ok) {
+        const data = await res.json();
+        if (data.success && data.companies) {
+          setCompanies(data.companies);
+          // Select first company by default
+          if (data.companies.length > 0) {
+            setSelectedCompany(data.companies[0]);
+          }
+        }
+      }
+    } catch (e) {
+      console.error("Error fetching companies:", e);
+    } finally {
+      setCompanyLoading(false);
+    }
+  };
 
   const handleSavedName = (updatedUser) => {
     if (updatedUser) setUser((prev) => (prev ? { ...prev, ...updatedUser } : updatedUser));
@@ -171,6 +207,56 @@ export default function SettingsModal({ isOpen, onClose }) {
     e.target.value = '';
   };
 
+  const handleCompanyLogoUpload = async (file) => {
+    if (!selectedCompany) return;
+    
+    setCompanyLogoUploading(true);
+    setCompanyLogoError(null);
+    
+    try {
+      const formData = new FormData();
+      formData.append("logo", file);
+      
+      const res = await fetch(`/api/onboarding/company/${selectedCompany.id}`, {
+        method: "PATCH",
+        body: formData,
+        credentials: "same-origin",
+      });
+
+      if (res.ok) {
+        setShowCompanyLogoModal(false);
+        await fetchCompanies();
+      } else {
+        const errBody = await res.json().catch(() => ({}));
+        const msg = errBody?.error || `Upload failed (${res.status})`;
+        setCompanyLogoError(msg);
+      }
+    } catch (e) {
+      console.error("Failed to upload company logo", e);
+      setCompanyLogoError("Network or server error. Try again.");
+    } finally {
+      setCompanyLogoUploading(false);
+    }
+  };
+
+  const handleCompanyLogoInputChange = (e) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    
+    if (!file.type.startsWith('image/')) {
+      setCompanyLogoError("Please select an image file");
+      return;
+    }
+    
+    if (file.size > 5 * 1024 * 1024) {
+      setCompanyLogoError("File size must be less than 5MB");
+      return;
+    }
+
+    handleCompanyLogoUpload(file);
+    e.target.value = '';
+  };
+
   const displayName =
     (user?.name && String(user.name).trim()) ||
     (user?.email ? String(user.email).split("@")[0] : "") ||
@@ -211,7 +297,13 @@ export default function SettingsModal({ isOpen, onClose }) {
             {/* Sidebar - no border */}
             <nav className="shrink-0 w-48 py-4 pr-0">
               <ul className="space-y-0.5">
-                {SECTIONS.map(({ id, label, icon: Icon, disabled }) => (
+                {SECTIONS.filter(section => {
+                  // Only show company section for Company accounts
+                  if (section.id === "company") {
+                    return user?.accountType === "Company";
+                  }
+                  return true;
+                }).map(({ id, label, icon: Icon, disabled }) => (
                   <li key={id}>
                     <button
                       type="button"
@@ -329,6 +421,138 @@ export default function SettingsModal({ isOpen, onClose }) {
                     />
                   </div>
                 </div>
+              ) : activeSection === "company" ? (
+                <div className="space-y-4">
+                  <h2 className={`text-base font-semibold ${brand.text.strong}`}>
+                    Company Details
+                  </h2>
+
+                  {companyLoading ? (
+                    <p className={brand.text.weak}>Loading company details...</p>
+                  ) : companies.length === 0 ? (
+                    <p className={brand.text.weak}>No company information found. Complete onboarding to add your company.</p>
+                  ) : (
+                    <>
+                      {/* Company selector if multiple companies */}
+                      {companies.length > 1 && (
+                        <div className="flex items-center justify-between gap-4 py-2">
+                          <span className={`text-sm ${brand.text.strong}`}>
+                            Select Company
+                          </span>
+                          <select
+                            value={selectedCompany?.id || ""}
+                            onChange={(e) => {
+                              const company = companies.find(c => c.id === parseInt(e.target.value));
+                              setSelectedCompany(company);
+                            }}
+                            className="rounded-lg border border-brand-stroke-border px-3 py-2 text-sm text-brand-text-strong focus:outline-none focus:ring-2 focus:ring-brand focus:border-brand"
+                          >
+                            {companies.map((company) => (
+                              <option key={company.id} value={company.id}>
+                                {company.name}
+                              </option>
+                            ))}
+                          </select>
+                        </div>
+                      )}
+
+                      {selectedCompany && (
+                        <>
+                          {/* Company logo */}
+                          <div className="flex items-center justify-between gap-4 py-2">
+                            <span className={`text-sm ${brand.text.strong}`}>
+                              Company logo
+                            </span>
+                            <div className="flex items-center gap-3">
+                              <div className="h-12 w-12 rounded-full overflow-hidden bg-brand-bg-fill flex items-center justify-center border border-brand-stroke-border shrink-0">
+                                {selectedCompany.logoPath ? (
+                                  <img
+                                    src={selectedCompany.logoPath}
+                                    alt="Company logo"
+                                    className="h-full w-full object-cover"
+                                  />
+                                ) : (
+                                  <span className={`text-lg font-medium ${brand.text.weak}`}>
+                                    {selectedCompany.name?.charAt(0)?.toUpperCase() || "?"}
+                                  </span>
+                                )}
+                              </div>
+                              <button
+                                type="button"
+                                onClick={() => {
+                                  setCompanyLogoError(null);
+                                  setShowCompanyLogoModal(true);
+                                }}
+                                className="text-sm font-medium text-brand underline underline-offset-2 hover:opacity-80"
+                                style={{ color: brand.color || "#F84416" }}
+                              >
+                                Change logo
+                              </button>
+                            </div>
+                          </div>
+                          <div className="border-t border-brand-stroke-weak" />
+
+                          {/* Company name */}
+                          <div className="flex items-center justify-between gap-4 py-2">
+                            <span className={`text-sm ${brand.text.strong}`}>
+                              Company name
+                            </span>
+                            <span className={`text-sm ${brand.text.strong}`}>
+                              {selectedCompany.name}
+                            </span>
+                          </div>
+                          <div className="border-t border-brand-stroke-weak" />
+
+                          {/* Location */}
+                          <div className="flex items-center justify-between gap-4 py-2">
+                            <span className={`text-sm ${brand.text.strong}`}>
+                              Location
+                            </span>
+                            <span className={`text-sm ${brand.text.strong}`}>
+                              {selectedCompany.district}, {selectedCompany.state}
+                            </span>
+                          </div>
+                          <div className="border-t border-brand-stroke-weak" />
+
+                          {/* Website URL */}
+                          {selectedCompany.websiteUrl && (
+                            <>
+                              <div className="flex items-center justify-between gap-4 py-2">
+                                <span className={`text-sm ${brand.text.strong}`}>
+                                  Website
+                                </span>
+                                <a
+                                  href={selectedCompany.websiteUrl}
+                                  target="_blank"
+                                  rel="noopener noreferrer"
+                                  className="text-sm text-brand underline hover:opacity-80"
+                                >
+                                  {selectedCompany.websiteUrl}
+                                </a>
+                              </div>
+                              <div className="border-t border-brand-stroke-weak" />
+                            </>
+                          )}
+
+                          {/* Funding series */}
+                          {selectedCompany.fundingSeries && (
+                            <>
+                              <div className="flex items-center justify-between gap-4 py-2">
+                                <span className={`text-sm ${brand.text.strong}`}>
+                                  Funding
+                                </span>
+                                <span className={`text-sm ${brand.text.strong}`}>
+                                  {selectedCompany.fundingSeries}
+                                </span>
+                              </div>
+                              <div className="border-t border-brand-stroke-weak" />
+                            </>
+                          )}
+                        </>
+                      )}
+                    </>
+                  )}
+                </div>
               ) : activeSection === "subscription" ? (
                 <p className={brand.text.weak}>Subscription settings (placeholder).</p>
               ) : null}
@@ -410,6 +634,68 @@ export default function SettingsModal({ isOpen, onClose }) {
           {avatarError && (
             <p className="mt-4 text-sm text-red-600" role="alert">
               {avatarError}
+            </p>
+          )}
+        </div>
+      </Modal>
+
+      <Modal isOpen={showCompanyLogoModal} onClose={() => !companyLogoUploading && setShowCompanyLogoModal(false)}>
+        <div
+          className="fixed left-1/2 top-1/2 z-[1003] w-full max-w-md -translate-x-1/2 -translate-y-1/2 rounded-lg border border-brand-stroke-border bg-brand-bg-white p-6 shadow-lg"
+          style={{ fontFamily: "Open Sans, sans-serif" }}
+          onClick={(e) => e.stopPropagation()}
+        >
+          <div className="flex items-center justify-between border-b border-brand-stroke-weak pb-4 mb-4">
+            <h2 className={`text-lg font-semibold ${brand.text.strong}`}>
+              Change company logo
+            </h2>
+            <button
+              type="button"
+              onClick={() => {
+                if (!companyLogoUploading) {
+                  setCompanyLogoError(null);
+                  setShowCompanyLogoModal(false);
+                }
+              }}
+              className="p-2 rounded-lg hover:bg-brand-bg-fill transition-colors"
+              aria-label="Close"
+            >
+              <Close size={20} className="text-brand-stroke-strong" />
+            </button>
+          </div>
+          <input
+            ref={companyLogoInputRef}
+            type="file"
+            accept="image/*"
+            className="hidden"
+            onChange={handleCompanyLogoInputChange}
+          />
+          <div className="flex flex-col gap-3">
+            <button
+              type="button"
+              disabled={companyLogoUploading}
+              onClick={() => companyLogoInputRef.current?.click()}
+              className="w-full py-3 rounded-lg border-2 border-dashed border-brand-stroke-border hover:border-brand hover:bg-brand-bg-fill flex items-center justify-center gap-2 transition-colors focus:outline-none focus:ring-2 focus:ring-brand disabled:opacity-50"
+              title="Upload logo from device"
+              aria-label="Upload logo from device"
+            >
+              <Add size={24} className="text-brand-stroke-strong" />
+              <span className={`text-sm font-medium ${brand.text.strong}`}>
+                Upload company logo
+              </span>
+            </button>
+            <p className={`text-xs text-center ${brand.text.weak}`}>
+              Only image upload is supported for company logos
+            </p>
+          </div>
+          {companyLogoUploading && (
+            <p className={`mt-4 text-sm ${brand.text.weak}`}>
+              Uploading...
+            </p>
+          )}
+          {companyLogoError && (
+            <p className="mt-4 text-sm text-red-600" role="alert">
+              {companyLogoError}
             </p>
           )}
         </div>

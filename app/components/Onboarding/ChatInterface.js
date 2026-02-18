@@ -9,7 +9,7 @@ import { getAvatarUrlById } from "../../../lib/avatars";
 import ConfirmDeleteModal from "../ConfirmDeleteModal";
 import EditGigModal from "./EditGigModal";
 
-export default function ChatInterface({ messages = [], onSendMessage, isLoading = false, inlineComponent = null, typingText = null, onScrollRequest, onSave, onViewOnMap, onStartNext, showFindOrPostButtons = false, accountType, onFindJob, onPostGig, onGigDeleted, onGigEdited }) {
+export default function ChatInterface({ messages = [], onSendMessage, isLoading = false, inlineComponent = null, typingText = null, onScrollRequest, onSave, onViewOnMap, onStartNext, showFindOrPostButtons = false, accountType, onFindJob, onPostGig, onFindCandidates, onGigDeleted, onGigEdited }) {
   const router = useRouter();
   const messagesEndRef = useRef(null);
   const inputRef = useRef(null);
@@ -349,33 +349,60 @@ export default function ChatInterface({ messages = [], onSendMessage, isLoading 
                     </div>
                   )}
                 </div>
-                {/* Find a job / Post a gig (Individual) or Post your job (Company) - show after first welcome message only */}
-                {message.type === "ai" && index === 0 && showFindOrPostButtons && (accountType === "Company" ? onPostGig : (onFindJob && onPostGig)) && (
+                {/* Find a job / Post a gig (Individual) or Post your job / Find Candidates (Company) - show after first welcome message only */}
+                {message.type === "ai" && index === 0 && showFindOrPostButtons && (accountType === "Company" ? (onPostGig || onFindCandidates) : (onFindJob && onPostGig)) && (
                   <div className="flex flex-col gap-2 mt-2">
                     <p className="text-sm text-brand-text-weak" style={{ fontFamily: "Open Sans, sans-serif" }}>
-                      {accountType === "Company" ? "Post your job to get started." : "Do you want to find a job or post a gig?"}
+                      {accountType === "Company" ? "What would you like to do?" : "Do you want to find a job or post a gig?"}
                     </p>
                     <div className="flex flex-wrap gap-2">
-                      {accountType !== "Company" && (
-                        <button
-                          type="button"
-                          onClick={onFindJob}
-                          className="flex items-center gap-2 px-4 py-2.5 bg-brand-bg-white text-brand-text-strong hover:bg-brand-bg-fill rounded-md text-sm font-medium transition-colors border border-brand-stroke-weak"
-                          style={{ fontFamily: "Open Sans, sans-serif" }}
-                        >
-                          <Location size={16} className="text-brand-stroke-strong" />
-                          <span>Find a job</span>
-                        </button>
+                      {accountType === "Company" ? (
+                        <>
+                          {onPostGig && (
+                            <button
+                              type="button"
+                              onClick={onPostGig}
+                              className="flex items-center gap-2 px-4 py-2.5 bg-brand-bg-white text-brand-text-strong hover:bg-brand-bg-fill rounded-md text-sm font-medium transition-colors border border-brand-stroke-weak"
+                              style={{ fontFamily: "Open Sans, sans-serif" }}
+                            >
+                              <Add size={16} className="text-brand-stroke-strong" />
+                              <span>Post your job</span>
+                            </button>
+                          )}
+                          {onFindCandidates && (
+                            <button
+                              type="button"
+                              onClick={onFindCandidates}
+                              className="flex items-center gap-2 px-4 py-2.5 bg-brand-bg-white text-brand-text-strong hover:bg-brand-bg-fill rounded-md text-sm font-medium transition-colors border border-brand-stroke-weak"
+                              style={{ fontFamily: "Open Sans, sans-serif" }}
+                            >
+                              <Location size={16} className="text-brand-stroke-strong" />
+                              <span>Find Candidates</span>
+                            </button>
+                          )}
+                        </>
+                      ) : (
+                        <>
+                          <button
+                            type="button"
+                            onClick={onFindJob}
+                            className="flex items-center gap-2 px-4 py-2.5 bg-brand-bg-white text-brand-text-strong hover:bg-brand-bg-fill rounded-md text-sm font-medium transition-colors border border-brand-stroke-weak"
+                            style={{ fontFamily: "Open Sans, sans-serif" }}
+                          >
+                            <Location size={16} className="text-brand-stroke-strong" />
+                            <span>Find a job</span>
+                          </button>
+                          <button
+                            type="button"
+                            onClick={onPostGig}
+                            className="flex items-center gap-2 px-4 py-2.5 bg-brand-bg-white text-brand-text-strong hover:bg-brand-bg-fill rounded-md text-sm font-medium transition-colors border border-brand-stroke-weak"
+                            style={{ fontFamily: "Open Sans, sans-serif" }}
+                          >
+                            <Add size={16} className="text-brand-stroke-strong" />
+                            <span>Post a gig</span>
+                          </button>
+                        </>
                       )}
-                      <button
-                        type="button"
-                        onClick={onPostGig}
-                        className="flex items-center gap-2 px-4 py-2.5 bg-brand-bg-white text-brand-text-strong hover:bg-brand-bg-fill rounded-md text-sm font-medium transition-colors border border-brand-stroke-weak"
-                        style={{ fontFamily: "Open Sans, sans-serif" }}
-                      >
-                        <Add size={16} className="text-brand-stroke-strong" />
-                        <span>{accountType === "Company" ? "Post your job" : "Post a gig"}</span>
-                      </button>
                     </div>
                   </div>
                 )}

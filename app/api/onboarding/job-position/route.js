@@ -12,6 +12,12 @@ import { jobService } from "../../../../lib/services/job.service";
  *   salaryMin: number (optional)
  *   salaryMax: number (optional)
  *   jobDescription: string
+ *   remoteType: string (optional)
+ *   assistRelocation: boolean (optional)
+ *   seniorityLevel: string (optional)
+ *   teamSize: string (optional)
+ *   perks: string[] (optional)
+ *   holidays: string (optional)
  *   companyId: number
  * }
  */
@@ -25,6 +31,12 @@ export async function POST(request) {
       salaryMin,
       salaryMax,
       jobDescription,
+      remoteType,
+      assistRelocation,
+      seniorityLevel,
+      teamSize,
+      perks,
+      holidays,
       companyId,
     } = body;
 
@@ -46,6 +58,12 @@ export async function POST(request) {
         salaryMin,
         salaryMax,
         jobDescription,
+        remoteType,
+        assistRelocation,
+        seniorityLevel,
+        teamSize,
+        perks,
+        holidays,
         companyId,
       });
 
@@ -59,6 +77,12 @@ export async function POST(request) {
           salaryMin: jobPosition.salaryMin,
           salaryMax: jobPosition.salaryMax,
           jobDescription: jobPosition.jobDescription,
+          remoteType: jobPosition.remoteType,
+          assistRelocation: jobPosition.assistRelocation,
+          seniorityLevel: jobPosition.seniorityLevel,
+          teamSize: jobPosition.teamSize,
+          perks: jobPosition.perks,
+          holidays: jobPosition.holidays,
           companyId: jobPosition.companyId,
           isActive: jobPosition.isActive,
         },

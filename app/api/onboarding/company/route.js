@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { prisma } from "../../../../lib/prisma";
 import { handleFileUpload } from "../../../../lib/fileUpload";
 import { companyService } from "../../../../lib/services/company.service";
+import { getCurrentUser } from "../../../../lib/getCurrentUser";
 
 /**
  * POST /api/onboarding/company
@@ -75,9 +76,11 @@ export async function POST(request) {
       );
     }
 
-    // Handle logo upload if provided
+    // Handle logo upload if provided, or use logoUrl if provided
     let logoPath = null;
     const logoFile = formData.get("logo");
+    const logoUrl = formData.get("logoUrl");
+    
     if (logoFile && logoFile instanceof File && logoFile.size > 0) {
       const uploadResult = await handleFileUpload(formData, "logo");
       if (!uploadResult.success) {
@@ -87,6 +90,9 @@ export async function POST(request) {
         );
       }
       logoPath = uploadResult.path;
+    } else if (logoUrl && typeof logoUrl === "string" && logoUrl.trim()) {
+      // Use the fetched logo URL directly
+      logoPath = logoUrl.trim();
     }
 
     const nameStr = name.toString();
@@ -142,6 +148,43 @@ export async function POST(request) {
     });
   } catch (error) {
     console.error("Error in company API:", error);
+    return NextResponse.json(
+      {
+        success: false,
+        error: "Internal server error",
+        details: process.env.NODE_ENV === "development" ? error.message : undefined,
+      },
+      { status: 500 }
+    );
+  }
+}
+
+/**
+ * GET /api/onboarding/company
+ * Get all companies for the current user
+ */
+export async function GET(request) {
+  try {
+    const user = await getCurrentUser(request);
+    
+    if (!user) {
+      return NextResponse.json(
+        { success: false, error: "Unauthorized" },
+        { status: 401 }
+      );
+    }
+
+    const companies = await prisma.company.findMany({
+      where: { userId: user.id },
+      orderBy: { createdAt: 'desc' },
+    });
+
+    return NextResponse.json({
+      success: true,
+      companies,
+    });
+  } catch (error) {
+    console.error("Error fetching companies:", error);
     return NextResponse.json(
       {
         success: false,
