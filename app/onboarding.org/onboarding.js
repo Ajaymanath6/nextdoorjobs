@@ -787,32 +787,36 @@ export default function OnboardingPage() {
     await saveConversation(COMPANY_FIELDS.LOCATION, lastAIMessageTextRef.current, `${lat},${lon}`);
     setIsLoading(true);
     
+    // Convert to numbers if they're strings
+    const latitude = typeof lat === 'number' ? lat : parseFloat(lat);
+    const longitude = typeof lon === 'number' ? lon : parseFloat(lon);
+    
     // Reverse geocode to get district and state
     try {
-      const res = await fetch(`/api/geocode/reverse?lat=${lat}&lon=${lon}`);
+      const res = await fetch(`/api/geocode/reverse?lat=${latitude}&lon=${longitude}`);
       if (res.ok) {
         const data = await res.json();
         const district = data.district || "Unknown";
         const state = data.state || "Unknown";
         
-        await addAIMessage(`Location saved! Coordinates: ${lat.toFixed(4)}, ${lon.toFixed(4)} | ${district}, ${state}`);
+        await addAIMessage(`Location saved! Coordinates: ${latitude.toFixed(4)}, ${longitude.toFixed(4)} | ${district}, ${state}`);
         
         // Save to company data
         setCompanyData((prev) => ({ 
           ...prev, 
-          latitude: lat, 
-          longitude: lon,
+          latitude: latitude, 
+          longitude: longitude,
           state: state !== "Unknown" ? state : prev?.state,
           district: district !== "Unknown" ? district : prev?.district
         }));
       } else {
-        await addAIMessage(`Location saved! Coordinates: ${lat.toFixed(4)}, ${lon.toFixed(4)}`);
-        setCompanyData((prev) => ({ ...prev, latitude: lat, longitude: lon }));
+        await addAIMessage(`Location saved! Coordinates: ${latitude.toFixed(4)}, ${longitude.toFixed(4)}`);
+        setCompanyData((prev) => ({ ...prev, latitude: latitude, longitude: longitude }));
       }
     } catch (error) {
       console.error("Reverse geocoding failed:", error);
-      await addAIMessage(`Location saved! Coordinates: ${lat.toFixed(4)}, ${lon.toFixed(4)}`);
-      setCompanyData((prev) => ({ ...prev, latitude: lat, longitude: lon }));
+      await addAIMessage(`Location saved! Coordinates: ${latitude.toFixed(4)}, ${longitude.toFixed(4)}`);
+      setCompanyData((prev) => ({ ...prev, latitude: latitude, longitude: longitude }));
     }
     
     await addAIMessage("Do you have a company website URL?");
