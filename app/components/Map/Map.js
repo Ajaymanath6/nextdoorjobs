@@ -486,11 +486,96 @@ const MapComponent = () => {
       zoomToBoundsOnClick: true,
       disableClusteringAtZoom: 15,
       iconCreateFunction: function(cluster) {
-        const count = cluster.getChildCount();
+        const markers = cluster.getAllChildMarkers();
+        const count = markers.length;
+        
+        // Get up to 4 unique company logos from the markers
+        const logos = [];
+        const seen = new Set();
+        
+        for (const marker of markers) {
+          if (logos.length >= 4) break;
+          const company = marker.companyData;
+          const logoUrl = company?.logoPath || company?.logoUrl || null;
+          
+          if (logoUrl && !seen.has(logoUrl)) {
+            logos.push(logoUrl);
+            seen.add(logoUrl);
+          }
+        }
+        
+        // Light bubble size
+        const baseSize = 56;
+        const size = Math.min(baseSize + (count * 2), 100);
+        const padding = 10;
+
+        // 2x2 grid: always 4 cells, fill with logos (empty if fewer than 4)
+        const logoCells = [];
+        for (let i = 0; i < 4; i++) {
+          const url = logos[i];
+          if (url) {
+            logoCells.push(`
+              <div style="width:100%;height:100%;min-width:0;min-height:0;display:flex;align-items:center;justify-content:center;border-radius:50%;overflow:hidden;background:white;">
+                <img src="${url}" alt="" style="width:80%;height:80%;object-fit:contain;" onerror="this.style.display='none'" />
+              </div>
+            `);
+          } else {
+            logoCells.push('<div style="width:100%;height:100%;"></div>');
+          }
+        }
+
+        const html = `
+          <div style="
+            position: relative;
+            width: ${size}px;
+            height: ${size}px;
+            border-radius: 50%;
+            background: rgba(255, 255, 255, 0.15);
+            backdrop-filter: blur(6px);
+            -webkit-backdrop-filter: blur(6px);
+            border: 1px solid rgba(255, 255, 255, 0.4);
+            box-shadow: inset 0 20px 30px rgba(255, 255, 255, 0.3), inset 10px 0 20px rgba(0, 0, 0, 0.02), inset -10px -20px 30px rgba(0, 0, 0, 0.05), 0 15px 35px rgba(0, 0, 0, 0.08);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: ${padding}px;
+            box-sizing: border-box;
+          ">
+            <div style="
+              display: grid;
+              grid-template-columns: 1fr 1fr;
+              grid-template-rows: 1fr 1fr;
+              gap: 4px;
+              width: 100%;
+              height: 100%;
+              min-width: 0;
+              min-height: 0;
+            ">
+              ${logoCells.join('')}
+            </div>
+            ${count > 4 ? `
+              <div style="
+                position: absolute;
+                bottom: 4px;
+                right: 4px;
+                background: rgba(248, 68, 22, 0.85);
+                color: white;
+                border-radius: 10px;
+                padding: 2px 6px;
+                font-size: 10px;
+                font-weight: 600;
+              ">
+                +${count - 4}
+              </div>
+            ` : ''}
+          </div>
+        `;
+
         return L.divIcon({
-          html: `<div style="background-color:#F84416;color:white;border-radius:50%;width:40px;height:40px;display:flex;align-items:center;justify-content:center;font-weight:bold;font-size:14px;border:3px solid white;box-shadow:0 2px 8px rgba(0,0,0,0.3);">${count}</div>`,
+          html: html,
           className: 'marker-cluster-custom',
-          iconSize: L.point(40, 40),
+          iconSize: L.point(size, size),
+          iconAnchor: [size / 2, size / 2],
         });
       },
     });
@@ -541,6 +626,59 @@ const MapComponent = () => {
 
       clusterGroup.addLayer(marker);
       companyMarkersRef.current.push(marker);
+    });
+
+    // Add hover tooltip for clusters
+    clusterGroup.on('clustermouseover', async function(e) {
+      const cluster = e.layer;
+      const markers = cluster.getAllChildMarkers();
+      const companies = markers.map(m => m.companyData).filter(Boolean);
+      const companyCount = companies.length;
+      
+      if (companyCount === 0) return;
+      
+      // Fetch job titles for these companies
+      try {
+        const companyIds = companies.map(c => c.id);
+        const res = await fetch('/api/companies/job-titles', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ companyIds }),
+        });
+        
+        if (res.ok) {
+          const data = await res.json();
+          const titles = data.titles || [];
+          const displayTitles = titles.slice(0, 5);
+          
+          const tooltipContent = `
+            <div style="font-family: 'Open Sans', sans-serif; padding: 8px;">
+              <div style="font-weight: 600; font-size: 13px; color: #0A0A0A; margin-bottom: 6px;">
+                ${companyCount} ${companyCount === 1 ? 'company' : 'companies'} hiring
+              </div>
+              ${displayTitles.length > 0 ? `
+                <div style="font-size: 11px; color: #575757;">
+                  ${displayTitles.join(', ')}${titles.length > 5 ? '...' : ''}
+                </div>
+              ` : ''}
+            </div>
+          `;
+          
+          cluster.bindTooltip(tooltipContent, {
+            permanent: false,
+            direction: 'top',
+            className: 'cluster-tooltip',
+            offset: [0, -10],
+          }).openTooltip();
+        }
+      } catch (error) {
+        console.error('Error fetching job titles for tooltip:', error);
+      }
+    });
+
+    clusterGroup.on('clustermouseout', function(e) {
+      const cluster = e.layer;
+      cluster.closeTooltip();
     });
 
     // Add cluster group to map
@@ -953,13 +1091,15 @@ const MapComponent = () => {
       ? [dbData.latitude, dbData.longitude]
       : [localityData.center.lat, localityData.center.lon];
 
-    // Calculate state center (Kerala center - Thrissur area)
-    const stateCenter = [10.5276, 76.2144]; // Kerala center (Thrissur area)
+    // Calculate state center from locality data
+    const stateCenter = hasCoordinates 
+      ? [dbData.latitude, dbData.longitude]
+      : [localityData.center.lat, localityData.center.lon];
     
     // Use database coordinates for district center if available
     const districtCenter = hasCoordinates
       ? [dbData.latitude, dbData.longitude]
-      : [10.5276, 76.2144]; // Default Thrissur center
+      : [localityData.center.lat, localityData.center.lon];
 
     // Stage 1: Fly to State (zoom 8)
     mapInstanceRef.current.flyTo(stateCenter, 8, {
@@ -1058,7 +1198,8 @@ const MapComponent = () => {
     }
     
     const collegeCenter = [lat, lon];
-    const stateCenter = [10.5276, 76.2144]; // Kerala center
+    // Use India center as fallback
+    const stateCenter = [20.5937, 78.9629]; // India center
     
     console.log("📍 College center coordinates:", collegeCenter);
     console.log("📍 Raw values:", { 
@@ -1361,11 +1502,11 @@ const MapComponent = () => {
         // Guard: container may be unmounted (e.g. user navigated away) during async load
         if (!mapRef.current || !document.body.contains(mapRef.current)) return;
 
-        // Set initial view to home location (Thrissur, Kerala)
+        // Set initial view to India center
         // Will be adjusted by fitBounds when markers are added
-        const initialLat = 10.5276;
-        const initialLon = 76.2144;
-        const zoom = 10; // Default zoom, will be adjusted by fitBounds
+        const initialLat = 20.5937;
+        const initialLon = 78.9629;
+        const zoom = 5; // Default zoom for India view
 
         // Map initialization with exact configuration
         const map = L.map(mapRef.current, {
@@ -1458,8 +1599,105 @@ const MapComponent = () => {
       companyMarkersRef.current = [];
 
       if (companies && companies.length > 0) {
-        // Create marker cluster group for companies
-        const clusterGroup = L.markerClusterGroup();
+        // Create marker cluster group for companies with glassmorphism style
+        const clusterGroup = L.markerClusterGroup({
+          chunkedLoading: true,
+          maxClusterRadius: 80,
+          showCoverageOnHover: false,
+          iconCreateFunction: function(cluster) {
+            const markers = cluster.getAllChildMarkers();
+            const count = markers.length;
+            
+            // Get up to 4 unique company logos from the markers
+            const logos = [];
+            const seen = new Set();
+            
+            for (const marker of markers) {
+              if (logos.length >= 4) break;
+              const company = marker.companyData;
+              const logoUrl = company?.logoPath || company?.logoUrl || null;
+              
+              if (logoUrl && !seen.has(logoUrl)) {
+                logos.push(logoUrl);
+                seen.add(logoUrl);
+              }
+            }
+            
+            // Light bubble size
+            const baseSize = 56;
+            const size = Math.min(baseSize + (count * 2), 100);
+            const padding = 10;
+
+            // 2x2 grid: always 4 cells, fill with logos (empty if fewer than 4)
+            const logoCells = [];
+            for (let i = 0; i < 4; i++) {
+              const url = logos[i];
+              if (url) {
+                logoCells.push(`
+                  <div style="width:100%;height:100%;min-width:0;min-height:0;display:flex;align-items:center;justify-content:center;border-radius:50%;overflow:hidden;background:white;">
+                    <img src="${url}" alt="" style="width:80%;height:80%;object-fit:contain;" onerror="this.style.display='none'" />
+                  </div>
+                `);
+              } else {
+                logoCells.push('<div style="width:100%;height:100%;"></div>');
+              }
+            }
+
+            const html = `
+              <div style="
+                position: relative;
+                width: ${size}px;
+                height: ${size}px;
+                border-radius: 50%;
+                background: rgba(255, 255, 255, 0.15);
+                backdrop-filter: blur(6px);
+                -webkit-backdrop-filter: blur(6px);
+                border: 1px solid rgba(255, 255, 255, 0.4);
+                box-shadow: inset 0 20px 30px rgba(255, 255, 255, 0.3), inset 10px 0 20px rgba(0, 0, 0, 0.02), inset -10px -20px 30px rgba(0, 0, 0, 0.05), 0 15px 35px rgba(0, 0, 0, 0.08);
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                padding: ${padding}px;
+                box-sizing: border-box;
+              ">
+                <div style="
+                  display: grid;
+                  grid-template-columns: 1fr 1fr;
+                  grid-template-rows: 1fr 1fr;
+                  gap: 4px;
+                  width: 100%;
+                  height: 100%;
+                  min-width: 0;
+                  min-height: 0;
+                ">
+                  ${logoCells.join('')}
+                </div>
+                ${count > 4 ? `
+                  <div style="
+                    position: absolute;
+                    bottom: 4px;
+                    right: 4px;
+                    background: rgba(248, 68, 22, 0.85);
+                    color: white;
+                    border-radius: 10px;
+                    padding: 2px 6px;
+                    font-size: 10px;
+                    font-weight: 600;
+                  ">
+                    +${count - 4}
+                  </div>
+                ` : ''}
+              </div>
+            `;
+
+            return L.divIcon({
+              html: html,
+              className: 'marker-cluster-custom',
+              iconSize: L.point(size, size),
+              iconAnchor: [size / 2, size / 2],
+            });
+          },
+        });
         clusterGroupRef.current = clusterGroup;
 
         // Create company markers
@@ -1500,6 +1738,59 @@ const MapComponent = () => {
 
           clusterGroup.addLayer(marker);
           companyMarkersRef.current.push(marker);
+        });
+
+        // Add hover tooltip for clusters
+        clusterGroup.on('clustermouseover', async function(e) {
+          const cluster = e.layer;
+          const markers = cluster.getAllChildMarkers();
+          const companies = markers.map(m => m.companyData).filter(Boolean);
+          const companyCount = companies.length;
+          
+          if (companyCount === 0) return;
+          
+          // Fetch job titles for these companies
+          try {
+            const companyIds = companies.map(c => c.id);
+            const res = await fetch('/api/companies/job-titles', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ companyIds }),
+            });
+            
+            if (res.ok) {
+              const data = await res.json();
+              const titles = data.titles || [];
+              const displayTitles = titles.slice(0, 5);
+              
+              const tooltipContent = `
+                <div style="font-family: 'Open Sans', sans-serif; padding: 8px;">
+                  <div style="font-weight: 600; font-size: 13px; color: #0A0A0A; margin-bottom: 6px;">
+                    ${companyCount} ${companyCount === 1 ? 'company' : 'companies'} hiring
+                  </div>
+                  ${displayTitles.length > 0 ? `
+                    <div style="font-size: 11px; color: #575757;">
+                      ${displayTitles.join(', ')}${titles.length > 5 ? '...' : ''}
+                    </div>
+                  ` : ''}
+                </div>
+              `;
+              
+              cluster.bindTooltip(tooltipContent, {
+                permanent: false,
+                direction: 'top',
+                className: 'cluster-tooltip',
+                offset: [0, -10],
+              }).openTooltip();
+            }
+          } catch (error) {
+            console.error('Error fetching job titles for tooltip:', error);
+          }
+        });
+
+        clusterGroup.on('clustermouseout', function(e) {
+          const cluster = e.layer;
+          cluster.closeTooltip();
         });
 
         // Add cluster group to map

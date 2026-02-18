@@ -3,13 +3,14 @@
 import { useEffect, useRef, useState } from "react";
 import Image from "next/image";
 import { useRouter } from "next/navigation";
-import { Screen, Document, Enterprise, Save, Location, Add, OverflowMenuVertical, TrashCan, Edit, List } from "@carbon/icons-react";
+import { Screen, Document, Enterprise, Save, Location, Add, OverflowMenuVertical, TrashCan, Edit, List, Renew } from "@carbon/icons-react";
 import TypingAnimation from "./TypingAnimation";
 import { getAvatarUrlById } from "../../../lib/avatars";
 import ConfirmDeleteModal from "../ConfirmDeleteModal";
 import EditGigModal from "./EditGigModal";
+import EditJobModal from "../EditJobModal";
 
-export default function ChatInterface({ messages = [], onSendMessage, isLoading = false, inlineComponent = null, typingText = null, onScrollRequest, onSave, onViewOnMap, onStartNext, showFindOrPostButtons = false, accountType, onFindJob, onPostGig, onFindCandidates, onGigDeleted, onGigEdited, onShowJobListings }) {
+export default function ChatInterface({ messages = [], onSendMessage, isLoading = false, inlineComponent = null, typingText = null, onScrollRequest, onSave, onViewOnMap, onStartNext, showFindOrPostButtons = false, accountType, onFindJob, onPostGig, onFindCandidates, onGigDeleted, onGigEdited, onJobDeleted, onJobEdited, onShowJobListings }) {
   const router = useRouter();
   const messagesEndRef = useRef(null);
   const inputRef = useRef(null);
@@ -26,6 +27,12 @@ export default function ChatInterface({ messages = [], onSendMessage, isLoading 
   const [deletingGigId, setDeletingGigId] = useState(null);
   const [editModalOpen, setEditModalOpen] = useState(false);
   const [gigToEdit, setGigToEdit] = useState(null);
+  const [jobDeleteConfirmOpen, setJobDeleteConfirmOpen] = useState(false);
+  const [jobToDelete, setJobToDelete] = useState(null);
+  const [deletingJobId, setDeletingJobId] = useState(null);
+  const [jobEditModalOpen, setJobEditModalOpen] = useState(false);
+  const [jobToEdit, setJobToEdit] = useState(null);
+  const [extendingJobId, setExtendingJobId] = useState(null);
 
   const handleViewGigOnMap = (gig) => {
     if (gig.latitude != null && gig.longitude != null) {
@@ -41,6 +48,47 @@ export default function ChatInterface({ messages = [], onSendMessage, isLoading 
         );
       }
       router.push("/");
+    }
+  };
+
+  const handleDeleteJob = async (jobId) => {
+    setDeletingJobId(jobId);
+    try {
+      const res = await fetch(`/api/jobs/${jobId}`, {
+        method: "DELETE",
+        credentials: "same-origin",
+      });
+      if (res.ok) {
+        setJobDeleteConfirmOpen(false);
+        setJobToDelete(null);
+        if (onJobDeleted) onJobDeleted(jobId);
+      } else {
+        console.error("Failed to delete job");
+      }
+    } catch (error) {
+      console.error("Error deleting job:", error);
+    } finally {
+      setDeletingJobId(null);
+    }
+  };
+
+  const handleExtendJob = async (jobId) => {
+    setExtendingJobId(jobId);
+    try {
+      const res = await fetch(`/api/jobs/${jobId}/extend`, {
+        method: "POST",
+        credentials: "same-origin",
+      });
+      if (res.ok) {
+        const data = await res.json();
+        if (onJobEdited) onJobEdited(data.job);
+      } else {
+        console.error("Failed to extend job");
+      }
+    } catch (error) {
+      console.error("Error extending job:", error);
+    } finally {
+      setExtendingJobId(null);
     }
   };
 
@@ -160,8 +208,8 @@ export default function ChatInterface({ messages = [], onSendMessage, isLoading 
                     className="w-7 h-7"
                   />
                 </div>
-                <div className="flex flex-col gap-2 max-w-[80%]">
-                <div className="max-w-[85%] w-full rounded-lg border border-brand-stroke-weak bg-brand-bg-white px-4 py-3">
+                <div className="flex flex-col gap-2 w-full">
+                <div className="w-full rounded-lg border border-brand-stroke-weak bg-brand-bg-white px-4 py-3">
                   <p className="text-sm font-medium text-brand-text-strong mb-3" style={{ fontFamily: "Open Sans, sans-serif" }}>
                     Your job postings
                   </p>
@@ -178,13 +226,57 @@ export default function ChatInterface({ messages = [], onSendMessage, isLoading 
                             <p className="text-sm font-medium text-brand-text-strong truncate" style={{ fontFamily: "Open Sans, sans-serif" }}>{job.title}</p>
                             <p className="text-xs text-brand-text-weak truncate mt-0.5" style={{ fontFamily: "Open Sans, sans-serif" }}>{job.jobDescription}</p>
                           </div>
-                          <button
-                            type="button"
-                            className="shrink-0 p-1 rounded hover:bg-brand-bg-fill text-brand-stroke-strong"
-                            aria-label="More options"
-                          >
-                            <OverflowMenuVertical size={20} />
-                          </button>
+                          <div className="shrink-0 flex items-center gap-1.5">
+                            {onJobEdited ? (
+                              <button
+                                type="button"
+                                onClick={() => handleExtendJob(job.id)}
+                                disabled={extendingJobId === job.id}
+                                className="p-1.5 rounded-md text-brand-text-weak hover:bg-green-50 hover:text-green-600 transition-colors disabled:opacity-50 relative"
+                                title="Extend posting by 2 weeks"
+                                aria-label="Extend job"
+                              >
+                                {extendingJobId === job.id ? (
+                                  <div className="w-[18px] h-[18px] border-2 border-green-600 border-t-transparent rounded-full animate-spin" />
+                                ) : (
+                                  <Renew size={18} />
+                                )}
+                              </button>
+                            ) : null}
+                            {onJobEdited ? (
+                              <button
+                                type="button"
+                                onClick={() => {
+                                  setJobToEdit(job);
+                                  setJobEditModalOpen(true);
+                                }}
+                                className="p-1.5 rounded-md text-brand-text-weak hover:bg-brand-bg-fill hover:text-brand-stroke-strong transition-colors"
+                                title="Edit job"
+                                aria-label="Edit job"
+                              >
+                                <Edit size={18} />
+                              </button>
+                            ) : null}
+                            {onJobDeleted ? (
+                              <button
+                                type="button"
+                                onClick={() => {
+                                  setJobToDelete(job);
+                                  setJobDeleteConfirmOpen(true);
+                                }}
+                                disabled={deletingJobId === job.id}
+                                className="p-1.5 rounded-md text-brand-text-weak hover:bg-red-50 hover:text-red-600 transition-colors disabled:opacity-50 relative"
+                                title="Delete job"
+                                aria-label="Delete job"
+                              >
+                                {deletingJobId === job.id ? (
+                                  <div className="w-[18px] h-[18px] border-2 border-red-600 border-t-transparent rounded-full animate-spin" />
+                                ) : (
+                                  <TrashCan size={18} />
+                                )}
+                              </button>
+                            ) : null}
+                          </div>
                         </li>
                       ))}
                     </ul>
@@ -778,6 +870,32 @@ export default function ChatInterface({ messages = [], onSendMessage, isLoading 
         gig={gigToEdit}
         onSaved={() => {
           onGigEdited?.();
+        }}
+      />
+
+      <ConfirmDeleteModal
+        isOpen={jobDeleteConfirmOpen}
+        onClose={() => {
+          setJobDeleteConfirmOpen(false);
+          setJobToDelete(null);
+        }}
+        onConfirm={() => handleDeleteJob(jobToDelete?.id)}
+        title="Delete Job Posting"
+        message={`Are you sure you want to delete "${jobToDelete?.title}"? This action cannot be undone.`}
+        isDeleting={deletingJobId === jobToDelete?.id}
+      />
+
+      <EditJobModal
+        isOpen={jobEditModalOpen}
+        onClose={() => {
+          setJobEditModalOpen(false);
+          setJobToEdit(null);
+        }}
+        job={jobToEdit}
+        onSaved={(updatedJob) => {
+          setJobEditModalOpen(false);
+          setJobToEdit(null);
+          if (onJobEdited) onJobEdited(updatedJob);
         }}
       />
     </div>

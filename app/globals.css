@@ -140,6 +140,21 @@ body {
   font-family: "Open Sans", sans-serif !important;
 }
 
+/* Cluster Tooltip */
+.cluster-tooltip {
+  background: white !important;
+  border: 1px solid #E5E5E5 !important;
+  border-radius: 8px !important;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15) !important;
+  font-family: "Open Sans", sans-serif !important;
+  pointer-events: none !important;
+}
+
+.cluster-tooltip .leaflet-tooltip-content {
+  margin: 0 !important;
+  padding: 0 !important;
+}
+
 /* No Companies Found Message */
 .no-companies-message .leaflet-popup-content-wrapper {
   background: white !important;

@@ -2108,6 +2108,52 @@ export default function OnboardingPage() {
               onPostGig={handlePostGig}
               onFindCandidates={handleFindCandidates}
               onShowJobListings={handleShowJobListings}
+              onJobDeleted={async () => {
+                // Refetch job list
+                try {
+                  const res = await fetch("/api/onboarding/my-jobs");
+                  if (res.ok) {
+                    const data = await res.json();
+                    const jobs = data.success ? (data.jobs || []) : [];
+                    setJobCount(jobs.length);
+                    // Update the job list in chat messages
+                    setChatMessages((prev) => {
+                      const lastJobListIndex = prev.map((m, i) => m.type === "jobList" ? i : -1).filter(i => i >= 0).pop();
+                      if (lastJobListIndex != null) {
+                        const updated = [...prev];
+                        updated[lastJobListIndex] = { type: "jobList", jobs };
+                        return updated;
+                      }
+                      return prev;
+                    });
+                  }
+                } catch (e) {
+                  console.error("Error refetching jobs:", e);
+                }
+              }}
+              onJobEdited={async (updatedJob) => {
+                // Refetch job list to get updated data
+                try {
+                  const res = await fetch("/api/onboarding/my-jobs");
+                  if (res.ok) {
+                    const data = await res.json();
+                    const jobs = data.success ? (data.jobs || []) : [];
+                    setJobCount(jobs.length);
+                    // Update the job list in chat messages
+                    setChatMessages((prev) => {
+                      const lastJobListIndex = prev.map((m, i) => m.type === "jobList" ? i : -1).filter(i => i >= 0).pop();
+                      if (lastJobListIndex != null) {
+                        const updated = [...prev];
+                        updated[lastJobListIndex] = { type: "jobList", jobs };
+                        return updated;
+                      }
+                      return prev;
+                    });
+                  }
+                } catch (e) {
+                  console.error("Error refetching jobs:", e);
+                }
+              }}
             />
           </div>
         </div>
