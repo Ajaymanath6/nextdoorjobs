@@ -397,15 +397,31 @@ export default function OnboardingPage() {
     }
   };
 
-  // Extract company name from email domain
+  // Generic email domains list
+  const GENERIC_EMAIL_DOMAINS = [
+    'gmail.com', 'yahoo.com', 'outlook.com', 'hotmail.com', 
+    'icloud.com', 'protonmail.com', 'mail.com', 'aol.com',
+    'zoho.com', 'yandex.com', 'gmx.com', 'live.com'
+  ];
+
+  // Extract company name from email with smart logic
   const extractCompanyNameFromEmail = (email) => {
     if (!email) return "";
     try {
-      const domain = email.split("@")[1];
-      if (!domain) return "";
-      // Remove common TLDs and get the company name
+      const parts = email.split("@");
+      if (parts.length !== 2) return "";
+      
+      const username = parts[0];
+      const domain = parts[1];
+      
+      // Check if generic domain
+      if (GENERIC_EMAIL_DOMAINS.includes(domain.toLowerCase())) {
+        // Use username for generic domains
+        return username.charAt(0).toUpperCase() + username.slice(1);
+      }
+      
+      // Use domain name for corporate emails
       const companyPart = domain.split(".")[0];
-      // Capitalize first letter
       return companyPart.charAt(0).toUpperCase() + companyPart.slice(1);
     } catch (e) {
       return "";
@@ -468,16 +484,20 @@ export default function OnboardingPage() {
         switch (currentField) {
           case COMPANY_FIELDS.NAME:
             setCompanyData((prev) => ({ ...prev, name: value }));
-            await addAIMessage(`Got it! Your company name is "${value}". What state is your company located in?`);
-            setCurrentField(COMPANY_FIELDS.STATE);
+            await addAIMessage(`Got it! Your company name is "${value}".`);
+            await addAIMessage("What's the location of your company?");
+            setCurrentField(COMPANY_FIELDS.LOCATION);
             setInlineComponent(
-              <StateDistrictSelector
-                onStateSelect={(state) => {
-                  setCompanyData((prev) => ({ ...prev, state }));
+              <GetCoordinatesButton
+                onCoordinatesReceived={(lat, lon) => {
+                  setCompanyData((prev) => ({ ...prev, latitude: lat, longitude: lon }));
                   setInlineComponent(null);
-                  handleStateSelected(state);
+                  handleLocationReceived(lat, lon);
                 }}
-                selectedState={companyData?.state}
+                onSkip={() => {
+                  setInlineComponent(null);
+                  handleLocationSkipped();
+                }}
               />
             );
             break;
@@ -657,6 +677,60 @@ export default function OnboardingPage() {
           handleFundingSelected("skip");
         }}
         selectedValue={companyData?.fundingSeries}
+      />
+    );
+    setIsLoading(false);
+    setTimeout(() => scrollToInlineRef.current?.(), 150);
+  };
+
+  // Handle location coordinates received
+  const handleLocationReceived = async (lat, lon) => {
+    await saveConversation(COMPANY_FIELDS.LOCATION, lastAIMessageTextRef.current, `${lat},${lon}`);
+    setIsLoading(true);
+    await addAIMessage(`Location saved!`);
+    await addAIMessage("Do you have a company website URL?");
+    setCurrentField(COMPANY_FIELDS.WEBSITE);
+    setInlineComponent(
+      <UrlInput
+        onUrlSubmit={(url) => {
+          if (url.toLowerCase() !== "skip") {
+            setCompanyData((prev) => ({ ...prev, websiteUrl: url }));
+          }
+          setInlineComponent(null);
+          handleWebsiteSubmitted(url);
+        }}
+        onSkip={() => {
+          setInlineComponent(null);
+          handleWebsiteSubmitted("skip");
+        }}
+        placeholder="Enter website URL..."
+      />
+    );
+    setIsLoading(false);
+    setTimeout(() => scrollToInlineRef.current?.(), 150);
+  };
+
+  // Handle location skipped
+  const handleLocationSkipped = async () => {
+    await saveConversation(COMPANY_FIELDS.LOCATION, lastAIMessageTextRef.current, "skip");
+    setIsLoading(true);
+    await addAIMessage(`No problem!`);
+    await addAIMessage("Do you have a company website URL?");
+    setCurrentField(COMPANY_FIELDS.WEBSITE);
+    setInlineComponent(
+      <UrlInput
+        onUrlSubmit={(url) => {
+          if (url.toLowerCase() !== "skip") {
+            setCompanyData((prev) => ({ ...prev, websiteUrl: url }));
+          }
+          setInlineComponent(null);
+          handleWebsiteSubmitted(url);
+        }}
+        onSkip={() => {
+          setInlineComponent(null);
+          handleWebsiteSubmitted("skip");
+        }}
+        placeholder="Enter website URL..."
       />
     );
     setIsLoading(false);
@@ -959,7 +1033,8 @@ export default function OnboardingPage() {
   const handleRemoteTypeSelected = async (type) => {
     await saveConversation(JOB_FIELDS.REMOTE_TYPE, lastAIMessageTextRef.current, type);
     setIsLoading(true);
-    await addAIMessage(`${type} position noted. Do you assist with relocation?`);
+    await addAIMessage(`${type} position noted.`);
+    await addAIMessage("Do you assist with relocation?");
     setCurrentField(JOB_FIELDS.RELOCATION);
     setInlineComponent(
       <RelocationSelector
@@ -978,7 +1053,8 @@ export default function OnboardingPage() {
   const handleRelocationSelected = async (assist) => {
     await saveConversation(JOB_FIELDS.RELOCATION, lastAIMessageTextRef.current, assist ? "Yes" : "No");
     setIsLoading(true);
-    await addAIMessage(`${assist ? "Relocation assistance available" : "No relocation assistance"}. What's the seniority level for this position?`);
+    await addAIMessage(`${assist ? "Relocation assistance available." : "No relocation assistance."}`);
+    await addAIMessage("What's the seniority level for this position?");
     setCurrentField(JOB_FIELDS.SENIORITY);
     setInlineComponent(
       <SeniorityLevelSelector
@@ -997,7 +1073,8 @@ export default function OnboardingPage() {
   const handleSenioritySelected = async (level) => {
     await saveConversation(JOB_FIELDS.SENIORITY, lastAIMessageTextRef.current, level);
     setIsLoading(true);
-    await addAIMessage(`Seniority level: ${level}. How many years of experience are required?`);
+    await addAIMessage(`Seniority level: ${level}.`);
+    await addAIMessage("How many years of experience are required?");
     setCurrentField(JOB_FIELDS.YEARS);
     setInlineComponent(
       <ExperienceRangeSelect
@@ -1016,7 +1093,8 @@ export default function OnboardingPage() {
   const handleExperienceSelected = async (years) => {
     await saveConversation(JOB_FIELDS.YEARS, lastAIMessageTextRef.current, String(years));
     setIsLoading(true);
-    await addAIMessage(`Experience required: ${years} years. What's the salary range?`);
+    await addAIMessage(`Experience required: ${years} years.`);
+    await addAIMessage("What's the salary range?");
     setCurrentField(JOB_FIELDS.SALARY);
     setInlineComponent(
       <SalaryRangeBadges
@@ -1068,7 +1146,8 @@ export default function OnboardingPage() {
   const handleTeamSizeSelected = async (size) => {
     await saveConversation(JOB_FIELDS.TEAM_SIZE, lastAIMessageTextRef.current, size);
     setIsLoading(true);
-    await addAIMessage(`Team size: ${size}. What perks and benefits do you offer? (Select all that apply)`);
+    await addAIMessage(`Team size: ${size}.`);
+    await addAIMessage("What perks and benefits do you offer? (Select all that apply)");
     setCurrentField(JOB_FIELDS.PERKS);
     setInlineComponent(
       <PerksSelector
@@ -1093,10 +1172,11 @@ export default function OnboardingPage() {
     await saveConversation(JOB_FIELDS.PERKS, lastAIMessageTextRef.current, answerText);
     setIsLoading(true);
     if (perks.length > 0) {
-      await addAIMessage(`Perks selected: ${perks.join(", ")}. Any specific holiday information? (Optional)`);
+      await addAIMessage(`Perks selected: ${perks.join(", ")}.`);
     } else {
-      await addAIMessage(`No problem! Any specific holiday information? (Optional)`);
+      await addAIMessage("No perks selected.");
     }
+    await addAIMessage("Any specific holiday information? (Optional)");
     setCurrentField(JOB_FIELDS.HOLIDAYS);
     setInlineComponent(
       <HolidaysInput
@@ -1120,10 +1200,9 @@ export default function OnboardingPage() {
     await saveConversation(JOB_FIELDS.HOLIDAYS, lastAIMessageTextRef.current, answerText);
     setIsLoading(true);
     if (holidays) {
-      await addAIMessage(`Holidays: ${holidays}. Perfect! I have all the information. Let me submit your job posting...`);
-    } else {
-      await addAIMessage(`Perfect! I have all the information. Let me submit your job posting...`);
+      await addAIMessage(`Holidays: ${holidays}.`);
     }
+    await addAIMessage("Perfect! I have all the information. Let me submit your job posting...");
     // Mark this message as final to show action buttons
     setChatMessages((prev) => {
       const updated = [...prev];

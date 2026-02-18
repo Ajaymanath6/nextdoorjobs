@@ -33,6 +33,7 @@ import AddHomeModal from "./AddHomeModal";
 import JobTitleAutocomplete from "./JobTitleAutocomplete";
 import CollegeAutocomplete from "./CollegeAutocomplete";
 import EmptyState from "./EmptyState";
+import CompanyJobsSidebar from "../CompanyJobsSidebar";
 import { getStateCenter } from "../../../lib/indiaStateCenters";
 import { getAvatarUrlById } from "../../../lib/avatars";
 // Import CSS files (Next.js handles these)
@@ -99,6 +100,9 @@ const MapComponent = () => {
   const [locationsData, setLocationsData] = useState(null);
   const [mapReady, setMapReady] = useState(false);
   const [companyDistances, setCompanyDistances] = useState({});
+  const [showCompanyJobsSidebar, setShowCompanyJobsSidebar] = useState(false);
+  const [selectedCompanyForSidebar, setSelectedCompanyForSidebar] = useState(null);
+  const [selectedCompanyJobs, setSelectedCompanyJobs] = useState([]);
 
   // Flattened company list for filter modal (main companies + per-locality companies)
   const flattenedCompanies = useMemo(() => {
@@ -1417,6 +1421,21 @@ const MapComponent = () => {
             </div>
           `;
           marker.bindPopup(popupContent, { className: "company-popup" });
+
+          // Add click handler to fetch and display jobs
+          marker.on("click", async () => {
+            try {
+              const res = await fetch(`/api/companies/${company.id}/jobs`);
+              if (res.ok) {
+                const data = await res.json();
+                setSelectedCompanyForSidebar(company);
+                setSelectedCompanyJobs(data.jobs || []);
+                setShowCompanyJobsSidebar(true);
+              }
+            } catch (e) {
+              console.error("Failed to fetch company jobs:", e);
+            }
+          });
 
           clusterGroup.addLayer(marker);
           companyMarkersRef.current.push(marker);
@@ -3602,6 +3621,13 @@ const MapComponent = () => {
           }
         }}
         initialHome={homeLocation}
+      />
+
+      <CompanyJobsSidebar
+        company={selectedCompanyForSidebar}
+        jobs={selectedCompanyJobs}
+        isOpen={showCompanyJobsSidebar}
+        onClose={() => setShowCompanyJobsSidebar(false)}
       />
     </div>
   );
