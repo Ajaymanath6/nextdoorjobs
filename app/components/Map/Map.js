@@ -1439,8 +1439,21 @@ const MapComponent = () => {
         return;
       }
 
-      // Do not render demo pins from locationsData; only job pin from zoomToJobCoords
-      const companies = [];
+      // Fetch companies from API to display on map
+      let companies = [];
+      
+      try {
+        const res = await fetch('/api/companies');
+        if (res.ok) {
+          const data = await res.json();
+          companies = data.companies || [];
+          console.log('✅ Fetched companies for map:', companies.length);
+        } else {
+          console.error('Failed to fetch companies:', res.status);
+        }
+      } catch (error) {
+        console.error('Error fetching companies:', error);
+      }
 
       if (clusterGroupRef.current) {
         mapInstanceRef.current.removeLayer(clusterGroupRef.current);

@@ -151,6 +151,7 @@ export default function OnboardingPage() {
   const [isLoadingJobs, setIsLoadingJobs] = useState(false);
   const [showEditJobModal, setShowEditJobModal] = useState(false);
   const [selectedJobForEdit, setSelectedJobForEdit] = useState(null);
+  const [jobCount, setJobCount] = useState(0);
   const onboardingSessionIdRef = useRef(null);
   const conversationOrderRef = useRef(0);
   const lastAIMessageTextRef = useRef("");
@@ -175,6 +176,25 @@ export default function OnboardingPage() {
       router.replace("/onboarding");
     }
   }, [userData, router]);
+
+  // Fetch job count when user data is available
+  useEffect(() => {
+    const fetchJobCount = async () => {
+      if (!userData || userData.accountType !== "Company") return;
+      
+      try {
+        const res = await fetch("/api/onboarding/my-jobs", { credentials: "same-origin" });
+        if (res.ok) {
+          const data = await res.json();
+          setJobCount(data.jobs?.length || 0);
+        }
+      } catch (error) {
+        console.error("Error fetching job count:", error);
+      }
+    };
+
+    fetchJobCount();
+  }, [userData]);
 
   const saveConversation = async (stepKey, questionText, answerText) => {
     const sessionId = onboardingSessionIdRef.current;
@@ -371,7 +391,9 @@ export default function OnboardingPage() {
       if (res.ok) {
         const data = await res.json();
         console.log("Fetched jobs:", data.jobs);
-        setCompanyJobs(data.jobs || []);
+        const jobs = data.jobs || [];
+        setCompanyJobs(jobs);
+        setJobCount(jobs.length);
       } else {
         console.error("Failed to fetch jobs:", res.status);
       }
@@ -1679,6 +1701,9 @@ export default function OnboardingPage() {
         companyId: companyResult.company.id
       });
 
+      // Increment job count
+      setJobCount((prev) => prev + 1);
+
       const sid = onboardingSessionIdRef.current ?? onboardingSessionId;
       if (sid) {
         try {
@@ -1885,16 +1910,25 @@ export default function OnboardingPage() {
                     const res = await fetch("/api/onboarding/my-jobs");
                     const data = await res.json().catch(() => ({}));
                     const jobs = data.success ? (data.jobs || []) : [];
+                    setJobCount(jobs.length);
                     setChatMessages((prev) => [...prev, { type: "jobList", jobs }]);
                   } catch (e) {
                     console.error("Error fetching list:", e);
                     setChatMessages((prev) => [...prev, { type: "jobList", jobs: [] }]);
                   }
                 }}
-                className="p-2 rounded-lg hover:bg-gray-100 transition-colors"
+                className="p-2 rounded-lg hover:bg-gray-100 transition-colors relative"
                 title="Your job postings"
               >
                 <List size={20} style={{ color: "#575757" }} />
+                {jobCount > 0 && (
+                  <span 
+                    className="absolute -top-1 -right-1 bg-brand text-white text-xs font-bold rounded-full min-w-[18px] h-[18px] flex items-center justify-center px-1"
+                    style={{ fontFamily: "Open Sans, sans-serif", fontSize: "10px" }}
+                  >
+                    {jobCount}
+                  </span>
+                )}
               </button>
               <div className="relative" ref={languageDropdownRef}>
               <button
