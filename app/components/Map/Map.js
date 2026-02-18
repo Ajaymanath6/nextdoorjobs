@@ -468,6 +468,8 @@ const MapComponent = () => {
   // Render company markers with popups
   const renderCompanyMarkers = (companies) => {
     if (!mapInstanceRef.current || !window.L) return;
+    // Only render companies when in company mode
+    if (searchMode !== "company") return;
 
     const L = window.L;
 
@@ -953,6 +955,16 @@ const MapComponent = () => {
     setSelectedGigType(null); // Clear filter when switching modes
   }, [searchMode]);
 
+  // Clear company markers when switching to person mode
+  useEffect(() => {
+    if (searchMode !== "person" || !mapInstanceRef.current) return;
+    if (clusterGroupRef.current) {
+      mapInstanceRef.current.removeLayer(clusterGroupRef.current);
+      clusterGroupRef.current = null;
+    }
+    companyMarkersRef.current = [];
+  }, [searchMode]);
+
   // Re-render gigs when filter, selected gig for distance, or home changes
   useEffect(() => {
     if (searchMode === "person" && gigs.length > 0 && mapInstanceRef.current) {
@@ -1138,12 +1150,15 @@ const MapComponent = () => {
                   setIsFindingJobs(false);
                   setIsMapLoading(false);
                 });
-            } else {
+            } else if (searchMode === "company") {
               renderCompanyMarkers(companies);
               setTimeout(() => {
                 setIsFindingJobs(false);
                 setIsMapLoading(false);
               }, 300);
+            } else {
+              setIsFindingJobs(false);
+              setIsMapLoading(false);
             }
           });
         });
@@ -1559,9 +1574,20 @@ const MapComponent = () => {
     };
   }, [isClient]);
 
-  // Add markers when locations data and map are ready (companies only; no home)
+  // Add markers when locations data and map are ready (companies only when in company mode)
   useEffect(() => {
     if (!mapInstanceRef.current || !locationsData) {
+      return;
+    }
+
+    // Only render companies when in company mode
+    if (searchMode !== "company") {
+      // Clear company markers if switching away from company mode
+      if (clusterGroupRef.current) {
+        mapInstanceRef.current.removeLayer(clusterGroupRef.current);
+        clusterGroupRef.current = null;
+      }
+      companyMarkersRef.current = [];
       return;
     }
 
@@ -1829,8 +1855,11 @@ const MapComponent = () => {
     };
 
     addMarkersToMap();
+  }, [mapInstanceRef.current, locationsData, searchMode]);
 
-    // Zoom to job coordinates when arriving from "See your posting on the map"
+  // Zoom to job coordinates when arriving from "See your posting on the map"
+  useEffect(() => {
+    if (!mapInstanceRef.current) return;
     try {
       const raw = typeof window !== "undefined" ? sessionStorage.getItem("zoomToJobCoords") : null;
       if (raw && mapInstanceRef.current) {
