@@ -135,8 +135,9 @@ const MapComponent = () => {
   const [collegeDistances, setCollegeDistances] = useState({});
   const collegeLinesRef = useRef([]);
 
-  // Search bar mode toggle: "person" (users) or "job" (suitcase) - UI only for now
-  const [searchMode, setSearchMode] = useState("job");
+  // Search bar mode toggle: "person" (users), "job" (company jobs), or "company" (all companies)
+  // Default to "person" for Individual/Gig Worker accounts, "job" for Company accounts
+  const [searchMode, setSearchMode] = useState("person");
   // Last district/state from locality search (e.g. for gig workers fetch)
   const [lastSearchedDistrict, setLastSearchedDistrict] = useState(null);
   const [lastSearchedState, setLastSearchedState] = useState(null);
@@ -971,10 +972,7 @@ const MapComponent = () => {
             setGigs(data.gigs);
             renderGigMarkers(data.gigs);
           }
-          // If companies are returned (for Company accounts), render them too
-          if (data.companies && Array.isArray(data.companies) && data.companies.length > 0) {
-            renderCompanyMarkers(data.companies);
-          }
+          // Don't render companies when in person mode - only show gig workers
         })
         .catch((err) => {
           console.error("Error fetching gigs:", err);
@@ -1463,12 +1461,18 @@ const MapComponent = () => {
   useEffect(() => {
     setIsClient(true);
     
-    // Fetch user account type
+    // Fetch user account type and set initial search mode
     fetch("/api/auth/me", { credentials: "same-origin" })
       .then((res) => res.ok ? res.json() : null)
       .then((data) => {
         if (data?.user?.accountType) {
           setUserAccountType(data.user.accountType);
+          // Set initial search mode: "person" for Individual/Gig Worker, "job" for Company
+          if (data.user.accountType === "Company") {
+            setSearchMode("job");
+          } else {
+            setSearchMode("person");
+          }
         }
       })
       .catch(() => {});
@@ -3333,7 +3337,7 @@ const MapComponent = () => {
 
               {/* Toggle: Person (users) / Job (suitcase) - hidden on mobile when search input focused */}
               <div className={`${searchBar["toggle-wrapper"]} border-0 overflow-visible shrink-0 md:pr-1 ${mobileSearchExpanded ? "hidden md:!flex" : ""}`} ref={searchModeDropdownRef}>
-                {/* Mobile: single button with chevron, dropdown with all options */}
+                {/* Mobile: single button with chevron, dropdown with options (only Person for Individual/Gig Worker accounts) */}
                 <div className="relative md:hidden shrink-0">
                   <button
                     type="button"
@@ -3350,9 +3354,9 @@ const MapComponent = () => {
                     ) : (
                       <Enterprise size={20} className={`w-5 h-5 shrink-0 ${searchBar["toggle-segment-icon-active"]}`} />
                     )}
-                    <ChevronDown size={16} className="w-4 h-4 shrink-0 text-brand-stroke-strong" />
+                    {userAccountType === "Company" && <ChevronDown size={16} className="w-4 h-4 shrink-0 text-brand-stroke-strong" />}
                   </button>
-                  {showSearchModeDropdown && (
+                  {showSearchModeDropdown && userAccountType === "Company" && (
                     <div className="absolute top-full left-0 mt-1 min-w-[140px] rounded-lg border border-brand-stroke-border bg-brand-bg-white shadow-lg z-[1001] py-1 overflow-hidden">
                       {searchMode !== "person" && (
                         <button
@@ -3396,66 +3400,117 @@ const MapComponent = () => {
                     </div>
                   )}
                 </div>
-                {/* Desktop: three-segment toggle - Gig Workers, Company Jobs, All Companies */}
+                {/* Desktop: toggle buttons - Show all 3 for Company accounts, only Person for Individual/Gig Worker accounts */}
                 <div className="hidden md:flex items-center gap-1 shrink-0">
-                  <div className="flex rounded-full border border-brand-stroke-border overflow-hidden">
-                    <button
-                      type="button"
-                      onClick={() => setSearchMode("person")}
-                      className={`p-2 border-0 ${searchBar["toggle-segment"]} ${searchMode === "person" ? searchBar["toggle-segment-active"] : ""} !rounded-l-md !rounded-r-none`}
-                      title="Gig work"
-                    >
-                      <User
-                        size={20}
-                        className={`w-5 h-5 shrink-0 ${searchMode === "person" ? searchBar["toggle-segment-icon-active"] + " text-brand" : searchBar["toggle-segment-icon"]}`}
-                      />
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => setSearchMode("job")}
-                      className={`p-2 border-0 ${searchBar["toggle-segment"]} ${searchMode === "job" ? searchBar["toggle-segment-active"] : ""} !rounded-none`}
-                      title="Company jobs"
-                    >
-                      <Portfolio
-                        size={20}
-                        className={`w-5 h-5 shrink-0 ${searchMode === "job" ? searchBar["toggle-segment-icon-active"] + " text-brand" : searchBar["toggle-segment-icon"]}`}
-                      />
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => setSearchMode("company")}
-                      className={`p-2 border-0 ${searchBar["toggle-segment"]} ${searchMode === "company" ? searchBar["toggle-segment-active"] : ""} !rounded-r-md !rounded-l-none`}
-                      title="All companies"
-                    >
-                      <Enterprise
-                        size={20}
-                        className={`w-5 h-5 shrink-0 ${searchMode === "company" ? searchBar["toggle-segment-icon-active"] + " text-brand" : searchBar["toggle-segment-icon"]}`}
-                      />
-                    </button>
-                  </div>
-                  {/* Filter dropdown - right of toggle, shows different content based on mode */}
-                  <div className="relative shrink-0">
-                    <button
-                      ref={gigFilterButtonRef}
-                      type="button"
-                      onClick={() => searchMode === "person" && setShowGigFilterDropdown(!showGigFilterDropdown)}
-                      disabled={searchMode !== "person"}
-                      className={`flex items-center gap-1.5 px-3 py-1.5 border rounded-full text-sm font-medium transition-colors shrink-0 ${
-                        searchMode === "person"
-                          ? "bg-brand-bg-white border-brand-stroke-weak text-brand-text-strong hover:bg-brand-bg-fill cursor-pointer"
-                          : "bg-brand-bg-fill border-brand-stroke-weak text-brand-text-placeholder cursor-not-allowed opacity-70"
-                      }`}
-                      style={{ fontFamily: "Open Sans" }}
-                      aria-label={searchMode === "company" ? "All Companies" : "Filter by service type"}
-                      title={searchMode === "person" ? "Filter gigs by service type" : searchMode === "company" ? "All Companies" : "Switch to filter"}
-                    >
-                      <Filter size={16} className="shrink-0" />
-                      <span className="max-w-[100px] truncate">
-                        {searchMode === "company" ? "All Companies" : (selectedGigType || "All Gigs")}
-                      </span>
-                      {searchMode === "person" && <RiArrowDownSLine size={16} className="shrink-0" />}
-                    </button>
-                    {searchMode === "person" && (
+                  {userAccountType === "Company" ? (
+                    <div className="flex rounded-full border border-brand-stroke-border overflow-hidden">
+                      <button
+                        type="button"
+                        onClick={() => setSearchMode("person")}
+                        className={`p-2 border-0 ${searchBar["toggle-segment"]} ${searchMode === "person" ? searchBar["toggle-segment-active"] : ""} !rounded-l-md !rounded-r-none`}
+                        title="Gig work"
+                      >
+                        <User
+                          size={20}
+                          className={`w-5 h-5 shrink-0 ${searchMode === "person" ? searchBar["toggle-segment-icon-active"] + " text-brand" : searchBar["toggle-segment-icon"]}`}
+                        />
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setSearchMode("job")}
+                        className={`p-2 border-0 ${searchBar["toggle-segment"]} ${searchMode === "job" ? searchBar["toggle-segment-active"] : ""} !rounded-none`}
+                        title="Company jobs"
+                      >
+                        <Portfolio
+                          size={20}
+                          className={`w-5 h-5 shrink-0 ${searchMode === "job" ? searchBar["toggle-segment-icon-active"] + " text-brand" : searchBar["toggle-segment-icon"]}`}
+                        />
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setSearchMode("company")}
+                        className={`p-2 border-0 ${searchBar["toggle-segment"]} ${searchMode === "company" ? searchBar["toggle-segment-active"] : ""} !rounded-r-md !rounded-l-none`}
+                        title="All companies"
+                      >
+                        <Enterprise
+                          size={20}
+                          className={`w-5 h-5 shrink-0 ${searchMode === "company" ? searchBar["toggle-segment-icon-active"] + " text-brand" : searchBar["toggle-segment-icon"]}`}
+                        />
+                      </button>
+                    </div>
+                  ) : (
+                    <div className="flex rounded-full border border-brand-stroke-border overflow-hidden">
+                      <button
+                        type="button"
+                        onClick={() => setSearchMode("person")}
+                        className={`p-2 border-0 ${searchBar["toggle-segment"]} ${searchBar["toggle-segment-active"]} !rounded-full`}
+                        title="Gig work"
+                      >
+                        <User
+                          size={20}
+                          className={`w-5 h-5 shrink-0 ${searchBar["toggle-segment-icon-active"] + " text-brand"}`}
+                        />
+                      </button>
+                    </div>
+                  )}
+                  {/* Filter dropdown - right of toggle, shows different content based on mode (only show for Company accounts or when in person mode) */}
+                  {userAccountType === "Company" && (
+                    <div className="relative shrink-0">
+                      <button
+                        ref={gigFilterButtonRef}
+                        type="button"
+                        onClick={() => searchMode === "person" && setShowGigFilterDropdown(!showGigFilterDropdown)}
+                        disabled={searchMode !== "person"}
+                        className={`flex items-center gap-1.5 px-3 py-1.5 border rounded-full text-sm font-medium transition-colors shrink-0 ${
+                          searchMode === "person"
+                            ? "bg-brand-bg-white border-brand-stroke-weak text-brand-text-strong hover:bg-brand-bg-fill cursor-pointer"
+                            : "bg-brand-bg-fill border-brand-stroke-weak text-brand-text-placeholder cursor-not-allowed opacity-70"
+                        }`}
+                        style={{ fontFamily: "Open Sans" }}
+                        aria-label={searchMode === "company" ? "All Companies" : "Filter by service type"}
+                        title={searchMode === "person" ? "Filter gigs by service type" : searchMode === "company" ? "All Companies" : "Switch to filter"}
+                      >
+                        <Filter size={16} className="shrink-0" />
+                        <span className="max-w-[100px] truncate">
+                          {searchMode === "company" ? "All Companies" : (selectedGigType || "All Gigs")}
+                        </span>
+                        {searchMode === "person" && <RiArrowDownSLine size={16} className="shrink-0" />}
+                      </button>
+                      {searchMode === "person" && (
+                        <GigFilterDropdown
+                          isOpen={showGigFilterDropdown}
+                          onClose={() => setShowGigFilterDropdown(false)}
+                          dropdownRef={gigFilterDropdownRef}
+                          position={{
+                            top: "100%",
+                            bottom: "auto",
+                            left: "0",
+                            right: "auto",
+                            marginTop: "8px",
+                          }}
+                          width="300px"
+                          selectedGigType={selectedGigType}
+                          onSelect={(type) => setSelectedGigType(type)}
+                        />
+                      )}
+                    </div>
+                  )}
+                  {/* Filter dropdown for Individual/Gig Worker accounts (only in person mode) */}
+                  {userAccountType !== "Company" && searchMode === "person" && (
+                    <div className="relative shrink-0">
+                      <button
+                        ref={gigFilterButtonRef}
+                        type="button"
+                        onClick={() => setShowGigFilterDropdown(!showGigFilterDropdown)}
+                        className="flex items-center gap-1.5 px-3 py-1.5 border rounded-full text-sm font-medium transition-colors shrink-0 bg-brand-bg-white border-brand-stroke-weak text-brand-text-strong hover:bg-brand-bg-fill cursor-pointer"
+                        style={{ fontFamily: "Open Sans" }}
+                        aria-label="Filter by service type"
+                        title="Filter gigs by service type"
+                      >
+                        <Filter size={16} className="shrink-0" />
+                        <span className="max-w-[100px] truncate">{selectedGigType || "All Gigs"}</span>
+                        <RiArrowDownSLine size={16} className="shrink-0" />
+                      </button>
                       <GigFilterDropdown
                         isOpen={showGigFilterDropdown}
                         onClose={() => setShowGigFilterDropdown(false)}
@@ -3471,8 +3526,8 @@ const MapComponent = () => {
                         selectedGigType={selectedGigType}
                         onSelect={(type) => setSelectedGigType(type)}
                       />
-                    )}
-                  </div>
+                    </div>
+                  )}
                 </div>
               </div>
 
