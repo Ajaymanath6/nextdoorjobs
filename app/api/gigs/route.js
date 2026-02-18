@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { getCurrentUser } from "../../../lib/getCurrentUser";
 import { gigService } from "../../../lib/services/gig.service";
+import { prisma } from "../../../lib/prisma";
 
 /**
  * POST /api/gigs
@@ -92,6 +93,7 @@ export async function POST(request) {
  * GET /api/gigs
  * List gigs with optional location filter: state, district, pincode.
  * Returns gigs with user (avatarId, avatarUrl, name) for map markers.
+ * For Company accounts, returns job seekers instead of gig workers.
  */
 export async function GET(request) {
   try {
@@ -108,6 +110,74 @@ export async function GET(request) {
       return NextResponse.json({ success: true, gigs });
     }
 
+    // Check if requesting user is a Company
+    const currentUser = await getCurrentUser();
+    
+    // If Company account, return job seekers instead of gig workers
+    if (currentUser && currentUser.accountType === "Company") {
+      const filters = {
+        state: searchParams.get("state"),
+        district: searchParams.get("district"),
+        pincode: searchParams.get("pincode"),
+      };
+
+      // Fetch job seekers (gig workers who enabled job seeker mode)
+      const whereClause = {
+        accountType: "Individual",
+        isJobSeeker: true,
+        homeLatitude: { not: null },
+        homeLongitude: { not: null },
+      };
+
+      if (filters.state) whereClause.homeState = filters.state;
+      if (filters.district) whereClause.homeDistrict = filters.district;
+
+      const jobSeekers = await prisma.user.findMany({
+        where: whereClause,
+        select: {
+          id: true,
+          name: true,
+          email: true,
+          avatarUrl: true,
+          avatarId: true,
+          homeLatitude: true,
+          homeLongitude: true,
+          homeState: true,
+          homeDistrict: true,
+          homeLocality: true,
+          jobSeekerSkills: true,
+          jobSeekerExperience: true,
+        },
+      });
+
+      // Transform to match gig structure for map rendering
+      const transformedJobSeekers = jobSeekers.map(seeker => ({
+        id: seeker.id,
+        title: seeker.name,
+        serviceType: "Job Seeker",
+        state: seeker.homeState,
+        district: seeker.homeDistrict,
+        locality: seeker.homeLocality,
+        latitude: seeker.homeLatitude,
+        longitude: seeker.homeLongitude,
+        user: {
+          id: seeker.id,
+          name: seeker.name,
+          avatarId: seeker.avatarId,
+          avatarUrl: seeker.avatarUrl,
+        },
+        jobSeekerSkills: seeker.jobSeekerSkills,
+        jobSeekerExperience: seeker.jobSeekerExperience,
+      }));
+
+      return NextResponse.json({ 
+        success: true, 
+        gigs: transformedJobSeekers,
+        isJobSeekerMode: true 
+      });
+    }
+
+    // For non-Company accounts, return regular gigs
     const filters = {
       state: searchParams.get("state"),
       district: searchParams.get("district"),

@@ -103,6 +103,8 @@ const MapComponent = () => {
   const [showCompanyJobsSidebar, setShowCompanyJobsSidebar] = useState(false);
   const [selectedCompanyForSidebar, setSelectedCompanyForSidebar] = useState(null);
   const [selectedCompanyJobs, setSelectedCompanyJobs] = useState([]);
+  const [isSwitchingToChat, setIsSwitchingToChat] = useState(false);
+  const [userAccountType, setUserAccountType] = useState(null);
 
   // Flattened company list for filter modal (main companies + per-locality companies)
   const flattenedCompanies = useMemo(() => {
@@ -1282,6 +1284,16 @@ const MapComponent = () => {
 
   useEffect(() => {
     setIsClient(true);
+    
+    // Fetch user account type
+    fetch("/api/auth/me", { credentials: "same-origin" })
+      .then((res) => res.ok ? res.json() : null)
+      .then((data) => {
+        if (data?.user?.accountType) {
+          setUserAccountType(data.user.accountType);
+        }
+      })
+      .catch(() => {});
   }, []);
 
   useEffect(() => {
@@ -3450,7 +3462,27 @@ const MapComponent = () => {
                     </button>
                     <button
                       type="button"
-                      onClick={() => router.push("/onboarding")}
+                      onClick={async () => {
+                        setIsSwitchingToChat(true);
+                        try {
+                          // Fetch user account type
+                          const res = await fetch("/api/auth/me", { credentials: "same-origin" });
+                          const data = await res.json();
+                          const accountType = data?.user?.accountType;
+                          
+                          // Small delay for UX
+                          await new Promise(resolve => setTimeout(resolve, 500));
+                          
+                          if (accountType === "Company") {
+                            router.push("/onboarding.org");
+                          } else {
+                            router.push("/onboarding");
+                          }
+                        } catch (error) {
+                          console.error("Error switching to chat:", error);
+                          router.push("/onboarding");
+                        }
+                      }}
                       aria-label="Chat / onboarding"
                       className={`flex items-center gap-1.5 px-3 py-2 border-0 ${searchBar["toggle-segment"]} !rounded-r-full !rounded-l-none`}
                     >
@@ -3568,26 +3600,38 @@ const MapComponent = () => {
         className="hidden md:flex absolute md:top-auto md:bottom-4 md:left-4 flex-col gap-1.5 md:gap-2 z-[1000]"
         style={{ pointerEvents: "none" }}
       >
-        {/* Total Jobs Badge */}
+        {/* Total Jobs/Candidates Badge */}
         <div
           className="bg-white border border-brand-stroke-border rounded-lg shadow-lg px-2 py-1.5 md:px-3 md:py-2 flex items-center gap-1.5 md:gap-2 pointer-events-auto"
           style={{ fontFamily: "Open Sans" }}
         >
-          <Portfolio size={14} className="shrink-0 text-brand" style={{ color: "#F84416" }} />
+          {userAccountType === "Company" ? (
+            <User size={14} className="shrink-0 text-brand" style={{ color: "#F84416" }} />
+          ) : (
+            <Portfolio size={14} className="shrink-0 text-brand" style={{ color: "#F84416" }} />
+          )}
           <div className="flex flex-col leading-tight">
-            <span className="text-[10px] md:text-xs text-brand-text-weak font-normal">Total Jobs</span>
+            <span className="text-[10px] md:text-xs text-brand-text-weak font-normal">
+              {userAccountType === "Company" ? "Candidates" : "Total Jobs"}
+            </span>
             <span className="text-sm md:text-base text-brand-text-strong font-semibold">{(jobTitles?.length || 0).toLocaleString()}</span>
           </div>
         </div>
 
-        {/* Total Companies Badge */}
+        {/* Total Companies/Your Jobs Badge */}
         <div
           className="bg-white border border-brand-stroke-border rounded-lg shadow-lg px-2 py-1.5 md:px-3 md:py-2 flex items-center gap-1.5 md:gap-2 pointer-events-auto"
           style={{ fontFamily: "Open Sans" }}
         >
-          <Enterprise size={14} className="shrink-0 text-brand" style={{ color: "#F84416" }} />
+          {userAccountType === "Company" ? (
+            <Portfolio size={14} className="shrink-0 text-brand" style={{ color: "#F84416" }} />
+          ) : (
+            <Enterprise size={14} className="shrink-0 text-brand" style={{ color: "#F84416" }} />
+          )}
           <div className="flex flex-col leading-tight">
-            <span className="text-[10px] md:text-xs text-brand-text-weak font-normal">Total Companies</span>
+            <span className="text-[10px] md:text-xs text-brand-text-weak font-normal">
+              {userAccountType === "Company" ? "Your Company Jobs" : "Total Companies"}
+            </span>
             <span className="text-sm md:text-base text-brand-text-strong font-semibold">
               {locationsData
                 ? (() => {
@@ -3629,6 +3673,13 @@ const MapComponent = () => {
         isOpen={showCompanyJobsSidebar}
         onClose={() => setShowCompanyJobsSidebar(false)}
       />
+
+      {/* Loading overlay when switching to chat */}
+      {isSwitchingToChat && (
+        <div className="fixed inset-0 z-[9999] bg-white/80 flex items-center justify-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-brand"></div>
+        </div>
+      )}
     </div>
   );
 };

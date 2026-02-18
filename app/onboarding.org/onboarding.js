@@ -6,6 +6,7 @@ import { useUser, useClerk } from "@clerk/nextjs";
 import { WatsonHealthRotate_360, List, UserAvatar, User, Settings, Logout, EarthFilled, Chat } from "@carbon/icons-react";
 import ChatInterface from "../components/Onboarding/ChatInterface";
 import SettingsModal from "../components/SettingsModal";
+import JobListingsModal from "../components/JobListingsModal";
 import EmailAuthForm from "../components/Onboarding/EmailAuthForm";
 import StateDistrictSelector from "../components/Onboarding/StateDistrictSelector";
 import LogoPicker from "../components/Onboarding/LogoPicker";
@@ -143,6 +144,8 @@ export default function OnboardingPage() {
   const [onboardingSessionId, setOnboardingSessionId] = useState(null);
   const [isMobile, setIsMobile] = useState(false);
   const [isNavigatingToMap, setIsNavigatingToMap] = useState(false);
+  const [showJobListingsModal, setShowJobListingsModal] = useState(false);
+  const [companyJobs, setCompanyJobs] = useState([]);
   const onboardingSessionIdRef = useRef(null);
   const conversationOrderRef = useRef(0);
   const lastAIMessageTextRef = useRef("");
@@ -344,6 +347,59 @@ export default function OnboardingPage() {
   // User chose "Find Candidates" (Company only - placeholder)
   const handleFindCandidates = async () => {
     await addAIMessage("The 'Find Candidates' feature is coming soon! For now, you can post a job and candidates will find you on the map.");
+  };
+
+  // Show job listings modal
+  const handleShowJobListings = async () => {
+    try {
+      const res = await fetch("/api/onboarding/my-jobs", { credentials: "same-origin" });
+      if (res.ok) {
+        const data = await res.json();
+        setCompanyJobs(data.jobs || []);
+        setShowJobListingsModal(true);
+      }
+    } catch (error) {
+      console.error("Error fetching jobs:", error);
+    }
+  };
+
+  // Handle job extend
+  const handleExtendJob = async (job) => {
+    try {
+      const res = await fetch(`/api/jobs/${job.id}/extend`, {
+        method: "POST",
+        credentials: "same-origin",
+      });
+      if (res.ok) {
+        // Refresh job listings
+        handleShowJobListings();
+      }
+    } catch (error) {
+      console.error("Error extending job:", error);
+    }
+  };
+
+  // Handle job delete
+  const handleDeleteJob = async (job) => {
+    if (!confirm(`Are you sure you want to delete "${job.title}"?`)) return;
+    
+    try {
+      const res = await fetch(`/api/jobs/${job.id}`, {
+        method: "DELETE",
+        credentials: "same-origin",
+      });
+      if (res.ok) {
+        // Refresh job listings
+        handleShowJobListings();
+      }
+    } catch (error) {
+      console.error("Error deleting job:", error);
+    }
+  };
+
+  // Handle job edit (placeholder for now)
+  const handleEditJob = async (job) => {
+    alert("Edit functionality coming soon!");
   };
 
   // User chose "Post your job" (Company only)
@@ -1904,6 +1960,7 @@ export default function OnboardingPage() {
               accountType="Company"
               onPostGig={handlePostGig}
               onFindCandidates={handleFindCandidates}
+              onShowJobListings={handleShowJobListings}
             />
           </div>
         </div>
@@ -1924,6 +1981,15 @@ export default function OnboardingPage() {
             })
             .catch(() => {});
         }}
+      />
+
+      <JobListingsModal
+        isOpen={showJobListingsModal}
+        onClose={() => setShowJobListingsModal(false)}
+        jobs={companyJobs}
+        onEdit={handleEditJob}
+        onDelete={handleDeleteJob}
+        onExtend={handleExtendJob}
       />
     </div>
   );

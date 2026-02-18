@@ -420,6 +420,47 @@ export default function SettingsModal({ isOpen, onClose }) {
                       className="w-48 rounded-lg border border-brand-stroke-border px-3 py-2 text-sm text-brand-text-strong focus:outline-none focus:ring-2 focus:ring-brand focus:border-brand"
                     />
                   </div>
+
+                  {/* Job Seeker Toggle - Only for Individual/Gig Worker accounts */}
+                  {user?.accountType === "Individual" && (
+                    <>
+                      <div className="border-t border-brand-stroke-weak" />
+                      <div className="flex items-center justify-between gap-4 py-3">
+                        <div className="flex-1">
+                          <p className={`text-sm font-medium ${brand.text.strong}`}>
+                            Available for full-time positions
+                          </p>
+                          <p className={`text-xs ${brand.text.weak} mt-1`}>
+                            Show your profile to companies looking for full-time employees
+                          </p>
+                        </div>
+                        <label className="relative inline-flex items-center cursor-pointer">
+                          <input
+                            type="checkbox"
+                            checked={user.isJobSeeker || false}
+                            onChange={async (e) => {
+                              const newValue = e.target.checked;
+                              try {
+                                const res = await fetch("/api/profile/job-seeker-toggle", {
+                                  method: "PATCH",
+                                  headers: { "Content-Type": "application/json" },
+                                  body: JSON.stringify({ isJobSeeker: newValue }),
+                                  credentials: "same-origin",
+                                });
+                                if (res.ok) {
+                                  setUser((prev) => ({ ...prev, isJobSeeker: newValue }));
+                                }
+                              } catch (e) {
+                                console.error("Failed to update job seeker status:", e);
+                              }
+                            }}
+                            className="sr-only peer"
+                          />
+                          <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-2 peer-focus:ring-brand rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-brand"></div>
+                        </label>
+                      </div>
+                    </>
+                  )}
                 </div>
               ) : activeSection === "company" ? (
                 <div className="space-y-4">
