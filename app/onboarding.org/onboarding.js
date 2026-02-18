@@ -180,16 +180,23 @@ export default function OnboardingPage() {
   // Fetch job count when user data is available
   useEffect(() => {
     const fetchJobCount = async () => {
-      if (!userData || userData.accountType !== "Company") return;
+      if (!userData || userData.accountType !== "Company") {
+        setJobCount(0);
+        return;
+      }
       
       try {
         const res = await fetch("/api/onboarding/my-jobs", { credentials: "same-origin" });
         if (res.ok) {
           const data = await res.json();
           setJobCount(data.jobs?.length || 0);
+        } else {
+          console.error("Error fetching job count:", res.status, res.statusText);
+          setJobCount(0);
         }
       } catch (error) {
         console.error("Error fetching job count:", error);
+        setJobCount(0);
       }
     };
 
@@ -1906,12 +1913,36 @@ export default function OnboardingPage() {
               <button
                 type="button"
                 onClick={async () => {
+                  if (!userData) {
+                    console.log('⏳ User data not loaded yet');
+                    return;
+                  }
+                  
+                  if (userData.accountType !== "Company") {
+                    console.log('⚠️ Only Company accounts can view job postings');
+                    setChatMessages((prev) => [...prev, { 
+                      type: "ai", 
+                      text: "Job postings are only available for Company accounts." 
+                    }]);
+                    return;
+                  }
+                  
                   console.log('📋 Fetching job list from /api/onboarding/my-jobs');
                   try {
                     const res = await fetch("/api/onboarding/my-jobs");
                     console.log('📡 Job list API response status:', res.status);
                     const data = await res.json().catch(() => ({}));
                     console.log('📊 Job list data:', data);
+                    
+                    if (!res.ok) {
+                      console.error('❌ API error:', data.error || res.statusText);
+                      setChatMessages((prev) => [...prev, { 
+                        type: "ai", 
+                        text: data.error || "Failed to fetch job postings. Please try again." 
+                      }]);
+                      return;
+                    }
+                    
                     const jobs = data.success ? (data.jobs || []) : [];
                     console.log('✅ Jobs to display:', jobs.length);
                     setJobCount(jobs.length);

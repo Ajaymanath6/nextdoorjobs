@@ -518,29 +518,25 @@ const MapComponent = () => {
       });
       marker.companyData = company;
 
-      const collegeDistanceText =
-        selectedCollege && collegeDistances[companyName]
-          ? `${collegeDistances[companyName]} km from ${selectedCollege.name}`
-          : null;
-
-      const popupContent = `
-        <div style="font-family: 'Open Sans', sans-serif; padding: 4px;">
-          <div style="font-weight: 600; font-size: 14px; color: #0A0A0A; margin-bottom: 4px;">
-            ${company.company_name}
-          </div>
-          <div style="font-size: 12px; color: #1A1A1A;">
-            ${company.type}
-          </div>
-          ${collegeDistanceText ? `
-            <div style="font-size: 11px; color: #575757; margin-top: 4px;">
-              ${collegeDistanceText}
-            </div>
-          ` : ""}
-        </div>
-      `;
-
-      marker.bindPopup(popupContent, {
-        className: "company-popup",
+      // Add click handler to fetch and display jobs in sidebar
+      marker.on("click", async () => {
+        console.log('🔍 Company pin clicked:', company.id, company.company_name || company.name);
+        try {
+          const res = await fetch(`/api/companies/${company.id}/jobs`);
+          console.log('📡 API response status:', res.status);
+          if (res.ok) {
+            const data = await res.json();
+            console.log('✅ Jobs fetched:', data.jobs?.length || 0, 'jobs');
+            setSelectedCompanyForSidebar(company);
+            setSelectedCompanyJobs(data.jobs || []);
+            setShowCompanyJobsSidebar(true);
+            console.log('✅ Sidebar state set to true');
+          } else {
+            console.error('❌ API error:', res.status, res.statusText);
+          }
+        } catch (e) {
+          console.error("❌ Failed to fetch company jobs:", e);
+        }
       });
 
       clusterGroup.addLayer(marker);
@@ -1480,13 +1476,6 @@ const MapComponent = () => {
 
           // Store company data on marker
           marker.companyData = company;
-
-          const popupContent = `
-            <div style="font-family: 'Open Sans', sans-serif; padding: 4px;">
-              <div style="font-weight: 600; font-size: 14px; color: #0A0A0A;">${companyName}</div>
-            </div>
-          `;
-          marker.bindPopup(popupContent, { className: "company-popup" });
 
           // Add click handler to fetch and display jobs
           marker.on("click", async () => {
