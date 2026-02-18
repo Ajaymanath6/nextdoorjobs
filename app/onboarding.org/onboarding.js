@@ -513,45 +513,6 @@ export default function OnboardingPage() {
     return trimmed.replace(/^["']|["']$/g, "");
   };
 
-  // Parse Google Maps URL to extract coordinates
-  const parseGoogleMapsUrl = (url) => {
-    if (!url || typeof url !== "string") return null;
-    const s = url.trim();
-    if (!s) return null;
-
-    // @lat,lon or @lat,lon,zoom
-    const atMatch = s.match(/@(-?\d+\.?\d*),(-?\d+\.?\d*)(?:,\d+z?)?/);
-    if (atMatch) {
-      const lat = parseFloat(atMatch[1]);
-      const lon = parseFloat(atMatch[2]);
-      if (lat >= -90 && lat <= 90 && lon >= -180 && lon <= 180) {
-        return { lat, lon };
-      }
-    }
-
-    // ?q=lat,lon or &q=lat,lon
-    const qMatch = s.match(/[?&]q=(-?\d+\.?\d*),(-?\d+\.?\d*)/);
-    if (qMatch) {
-      const lat = parseFloat(qMatch[1]);
-      const lon = parseFloat(qMatch[2]);
-      if (lat >= -90 && lat <= 90 && lon >= -180 && lon <= 180) {
-        return { lat, lon };
-      }
-    }
-
-    // !3dLAT!4dLON (embed style)
-    const embedMatch = s.match(/!3d(-?\d+\.?\d*)!4d(-?\d+\.?\d*)/);
-    if (embedMatch) {
-      const lat = parseFloat(embedMatch[1]);
-      const lon = parseFloat(embedMatch[2]);
-      if (lat >= -90 && lat <= 90 && lon >= -180 && lon <= 180) {
-        return { lat, lon };
-      }
-    }
-
-    return null;
-  };
-
   // Add AI message with typing animation; optional imageUrl for logo etc.
   const addAIMessage = async (text, options = {}) => {
     const { imageUrl } = options;
@@ -694,43 +655,7 @@ export default function OnboardingPage() {
             break;
 
           case COMPANY_FIELDS.LOCATION:
-            // This case is handled by GetCoordinatesButton callback
-            // But also allow manual input (coordinates or Google Maps URL)
-            if (value.toLowerCase() !== "skip" && value) {
-              // First, try to parse as Google Maps URL
-              let parsedCoords = parseGoogleMapsUrl(value);
-              
-              if (!parsedCoords) {
-                // If not a URL, try to parse as lat,lon or lat lon
-                const coords = value.split(/[,\s]+/).map(v => v.trim()).filter(v => v);
-                if (coords.length >= 2) {
-                  const lat = parseFloat(coords[0]);
-                  const lon = parseFloat(coords[1]);
-                  if (!isNaN(lat) && !isNaN(lon) && lat >= -90 && lat <= 90 && lon >= -180 && lon <= 180) {
-                    parsedCoords = { lat, lon };
-                  }
-                }
-              }
-              
-              if (parsedCoords) {
-                setCompanyData((prev) => ({
-                  ...prev,
-                  latitude: parsedCoords.lat,
-                  longitude: parsedCoords.lon,
-                }));
-                setInlineComponent(null);
-                await handleLocationReceived(parsedCoords.lat, parsedCoords.lon);
-                return; // Return early to prevent setIsLoading(false) from running
-              } else {
-                await addAIMessage(`Could not parse location. Please provide latitude and longitude (e.g., 10.5276, 76.2144) or a Google Maps link, or use the buttons above.`);
-                setIsLoading(false);
-                return;
-              }
-            } else {
-              setInlineComponent(null);
-              await handleLocationSkipped();
-              return; // Return early to prevent setIsLoading(false) from running
-            }
+            // This case is handled by GetCoordinatesButton callback only
             break;
 
           case COMPANY_FIELDS.PINCODE:
@@ -1936,17 +1861,19 @@ export default function OnboardingPage() {
                   type="button"
                   onClick={() => router.push("/")}
                   aria-label="Map view"
-                  className="flex items-center gap-1 px-3 py-2 border-0 rounded-l-full rounded-r-none bg-transparent hover:bg-gray-50 transition-colors"
+                  className="flex items-center gap-1.5 px-3 py-2 border-0 rounded-l-full rounded-r-none bg-transparent hover:bg-gray-50 transition-colors"
                 >
                   <ArrowLeft size={16} className="w-4 h-4 shrink-0 text-[#575757]" />
                   <EarthFilled size={20} className="w-5 h-5 shrink-0 text-[#575757]" />
+                  <span className="text-sm font-medium text-[#575757]">Map</span>
                 </button>
                 <button
                   type="button"
                   aria-label="Chat"
-                  className="p-2 border-0 rounded-r-full rounded-l-none bg-brand/10 transition-colors"
+                  className="flex items-center gap-1.5 px-3 py-2 border-0 rounded-r-full rounded-l-none bg-brand/10 transition-colors"
                 >
                   <Chat size={20} className="w-5 h-5 shrink-0 text-brand" />
+                  <span className="text-sm font-medium text-brand">Chat</span>
                 </button>
               </div>
             </div>
