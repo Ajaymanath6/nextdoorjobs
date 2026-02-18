@@ -23,7 +23,6 @@ import {
   Chat,
   Home,
   Add,
-  Suitcase,
 } from "@carbon/icons-react";
 import { RiArrowDownSLine } from "@remixicon/react";
 import FilterDropdown from "./FilterDropdown";
@@ -3349,7 +3348,7 @@ const MapComponent = () => {
                     ) : searchMode === "job" ? (
                       <Portfolio size={20} className={`w-5 h-5 shrink-0 ${searchBar["toggle-segment-icon-active"]}`} />
                     ) : (
-                      <Suitcase size={20} className={`w-5 h-5 shrink-0 ${searchBar["toggle-segment-icon-active"]}`} />
+                      <Enterprise size={20} className={`w-5 h-5 shrink-0 ${searchBar["toggle-segment-icon-active"]}`} />
                     )}
                     <ChevronDown size={16} className="w-4 h-4 shrink-0 text-brand-stroke-strong" />
                   </button>
@@ -3390,7 +3389,7 @@ const MapComponent = () => {
                           }}
                           className="w-full flex items-center gap-2 px-3 py-2 text-left text-sm font-medium text-brand-text-strong hover:bg-brand-bg-fill transition-colors min-w-0"
                         >
-                          <Suitcase size={20} className={`w-5 h-5 shrink-0 ${searchBar["toggle-segment-icon"]}`} />
+                          <Enterprise size={20} className={`w-5 h-5 shrink-0 ${searchBar["toggle-segment-icon"]}`} />
                           <span className="truncate">All Companies</span>
                         </button>
                       )}
@@ -3428,7 +3427,7 @@ const MapComponent = () => {
                       className={`p-2 border-0 ${searchBar["toggle-segment"]} ${searchMode === "company" ? searchBar["toggle-segment-active"] : ""} !rounded-r-md !rounded-l-none`}
                       title="All companies"
                     >
-                      <Suitcase
+                      <Enterprise
                         size={20}
                         className={`w-5 h-5 shrink-0 ${searchMode === "company" ? searchBar["toggle-segment-icon-active"] + " text-brand" : searchBar["toggle-segment-icon"]}`}
                       />
