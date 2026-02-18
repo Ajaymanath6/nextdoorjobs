@@ -130,8 +130,8 @@ export default function ChatInterface({ messages = [], onSendMessage, isLoading 
     <div className="flex flex-col h-full min-h-0 bg-white rounded-lg relative overflow-hidden">
       {/* Logo - Sticky at Top */}
       <div className="sticky top-0 z-10 shrink-0 bg-white px-4 py-3 border-b border-brand-stroke-weak">
-        <div className="flex items-center justify-center">
-          <div className="h-8 flex items-center justify-center">
+        <div className="flex items-center justify-start">
+          <div className="h-8 flex items-center">
             <Image
               src="/logo.svg"
               alt="mapmyGig"

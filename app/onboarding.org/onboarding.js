@@ -3,7 +3,7 @@
 import { useState, useEffect, useRef } from "react";
 import { useRouter } from "next/navigation";
 import { useUser, useClerk } from "@clerk/nextjs";
-import { WatsonHealthRotate_360, List, UserAvatar, User, Settings, Logout, EarthFilled, Chat } from "@carbon/icons-react";
+import { WatsonHealthRotate_360, List, UserAvatar, User, Settings, Logout, EarthFilled, Chat, ArrowLeft } from "@carbon/icons-react";
 import ChatInterface from "../components/Onboarding/ChatInterface";
 import SettingsModal from "../components/SettingsModal";
 import JobListingsModal from "../components/JobListingsModal";
@@ -720,6 +720,7 @@ export default function OnboardingPage() {
                 }));
                 setInlineComponent(null);
                 await handleLocationReceived(parsedCoords.lat, parsedCoords.lon);
+                return; // Return early to prevent setIsLoading(false) from running
               } else {
                 await addAIMessage(`Could not parse location. Please provide latitude and longitude (e.g., 10.5276, 76.2144) or a Google Maps link, or use the buttons above.`);
                 setIsLoading(false);
@@ -728,6 +729,7 @@ export default function OnboardingPage() {
             } else {
               setInlineComponent(null);
               await handleLocationSkipped();
+              return; // Return early to prevent setIsLoading(false) from running
             }
             break;
 
@@ -1934,8 +1936,9 @@ export default function OnboardingPage() {
                   type="button"
                   onClick={() => router.push("/")}
                   aria-label="Map view"
-                  className="p-2 border-0 rounded-l-full rounded-r-none bg-transparent hover:bg-gray-50 transition-colors"
+                  className="flex items-center gap-1 px-3 py-2 border-0 rounded-l-full rounded-r-none bg-transparent hover:bg-gray-50 transition-colors"
                 >
+                  <ArrowLeft size={16} className="w-4 h-4 shrink-0 text-[#575757]" />
                   <EarthFilled size={20} className="w-5 h-5 shrink-0 text-[#575757]" />
                 </button>
                 <button
