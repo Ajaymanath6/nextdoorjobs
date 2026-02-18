@@ -237,11 +237,13 @@ export default function OnboardingPage() {
       const email = clerkUser.emailAddresses[0]?.emailAddress;
 
       // Show welcome message and buttons immediately so the chat is never empty
+      // Since this is onboarding.org, we know it's a Company account
       setUserData({
         id: null,
         email: email || "",
         name: name || "there",
         phone: null,
+        accountType: "Company", // Pre-set for onboarding.org
       });
       setChatMessages([
         { type: "ai", text: `Hi ${name || "there"}! 👋 Welcome to mapmyGig.` },
@@ -1913,16 +1915,24 @@ export default function OnboardingPage() {
               <button
                 type="button"
                 onClick={async () => {
+                  console.log('📋 List button clicked');
+                  console.log('🔍 User data:', userData);
+                  console.log('🔍 Account type:', userData?.accountType);
+                  
                   if (!userData) {
                     console.log('⏳ User data not loaded yet');
+                    setChatMessages((prev) => [...prev, { 
+                      type: "ai", 
+                      text: "Loading user data, please try again in a moment." 
+                    }]);
                     return;
                   }
                   
                   if (userData.accountType !== "Company") {
-                    console.log('⚠️ Only Company accounts can view job postings');
+                    console.log('⚠️ Account type mismatch:', userData.accountType, 'vs Company');
                     setChatMessages((prev) => [...prev, { 
                       type: "ai", 
-                      text: "Job postings are only available for Company accounts." 
+                      text: `Job postings are only available for Company accounts. Your account type is: ${userData.accountType || 'not set'}` 
                     }]);
                     return;
                   }
@@ -1945,6 +1955,7 @@ export default function OnboardingPage() {
                     
                     const jobs = data.success ? (data.jobs || []) : [];
                     console.log('✅ Jobs to display:', jobs.length);
+                    console.log('✅ Jobs array:', jobs);
                     setJobCount(jobs.length);
                     setChatMessages((prev) => [...prev, { type: "jobList", jobs }]);
                   } catch (e) {
