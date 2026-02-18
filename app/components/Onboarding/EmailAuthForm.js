@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { useSignIn } from "@clerk/nextjs";
 import Image from "next/image";
+import Link from "next/link";
 
 export default function EmailAuthForm({ onSubmit, isLoading = false }) {
   const { signIn } = useSignIn();
@@ -111,6 +112,17 @@ export default function EmailAuthForm({ onSubmit, isLoading = false }) {
             </svg>
             <span>Continue with GitHub</span>
           </button>
+        </div>
+
+        {/* Privacy Policy Link */}
+        <div className="mt-4 text-center">
+          <Link
+            href="/privacy-policy"
+            className="text-xs text-gray-600 hover:text-gray-800 hover:underline transition-colors"
+            style={{ fontFamily: "Open Sans, sans-serif" }}
+          >
+            Privacy Policy
+          </Link>
         </div>
 
       </div>

@@ -106,6 +106,7 @@ const MapComponent = () => {
   const [selectedCompanyJobs, setSelectedCompanyJobs] = useState([]);
   const [isSwitchingToChat, setIsSwitchingToChat] = useState(false);
   const [userAccountType, setUserAccountType] = useState(null);
+  const [totalCompaniesCount, setTotalCompaniesCount] = useState(0);
 
   // Flattened company list for filter modal (main companies + per-locality companies)
   const flattenedCompanies = useMemo(() => {
@@ -1487,6 +1488,16 @@ const MapComponent = () => {
         }
       })
       .catch(() => {});
+
+    // Fetch total companies count
+    fetch("/api/companies")
+      .then((res) => res.ok ? res.json() : null)
+      .then((data) => {
+        if (data?.companies && Array.isArray(data.companies)) {
+          setTotalCompaniesCount(data.companies.length);
+        }
+      })
+      .catch(() => {});
   }, []);
 
   useEffect(() => {
@@ -1610,12 +1621,15 @@ const MapComponent = () => {
         if (res.ok) {
           const data = await res.json();
           companies = data.companies || [];
+          setTotalCompaniesCount(companies.length);
           console.log('✅ Fetched companies for map:', companies.length);
         } else {
           console.error('Failed to fetch companies:', res.status);
+          setTotalCompaniesCount(0);
         }
       } catch (error) {
         console.error('Error fetching companies:', error);
+        setTotalCompaniesCount(0);
       }
 
       if (clusterGroupRef.current) {
@@ -3799,32 +3813,6 @@ const MapComponent = () => {
                   </button>
                 </div>
 
-                {/* Home distance badge - when user has home, toggle show distance */}
-                {homeLocation && searchMode === "person" && (
-                  <button
-                    type="button"
-                    onClick={() => setShowDistanceFromHome((v) => !v)}
-                    className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-full border border-brand-stroke-border bg-brand-bg-white hover:bg-brand-bg-fill transition-colors shrink-0"
-                    title={showDistanceFromHome ? "Hide distance" : "Show distance from home"}
-                  >
-                    <Home size={18} className="text-brand shrink-0" />
-                    {showDistanceFromHome &&
-                    selectedGigForDistance?.latitude != null &&
-                    selectedGigForDistance?.longitude != null ? (
-                      <span className="text-xs font-medium text-brand-text-strong">
-                        {haversineKm(
-                          homeLocation.homeLatitude,
-                          homeLocation.homeLongitude,
-                          selectedGigForDistance.latitude,
-                          selectedGigForDistance.longitude
-                        ).toFixed(1)}{" "}
-                        km
-                      </span>
-                    ) : (
-                      <span className="text-xs font-medium text-brand-text-weak">Home</span>
-                    )}
-                  </button>
-                )}
 
                 {/* View toggle: Globe (map) | Chat (onboarding) - inside search bar, right end, desktop only; rounded-full pill shape */}
                 <div className="hidden md:flex items-center shrink-0 ml-1">
@@ -3892,6 +3880,35 @@ const MapComponent = () => {
               </button> */}
             </div>
           </div>
+
+          {/* Home badge - below search bar, when user has home and in person mode */}
+          {homeLocation && searchMode === "person" && (
+            <div className="relative self-start">
+              <button
+                type="button"
+                onClick={() => setShowDistanceFromHome((v) => !v)}
+                className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-md border border-brand-stroke-border bg-brand-bg-white hover:bg-brand-bg-fill transition-colors shrink-0"
+                title={showDistanceFromHome ? "Hide distance" : "Show distance from home"}
+              >
+                <span className="text-base">🏠</span>
+                {showDistanceFromHome &&
+                selectedGigForDistance?.latitude != null &&
+                selectedGigForDistance?.longitude != null ? (
+                  <span className="text-xs font-medium text-brand-text-strong">
+                    {haversineKm(
+                      homeLocation.homeLatitude,
+                      homeLocation.homeLongitude,
+                      selectedGigForDistance.latitude,
+                      selectedGigForDistance.longitude
+                    ).toFixed(1)}{" "}
+                    km
+                  </span>
+                ) : (
+                  <span className="text-xs font-medium text-brand-text-weak">Home</span>
+                )}
+              </button>
+            </div>
+          )}
 
           {/* Distance chip - below search bar, mobile only; only when a college is selected */}
           <div className="relative self-start md:hidden">
@@ -3977,54 +3994,59 @@ const MapComponent = () => {
         className="hidden md:flex absolute md:top-auto md:bottom-4 md:left-4 flex-col gap-1.5 md:gap-2 z-[1000]"
         style={{ pointerEvents: "none" }}
       >
-        {/* Total Jobs/Candidates Badge */}
-        <div
-          className="bg-white border border-brand-stroke-border rounded-lg shadow-lg px-2 py-1.5 md:px-3 md:py-2 flex items-center gap-1.5 md:gap-2 pointer-events-auto"
-          style={{ fontFamily: "Open Sans" }}
-        >
-          {userAccountType === "Company" ? (
-            <User size={14} className="shrink-0 text-brand" style={{ color: "#F84416" }} />
-          ) : (
-            <Portfolio size={14} className="shrink-0 text-brand" style={{ color: "#F84416" }} />
-          )}
-          <div className="flex flex-col leading-tight">
-            <span className="text-[10px] md:text-xs text-brand-text-weak font-normal">
-              {userAccountType === "Company" ? "Candidates" : "Total Jobs"}
-            </span>
-            <span className="text-sm md:text-base text-brand-text-strong font-semibold">{(jobTitles?.length || 0).toLocaleString()}</span>
-          </div>
-        </div>
-
-        {/* Total Companies/Your Jobs Badge */}
-        <div
-          className="bg-white border border-brand-stroke-border rounded-lg shadow-lg px-2 py-1.5 md:px-3 md:py-2 flex items-center gap-1.5 md:gap-2 pointer-events-auto"
-          style={{ fontFamily: "Open Sans" }}
-        >
-          {userAccountType === "Company" ? (
-            <Portfolio size={14} className="shrink-0 text-brand" style={{ color: "#F84416" }} />
-          ) : (
+        {/* Statistics Badges - Show different content based on account type and search mode */}
+        {userAccountType === "Company" ? (
+          /* Company Account: Show Total Companies */
+          <div
+            className="bg-white border border-brand-stroke-border rounded-lg shadow-lg px-2 py-1.5 md:px-3 md:py-2 flex items-center gap-1.5 md:gap-2 pointer-events-auto"
+            style={{ fontFamily: "Open Sans" }}
+          >
             <Enterprise size={14} className="shrink-0 text-brand" style={{ color: "#F84416" }} />
-          )}
-          <div className="flex flex-col leading-tight">
-            <span className="text-[10px] md:text-xs text-brand-text-weak font-normal">
-              {userAccountType === "Company" ? "Your Company Jobs" : "Total Companies"}
-            </span>
-            <span className="text-sm md:text-base text-brand-text-strong font-semibold">
-              {locationsData
-                ? (() => {
-                    const mainCompanies = locationsData.companies?.length || 0;
-                    const localityCompanies = locationsData.localities
-                      ? Object.values(locationsData.localities).reduce(
-                          (sum, locality) => sum + (locality.companies?.length || 0),
-                          0
-                        )
-                      : 0;
-                    return (mainCompanies + localityCompanies).toLocaleString();
-                  })()
-                : "0"}
-            </span>
+            <div className="flex flex-col leading-tight">
+              <span className="text-[10px] md:text-xs text-brand-text-weak font-normal">
+                Total Companies
+              </span>
+              <span className="text-sm md:text-base text-brand-text-strong font-semibold">
+                {totalCompaniesCount.toLocaleString()}
+              </span>
+            </div>
           </div>
-        </div>
+        ) : (
+          /* Individual/Gig Worker Account: Show Total Gigs in person mode, Total Companies in company mode */
+          <>
+            {searchMode === "person" ? (
+              <div
+                className="bg-white border border-brand-stroke-border rounded-lg shadow-lg px-2 py-1.5 md:px-3 md:py-2 flex items-center gap-1.5 md:gap-2 pointer-events-auto"
+                style={{ fontFamily: "Open Sans" }}
+              >
+                <User size={14} className="shrink-0 text-brand" style={{ color: "#F84416" }} />
+                <div className="flex flex-col leading-tight">
+                  <span className="text-[10px] md:text-xs text-brand-text-weak font-normal">
+                    Total Gigs
+                  </span>
+                  <span className="text-sm md:text-base text-brand-text-strong font-semibold">
+                    {(gigs?.length || 0).toLocaleString()}
+                  </span>
+                </div>
+              </div>
+            ) : (
+              <div
+                className="bg-white border border-brand-stroke-border rounded-lg shadow-lg px-2 py-1.5 md:px-3 md:py-2 flex items-center gap-1.5 md:gap-2 pointer-events-auto"
+                style={{ fontFamily: "Open Sans" }}
+              >
+                <Enterprise size={14} className="shrink-0 text-brand" style={{ color: "#F84416" }} />
+                <div className="flex flex-col leading-tight">
+                  <span className="text-[10px] md:text-xs text-brand-text-weak font-normal">
+                    Total Companies
+                  </span>
+                  <span className="text-sm md:text-base text-brand-text-strong font-semibold">
+                    {totalCompaniesCount.toLocaleString()}
+                  </span>
+                </div>
+              </div>
+            )}
+          </>
+        )}
       </div>
 
       <AddHomeModal
