@@ -3320,7 +3320,7 @@ const MapComponent = () => {
       {/* Search Bar - visible on all viewports */}
       {isGlobeView && (
         <div
-          className={`flex flex-col top-3 md:top-4 gap-2 md:gap-6 ${searchBar.container} w-[calc(100vw-16px)] max-w-[800px]`}
+          className={`flex flex-col top-3 md:top-4 gap-4 ${searchBar.container} w-[calc(100vw-16px)] max-w-[800px]`}
         >
           {/* Search Bar Card - same corner radius as show distance button (rounded-full), white bg. */}
           <div className={`bg-brand-bg-white rounded-full border border-brand-stroke-border shadow-lg w-full px-1.5 py-1.5 md:px-4 md:py-2`}>
