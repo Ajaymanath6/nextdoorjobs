@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { prisma } from "../../../../lib/prisma";
-import { getCurrentUser } from "../../../../lib/auth";
+import { getCurrentUser } from "../../../../lib/getCurrentUser";
 
 /**
  * GET /api/onboarding/my-jobs
