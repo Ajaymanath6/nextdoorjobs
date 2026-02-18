@@ -8,7 +8,6 @@ import TypingAnimation from "./TypingAnimation";
 import { getAvatarUrlById } from "../../../lib/avatars";
 import ConfirmDeleteModal from "../ConfirmDeleteModal";
 import EditGigModal from "./EditGigModal";
-import ViewToggle from "./ViewToggle";
 
 export default function ChatInterface({ messages = [], onSendMessage, isLoading = false, inlineComponent = null, typingText = null, onScrollRequest, onSave, onViewOnMap, onStartNext, showFindOrPostButtons = false, accountType, onFindJob, onPostGig, onFindCandidates, onGigDeleted, onGigEdited, onShowJobListings }) {
   const router = useRouter();
@@ -131,7 +130,7 @@ export default function ChatInterface({ messages = [], onSendMessage, isLoading 
     <div className="flex flex-col h-full min-h-0 bg-white rounded-lg relative overflow-hidden">
       {/* Logo - Sticky at Top */}
       <div className="sticky top-0 z-10 shrink-0 bg-white px-4 py-3 border-b border-brand-stroke-weak">
-        <div className="flex items-center justify-between">
+        <div className="flex items-center justify-center">
           <div className="h-8 flex items-center justify-center">
             <Image
               src="/logo.svg"
@@ -142,26 +141,8 @@ export default function ChatInterface({ messages = [], onSendMessage, isLoading 
               style={{ width: "auto", height: "2rem" }}
             />
           </div>
-          
-          {/* Job Listings Button - Only for Company accounts */}
-          {accountType === "Company" && onShowJobListings && (
-            <button
-              type="button"
-              onClick={onShowJobListings}
-              className="p-2 rounded-lg hover:bg-brand-bg-fill transition-colors"
-              title="Your job postings"
-              aria-label="Your job postings"
-            >
-              <List size={20} className="text-brand-stroke-strong" />
-            </button>
-          )}
         </div>
       </div>
-
-      {/* View Toggle - Map/Chat */}
-      {accountType === "Company" && (
-        <ViewToggle currentView="chat" />
-      )}
 
       {/* Messages Container - scrollable, leaves room for input */}
       <div ref={messagesContainerRef} className="flex-1 min-h-0 overflow-y-auto px-4 pt-4 space-y-4 chat-scrollable bg-white">

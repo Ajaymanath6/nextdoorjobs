@@ -155,6 +155,7 @@ export default function OnboardingPage() {
   const conversationOrderRef = useRef(0);
   const lastAIMessageTextRef = useRef("");
   const scrollToInlineRef = useRef(null);
+  const [suggestedCompanyName, setSuggestedCompanyName] = useState(null);
 
   useEffect(() => {
     const checkMobile = () =>
@@ -218,6 +219,7 @@ export default function OnboardingPage() {
       setChatMessages([
         { type: "ai", text: `Hi ${name || "there"}! 👋 Welcome to mapmyGig.` },
       ]);
+      setIsLoading(false);
 
       if (!email) return;
 
@@ -334,6 +336,10 @@ export default function OnboardingPage() {
     setHasChosenPostGig(false);
     setOnboardingSessionId(null);
     conversationOrderRef.current = 0;
+    setIsLoading(false);
+    setTypingText("");
+    setIsTyping(false);
+    setInlineComponent(null);
     if (userData) {
       const welcomeName =
         userData.name?.trim() ||
@@ -461,8 +467,10 @@ export default function OnboardingPage() {
     // Auto-populate company name from email
     const suggestedName = extractCompanyNameFromEmail(userData.email);
     if (suggestedName) {
+      setSuggestedCompanyName(suggestedName);
       await addAIMessage(`I'll help you post a job opening. Is your company name "${suggestedName}"? (You can type a different name if this is incorrect)`);
     } else {
+      setSuggestedCompanyName(null);
       await addAIMessage("I'll help you post a job opening. What's your company name?");
     }
   };
@@ -505,9 +513,49 @@ export default function OnboardingPage() {
     return trimmed.replace(/^["']|["']$/g, "");
   };
 
+  // Parse Google Maps URL to extract coordinates
+  const parseGoogleMapsUrl = (url) => {
+    if (!url || typeof url !== "string") return null;
+    const s = url.trim();
+    if (!s) return null;
+
+    // @lat,lon or @lat,lon,zoom
+    const atMatch = s.match(/@(-?\d+\.?\d*),(-?\d+\.?\d*)(?:,\d+z?)?/);
+    if (atMatch) {
+      const lat = parseFloat(atMatch[1]);
+      const lon = parseFloat(atMatch[2]);
+      if (lat >= -90 && lat <= 90 && lon >= -180 && lon <= 180) {
+        return { lat, lon };
+      }
+    }
+
+    // ?q=lat,lon or &q=lat,lon
+    const qMatch = s.match(/[?&]q=(-?\d+\.?\d*),(-?\d+\.?\d*)/);
+    if (qMatch) {
+      const lat = parseFloat(qMatch[1]);
+      const lon = parseFloat(qMatch[2]);
+      if (lat >= -90 && lat <= 90 && lon >= -180 && lon <= 180) {
+        return { lat, lon };
+      }
+    }
+
+    // !3dLAT!4dLON (embed style)
+    const embedMatch = s.match(/!3d(-?\d+\.?\d*)!4d(-?\d+\.?\d*)/);
+    if (embedMatch) {
+      const lat = parseFloat(embedMatch[1]);
+      const lon = parseFloat(embedMatch[2]);
+      if (lat >= -90 && lat <= 90 && lon >= -180 && lon <= 180) {
+        return { lat, lon };
+      }
+    }
+
+    return null;
+  };
+
   // Add AI message with typing animation; optional imageUrl for logo etc.
   const addAIMessage = async (text, options = {}) => {
     const { imageUrl } = options;
+    setIsLoading(false);
     setIsTyping(true);
     setTypingText("");
     for (let i = 0; i < text.length; i++) {
@@ -553,10 +601,24 @@ export default function OnboardingPage() {
 
         switch (currentField) {
           case COMPANY_FIELDS.NAME:
-            setCompanyData((prev) => ({ ...prev, name: value }));
-            await addAIMessage(`Got it! Your company name is "${value}".`);
+            // Check if user confirmed the suggested name
+            const lowerValue = value.toLowerCase().trim();
+            const isConfirmation = suggestedCompanyName && (
+              lowerValue === "yes" || 
+              lowerValue === "ok" || 
+              lowerValue === "yeah" || 
+              lowerValue === "yep" || 
+              lowerValue === "correct" || 
+              lowerValue === "right" ||
+              lowerValue === "y"
+            );
+            
+            const finalCompanyName = isConfirmation ? suggestedCompanyName : value;
+            setCompanyData((prev) => ({ ...prev, name: finalCompanyName }));
+            await addAIMessage(`Got it! Your company name is "${finalCompanyName}".`);
             await addAIMessage("What's the location of your company?");
             setCurrentField(COMPANY_FIELDS.LOCATION);
+            setSuggestedCompanyName(null);
             
             // Check if company already has coordinates (subsequent job posting)
             const hasExistingLocation = companyData?.latitude && companyData?.longitude;
@@ -633,26 +695,39 @@ export default function OnboardingPage() {
 
           case COMPANY_FIELDS.LOCATION:
             // This case is handled by GetCoordinatesButton callback
-            // But also allow manual input
+            // But also allow manual input (coordinates or Google Maps URL)
             if (value.toLowerCase() !== "skip" && value) {
-              // Try to parse lat,lon or lat lon
-              const coords = value.split(/[,\s]+/).map(v => v.trim()).filter(v => v);
-              if (coords.length >= 2) {
+              // First, try to parse as Google Maps URL
+              let parsedCoords = parseGoogleMapsUrl(value);
+              
+              if (!parsedCoords) {
+                // If not a URL, try to parse as lat,lon or lat lon
+                const coords = value.split(/[,\s]+/).map(v => v.trim()).filter(v => v);
+                if (coords.length >= 2) {
+                  const lat = parseFloat(coords[0]);
+                  const lon = parseFloat(coords[1]);
+                  if (!isNaN(lat) && !isNaN(lon) && lat >= -90 && lat <= 90 && lon >= -180 && lon <= 180) {
+                    parsedCoords = { lat, lon };
+                  }
+                }
+              }
+              
+              if (parsedCoords) {
                 setCompanyData((prev) => ({
                   ...prev,
-                  latitude: coords[0],
-                  longitude: coords[1],
+                  latitude: parsedCoords.lat,
+                  longitude: parsedCoords.lon,
                 }));
-                await addAIMessage(`Coordinates saved! What's the pincode? (Type "skip" if not available)`);
-                setCurrentField(COMPANY_FIELDS.PINCODE);
+                setInlineComponent(null);
+                await handleLocationReceived(parsedCoords.lat, parsedCoords.lon);
               } else {
-                await addAIMessage(`Please provide both latitude and longitude separated by comma (e.g., 10.5276, 76.2144) or use the button above`);
+                await addAIMessage(`Could not parse location. Please provide latitude and longitude (e.g., 10.5276, 76.2144) or a Google Maps link, or use the buttons above.`);
                 setIsLoading(false);
                 return;
               }
             } else {
-              await addAIMessage(`No problem! What's the pincode? (Type "skip" if not available)`);
-              setCurrentField(COMPANY_FIELDS.PINCODE);
+              setInlineComponent(null);
+              await handleLocationSkipped();
             }
             break;
 
@@ -1854,7 +1929,7 @@ export default function OnboardingPage() {
           <div className="bg-white/95 backdrop-blur-sm px-6 py-4 flex items-center justify-between border-b border-[#E5E5E5] relative z-30 flex-shrink-0 overflow-visible">
             <div className="flex items-center gap-3">
               {/* Globe | Chat toggle - same as map search bar; Chat selected here */}
-              <div className="bg-white border border-[#E5E5E5] overflow-hidden rounded-full shrink-0">
+              <div className="bg-white border border-[#E5E5E5] overflow-hidden rounded-full shrink-0 flex">
                 <button
                   type="button"
                   onClick={() => router.push("/")}
