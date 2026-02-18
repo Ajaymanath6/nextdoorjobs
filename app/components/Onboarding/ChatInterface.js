@@ -3,7 +3,7 @@
 import { useEffect, useRef, useState } from "react";
 import Image from "next/image";
 import { useRouter } from "next/navigation";
-import { Screen, Document, Enterprise, Save, Location, Add, OverflowMenuVertical, TrashCan, Edit } from "@carbon/icons-react";
+import { Screen, Document, Enterprise, Save, Location, Add, OverflowMenuVertical, TrashCan, Edit, List } from "@carbon/icons-react";
 import TypingAnimation from "./TypingAnimation";
 import { getAvatarUrlById } from "../../../lib/avatars";
 import ConfirmDeleteModal from "../ConfirmDeleteModal";
