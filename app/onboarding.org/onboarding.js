@@ -491,6 +491,32 @@ export default function OnboardingPage() {
         onboardingSessionIdRef.current = sessionData.sessionId;
         conversationOrderRef.current = 0;
       }
+
+      // Fetch existing company data if user has already posted a job
+      try {
+        const companyRes = await fetch("/api/onboarding/company", { credentials: "same-origin" });
+        if (companyRes.ok) {
+          const companyResData = await companyRes.json();
+          if (companyResData.success && companyResData.companies && companyResData.companies.length > 0) {
+            // Use the most recent company (already sorted by createdAt desc)
+            const existingCompany = companyResData.companies[0];
+            setCompanyData({
+              id: existingCompany.id,
+              name: existingCompany.name,
+              logoPath: existingCompany.logoPath,
+              websiteUrl: existingCompany.websiteUrl,
+              fundingSeries: existingCompany.fundingSeries,
+              latitude: existingCompany.latitude,
+              longitude: existingCompany.longitude,
+              state: existingCompany.state,
+              district: existingCompany.district,
+              pincode: existingCompany.pincode,
+            });
+          }
+        }
+      } catch (err) {
+        console.error("Error fetching existing company:", err);
+      }
     } catch (err) {
       console.error("Error starting onboarding session:", err);
     }
@@ -606,16 +632,18 @@ export default function OnboardingPage() {
             );
             
             const finalCompanyName = isConfirmation ? suggestedCompanyName : value;
-            setCompanyData((prev) => ({ ...prev, name: finalCompanyName }));
-            await addAIMessage(`Got it! Your company name is "${finalCompanyName}".`);
-            await addAIMessage("What's the location of your company?");
-            setCurrentField(COMPANY_FIELDS.LOCATION);
-            setSuggestedCompanyName(null);
             
-            // Check if company already has coordinates (subsequent job posting)
+            // Check if company already has coordinates BEFORE updating state (subsequent job posting)
             const hasExistingLocation = companyData?.latitude && companyData?.longitude;
             
+            setCompanyData((prev) => ({ ...prev, name: finalCompanyName }));
+            await addAIMessage(`Got it! Your company name is "${finalCompanyName}".`);
+            
             if (hasExistingLocation) {
+              // Company already has location - show it in chat
+              await addAIMessage(`Your company location: ${companyData.district}, ${companyData.state} (Lat: ${companyData.latitude}, Lon: ${companyData.longitude})`);
+              setCurrentField(COMPANY_FIELDS.LOCATION);
+              setSuggestedCompanyName(null);
               // Show reuse selector for subsequent jobs
               setInlineComponent(
                 <LocationReuseSelector
@@ -636,7 +664,10 @@ export default function OnboardingPage() {
                 />
               );
             } else {
-              // First job - show all 3 options
+              // First job - ask for location and show all 3 options
+              await addAIMessage("What's the location of your company?");
+              setCurrentField(COMPANY_FIELDS.LOCATION);
+              setSuggestedCompanyName(null);
               setInlineComponent(
                 <GetCoordinatesButton
                   onCoordinatesReceived={(lat, lon) => {

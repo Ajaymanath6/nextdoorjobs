@@ -10,8 +10,10 @@ import {
   SettingsAdjust,
   Edit,
   Add,
+  Location,
 } from "@carbon/icons-react";
 import EditDisplayNameModal from "./EditDisplayNameModal";
+import EditCompanyLocationModal from "./EditCompanyLocationModal";
 import themeClasses from "../theme-utility-classes.json";
 import { AVATARS } from "../../lib/avatars";
 
@@ -39,6 +41,7 @@ export default function SettingsModal({ isOpen, onClose }) {
   const [showCompanyLogoModal, setShowCompanyLogoModal] = useState(false);
   const [companyLogoUploading, setCompanyLogoUploading] = useState(false);
   const [companyLogoError, setCompanyLogoError] = useState(null);
+  const [showLocationEditModal, setShowLocationEditModal] = useState(false);
   const fileInputRef = useRef(null);
   const companyLogoInputRef = useRef(null);
 
@@ -545,13 +548,33 @@ export default function SettingsModal({ isOpen, onClose }) {
                           <div className="border-t border-brand-stroke-weak" />
 
                           {/* Location */}
-                          <div className="flex items-center justify-between gap-4 py-2">
-                            <span className={`text-sm ${brand.text.strong}`}>
-                              Location
-                            </span>
-                            <span className={`text-sm ${brand.text.strong}`}>
-                              {selectedCompany.district}, {selectedCompany.state}
-                            </span>
+                          <div className="py-2">
+                            <div className="flex items-start justify-between gap-4 mb-1">
+                              <span className={`text-sm ${brand.text.strong}`}>
+                                Company Location
+                              </span>
+                              <button
+                                type="button"
+                                onClick={() => setShowLocationEditModal(true)}
+                                className="text-sm font-medium text-brand underline underline-offset-2 hover:opacity-80"
+                                style={{ color: brand.color || "#F84416" }}
+                              >
+                                Edit
+                              </button>
+                            </div>
+                            <div className="flex items-start gap-2 mt-2">
+                              <Location size={16} className={`mt-0.5 ${brand.text.weak}`} />
+                              <div className="flex-1">
+                                <div className={`text-sm ${brand.text.strong}`}>
+                                  {selectedCompany.district}, {selectedCompany.state}
+                                </div>
+                                {(selectedCompany.latitude || selectedCompany.longitude) && (
+                                  <div className={`text-xs ${brand.text.weak} mt-1`}>
+                                    Coordinates: {selectedCompany.latitude}, {selectedCompany.longitude}
+                                  </div>
+                                )}
+                              </div>
+                            </div>
                           </div>
                           <div className="border-t border-brand-stroke-weak" />
 
@@ -741,6 +764,18 @@ export default function SettingsModal({ isOpen, onClose }) {
           )}
         </div>
       </Modal>
+
+      <EditCompanyLocationModal
+        isOpen={showLocationEditModal}
+        onClose={() => setShowLocationEditModal(false)}
+        company={selectedCompany}
+        onLocationUpdated={(updatedCompany) => {
+          setSelectedCompany(updatedCompany);
+          setCompanies((prev) =>
+            prev.map((c) => (c.id === updatedCompany.id ? updatedCompany : c))
+          );
+        }}
+      />
     </>
   );
 }
