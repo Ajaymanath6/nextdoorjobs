@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { Close, Edit, TrashCan, Time } from "@carbon/icons-react";
+import LoadingSpinner from "./LoadingSpinner";
 
 function getTimeAgo(dateString) {
   const now = new Date();
@@ -29,7 +30,7 @@ function getExpiryDate(createdAt, extensionCount) {
   return `in ${daysLeft} days`;
 }
 
-export default function JobListingsModal({ isOpen, onClose, jobs = [], onEdit, onDelete, onExtend }) {
+export default function JobListingsModal({ isOpen, onClose, jobs = [], onEdit, onDelete, onExtend, isLoading = false }) {
   if (!isOpen) return null;
 
   return (
@@ -58,10 +59,19 @@ export default function JobListingsModal({ isOpen, onClose, jobs = [], onEdit, o
 
         {/* Job Cards - Full Width */}
         <div className="flex-1 overflow-y-auto px-6 py-4 space-y-4">
-          {jobs.length === 0 ? (
-            <p className="text-sm text-brand-text-weak text-center py-8">
-              No job postings yet.
-            </p>
+          {isLoading ? (
+            <div className="flex items-center justify-center py-12">
+              <LoadingSpinner size="lg" />
+            </div>
+          ) : jobs.length === 0 ? (
+            <div className="text-center py-12">
+              <p className="text-sm text-brand-text-weak mb-2">
+                No job postings yet.
+              </p>
+              <p className="text-xs text-brand-text-weak">
+                Click "Post your job" to create your first job posting.
+              </p>
+            </div>
           ) : (
             jobs.map((job) => (
               <div

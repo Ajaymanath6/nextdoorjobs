@@ -34,6 +34,7 @@ import JobTitleAutocomplete from "./JobTitleAutocomplete";
 import CollegeAutocomplete from "./CollegeAutocomplete";
 import EmptyState from "./EmptyState";
 import CompanyJobsSidebar from "../CompanyJobsSidebar";
+import LoadingSpinner from "../LoadingSpinner";
 import { getStateCenter } from "../../../lib/indiaStateCenters";
 import { getAvatarUrlById } from "../../../lib/avatars";
 // Import CSS files (Next.js handles these)
@@ -498,8 +499,17 @@ const MapComponent = () => {
     // Create markers for each company
     companies.forEach((company, index) => {
       const companyName = company.company_name || company.name;
-      const logoUrl = company.logoPath || company.logoUrl || null;
-      const customIcon = createGeminiJobIcon(L, 50, logoUrl);
+      
+      // Logo fallback hierarchy:
+      // 1. Company logo URL (from website fetch)
+      // 2. Uploaded avatar from settings
+      // 3. Carbon Organization icon
+      const logoUrl = company.logoPath || company.logoUrl || company.avatarUrl || null;
+      
+      // Use Organization icon as final fallback
+      const customIcon = logoUrl 
+        ? createGeminiJobIcon(L, 50, logoUrl)
+        : createOrgIconMarker(L, 50);
 
       const marker = L.marker([company.latitude, company.longitude], {
         icon: customIcon,
@@ -826,6 +836,10 @@ const MapComponent = () => {
           if (data.success && Array.isArray(data.gigs)) {
             setGigs(data.gigs);
             renderGigMarkers(data.gigs);
+          }
+          // If companies are returned (for Company accounts), render them too
+          if (data.companies && Array.isArray(data.companies) && data.companies.length > 0) {
+            renderCompanyMarkers(data.companies);
           }
         })
         .catch((err) => {
@@ -1276,6 +1290,33 @@ const MapComponent = () => {
     return L.divIcon({
       html,
       className: "custom-pindrop-marker",
+      iconSize: [size, size],
+      iconAnchor: [size / 2, size],
+      popupAnchor: [0, -size - 10],
+    });
+  };
+
+  const createOrgIconMarker = (L, size = 50) => {
+    const html = `
+      <div style="
+        width: ${size}px;
+        height: ${size}px;
+        border-radius: 50%;
+        background: linear-gradient(135deg, #F84416 0%, #FF6B47 100%);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        border: 3px solid white;
+        box-shadow: 0 2px 8px rgba(0,0,0,0.2);
+      ">
+        <svg width="${size * 0.6}" height="${size * 0.6}" viewBox="0 0 32 32" fill="white">
+          <path d="M16 2C14.3 2 13 3.3 13 5s1.3 3 3 3 3-1.3 3-3-1.3-3-3-3zM8 8C6.3 8 5 9.3 5 11s1.3 3 3 3 3-1.3 3-3-1.3-3-3-3zM24 8c-1.7 0-3 1.3-3 3s1.3 3 3 3 3-1.3 3-3-1.3-3-3-3zM16 14c-3.3 0-6 2.7-6 6v10h12V20c0-3.3-2.7-6-6-6z"/>
+        </svg>
+      </div>
+    `;
+    return L.divIcon({
+      html,
+      className: "custom-org-marker",
       iconSize: [size, size],
       iconAnchor: [size / 2, size],
       popupAnchor: [0, -size - 10],
@@ -3675,11 +3716,7 @@ const MapComponent = () => {
       />
 
       {/* Loading overlay when switching to chat */}
-      {isSwitchingToChat && (
-        <div className="fixed inset-0 z-[9999] bg-white/80 flex items-center justify-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-brand"></div>
-        </div>
-      )}
+      {isSwitchingToChat && <LoadingSpinner size="lg" overlay={true} />}
     </div>
   );
 };

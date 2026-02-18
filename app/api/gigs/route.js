@@ -113,7 +113,7 @@ export async function GET(request) {
     // Check if requesting user is a Company
     const currentUser = await getCurrentUser();
     
-    // If Company account, return job seekers instead of gig workers
+    // If Company account, return job seekers and companies with jobs
     if (currentUser && currentUser.accountType === "Company") {
       const filters = {
         state: searchParams.get("state"),
@@ -170,9 +170,47 @@ export async function GET(request) {
         jobSeekerExperience: seeker.jobSeekerExperience,
       }));
 
+      // Also fetch companies with active job postings
+      const companyWhereClause = {
+        latitude: { not: null },
+        longitude: { not: null },
+        jobPositions: {
+          some: {
+            isActive: true,
+          },
+        },
+      };
+
+      if (filters.state) companyWhereClause.state = filters.state;
+      if (filters.district) companyWhereClause.district = filters.district;
+
+      const companies = await prisma.company.findMany({
+        where: companyWhereClause,
+        include: {
+          jobPositions: {
+            where: { isActive: true },
+            select: { id: true },
+          },
+        },
+      });
+
       return NextResponse.json({ 
         success: true, 
         gigs: transformedJobSeekers,
+        companies: companies.map(c => ({
+          id: c.id,
+          name: c.name,
+          company_name: c.name,
+          latitude: c.latitude,
+          longitude: c.longitude,
+          state: c.state,
+          district: c.district,
+          logoUrl: c.logoUrl,
+          logoPath: c.logoPath,
+          avatarUrl: c.avatarUrl,
+          jobCount: c.jobPositions.length,
+          type: "Company",
+        })),
         isJobSeekerMode: true 
       });
     }

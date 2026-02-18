@@ -7,6 +7,7 @@ import { WatsonHealthRotate_360, List, UserAvatar, User, Settings, Logout, Earth
 import ChatInterface from "../components/Onboarding/ChatInterface";
 import SettingsModal from "../components/SettingsModal";
 import JobListingsModal from "../components/JobListingsModal";
+import EditJobModal from "../components/EditJobModal";
 import EmailAuthForm from "../components/Onboarding/EmailAuthForm";
 import StateDistrictSelector from "../components/Onboarding/StateDistrictSelector";
 import LogoPicker from "../components/Onboarding/LogoPicker";
@@ -15,6 +16,7 @@ import FundingSeriesBadges from "../components/Onboarding/FundingSeriesBadges";
 import ExperienceRangeSelect from "../components/Onboarding/ExperienceRangeSelect";
 import SalaryRangeBadges from "../components/Onboarding/SalaryRangeBadges";
 import GetCoordinatesButton from "../components/Onboarding/GetCoordinatesButton";
+import LocationReuseSelector from "../components/Onboarding/LocationReuseSelector";
 import PincodeDropdown from "../components/Onboarding/PincodeDropdown";
 import RemoteTypeSelector from "../components/Onboarding/RemoteTypeSelector";
 import RelocationSelector from "../components/Onboarding/RelocationSelector";
@@ -146,6 +148,9 @@ export default function OnboardingPage() {
   const [isNavigatingToMap, setIsNavigatingToMap] = useState(false);
   const [showJobListingsModal, setShowJobListingsModal] = useState(false);
   const [companyJobs, setCompanyJobs] = useState([]);
+  const [isLoadingJobs, setIsLoadingJobs] = useState(false);
+  const [showEditJobModal, setShowEditJobModal] = useState(false);
+  const [selectedJobForEdit, setSelectedJobForEdit] = useState(null);
   const onboardingSessionIdRef = useRef(null);
   const conversationOrderRef = useRef(0);
   const lastAIMessageTextRef = useRef("");
@@ -351,15 +356,23 @@ export default function OnboardingPage() {
 
   // Show job listings modal
   const handleShowJobListings = async () => {
+    setShowJobListingsModal(true);
+    setIsLoadingJobs(true);
+    setCompanyJobs([]);
+    
     try {
       const res = await fetch("/api/onboarding/my-jobs", { credentials: "same-origin" });
       if (res.ok) {
         const data = await res.json();
+        console.log("Fetched jobs:", data.jobs);
         setCompanyJobs(data.jobs || []);
-        setShowJobListingsModal(true);
+      } else {
+        console.error("Failed to fetch jobs:", res.status);
       }
     } catch (error) {
       console.error("Error fetching jobs:", error);
+    } finally {
+      setIsLoadingJobs(false);
     }
   };
 
@@ -397,9 +410,10 @@ export default function OnboardingPage() {
     }
   };
 
-  // Handle job edit (placeholder for now)
+  // Handle job edit
   const handleEditJob = async (job) => {
-    alert("Edit functionality coming soon!");
+    setSelectedJobForEdit(job);
+    setShowEditJobModal(true);
   };
 
   // User chose "Post your job" (Company only)
@@ -543,19 +557,46 @@ export default function OnboardingPage() {
             await addAIMessage(`Got it! Your company name is "${value}".`);
             await addAIMessage("What's the location of your company?");
             setCurrentField(COMPANY_FIELDS.LOCATION);
-            setInlineComponent(
-              <GetCoordinatesButton
-                onCoordinatesReceived={(lat, lon) => {
-                  setCompanyData((prev) => ({ ...prev, latitude: lat, longitude: lon }));
-                  setInlineComponent(null);
-                  handleLocationReceived(lat, lon);
-                }}
-                onSkip={() => {
-                  setInlineComponent(null);
-                  handleLocationSkipped();
-                }}
-              />
-            );
+            
+            // Check if company already has coordinates (subsequent job posting)
+            const hasExistingLocation = companyData?.latitude && companyData?.longitude;
+            
+            if (hasExistingLocation) {
+              // Show reuse selector for subsequent jobs
+              setInlineComponent(
+                <LocationReuseSelector
+                  existingLocation={{
+                    latitude: companyData.latitude,
+                    longitude: companyData.longitude,
+                    district: companyData.district,
+                    state: companyData.state
+                  }}
+                  onUseExisting={() => {
+                    setInlineComponent(null);
+                    handleLocationReceived(companyData.latitude, companyData.longitude);
+                  }}
+                  onAddNew={(lat, lon) => {
+                    setInlineComponent(null);
+                    handleLocationReceived(lat, lon);
+                  }}
+                />
+              );
+            } else {
+              // First job - show all 3 options
+              setInlineComponent(
+                <GetCoordinatesButton
+                  onCoordinatesReceived={(lat, lon) => {
+                    setCompanyData((prev) => ({ ...prev, latitude: lat, longitude: lon }));
+                    setInlineComponent(null);
+                    handleLocationReceived(lat, lon);
+                  }}
+                  onSkip={() => {
+                    setInlineComponent(null);
+                    handleLocationSkipped();
+                  }}
+                />
+              );
+            }
             break;
 
           case COMPANY_FIELDS.LOGO:
@@ -743,7 +784,35 @@ export default function OnboardingPage() {
   const handleLocationReceived = async (lat, lon) => {
     await saveConversation(COMPANY_FIELDS.LOCATION, lastAIMessageTextRef.current, `${lat},${lon}`);
     setIsLoading(true);
-    await addAIMessage(`Location saved!`);
+    
+    // Reverse geocode to get district and state
+    try {
+      const res = await fetch(`/api/geocode/reverse?lat=${lat}&lon=${lon}`);
+      if (res.ok) {
+        const data = await res.json();
+        const district = data.district || "Unknown";
+        const state = data.state || "Unknown";
+        
+        await addAIMessage(`Location saved! Coordinates: ${lat.toFixed(4)}, ${lon.toFixed(4)} | ${district}, ${state}`);
+        
+        // Save to company data
+        setCompanyData((prev) => ({ 
+          ...prev, 
+          latitude: lat, 
+          longitude: lon,
+          state: state !== "Unknown" ? state : prev?.state,
+          district: district !== "Unknown" ? district : prev?.district
+        }));
+      } else {
+        await addAIMessage(`Location saved! Coordinates: ${lat.toFixed(4)}, ${lon.toFixed(4)}`);
+        setCompanyData((prev) => ({ ...prev, latitude: lat, longitude: lon }));
+      }
+    } catch (error) {
+      console.error("Reverse geocoding failed:", error);
+      await addAIMessage(`Location saved! Coordinates: ${lat.toFixed(4)}, ${lon.toFixed(4)}`);
+      setCompanyData((prev) => ({ ...prev, latitude: lat, longitude: lon }));
+    }
+    
     await addAIMessage("Do you have a company website URL?");
     setCurrentField(COMPANY_FIELDS.WEBSITE);
     setInlineComponent(
@@ -1990,6 +2059,19 @@ export default function OnboardingPage() {
         onEdit={handleEditJob}
         onDelete={handleDeleteJob}
         onExtend={handleExtendJob}
+        isLoading={isLoadingJobs}
+      />
+
+      <EditJobModal
+        isOpen={showEditJobModal}
+        onClose={() => {
+          setShowEditJobModal(false);
+          setSelectedJobForEdit(null);
+        }}
+        job={selectedJobForEdit}
+        onSaved={() => {
+          handleShowJobListings();
+        }}
       />
     </div>
   );

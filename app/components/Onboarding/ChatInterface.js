@@ -8,6 +8,7 @@ import TypingAnimation from "./TypingAnimation";
 import { getAvatarUrlById } from "../../../lib/avatars";
 import ConfirmDeleteModal from "../ConfirmDeleteModal";
 import EditGigModal from "./EditGigModal";
+import ViewToggle from "./ViewToggle";
 
 export default function ChatInterface({ messages = [], onSendMessage, isLoading = false, inlineComponent = null, typingText = null, onScrollRequest, onSave, onViewOnMap, onStartNext, showFindOrPostButtons = false, accountType, onFindJob, onPostGig, onFindCandidates, onGigDeleted, onGigEdited, onShowJobListings }) {
   const router = useRouter();
@@ -156,6 +157,11 @@ export default function ChatInterface({ messages = [], onSendMessage, isLoading 
           )}
         </div>
       </div>
+
+      {/* View Toggle - Map/Chat */}
+      {accountType === "Company" && (
+        <ViewToggle currentView="chat" />
+      )}
 
       {/* Messages Container - scrollable, leaves room for input */}
       <div ref={messagesContainerRef} className="flex-1 min-h-0 overflow-y-auto px-4 pt-4 space-y-4 chat-scrollable bg-white">
