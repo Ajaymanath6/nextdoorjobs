@@ -2817,7 +2817,7 @@ const MapComponent = () => {
 
     // Add home marker
     const homeIcon = L.divIcon({
-      html: `<div style="width:36px;height:36px;border-radius:50%;background:#fff;border:2px solid #0f62fe;display:flex;align-items:center;justify-content:center;box-shadow:0 2px 6px rgba(0,0,0,0.2);"><svg width="18" height="18" viewBox="0 0 32 32" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M16 4L4 14v14h8v-8h8v8h8V14L16 4z" fill="#0f62fe"/></svg></div>`,
+      html: `<div style="width:36px;height:36px;border-radius:50%;background:#fff;border:2px solid #0f62fe;display:flex;align-items:center;justify-content:center;box-shadow:0 2px 6px rgba(0,0,0,0.2);font-size:18px;">🏠</div>`,
       className: "home-marker",
       iconSize: [36, 36],
       iconAnchor: [18, 18],
@@ -3887,7 +3887,7 @@ const MapComponent = () => {
               <button
                 type="button"
                 onClick={() => setShowDistanceFromHome((v) => !v)}
-                className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-md border border-brand-stroke-border bg-brand-bg-white hover:bg-brand-bg-fill transition-colors shrink-0"
+                className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-full border border-brand-stroke-border bg-brand-bg-white hover:bg-brand-bg-fill transition-colors shrink-0 shadow-lg"
                 title={showDistanceFromHome ? "Hide distance" : "Show distance from home"}
               >
                 <span className="text-base">🏠</span>
