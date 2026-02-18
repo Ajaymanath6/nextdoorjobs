@@ -1477,16 +1477,22 @@ const MapComponent = () => {
 
           // Add click handler to fetch and display jobs
           marker.on("click", async () => {
+            console.log('🔍 Company pin clicked:', company.id, company.company_name || company.name);
             try {
               const res = await fetch(`/api/companies/${company.id}/jobs`);
+              console.log('📡 API response status:', res.status);
               if (res.ok) {
                 const data = await res.json();
+                console.log('✅ Jobs fetched:', data.jobs?.length || 0, 'jobs');
                 setSelectedCompanyForSidebar(company);
                 setSelectedCompanyJobs(data.jobs || []);
                 setShowCompanyJobsSidebar(true);
+                console.log('✅ Sidebar state set to true');
+              } else {
+                console.error('❌ API error:', res.status, res.statusText);
               }
             } catch (e) {
-              console.error("Failed to fetch company jobs:", e);
+              console.error("❌ Failed to fetch company jobs:", e);
             }
           });
 

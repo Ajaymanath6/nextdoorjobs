@@ -8,9 +8,9 @@ export default function CompanyJobsSidebar({ company, jobs, isOpen, onClose }) {
 
   return (
     <div 
-      className="fixed top-0 right-0 h-screen w-[400px] bg-brand-bg-white border-l border-brand-stroke-weak shadow-lg z-[1000] overflow-y-auto"
+      className="fixed top-0 right-0 h-screen w-[400px] bg-brand-bg-white border-l border-brand-stroke-weak shadow-lg z-[2000] overflow-y-auto"
       style={{ 
-        marginRight: isOpen ? "16px" : "-400px",
+        marginRight: isOpen ? "0" : "-400px",
         transition: "margin-right 0.3s ease",
         fontFamily: "Open Sans, sans-serif"
       }}

@@ -1041,35 +1041,17 @@ export default function OnboardingPage() {
   const handleFundingSelected = async (series) => {
     await saveConversation(COMPANY_FIELDS.FUNDING, lastAIMessageTextRef.current, series);
     setIsLoading(true);
+    
+    // Location and other company details were already collected, move to job details
+    setCollectingCompany(false);
+    setCurrentField(JOB_FIELDS.TITLE);
+    
     if (series.toLowerCase() !== "skip") {
-      await addAIMessage(`Funding series: ${series}. Do you have latitude and longitude coordinates?`);
+      await addAIMessage(`Funding series: ${series}. Excellent! Company information collected.`);
     } else {
-      await addAIMessage(`No problem! Do you have latitude and longitude coordinates?`);
+      await addAIMessage(`No problem! Company information collected.`);
     }
-    setCurrentField(COMPANY_FIELDS.LOCATION);
-    // If we already have coordinates (e.g. from company URL fetch), skip GetCoordinatesButton
-    if (companyData?.latitude != null && companyData?.longitude != null) {
-      await handleCoordinatesReceived(companyData.latitude, companyData.longitude);
-      return;
-    }
-    setInlineComponent(
-      <GetCoordinatesButton
-        isMobile={isMobile}
-        onCoordinatesReceived={(lat, lon) => {
-          setCompanyData((prev) => ({
-            ...prev,
-            latitude: lat,
-            longitude: lon,
-          }));
-          setInlineComponent(null);
-          handleCoordinatesReceived(lat, lon);
-        }}
-        onSkip={() => {
-          setInlineComponent(null);
-          handleCoordinatesReceived(null, null);
-        }}
-      />
-    );
+    await addAIMessage("Now let's add the job position details. What's the job title?");
     setIsLoading(false);
   };
 
@@ -1689,6 +1671,13 @@ export default function OnboardingPage() {
       if (!jobResult.success || !jobResult.jobPosition?.id) {
         throw new Error(jobResult.error || "Failed to create job position");
       }
+
+      console.log('✅ Job created successfully:', {
+        id: jobResult.jobPosition.id,
+        title: jobResult.jobPosition.title,
+        isActive: jobResult.jobPosition.isActive,
+        companyId: companyResult.company.id
+      });
 
       const sid = onboardingSessionIdRef.current ?? onboardingSessionId;
       if (sid) {
