@@ -9,25 +9,35 @@ import { getCurrentUser } from "../../../../lib/getCurrentUser";
 export async function GET(request) {
   try {
     const user = await getCurrentUser();
+    console.log('🔍 [my-jobs API] User from getCurrentUser:', user);
+    
     if (!user) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
+    console.log('🔍 [my-jobs API] User accountType:', user.accountType);
+    
     // Only Company accounts can have jobs
     if (user.accountType !== "Company") {
+      console.log('❌ [my-jobs API] Account type mismatch:', user.accountType);
       return NextResponse.json(
         { error: "Only Company accounts can view job postings" },
         { status: 400 }
       );
     }
+    
+    console.log('✅ [my-jobs API] User is Company account, fetching jobs...');
 
     // Fetch all companies owned by this user
     const companies = await prisma.company.findMany({
       where: { userId: user.id },
       select: { id: true },
     });
+    
+    console.log('🏢 [my-jobs API] Found companies:', companies.length);
 
     if (companies.length === 0) {
+      console.log('⚠️ [my-jobs API] No companies found for user');
       return NextResponse.json({ success: true, jobs: [] });
     }
 
@@ -52,6 +62,8 @@ export async function GET(request) {
         createdAt: "desc",
       },
     });
+    
+    console.log('📋 [my-jobs API] Found jobs:', jobs.length);
 
     return NextResponse.json({
       success: true,
