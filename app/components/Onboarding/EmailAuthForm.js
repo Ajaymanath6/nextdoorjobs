@@ -51,7 +51,7 @@ export default function EmailAuthForm({ onSubmit, isLoading = false }) {
         : "/api/auth/callback/clerk";
       const redirectUrlComplete = origin ? `${origin}/auth-redirect` : "/auth-redirect";
       await signIn.authenticateWithRedirect({
-        strategy: "oauth_linkedin",
+        strategy: "oauth_linkedin_oidc",
         redirectUrl,
         redirectUrlComplete,
       });
