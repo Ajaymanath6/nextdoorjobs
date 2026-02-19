@@ -1101,8 +1101,11 @@ const MapComponent = () => {
         .then((r) => r.json())
         .then((data) => {
           if (data.success && Array.isArray(data.gigs)) {
+            console.log(`[Map] Fetched ${data.gigs.length} ${userAccountType === "Company" ? "candidates" : "gigs"} from API`);
             setGigs(data.gigs);
             renderGigMarkers(data.gigs);
+          } else {
+            console.warn("[Map] API response missing success or gigs array:", data);
           }
           // Don't render companies when in person mode - only show gig workers
         })

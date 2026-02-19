@@ -112,7 +112,10 @@ export async function GET(request) {
     }
 
     // Check if requesting user is a Company (use same auth as /api/auth/me so map sees candidates)
-    const currentUser = await authService.getCurrentUser() || await getCurrentUser();
+    let currentUser = await authService.getCurrentUser();
+    if (!currentUser) {
+      currentUser = await getCurrentUser();
+    }
 
     // If Company account, return job seekers and companies with jobs
     if (currentUser && currentUser.accountType === "Company") {
@@ -136,6 +139,10 @@ export async function GET(request) {
         if (filters.state) whereClause.homeState = filters.state;
         if (filters.district) whereClause.homeDistrict = filters.district;
 
+        if (process.env.NODE_ENV === "development") {
+          console.log("[GET /api/gigs] Company branch: Fetching job seekers with filters:", filters);
+        }
+
         const jobSeekers = await prisma.user.findMany({
           where: whereClause,
           include: {
@@ -152,6 +159,10 @@ export async function GET(request) {
             },
           },
         });
+
+        if (process.env.NODE_ENV === "development") {
+          console.log("[GET /api/gigs] Found job seekers:", jobSeekers.length);
+        }
 
         // Transform: use home coords if set, else first gig's coords; only include if we have valid lat/lon
         const transformedJobSeekers = jobSeekers
@@ -181,6 +192,10 @@ export async function GET(request) {
             };
           })
           .filter(Boolean);
+
+        if (process.env.NODE_ENV === "development") {
+          console.log("[GET /api/gigs] Transformed candidates with location:", transformedJobSeekers.length);
+        }
 
         // Also fetch companies with active job postings
         const companyWhereClause = {
