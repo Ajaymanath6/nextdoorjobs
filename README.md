@@ -71,6 +71,7 @@ nextdoorjobs/
 
 - **Theme:** All UI uses theme variables and utility classes from `app/theme-guide.json` and `app/theme-utility-classes.json`. No hex codes or inline styles in components; map popups use CSS classes in `app/globals.css` (e.g. `.gig-popup .map-popup-content`).
 - **Map:** Company view shows job pindrops with “X positions open” badge; person view shows gig workers or (for Company accounts) **Candidates** with resume popovers. Cluster tooltips describe companies/gigs in the cluster. “Locate me on map” in profile dropdowns zooms to user location with a themed marker.
+- **Locate me & candidates:** Locate me on map uses first gig location if the user has one, else saved home location, else a "Choose your location" modal (device location, enter coords/paste link, cancel). Company map in person mode shows **Total Candidates** and candidate pindrops with resume popovers.
 - **Resume & candidates:** Individual/Job seeker accounts can add a **Resume** in Settings (sidebar → Settings → Resume): upload file and/or fill form (name, email, position, experience, work, education, salary, visibility to recruiter). Company accounts see candidates on the map (person view) with resume popovers. Resume data is exposed via `GET /api/gigs` for Company viewers.
 - **APIs:**  
   - `GET` / `PATCH` `app/api/profile/resume` — fetch/update resume for current user (Individual only).  

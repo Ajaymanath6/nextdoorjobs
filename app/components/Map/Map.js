@@ -30,6 +30,7 @@ import FilterBottomSheet from "./FilterBottomSheet";
 import GigFilterDropdown from "./GigFilterDropdown";
 import LocalityAutocomplete from "./LocalityAutocomplete";
 import AddHomeModal from "./AddHomeModal";
+import GetCoordinatesModal from "./GetCoordinatesModal";
 import JobTitleAutocomplete from "./JobTitleAutocomplete";
 import CollegeAutocomplete from "./CollegeAutocomplete";
 import EmptyState from "./EmptyState";
@@ -158,6 +159,7 @@ const MapComponent = () => {
   const [homeLocation, setHomeLocation] = useState(null);
   const [showSuggestionsDropdown, setShowSuggestionsDropdown] = useState(false);
   const [showAddHomeModal, setShowAddHomeModal] = useState(false);
+  const [showLocateMeCoordModal, setShowLocateMeCoordModal] = useState(false);
   const homeSuggestionsRef = useRef(null);
   const [showDistanceFromHome, setShowDistanceFromHome] = useState(false);
   const [selectedGigForDistance, setSelectedGigForDistance] = useState(null);
@@ -1716,17 +1718,51 @@ const MapComponent = () => {
     };
   }, [isClient]);
 
-  // "Locate me on map": zoom to user location and show marker with glow (from sidebar or onboarding)
+  // "Locate me on map": use first gig location, else home, else show get-coordinates modal (three options)
   const runLocateMeOnMap = () => {
-    if (!mapInstanceRef.current || !window.L || !navigator.geolocation) return;
-    navigator.geolocation.getCurrentPosition(
-      (pos) => {
-        const { latitude, longitude, accuracy } = pos.coords;
-        zoomToUserLocation({ lat: latitude, lng: longitude, accuracy });
-      },
-      () => {},
-      { enableHighAccuracy: true, timeout: 10000, maximumAge: 0 }
-    );
+    if (!mapInstanceRef.current || !window.L) return;
+
+    const applyCoords = (lat, lng) => {
+      if (lat != null && lng != null && Number.isFinite(lat) && Number.isFinite(lng)) {
+        zoomToUserLocation({ lat, lng });
+      }
+    };
+
+    // 1) Try first gig location (user who posted a gig)
+    fetch("/api/gigs?mine=1", { credentials: "same-origin" })
+      .then((r) => (r.ok ? r.json() : null))
+      .then((data) => {
+        const first = data?.gigs?.[0];
+        if (first && first.latitude != null && first.longitude != null) {
+          applyCoords(first.latitude, first.longitude);
+          return;
+        }
+        // 2) Else use home location if set
+        if (
+          homeLocation?.homeLatitude != null &&
+          homeLocation?.homeLongitude != null &&
+          Number.isFinite(Number(homeLocation.homeLatitude)) &&
+          Number.isFinite(Number(homeLocation.homeLongitude))
+        ) {
+          applyCoords(Number(homeLocation.homeLatitude), Number(homeLocation.homeLongitude));
+          return;
+        }
+        // 3) Else show modal: use device location, enter coords/link, or cancel
+        setShowLocateMeCoordModal(true);
+      })
+      .catch(() => {
+        // On fetch error, try home then modal
+        if (
+          homeLocation?.homeLatitude != null &&
+          homeLocation?.homeLongitude != null &&
+          Number.isFinite(Number(homeLocation.homeLatitude)) &&
+          Number.isFinite(Number(homeLocation.homeLongitude))
+        ) {
+          applyCoords(Number(homeLocation.homeLatitude), Number(homeLocation.homeLongitude));
+        } else {
+          setShowLocateMeCoordModal(true);
+        }
+      });
   };
 
   useEffect(() => {
@@ -4103,22 +4139,7 @@ const MapComponent = () => {
       {/* Loading Overlay */}
       {(isMapLoading || isFindingJobs || isDetectingLocation) && (
         <div
-          className="absolute inset-0 flex items-center justify-center"
-          style={{
-            position: 'absolute',
-            top: 0,
-            left: 0,
-            right: 0,
-            bottom: 0,
-            width: '100%',
-            height: '100%',
-            zIndex: 999,
-            backgroundColor: isFindingJobs 
-              ? 'rgba(255, 255, 255, 0.85)' 
-              : 'rgba(255, 255, 255, 0.5)',
-            backdropFilter: isFindingJobs ? 'blur(2px)' : 'none',
-            pointerEvents: 'auto'
-          }}
+          className={`absolute inset-0 z-[999] flex items-center justify-center pointer-events-auto ${isFindingJobs ? "bg-white/85 backdrop-blur-[2px]" : "bg-white/50"}`}
         >
           <div className="text-center">
             {/* Spinner */}
@@ -4136,24 +4157,35 @@ const MapComponent = () => {
       )}
 
       {/* Statistics Badges - hidden on mobile, bottom-left on desktop */}
-      <div
-        className="hidden md:flex absolute md:top-auto md:bottom-4 md:left-4 flex-col gap-1.5 md:gap-2 z-[1000]"
-        style={{ pointerEvents: "none" }}
-      >
+      <div className="hidden md:flex absolute md:top-auto md:bottom-4 md:left-4 flex-col gap-1.5 md:gap-2 z-[1000] pointer-events-none">
         {/* Statistics Badges - Show different content based on account type and search mode */}
         {userAccountType === "Company" ? (
-          /* Company Account: Show Total Companies */
-          <div className="bg-white border border-brand-stroke-border rounded-lg shadow-lg px-2 py-1.5 md:px-3 md:py-2 flex items-center gap-1.5 md:gap-2 pointer-events-auto font-sans">
-            <Enterprise size={14} className="shrink-0 text-brand" />
-            <div className="flex flex-col leading-tight">
-              <span className="text-[10px] md:text-xs text-brand-text-weak font-normal">
-                Total Companies
-              </span>
-              <span className="text-sm md:text-base text-brand-text-strong font-semibold">
-                {totalCompaniesCount.toLocaleString()}
-              </span>
+          /* Company Account: Total Candidates in person mode, Total Companies in company mode */
+          searchMode === "person" ? (
+            <div className="bg-white border border-brand-stroke-border rounded-lg shadow-lg px-2 py-1.5 md:px-3 md:py-2 flex items-center gap-1.5 md:gap-2 pointer-events-auto font-sans">
+              <User size={14} className="shrink-0 text-brand" />
+              <div className="flex flex-col leading-tight">
+                <span className="text-[10px] md:text-xs text-brand-text-weak font-normal">
+                  Total Candidates
+                </span>
+                <span className="text-sm md:text-base text-brand-text-strong font-semibold">
+                  {(gigs?.length || 0).toLocaleString()}
+                </span>
+              </div>
             </div>
-          </div>
+          ) : (
+            <div className="bg-white border border-brand-stroke-border rounded-lg shadow-lg px-2 py-1.5 md:px-3 md:py-2 flex items-center gap-1.5 md:gap-2 pointer-events-auto font-sans">
+              <Enterprise size={14} className="shrink-0 text-brand" />
+              <div className="flex flex-col leading-tight">
+                <span className="text-[10px] md:text-xs text-brand-text-weak font-normal">
+                  Total Companies
+                </span>
+                <span className="text-sm md:text-base text-brand-text-strong font-semibold">
+                  {totalCompaniesCount.toLocaleString()}
+                </span>
+              </div>
+            </div>
+          )
         ) : (
           /* Individual/Gig Worker Account: Show Total Gigs in person mode, Total Companies in company mode */
           <>
@@ -4201,6 +4233,17 @@ const MapComponent = () => {
           }
         }}
         initialHome={homeLocation}
+      />
+
+      <GetCoordinatesModal
+        isOpen={showLocateMeCoordModal}
+        onClose={() => setShowLocateMeCoordModal(false)}
+        onLocation={(coords) => {
+          if (coords?.lat != null && coords?.lng != null) {
+            zoomToUserLocation({ lat: coords.lat, lng: coords.lng });
+          }
+          setShowLocateMeCoordModal(false);
+        }}
       />
 
       <CompanyJobsSidebar

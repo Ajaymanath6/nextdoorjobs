@@ -121,12 +121,14 @@ export async function GET(request) {
         pincode: searchParams.get("pincode"),
       };
 
-      // Fetch job seekers (gig workers who enabled job seeker mode)
+      // Fetch job seekers: opted in (isJobSeeker) and have either home location or at least one gig with coordinates
       const whereClause = {
         accountType: "Individual",
         isJobSeeker: true,
-        homeLatitude: { not: null },
-        homeLongitude: { not: null },
+        OR: [
+          { homeLatitude: { not: null }, homeLongitude: { not: null } },
+          { gigs: { some: { latitude: { not: null }, longitude: { not: null } } } },
+        ],
       };
 
       if (filters.state) whereClause.homeState = filters.state;
@@ -141,30 +143,42 @@ export async function GET(request) {
               educations: { orderBy: { orderIndex: "asc" } },
             },
           },
+          gigs: {
+            where: { latitude: { not: null }, longitude: { not: null } },
+            orderBy: { id: "asc" },
+            take: 1,
+          },
         },
       });
 
-      // Transform to match gig structure for map rendering; attach resume for candidate popover
-      const transformedJobSeekers = jobSeekers.map(seeker => ({
-        id: seeker.id,
-        title: seeker.name,
-        serviceType: "Job Seeker",
-        state: seeker.homeState,
-        district: seeker.homeDistrict,
-        locality: seeker.homeLocality,
-        latitude: seeker.homeLatitude,
-        longitude: seeker.homeLongitude,
-        user: {
-          id: seeker.id,
-          name: seeker.name,
-          avatarId: seeker.avatarId,
-          avatarUrl: seeker.avatarUrl,
-        },
-        jobSeekerSkills: seeker.jobSeekerSkills,
-        jobSeekerExperience: seeker.jobSeekerExperience,
-        resume: seeker.resume || null,
-        email: seeker.email,
-      }));
+      // Transform: use home coords if set, else first gig's coords; only include if we have valid lat/lon
+      const transformedJobSeekers = jobSeekers
+        .map((seeker) => {
+          const lat = seeker.homeLatitude ?? seeker.gigs?.[0]?.latitude;
+          const lon = seeker.homeLongitude ?? seeker.gigs?.[0]?.longitude;
+          if (lat == null || lon == null) return null;
+          return {
+            id: seeker.id,
+            title: seeker.name,
+            serviceType: "Job Seeker",
+            state: seeker.homeState ?? seeker.gigs?.[0]?.state ?? null,
+            district: seeker.homeDistrict ?? seeker.gigs?.[0]?.district ?? null,
+            locality: seeker.homeLocality ?? seeker.gigs?.[0]?.locality ?? null,
+            latitude: lat,
+            longitude: lon,
+            user: {
+              id: seeker.id,
+              name: seeker.name,
+              avatarId: seeker.avatarId,
+              avatarUrl: seeker.avatarUrl,
+            },
+            jobSeekerSkills: seeker.jobSeekerSkills,
+            jobSeekerExperience: seeker.jobSeekerExperience,
+            resume: seeker.resume || null,
+            email: seeker.email,
+          };
+        })
+        .filter(Boolean);
 
       // Also fetch companies with active job postings
       const companyWhereClause = {
