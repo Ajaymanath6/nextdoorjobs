@@ -145,6 +145,7 @@ const MapComponent = () => {
   const [gigs, setGigs] = useState([]);
   const gigMarkersRef = useRef([]);
   const gigClusterGroupRef = useRef(null);
+  const gigClusterHoverPopupRef = useRef(null);
   const [mobileSearchExpanded, setMobileSearchExpanded] = useState(false);
   const [showSearchModeDropdown, setShowSearchModeDropdown] = useState(false);
   const searchModeDropdownRef = useRef(null);
@@ -595,10 +596,11 @@ const MapComponent = () => {
       // 3. Carbon Organization icon
       const logoUrl = company.logoPath || company.logoUrl || company.avatarUrl || null;
       
+      const positionsOpen = company.jobCount ?? 0;
       // Use Organization icon as final fallback
       const customIcon = logoUrl 
-        ? createGeminiJobIcon(L, 50, logoUrl)
-        : createOrgIconMarker(L, 50);
+        ? createGeminiJobIcon(L, 50, logoUrl, positionsOpen)
+        : createOrgIconMarker(L, 50, positionsOpen);
 
       const marker = L.marker([company.latitude, company.longitude], {
         icon: customIcon,
@@ -673,6 +675,8 @@ const MapComponent = () => {
             direction: 'top',
             className: 'cluster-tooltip',
             offset: [0, -10],
+            interactive: false,
+            opacity: 1,
           }).openTooltip();
         }
       } catch (error) {
@@ -940,6 +944,67 @@ const MapComponent = () => {
       gigMarkersRef.current.push(marker);
     });
 
+    // Add hover popover for gig worker clusters (map-level popup so it always shows)
+    clusterGroup.on('clustermouseover', function(e) {
+      const cluster = e.layer;
+      const map = mapInstanceRef.current;
+      if (!map) return;
+
+      // Close any existing gig cluster popup
+      if (gigClusterHoverPopupRef.current) {
+        map.removeLayer(gigClusterHoverPopupRef.current);
+        gigClusterHoverPopupRef.current = null;
+      }
+
+      const markers = cluster.getAllChildMarkers();
+      const gigs = markers.map(m => m.options.gigData).filter(Boolean);
+      const gigCount = gigs.length;
+      if (gigCount === 0) return;
+
+      const serviceTypes = [];
+      const seen = new Set();
+      for (const gig of gigs) {
+        const serviceType = gig.serviceType || gig.title;
+        if (serviceType && !seen.has(serviceType.toLowerCase())) {
+          serviceTypes.push(serviceType);
+          seen.add(serviceType.toLowerCase());
+        }
+      }
+      const displayServices = serviceTypes.slice(0, 5);
+
+      const tooltipContent = `
+        <div style="font-family: 'Open Sans', sans-serif; padding: 8px;">
+          <div style="font-weight: 600; font-size: 13px; color: #0A0A0A; margin-bottom: 6px;">
+            ${gigCount} ${gigCount === 1 ? 'gig worker' : 'gig workers'} available
+          </div>
+          ${displayServices.length > 0 ? `
+            <div style="font-size: 11px; color: #575757;">
+              ${displayServices.join(', ')}${serviceTypes.length > 5 ? '...' : ''}
+            </div>
+          ` : ''}
+        </div>
+      `;
+
+      const popup = L.popup({
+        closeButton: false,
+        className: 'cluster-tooltip',
+        offset: [0, -12],
+        autoPan: false,
+      })
+        .setLatLng(cluster.getLatLng())
+        .setContent(tooltipContent);
+      popup.openOn(map);
+      gigClusterHoverPopupRef.current = popup;
+    });
+
+    clusterGroup.on('clustermouseout', function() {
+      const map = mapInstanceRef.current;
+      if (map && gigClusterHoverPopupRef.current) {
+        map.removeLayer(gigClusterHoverPopupRef.current);
+        gigClusterHoverPopupRef.current = null;
+      }
+    });
+
     mapInstanceRef.current.addLayer(clusterGroup);
     gigClusterGroupRef.current = clusterGroup;
   };
@@ -947,6 +1012,10 @@ const MapComponent = () => {
   // Clear gig markers when switching to company mode
   useEffect(() => {
     if (searchMode !== "company" || !mapInstanceRef.current) return;
+    if (gigClusterHoverPopupRef.current) {
+      mapInstanceRef.current.removeLayer(gigClusterHoverPopupRef.current);
+      gigClusterHoverPopupRef.current = null;
+    }
     if (gigClusterGroupRef.current) {
       mapInstanceRef.current.removeLayer(gigClusterGroupRef.current);
       gigClusterGroupRef.current = null;
@@ -1434,43 +1503,58 @@ const MapComponent = () => {
   // Job posting pindrop: round, primary border, shadow; optional logoUrl (else gemni.png). onerror fallback when logo fails to load.
   const PRIMARY_BORDER = "#F84416";
   const DEFAULT_LOGO = "/gemni.png";
-  const createGeminiJobIcon = (L, size = 50, logoUrl = null) => {
+  const createGeminiJobIcon = (L, size = 50, logoUrl = null, jobCount = 0) => {
     const imgSrc = logoUrl || DEFAULT_LOGO;
     const safeSrc = imgSrc.replace(/"/g, "&quot;");
-    const html = `<div class="company-marker" style="position:relative;width:${size}px;height:${size}px;background-color:#FFFFFF;border-radius:50%;display:flex;align-items:center;justify-content:center;cursor:pointer;transition:transform 0.2s ease;box-shadow:0 2px 8px rgba(0,0,0,0.15),0 1px 3px rgba(0,0,0,0.1);border:2px solid ${PRIMARY_BORDER};overflow:hidden;"><img src="${safeSrc}" alt="Job" style="width:100%;height:100%;object-fit:cover;" onerror="this.onerror=null;this.src='${DEFAULT_LOGO}';" /></div>`;
+    const badgeHeight = 20;
+    const totalH = size + (jobCount > 0 ? badgeHeight : 0);
+    const label = jobCount === 1 ? "1 position open" : `${jobCount} positions open`;
+    const badgeHtml = jobCount > 0
+      ? `<div class="company-marker-badge" style="position:absolute;left:50%;top:${size}px;transform:translateX(-50%);white-space:nowrap;background:${PRIMARY_BORDER};color:#fff;font-size:10px;font-weight:600;padding:2px 6px;border-radius:10px;box-shadow:0 1px 4px rgba(0,0,0,0.2);font-family:'Open Sans',sans-serif;">${label}</div>`
+      : "";
+    const html = `<div class="company-marker" style="position:relative;width:${size}px;height:${totalH}px;cursor:pointer;"><div style="position:relative;width:${size}px;height:${size}px;background-color:#FFFFFF;border-radius:50%;display:flex;align-items:center;justify-content:center;transition:transform 0.2s ease;box-shadow:0 2px 8px rgba(0,0,0,0.15),0 1px 3px rgba(0,0,0,0.1);border:2px solid ${PRIMARY_BORDER};overflow:hidden;"><img src="${safeSrc}" alt="Job" style="width:100%;height:100%;object-fit:cover;" onerror="this.onerror=null;this.src='${DEFAULT_LOGO}';" /></div>${badgeHtml}</div>`;
     return L.divIcon({
       html,
       className: "custom-pindrop-marker",
-      iconSize: [size, size],
-      iconAnchor: [size / 2, size],
-      popupAnchor: [0, -size - 10],
+      iconSize: [size, totalH],
+      iconAnchor: [size / 2, totalH],
+      popupAnchor: [0, -totalH - 10],
     });
   };
 
-  const createOrgIconMarker = (L, size = 50) => {
+  const createOrgIconMarker = (L, size = 50, jobCount = 0) => {
+    const badgeHeight = 20;
+    const totalH = size + (jobCount > 0 ? badgeHeight : 0);
+    const label = jobCount === 1 ? "1 position open" : `${jobCount} positions open`;
+    const badgeHtml = jobCount > 0
+      ? `<div style="position:absolute;left:50%;top:${size}px;transform:translateX(-50%);white-space:nowrap;background:${PRIMARY_BORDER};color:#fff;font-size:10px;font-weight:600;padding:2px 6px;border-radius:10px;box-shadow:0 1px 4px rgba(0,0,0,0.2);font-family:'Open Sans',sans-serif;">${label}</div>`
+      : "";
     const html = `
-      <div style="
-        width: ${size}px;
-        height: ${size}px;
-        border-radius: 50%;
-        background: linear-gradient(135deg, #F84416 0%, #FF6B47 100%);
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        border: 3px solid white;
-        box-shadow: 0 2px 8px rgba(0,0,0,0.2);
-      ">
-        <svg width="${size * 0.6}" height="${size * 0.6}" viewBox="0 0 32 32" fill="white">
-          <path d="M16 2C14.3 2 13 3.3 13 5s1.3 3 3 3 3-1.3 3-3-1.3-3-3-3zM8 8C6.3 8 5 9.3 5 11s1.3 3 3 3 3-1.3 3-3-1.3-3-3-3zM24 8c-1.7 0-3 1.3-3 3s1.3 3 3 3 3-1.3 3-3-1.3-3-3-3zM16 14c-3.3 0-6 2.7-6 6v10h12V20c0-3.3-2.7-6-6-6z"/>
-        </svg>
+      <div style="position:relative;width:${size}px;height:${totalH}px;">
+        <div style="
+          width: ${size}px;
+          height: ${size}px;
+          border-radius: 50%;
+          background: linear-gradient(135deg, #F84416 0%, #FF6B47 100%);
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          border: 3px solid white;
+          box-shadow: 0 2px 8px rgba(0,0,0,0.2);
+        ">
+          <svg width="${size * 0.6}" height="${size * 0.6}" viewBox="0 0 32 32" fill="white">
+            <path d="M16 2C14.3 2 13 3.3 13 5s1.3 3 3 3 3-1.3 3-3-1.3-3-3-3zM8 8C6.3 8 5 9.3 5 11s1.3 3 3 3 3-1.3 3-3-1.3-3-3-3zM24 8c-1.7 0-3 1.3-3 3s1.3 3 3 3 3-1.3 3-3-1.3-3-3-3zM16 14c-3.3 0-6 2.7-6 6v10h12V20c0-3.3-2.7-6-6-6z"/>
+          </svg>
+        </div>
+        ${badgeHtml}
       </div>
     `;
     return L.divIcon({
       html,
       className: "custom-org-marker",
-      iconSize: [size, size],
-      iconAnchor: [size / 2, size],
-      popupAnchor: [0, -size - 10],
+      iconSize: [size, totalH],
+      iconAnchor: [size / 2, totalH],
+      popupAnchor: [0, -totalH - 10],
     });
   };
 
@@ -1584,6 +1668,25 @@ const MapComponent = () => {
       }
     };
   }, [isClient]);
+
+  // "Locate me on map" from sidebar profile: zoom to user location when flag is set
+  useEffect(() => {
+    if (!mapReady || !mapInstanceRef.current || typeof window === "undefined") return;
+    const flag = sessionStorage.getItem("locateMeOnMap");
+    if (!flag) return;
+    sessionStorage.removeItem("locateMeOnMap");
+    if (!navigator.geolocation) return;
+    navigator.geolocation.getCurrentPosition(
+      (pos) => {
+        const map = mapInstanceRef.current;
+        if (!map) return;
+        const { latitude, longitude } = pos.coords;
+        map.flyTo([latitude, longitude], 14, { duration: 0.8 });
+      },
+      () => {},
+      { enableHighAccuracy: true, timeout: 10000, maximumAge: 0 }
+    );
+  }, [mapReady]);
 
   // Add markers when locations data and map are ready (companies only when in company mode)
   useEffect(() => {
@@ -1743,7 +1846,10 @@ const MapComponent = () => {
         // Create company markers
         companies.forEach((company, index) => {
           const companyLogoUrl = company.logoPath || company.logoUrl || null;
-          const customIcon = createGeminiJobIcon(L, 50, companyLogoUrl);
+          const positionsOpen = company.jobCount ?? 0;
+          const customIcon = companyLogoUrl
+            ? createGeminiJobIcon(L, 50, companyLogoUrl, positionsOpen)
+            : createOrgIconMarker(L, 50, positionsOpen);
           const companyName = company.company_name || company.name || "Company";
 
           const marker = L.marker([company.lat, company.lon], {
@@ -1821,6 +1927,8 @@ const MapComponent = () => {
                 direction: 'top',
                 className: 'cluster-tooltip',
                 offset: [0, -10],
+                interactive: false,
+                opacity: 1,
               }).openTooltip();
             }
           } catch (error) {

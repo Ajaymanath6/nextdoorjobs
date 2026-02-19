@@ -3,7 +3,7 @@
 import { useState, useEffect, useRef } from "react";
 import { useRouter } from "next/navigation";
 import { useUser, useClerk } from "@clerk/nextjs";
-import { WatsonHealthRotate_360, List, UserAvatar, User, Settings, Logout, EarthFilled, Chat, ArrowLeft } from "@carbon/icons-react";
+import { WatsonHealthRotate_360, List, UserAvatar, User, Settings, Logout, EarthFilled, Chat, ArrowLeft, Location } from "@carbon/icons-react";
 import ChatInterface from "../components/Onboarding/ChatInterface";
 import SettingsModal from "../components/SettingsModal";
 import EmailAuthForm from "../components/Onboarding/EmailAuthForm";
@@ -1870,13 +1870,13 @@ setCurrentField(GIG_FIELDS.CUSTOMERS_TILL_DATE);
         </div>
       )}
       
-      <div className="relative z-10 flex justify-center px-4" style={{ height: '100dvh', width: '100vw', margin: 0, padding: 0, paddingBottom: 'env(safe-area-inset-bottom, 0)' }}>
-        <div className="bg-white/95 backdrop-blur-sm rounded-lg overflow-visible border border-[#E5E5E5] shadow-lg relative w-full max-w-4xl flex flex-col" style={{ height: '100%', margin: 0, padding: 0, minHeight: 0 }}>
+      <div className="relative z-10 flex justify-center px-4 h-[100dvh] w-screen m-0 p-0 pb-[env(safe-area-inset-bottom,0)]">
+        <div className="bg-white/95 backdrop-blur-sm rounded-lg overflow-visible border border-brand-stroke-weak shadow-lg relative w-full max-w-4xl flex flex-col h-full m-0 p-0 min-h-0">
           {/* Header - overflow-visible and high z so dropdowns overlay chat */}
-          <div className="bg-white/95 backdrop-blur-sm px-6 py-4 flex items-center justify-between border-b border-[#E5E5E5] relative z-30 flex-shrink-0 overflow-visible">
+          <div className="bg-white/95 backdrop-blur-sm px-6 py-4 flex items-center justify-between border-b border-brand-stroke-weak relative z-30 flex-shrink-0 overflow-visible">
             <div className="flex items-center gap-3">
               {/* Globe | Chat toggle - straight line, two options side by side */}
-              <div className="flex items-center bg-white border border-[#E5E5E5] overflow-hidden rounded-md shrink-0">
+              <div className="flex items-center bg-brand-bg-white border border-brand-stroke-weak overflow-hidden rounded-full shrink-0">
                 <button
                   type="button"
                   onClick={() => {
@@ -1884,11 +1884,11 @@ setCurrentField(GIG_FIELDS.CUSTOMERS_TILL_DATE);
                     router.push("/");
                   }}
                   aria-label="Map view"
-                  className="flex items-center gap-1.5 px-3 py-2 border-0 rounded-l-md rounded-r-none bg-transparent hover:bg-gray-50 transition-colors"
+                  className="flex items-center gap-1.5 px-3 py-2 border-0 rounded-l-md rounded-r-none bg-transparent hover:bg-brand-bg-fill transition-colors"
                 >
-                  <ArrowLeft size={16} className="w-4 h-4 shrink-0 text-[#575757]" />
-                  <EarthFilled size={20} className="w-5 h-5 shrink-0 text-[#575757]" />
-                  <span className="text-sm font-medium text-[#575757]">Map</span>
+                  <ArrowLeft size={16} className="w-4 h-4 shrink-0 text-brand-text-weak" />
+                  <EarthFilled size={20} className="w-5 h-5 shrink-0 text-brand-text-weak" />
+                  <span className="text-sm font-medium text-brand-text-weak">Map</span>
                 </button>
                 <button
                   type="button"
@@ -1903,10 +1903,10 @@ setCurrentField(GIG_FIELDS.CUSTOMERS_TILL_DATE);
             <div className="flex items-center gap-3">
               <button
                 onClick={handleResetChat}
-                className="p-2 rounded-lg hover:bg-gray-100 transition-colors"
+                className="p-2 rounded-lg hover:bg-brand-bg-fill transition-colors"
                 title="Restart chat"
               >
-                <WatsonHealthRotate_360 size={20} style={{ color: "#575757" }} />
+                <WatsonHealthRotate_360 size={20} className="text-brand-text-weak" />
               </button>
               <button
                 type="button"
@@ -2050,6 +2050,18 @@ setCurrentField(GIG_FIELDS.CUSTOMERS_TILL_DATE);
                       >
                         <Settings size={20} className="text-brand-stroke-strong" />
                         <span>Settings</span>
+                      </button>
+                      <button
+                        type="button"
+                        className="w-full text-left px-4 py-2 text-brand-text-strong hover:bg-brand-bg-fill rounded transition-colors flex items-center gap-2"
+                        onClick={() => {
+                          setShowUserDropdown(false);
+                          if (typeof sessionStorage !== "undefined") sessionStorage.setItem("locateMeOnMap", "1");
+                          router.push("/");
+                        }}
+                      >
+                        <Location size={20} className="text-brand-stroke-strong" />
+                        <span>Locate me on map</span>
                       </button>
                       <div className="border-t border-brand-stroke-weak my-1" />
                       <button

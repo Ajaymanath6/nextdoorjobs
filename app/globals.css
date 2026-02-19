@@ -148,11 +148,22 @@ body {
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15) !important;
   font-family: "Open Sans", sans-serif !important;
   pointer-events: none !important;
+  z-index: 10000 !important;
+  opacity: 1 !important;
+  visibility: visible !important;
 }
 
 .cluster-tooltip .leaflet-tooltip-content {
   margin: 0 !important;
   padding: 0 !important;
+}
+
+/* Ensure Leaflet tooltips are visible */
+.leaflet-tooltip.cluster-tooltip {
+  z-index: 10000 !important;
+  opacity: 1 !important;
+  visibility: visible !important;
+  display: block !important;
 }
 
 /* No Companies Found Message */
