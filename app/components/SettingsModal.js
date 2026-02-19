@@ -237,6 +237,17 @@ export default function SettingsModal({ isOpen, onClose }) {
     if (resumeSuccess) setResumeSuccess(false);
   };
 
+  // Input validation helpers
+  const handleNumericInput = (value) => {
+    // Only allow digits
+    return value.replace(/[^0-9]/g, '');
+  };
+
+  const handleTextInput = (value) => {
+    // Only allow letters, spaces, hyphens, apostrophes, periods, and commas
+    return value.replace(/[^a-zA-Z\s\-'.,]/g, '');
+  };
+
   const saveResume = async () => {
     setResumeSaving(true);
     setResumeError(null);
@@ -570,7 +581,7 @@ export default function SettingsModal({ isOpen, onClose }) {
             </nav>
 
             {/* Main content - no left border */}
-            <div className="flex-1 min-h-0 overflow-y-auto px-4 pt-6 pb-6">
+            <div className="flex-1 min-h-0 overflow-y-auto px-4 pt-6 pb-6 settings-modal-content">
               {loading ? (
                 <p className="text-brand-text-weak">Loading…</p>
               ) : activeSection === "general" ? (
@@ -681,9 +692,14 @@ export default function SettingsModal({ isOpen, onClose }) {
                               if (user.homeDistrict) parts.push(user.homeDistrict);
                               if (user.homeState) parts.push(user.homeState);
                               return (
-                                <span className="text-sm text-brand-text-strong">
-                                  {parts.length > 0 ? parts.join(", ") : "Location set"}
-                                </span>
+                                <div className="flex flex-col items-end gap-1">
+                                  <span className="text-sm text-brand-text-strong">
+                                    {parts.length > 0 ? parts.join(", ") : "Location set"}
+                                  </span>
+                                  <span className="text-xs text-brand-text-weak">
+                                    Coordinates: {user.homeLatitude}, {user.homeLongitude}
+                                  </span>
+                                </div>
                               );
                             }
                             // Priority 2: First gig location
@@ -694,9 +710,16 @@ export default function SettingsModal({ isOpen, onClose }) {
                               if (firstGigForLocation.state) parts.push(firstGigForLocation.state);
                               if (firstGigForLocation.pincode) parts.push(`Pincode: ${firstGigForLocation.pincode}`);
                               return (
-                                <span className="text-sm text-brand-text-strong">
-                                  {parts.length > 0 ? parts.join(", ") : "Location set"}
-                                </span>
+                                <div className="flex flex-col items-end gap-1">
+                                  <span className="text-sm text-brand-text-strong">
+                                    {parts.length > 0 ? parts.join(", ") : "Location set"}
+                                  </span>
+                                  {(firstGigForLocation.latitude || firstGigForLocation.longitude) && (
+                                    <span className="text-xs text-brand-text-weak">
+                                      Coordinates: {firstGigForLocation.latitude || "N/A"}, {firstGigForLocation.longitude || "N/A"}
+                                    </span>
+                                  )}
+                                </div>
                               );
                             }
                             // Empty state
@@ -943,15 +966,6 @@ export default function SettingsModal({ isOpen, onClose }) {
                       Current file: {resume.resumeFilePath.split("/").pop()}
                     </p>
                   )}
-                  {resume && (resume.firstName || resume.lastName || resume.currentPosition || resume.resumeFilePath || (resume.workExperiences && resume.workExperiences.length) || (resume.educations && resume.educations.length)) && (
-                    <button
-                      type="button"
-                      onClick={() => setShowViewResumeModal(true)}
-                      className="text-sm font-medium text-brand underline underline-offset-2 hover:opacity-80"
-                    >
-                      View resume
-                    </button>
-                  )}
                   {resumeLoading ? (
                     <p className="text-brand-text-weak">Loading resume…</p>
                   ) : (
@@ -961,7 +975,7 @@ export default function SettingsModal({ isOpen, onClose }) {
                           <label className="block text-sm text-brand-text-strong mb-1">First Name</label>
                           <input
                             value={resumeForm.firstName}
-                            onChange={(e) => setResumeForm((f) => ({ ...f, firstName: e.target.value }))}
+                            onChange={(e) => setResumeForm((f) => ({ ...f, firstName: handleTextInput(e.target.value) }))}
                             className={inputClass}
                             placeholder="First name"
                           />
@@ -970,7 +984,7 @@ export default function SettingsModal({ isOpen, onClose }) {
                           <label className="block text-sm text-brand-text-strong mb-1">Last Name</label>
                           <input
                             value={resumeForm.lastName}
-                            onChange={(e) => setResumeForm((f) => ({ ...f, lastName: e.target.value }))}
+                            onChange={(e) => setResumeForm((f) => ({ ...f, lastName: handleTextInput(e.target.value) }))}
                             className={inputClass}
                             placeholder="Last name"
                           />
@@ -991,7 +1005,7 @@ export default function SettingsModal({ isOpen, onClose }) {
                         <label className="block text-sm text-brand-text-strong mb-1">Current position</label>
                         <input
                           value={resumeForm.currentPosition}
-                          onChange={(e) => setResumeForm((f) => ({ ...f, currentPosition: e.target.value }))}
+                          onChange={(e) => setResumeForm((f) => ({ ...f, currentPosition: handleTextInput(e.target.value) }))}
                           className={inputClass}
                           placeholder="e.g. Software Engineer"
                         />
@@ -1000,7 +1014,7 @@ export default function SettingsModal({ isOpen, onClose }) {
                         <label className="block text-sm text-brand-text-strong mb-1">Years of experience</label>
                         <input
                           value={resumeForm.yearsExperience}
-                          onChange={(e) => setResumeForm((f) => ({ ...f, yearsExperience: e.target.value }))}
+                          onChange={(e) => setResumeForm((f) => ({ ...f, yearsExperience: handleNumericInput(e.target.value) }))}
                           className={inputClass}
                           placeholder="e.g. 5"
                         />
@@ -1031,7 +1045,7 @@ export default function SettingsModal({ isOpen, onClose }) {
                                 setResumeForm((f) => ({
                                   ...f,
                                   workExperiences: f.workExperiences.map((x, i) =>
-                                    i === idx ? { ...x, companyName: e.target.value } : x
+                                    i === idx ? { ...x, companyName: handleTextInput(e.target.value) } : x
                                   ),
                                 }))
                               }
@@ -1057,7 +1071,7 @@ export default function SettingsModal({ isOpen, onClose }) {
                                 setResumeForm((f) => ({
                                   ...f,
                                   workExperiences: f.workExperiences.map((x, i) =>
-                                    i === idx ? { ...x, position: e.target.value } : x
+                                    i === idx ? { ...x, position: handleTextInput(e.target.value) } : x
                                   ),
                                 }))
                               }
@@ -1070,7 +1084,7 @@ export default function SettingsModal({ isOpen, onClose }) {
                                 setResumeForm((f) => ({
                                   ...f,
                                   workExperiences: f.workExperiences.map((x, i) =>
-                                    i === idx ? { ...x, duties: e.target.value } : x
+                                    i === idx ? { ...x, duties: handleTextInput(e.target.value) } : x
                                   ),
                                 }))
                               }
@@ -1083,7 +1097,7 @@ export default function SettingsModal({ isOpen, onClose }) {
                                 setResumeForm((f) => ({
                                   ...f,
                                   workExperiences: f.workExperiences.map((x, i) =>
-                                    i === idx ? { ...x, year: e.target.value } : x
+                                    i === idx ? { ...x, year: handleNumericInput(e.target.value) } : x
                                   ),
                                 }))
                               }
@@ -1132,7 +1146,7 @@ export default function SettingsModal({ isOpen, onClose }) {
                                 setResumeForm((f) => ({
                                   ...f,
                                   educations: f.educations.map((x, i) =>
-                                    i === idx ? { ...x, universityName: ev.target.value } : x
+                                    i === idx ? { ...x, universityName: handleTextInput(ev.target.value) } : x
                                   ),
                                 }))
                               }
@@ -1145,7 +1159,7 @@ export default function SettingsModal({ isOpen, onClose }) {
                                 setResumeForm((f) => ({
                                   ...f,
                                   educations: f.educations.map((x, i) =>
-                                    i === idx ? { ...x, streamName: ev.target.value } : x
+                                    i === idx ? { ...x, streamName: handleTextInput(ev.target.value) } : x
                                   ),
                                 }))
                               }
@@ -1158,7 +1172,7 @@ export default function SettingsModal({ isOpen, onClose }) {
                                 setResumeForm((f) => ({
                                   ...f,
                                   educations: f.educations.map((x, i) =>
-                                    i === idx ? { ...x, marksOrScore: ev.target.value } : x
+                                    i === idx ? { ...x, marksOrScore: handleNumericInput(ev.target.value) } : x
                                   ),
                                 }))
                               }
@@ -1171,7 +1185,7 @@ export default function SettingsModal({ isOpen, onClose }) {
                                 setResumeForm((f) => ({
                                   ...f,
                                   educations: f.educations.map((x, i) =>
-                                    i === idx ? { ...x, yearOfPassing: ev.target.value } : x
+                                    i === idx ? { ...x, yearOfPassing: handleNumericInput(ev.target.value) } : x
                                   ),
                                 }))
                               }
@@ -1240,14 +1254,26 @@ export default function SettingsModal({ isOpen, onClose }) {
                           <p className="text-sm text-brand-text-strong">Resume saved successfully!</p>
                         </div>
                       )}
-                      <button
-                        type="button"
-                        onClick={saveResume}
-                        disabled={resumeSaving}
-                        className="px-4 py-2 rounded-md bg-brand text-brand-bg-white hover:bg-brand-hover font-medium text-sm disabled:opacity-50"
-                      >
-                        {resumeSaving ? "Saving…" : "Save resume"}
-                      </button>
+                      <div className="flex items-center gap-3">
+                        <button
+                          type="button"
+                          onClick={saveResume}
+                          disabled={resumeSaving}
+                          className="px-4 py-2 rounded-md bg-brand text-brand-bg-white hover:bg-brand-hover font-medium text-sm disabled:opacity-50"
+                        >
+                          {resumeSaving ? "Saving…" : "Save resume"}
+                        </button>
+                        {resume && (resume.firstName || resume.lastName || resume.currentPosition || resume.resumeFilePath || (resume.workExperiences && resume.workExperiences.length) || (resume.educations && resume.educations.length)) && (
+                          <button
+                            type="button"
+                            onClick={() => setShowViewResumeModal(true)}
+                            className="inline-flex items-center gap-2 px-4 py-2 rounded-md border border-brand-stroke-border text-brand-text-strong hover:bg-brand-bg-fill text-sm font-medium transition-colors"
+                          >
+                            <Document size={16} className="shrink-0" />
+                            View Resume
+                          </button>
+                        )}
+                      </div>
                     </>
                   )}
                 </div>
