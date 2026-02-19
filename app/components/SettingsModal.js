@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect, useRef } from "react";
+import { useRouter } from "next/navigation";
 import Modal from "./Modal";
 import {
   Close,
@@ -28,6 +29,7 @@ const SECTIONS = [
 ];
 
 export default function SettingsModal({ isOpen, onClose }) {
+  const router = useRouter();
   const [activeSection, setActiveSection] = useState("general");
   const [user, setUser] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -45,6 +47,7 @@ export default function SettingsModal({ isOpen, onClose }) {
   const [companyLogoError, setCompanyLogoError] = useState(null);
   const [showLocationEditModal, setShowLocationEditModal] = useState(false);
   const [showViewResumeModal, setShowViewResumeModal] = useState(false);
+  const [firstGigForLocation, setFirstGigForLocation] = useState(null);
   const fileInputRef = useRef(null);
   const companyLogoInputRef = useRef(null);
   const resumeFileInputRef = useRef(null);
@@ -118,6 +121,35 @@ export default function SettingsModal({ isOpen, onClose }) {
       })
       .catch(() => {});
   };
+
+  // Fetch first gig for location display when General section is open and user is Individual with no home
+  useEffect(() => {
+    if (!isOpen || activeSection !== "general" || user?.accountType !== "Individual") {
+      setFirstGigForLocation(null);
+      return;
+    }
+    // Only fetch if user has no home location
+    if (user?.homeLatitude == null && user?.homeLongitude == null) {
+      fetch("/api/gigs?mine=1", { credentials: "same-origin" })
+        .then((res) => (res.ok ? res.json() : null))
+        .then((data) => {
+          if (data?.success && Array.isArray(data.gigs) && data.gigs.length > 0) {
+            const firstGig = data.gigs[0];
+            // Only store if gig has location data
+            if (firstGig.district || firstGig.state || firstGig.locality || firstGig.pincode) {
+              setFirstGigForLocation(firstGig);
+            } else {
+              setFirstGigForLocation(null);
+            }
+          } else {
+            setFirstGigForLocation(null);
+          }
+        })
+        .catch(() => setFirstGigForLocation(null));
+    } else {
+      setFirstGigForLocation(null);
+    }
+  }, [isOpen, activeSection, user?.accountType, user?.homeLatitude, user?.homeLongitude]);
 
   useEffect(() => {
     if (!isOpen || activeSection !== "resume" || user?.accountType !== "Individual") return;
@@ -563,6 +595,68 @@ export default function SettingsModal({ isOpen, onClose }) {
                       className="w-48 rounded-lg border border-brand-stroke-border px-3 py-2 text-sm text-brand-text-strong placeholder:text-brand-text-placeholder focus:outline-none focus:ring-2 focus:ring-brand"
                     />
                   </div>
+
+                  {/* Location - Only for Individual/Gig Worker accounts */}
+                  {user?.accountType === "Individual" && (
+                    <>
+                      <div className="border-t border-brand-stroke-weak" />
+                      <div className="flex items-center justify-between gap-4 py-2">
+                        <span className="text-sm text-brand-text-strong">
+                          Location
+                        </span>
+                        <div className="flex items-center gap-2">
+                          {(() => {
+                            // Priority 1: Home location
+                            if (user?.homeLatitude != null && user?.homeLongitude != null) {
+                              const parts = [];
+                              if (user.homeLocality) parts.push(user.homeLocality);
+                              if (user.homeDistrict) parts.push(user.homeDistrict);
+                              if (user.homeState) parts.push(user.homeState);
+                              return (
+                                <span className="text-sm text-brand-text-strong">
+                                  {parts.length > 0 ? parts.join(", ") : "Location set"}
+                                </span>
+                              );
+                            }
+                            // Priority 2: First gig location
+                            if (firstGigForLocation) {
+                              const parts = [];
+                              if (firstGigForLocation.locality) parts.push(firstGigForLocation.locality);
+                              if (firstGigForLocation.district) parts.push(firstGigForLocation.district);
+                              if (firstGigForLocation.state) parts.push(firstGigForLocation.state);
+                              if (firstGigForLocation.pincode) parts.push(`Pincode: ${firstGigForLocation.pincode}`);
+                              return (
+                                <span className="text-sm text-brand-text-strong">
+                                  {parts.length > 0 ? parts.join(", ") : "Location set"}
+                                </span>
+                              );
+                            }
+                            // Empty state
+                            return (
+                              <div className="flex flex-col items-end gap-1 text-right">
+                                <span className="text-sm text-brand-text-weak">
+                                  No location set. Set your location on the map so companies can find you.
+                                </span>
+                                <button
+                                  type="button"
+                                  onClick={() => {
+                                    if (typeof window !== "undefined") {
+                                      sessionStorage.setItem("openAddHomeModal", "1");
+                                    }
+                                    onClose();
+                                    router.push("/");
+                                  }}
+                                  className="text-sm font-medium text-brand underline underline-offset-2 hover:opacity-80"
+                                >
+                                  Set location on map
+                                </button>
+                              </div>
+                            );
+                          })()}
+                        </div>
+                      </div>
+                    </>
+                  )}
 
                   {/* Job Seeker Toggle - Only for Individual/Gig Worker accounts */}
                   {user?.accountType === "Individual" && (

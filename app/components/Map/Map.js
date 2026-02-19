@@ -1819,6 +1819,16 @@ const MapComponent = () => {
     return () => window.removeEventListener("locateMeOnMap", onLocateMe);
   }, [mapReady]);
 
+  // Check for openAddHomeModal flag from Settings
+  useEffect(() => {
+    if (typeof window === "undefined" || !isClient) return;
+    const flag = sessionStorage.getItem("openAddHomeModal");
+    if (flag === "1") {
+      sessionStorage.removeItem("openAddHomeModal");
+      setShowAddHomeModal(true);
+    }
+  }, [isClient]);
+
   // Add markers when locations data and map are ready (companies only when in company mode)
   useEffect(() => {
     if (!mapInstanceRef.current || !locationsData) {
