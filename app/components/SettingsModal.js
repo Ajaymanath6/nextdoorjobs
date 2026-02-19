@@ -55,6 +55,8 @@ export default function SettingsModal({ isOpen, onClose }) {
   const [resumeLoading, setResumeLoading] = useState(false);
   const [resumeSaving, setResumeSaving] = useState(false);
   const [resumeUploading, setResumeUploading] = useState(false);
+  const [resumeError, setResumeError] = useState(null);
+  const [resumeSuccess, setResumeSuccess] = useState(false);
   const [resumeForm, setResumeForm] = useState({
     firstName: "",
     lastName: "",
@@ -229,8 +231,16 @@ export default function SettingsModal({ isOpen, onClose }) {
     }
   };
 
+  // Clear error/success messages when user starts editing
+  const clearResumeMessages = () => {
+    if (resumeError) setResumeError(null);
+    if (resumeSuccess) setResumeSuccess(false);
+  };
+
   const saveResume = async () => {
     setResumeSaving(true);
+    setResumeError(null);
+    setResumeSuccess(false);
     try {
       const res = await fetch("/api/profile/resume", {
         method: "PATCH",
@@ -264,10 +274,56 @@ export default function SettingsModal({ isOpen, onClose }) {
           currentSalaryVisibleToRecruiter: resumeForm.currentSalaryVisibleToRecruiter,
         }),
       });
-      const data = await res.json().catch(() => ({}));
-      if (data.success && data.resume) setResume(data.resume);
+
+      if (!res.ok) {
+        const errorData = await res.json().catch(() => ({ error: `HTTP ${res.status}` }));
+        throw new Error(errorData.error || errorData.details || `Failed to save resume (${res.status})`);
+      }
+
+      const data = await res.json();
+      if (data.success && data.resume) {
+        setResume(data.resume);
+        // Update form state with saved data to ensure form reflects what was saved
+        const work = (data.resume.workExperiences && data.resume.workExperiences.length)
+          ? data.resume.workExperiences
+          : [{ companyName: "", companyUrl: "", position: "", duties: "", year: "" }];
+        const edu = (data.resume.educations && data.resume.educations.length)
+          ? data.resume.educations
+          : [{ universityName: "", streamName: "", marksOrScore: "", yearOfPassing: "" }];
+        setResumeForm({
+          firstName: data.resume.firstName ?? "",
+          lastName: data.resume.lastName ?? "",
+          emailOverride: data.resume.emailOverride != null && data.resume.emailOverride !== ""
+            ? data.resume.emailOverride
+            : (user?.email ?? ""),
+          currentPosition: data.resume.currentPosition ?? "",
+          yearsExperience: data.resume.yearsExperience ?? "",
+          workExperiences: work.map((w) => ({
+            companyName: w.companyName ?? "",
+            companyUrl: w.companyUrl ?? "",
+            position: w.position ?? "",
+            duties: w.duties ?? "",
+            year: w.year ?? "",
+          })),
+          educations: edu.map((e) => ({
+            universityName: e.universityName ?? "",
+            streamName: e.streamName ?? "",
+            marksOrScore: e.marksOrScore ?? "",
+            yearOfPassing: e.yearOfPassing ?? "",
+          })),
+          expectedSalaryPackage: data.resume.expectedSalaryPackage ?? "",
+          currentSalaryPackage: data.resume.currentSalaryPackage ?? "",
+          currentSalaryVisibleToRecruiter: data.resume.currentSalaryVisibleToRecruiter ?? false,
+        });
+        setResumeSuccess(true);
+        // Clear success message after 3 seconds
+        setTimeout(() => setResumeSuccess(false), 3000);
+      } else {
+        throw new Error(data.error || "Failed to save resume");
+      }
     } catch (err) {
       console.error("Resume save error:", err);
+      setResumeError(err.message || "Failed to save resume. Please try again.");
     } finally {
       setResumeSaving(false);
     }
@@ -1160,6 +1216,18 @@ export default function SettingsModal({ isOpen, onClose }) {
                           </div>
                         </div>
                       </div>
+                      {/* Error message */}
+                      {resumeError && (
+                        <div className="mb-4 rounded-lg border border-brand-stroke-border bg-brand-bg-fill px-4 py-3">
+                          <p className="text-sm text-brand-text-strong">{resumeError}</p>
+                        </div>
+                      )}
+                      {/* Success message */}
+                      {resumeSuccess && (
+                        <div className="mb-4 rounded-lg border border-brand-stroke-border bg-brand-bg-fill px-4 py-3">
+                          <p className="text-sm text-brand-text-strong">Resume saved successfully!</p>
+                        </div>
+                      )}
                       <button
                         type="button"
                         onClick={saveResume}
