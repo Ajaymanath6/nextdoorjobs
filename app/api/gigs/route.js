@@ -136,11 +136,45 @@ export async function GET(request) {
           ],
         };
 
-        if (filters.state) whereClause.homeState = filters.state;
-        if (filters.district) whereClause.homeDistrict = filters.district;
+        // Only apply location filters if they're provided and not empty
+        // Note: These filters apply to home location; gig location filtering happens in the include
+        if (filters.state && filters.state.trim()) {
+          // Apply state filter to home location branch of OR
+          whereClause.OR[0].homeState = filters.state;
+          // For gig location branch, filter gigs by state
+          whereClause.OR[1] = {
+            gigs: {
+              some: {
+                latitude: { not: null },
+                longitude: { not: null },
+                state: filters.state,
+              },
+            },
+          };
+        }
+        if (filters.district && filters.district.trim()) {
+          // Apply district filter to home location branch
+          whereClause.OR[0].homeDistrict = filters.district;
+          // Update gig location branch to include district filter
+          if (whereClause.OR[1].gigs && whereClause.OR[1].gigs.some) {
+            whereClause.OR[1].gigs.some.district = filters.district;
+          } else {
+            whereClause.OR[1] = {
+              gigs: {
+                some: {
+                  latitude: { not: null },
+                  longitude: { not: null },
+                  ...(filters.state && filters.state.trim() ? { state: filters.state } : {}),
+                  district: filters.district,
+                },
+              },
+            };
+          }
+        }
 
         if (process.env.NODE_ENV === "development") {
           console.log("[GET /api/gigs] Company branch: Fetching job seekers with filters:", filters);
+          console.log("[GET /api/gigs] Where clause:", JSON.stringify(whereClause, null, 2));
         }
 
         const jobSeekers = await prisma.user.findMany({
@@ -162,6 +196,16 @@ export async function GET(request) {
 
         if (process.env.NODE_ENV === "development") {
           console.log("[GET /api/gigs] Found job seekers:", jobSeekers.length);
+          if (jobSeekers.length > 0) {
+            console.log("[GET /api/gigs] Sample seeker:", {
+              id: jobSeekers[0].id,
+              name: jobSeekers[0].name,
+              isJobSeeker: jobSeekers[0].isJobSeeker,
+              hasHome: !!(jobSeekers[0].homeLatitude && jobSeekers[0].homeLongitude),
+              hasGigs: jobSeekers[0].gigs?.length > 0,
+              gigCoords: jobSeekers[0].gigs?.[0] ? { lat: jobSeekers[0].gigs[0].latitude, lon: jobSeekers[0].gigs[0].longitude } : null,
+            });
+          }
         }
 
         // Transform: use home coords if set, else first gig's coords; only include if we have valid lat/lon
@@ -169,6 +213,17 @@ export async function GET(request) {
           .map((seeker) => {
             const lat = seeker.homeLatitude ?? seeker.gigs?.[0]?.latitude;
             const lon = seeker.homeLongitude ?? seeker.gigs?.[0]?.longitude;
+            if (process.env.NODE_ENV === "development" && (lat == null || lon == null)) {
+              console.log("[GET /api/gigs] Skipping seeker (no coords):", {
+                id: seeker.id,
+                name: seeker.name,
+                homeLat: seeker.homeLatitude,
+                homeLon: seeker.homeLongitude,
+                gigsCount: seeker.gigs?.length || 0,
+                firstGigLat: seeker.gigs?.[0]?.latitude,
+                firstGigLon: seeker.gigs?.[0]?.longitude,
+              });
+            }
             if (lat == null || lon == null) return null;
             return {
               id: seeker.id,

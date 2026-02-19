@@ -1098,10 +1098,19 @@ const MapComponent = () => {
 
     const fetchGigs = () => {
       fetch("/api/gigs", { credentials: "same-origin" })
-        .then((r) => r.json())
+        .then((r) => {
+          if (!r.ok) {
+            console.error(`[Map] API error: ${r.status} ${r.statusText}`);
+            return r.json().catch(() => ({ success: false, error: `HTTP ${r.status}` }));
+          }
+          return r.json();
+        })
         .then((data) => {
           if (data.success && Array.isArray(data.gigs)) {
             console.log(`[Map] Fetched ${data.gigs.length} ${userAccountType === "Company" ? "candidates" : "gigs"} from API`);
+            if (userAccountType === "Company" && data.gigs.length === 0) {
+              console.warn("[Map] No candidates returned. Check: 1) Users have isJobSeeker=true, 2) Users have home location OR gigs with coordinates");
+            }
             setGigs(data.gigs);
             renderGigMarkers(data.gigs);
           } else {
@@ -1110,7 +1119,7 @@ const MapComponent = () => {
           // Don't render companies when in person mode - only show gig workers
         })
         .catch((err) => {
-          console.error("Error fetching gigs:", err);
+          console.error("[Map] Error fetching gigs:", err);
         });
     };
 
