@@ -18,6 +18,8 @@ export default function GigFilterDropdown({
   width = "300px",
   selectedGigType = null,
   onSelect,
+  userAccountType = null,
+  gigs = [],
 }) {
   const filterClasses = themeClasses.components.filterDropdown;
   const [searchQuery, setSearchQuery] = useState("");
@@ -39,8 +41,22 @@ export default function GigFilterDropdown({
     }
   }, [isOpen]);
 
-  // Filter service types based on search
-  const filteredTypes = SERVICE_TYPES.filter((type) =>
+  // For Company accounts, extract unique positions from candidates; otherwise use service types
+  const isCompanyAccount = userAccountType === "Company";
+  
+  const candidatePositions = isCompanyAccount && gigs.length > 0
+    ? Array.from(new Set(
+        gigs
+          .map((g) => g.resume?.currentPosition?.trim())
+          .filter(Boolean)
+          .sort()
+      ))
+    : [];
+  
+  const availableOptions = isCompanyAccount ? candidatePositions : SERVICE_TYPES;
+  
+  // Filter options based on search
+  const filteredTypes = availableOptions.filter((type) =>
     type.toLowerCase().includes(searchQuery.toLowerCase())
   );
 
@@ -81,7 +97,7 @@ export default function GigFilterDropdown({
       {/* Header */}
       <div className="flex items-center justify-between px-3 py-2 border-b border-brand-stroke-weak">
         <span className="text-sm font-semibold text-brand-text-strong" style={{ fontFamily: "Open Sans" }}>
-          Filter by Service Type
+          {isCompanyAccount ? "Filter by Position" : "Filter by Service Type"}
         </span>
         {selectedGigType && (
           <button
@@ -105,7 +121,7 @@ export default function GigFilterDropdown({
           type="text"
           value={searchQuery}
           onChange={(e) => setSearchQuery(e.target.value)}
-          placeholder="Search service types..."
+          placeholder={isCompanyAccount ? "Search positions..." : "Search service types..."}
           className={`${filterClasses["search-input"]} ${filterClasses["search-input-text"]} ${filterClasses["search-input-placeholder"]}`}
           style={{
             fontFamily: "Open Sans",
@@ -114,11 +130,11 @@ export default function GigFilterDropdown({
         />
       </div>
 
-      {/* Service Types List */}
+      {/* Options List */}
       <div
         className={`${filterClasses["states-list"]} ${filterClasses["states-list-max-height"]}`}
       >
-        {/* All Gigs option */}
+        {/* All Gigs/Positions option */}
         <button
           onClick={handleClearFilter}
           className={filterClasses["state-item"]}
@@ -131,11 +147,11 @@ export default function GigFilterDropdown({
               fontWeight: selectedGigType === null ? 600 : 500,
             }}
           >
-            All Gigs
+            {isCompanyAccount ? "All Positions" : "All Gigs"}
           </span>
         </button>
 
-        {/* Filtered service types */}
+        {/* Filtered options */}
         {filteredTypes.length > 0 ? (
           filteredTypes.map((type, index) => (
             <button
@@ -160,7 +176,7 @@ export default function GigFilterDropdown({
             className={filterClasses["empty-state"]}
             style={{ fontFamily: "Open Sans" }}
           >
-            No service types found
+            {isCompanyAccount ? "No positions found" : "No service types found"}
           </div>
         )}
       </div>

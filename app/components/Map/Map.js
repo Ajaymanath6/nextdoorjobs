@@ -726,10 +726,30 @@ const MapComponent = () => {
       return false;
     };
 
-    // Filter by selected gig type only for gig workers; candidates view shows all candidates
+    const candidateMatchesFilter = (gig, filterPosition) => {
+      if (!filterPosition) return true;
+      const position = (gig.resume?.currentPosition || "").toLowerCase().trim();
+      const filter = filterPosition.toLowerCase().trim();
+      if (!position) return false;
+      if (position === filter) return true;
+      if (position.includes(filter)) return true;
+      if (filter.includes(position)) return true;
+      // Also check individual words
+      const positionWords = position.split(/[\s&,]+/).filter(Boolean);
+      const filterWords = filter.split(/[\s&,]+/).filter(Boolean);
+      return filterWords.some((fw) => 
+        positionWords.some((pw) => pw.includes(fw) || fw.includes(pw))
+      );
+    };
+
+    // Filter by selected gig type for gig workers, or by position for Company accounts
     let filteredGigs = gigsToRender || [];
-    if (selectedGigType && userAccountType !== "Company") {
-      filteredGigs = filteredGigs.filter((g) => gigMatchesFilter(g, selectedGigType));
+    if (selectedGigType) {
+      if (userAccountType === "Company") {
+        filteredGigs = filteredGigs.filter((g) => candidateMatchesFilter(g, selectedGigType));
+      } else {
+        filteredGigs = filteredGigs.filter((g) => gigMatchesFilter(g, selectedGigType));
+      }
     }
 
     const withCoords = filteredGigs.filter(
@@ -1011,25 +1031,42 @@ const MapComponent = () => {
       const gigCount = gigs.length;
       if (gigCount === 0) return;
 
+      // For Company accounts, show candidate positions; for others, show service types
+      const isCompanyAccount = userAccountType === "Company";
+      const positions = [];
       const serviceTypes = [];
       const seen = new Set();
+      
       for (const gig of gigs) {
-        const serviceType = gig.serviceType || gig.title;
-        if (serviceType && !seen.has(serviceType.toLowerCase())) {
-          serviceTypes.push(serviceType);
-          seen.add(serviceType.toLowerCase());
+        if (isCompanyAccount && gig.resume?.currentPosition) {
+          const position = gig.resume.currentPosition.trim();
+          if (position && !seen.has(position.toLowerCase())) {
+            positions.push(position);
+            seen.add(position.toLowerCase());
+          }
+        } else {
+          const serviceType = gig.serviceType || gig.title;
+          if (serviceType && !seen.has(serviceType.toLowerCase())) {
+            serviceTypes.push(serviceType);
+            seen.add(serviceType.toLowerCase());
+          }
         }
       }
-      const displayServices = serviceTypes.slice(0, 5);
+      
+      const displayItems = isCompanyAccount ? positions.slice(0, 5) : serviceTypes.slice(0, 5);
+      const allItems = isCompanyAccount ? positions : serviceTypes;
+      const countText = isCompanyAccount 
+        ? `${gigCount} ${gigCount === 1 ? 'fulltime candidate' : 'fulltime candidates'} found`
+        : `${gigCount} ${gigCount === 1 ? 'gig worker' : 'gig workers'} available`;
 
       const tooltipContent = `
         <div style="font-family: 'Open Sans', sans-serif; padding: 8px;">
           <div style="font-weight: 600; font-size: 13px; color: #0A0A0A; margin-bottom: 6px;">
-            ${gigCount} ${gigCount === 1 ? 'gig worker' : 'gig workers'} available
+            ${countText}
           </div>
-          ${displayServices.length > 0 ? `
+          ${displayItems.length > 0 ? `
             <div style="font-size: 11px; color: #575757;">
-              ${displayServices.join(', ')}${serviceTypes.length > 5 ? '...' : ''}
+              ${displayItems.join(', ')}${allItems.length > 5 ? '...' : ''}
             </div>
           ` : ''}
         </div>
@@ -3729,7 +3766,7 @@ const MapComponent = () => {
                         title="Filter gigs by service type"
                       >
                         <Filter size={16} className="shrink-0" />
-                        <span className="max-w-[100px] truncate">{selectedGigType || "All Gigs"}</span>
+                        <span className="max-w-[100px] truncate">{selectedGigType || (userAccountType === "Company" ? "All Positions" : "All Gigs")}</span>
                         <RiArrowDownSLine size={16} className="shrink-0" />
                       </button>
                       <GigFilterDropdown
@@ -3746,6 +3783,8 @@ const MapComponent = () => {
                         width="300px"
                         selectedGigType={selectedGigType}
                         onSelect={(type) => setSelectedGigType(type)}
+                        userAccountType={userAccountType}
+                        gigs={gigs}
                       />
                     </div>
                   )}
