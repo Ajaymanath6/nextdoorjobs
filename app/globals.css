@@ -274,6 +274,13 @@ body {
 .user-location-marker-glow {
   animation: user-location-pulse 2s ease-in-out infinite;
 }
+.user-location-marker-inner {
+  width: 100%;
+  height: 100%;
+  border-radius: 50%;
+  object-fit: cover;
+  display: block;
+}
 @keyframes user-location-pulse {
   0%, 100% { opacity: 0.95; transform: scale(1); }
   50% { opacity: 1; transform: scale(1.05); }

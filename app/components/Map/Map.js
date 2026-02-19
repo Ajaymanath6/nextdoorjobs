@@ -107,6 +107,7 @@ const MapComponent = () => {
   const [selectedCompanyJobs, setSelectedCompanyJobs] = useState([]);
   const [isSwitchingToChat, setIsSwitchingToChat] = useState(false);
   const [userAccountType, setUserAccountType] = useState(null);
+  const [meUser, setMeUser] = useState(null);
   const [totalCompaniesCount, setTotalCompaniesCount] = useState(0);
 
   // Flattened company list for filter modal (main companies + per-locality companies)
@@ -1610,15 +1611,16 @@ const MapComponent = () => {
   useEffect(() => {
     setIsClient(true);
     
-    // Fetch user account type and set initial search mode
+    // Fetch user account type and set initial search mode; store user for locate-me avatar/logo
     fetch("/api/auth/me", { credentials: "same-origin" })
       .then((res) => res.ok ? res.json() : null)
       .then((data) => {
-        if (data?.user?.accountType) {
-          setUserAccountType(data.user.accountType);
-          // Set initial search mode: "person" for all account types (default)
+        const user = data?.user ?? null;
+        if (user?.accountType) {
+          setUserAccountType(user.accountType);
           setSearchMode("person");
         }
+        setMeUser(user);
       })
       .catch(() => {});
 
@@ -1718,50 +1720,87 @@ const MapComponent = () => {
     };
   }, [isClient]);
 
-  // "Locate me on map": use first gig location, else home, else show get-coordinates modal (three options)
+  // "Locate me on map": Company = first company with coords + logo; Individual = first gig, else home, else modal
   const runLocateMeOnMap = () => {
     if (!mapInstanceRef.current || !window.L) return;
 
-    const applyCoords = (lat, lng) => {
+    const applyCoords = (lat, lng, imageUrl) => {
       if (lat != null && lng != null && Number.isFinite(lat) && Number.isFinite(lng)) {
-        zoomToUserLocation({ lat, lng });
+        zoomToUserLocation({ lat, lng }, { imageUrl });
       }
     };
 
-    // 1) Try first gig location (user who posted a gig)
-    fetch("/api/gigs?mine=1", { credentials: "same-origin" })
+    const tryHomeOrModal = (imageUrl) => {
+      if (
+        homeLocation?.homeLatitude != null &&
+        homeLocation?.homeLongitude != null &&
+        Number.isFinite(Number(homeLocation.homeLatitude)) &&
+        Number.isFinite(Number(homeLocation.homeLongitude))
+      ) {
+        applyCoords(Number(homeLocation.homeLatitude), Number(homeLocation.homeLongitude), imageUrl);
+      } else {
+        setShowLocateMeCoordModal(true);
+      }
+    };
+
+    // Resolve current user then branch by account type
+    fetch("/api/auth/me", { credentials: "same-origin" })
       .then((r) => (r.ok ? r.json() : null))
       .then((data) => {
-        const first = data?.gigs?.[0];
-        if (first && first.latitude != null && first.longitude != null) {
-          applyCoords(first.latitude, first.longitude);
+        const user = data?.user ?? null;
+        const accountType = user?.accountType ?? meUser?.accountType;
+        const avatarUrl = user?.avatarUrl ?? meUser?.avatarUrl;
+
+        if (accountType === "Company") {
+          fetch("/api/onboarding/company", { credentials: "same-origin" })
+            .then((r) => (r.ok ? r.json() : null))
+            .then((companyData) => {
+              const companies = companyData?.companies ?? companyData?.company ? [companyData.company] : [];
+              const firstWithCoords = Array.isArray(companies)
+                ? companies.find((c) => c?.latitude != null && c?.longitude != null)
+                : null;
+              if (firstWithCoords) {
+                const logoUrl = firstWithCoords.logoPath ?? firstWithCoords.logoUrl ?? null;
+                applyCoords(
+                  Number(firstWithCoords.latitude),
+                  Number(firstWithCoords.longitude),
+                  logoUrl
+                );
+              } else {
+                setShowLocateMeCoordModal(true);
+              }
+            })
+            .catch(() => setShowLocateMeCoordModal(true));
           return;
         }
-        // 2) Else use home location if set
-        if (
-          homeLocation?.homeLatitude != null &&
-          homeLocation?.homeLongitude != null &&
-          Number.isFinite(Number(homeLocation.homeLatitude)) &&
-          Number.isFinite(Number(homeLocation.homeLongitude))
-        ) {
-          applyCoords(Number(homeLocation.homeLatitude), Number(homeLocation.homeLongitude));
-          return;
-        }
-        // 3) Else show modal: use device location, enter coords/link, or cancel
-        setShowLocateMeCoordModal(true);
+
+        // Individual: first gig, else home, else modal
+        fetch("/api/gigs?mine=1", { credentials: "same-origin" })
+          .then((r) => (r.ok ? r.json() : null))
+          .then((data) => {
+            const first = data?.gigs?.[0];
+            if (first && first.latitude != null && first.longitude != null) {
+              applyCoords(first.latitude, first.longitude, avatarUrl);
+              return;
+            }
+            tryHomeOrModal(avatarUrl);
+          })
+          .catch(() => tryHomeOrModal(avatarUrl));
       })
       .catch(() => {
-        // On fetch error, try home then modal
-        if (
-          homeLocation?.homeLatitude != null &&
-          homeLocation?.homeLongitude != null &&
-          Number.isFinite(Number(homeLocation.homeLatitude)) &&
-          Number.isFinite(Number(homeLocation.homeLongitude))
-        ) {
-          applyCoords(Number(homeLocation.homeLatitude), Number(homeLocation.homeLongitude));
-        } else {
-          setShowLocateMeCoordModal(true);
-        }
+        // No auth: fall back to Individual flow using meUser or no imageUrl
+        const avatarUrl = meUser?.avatarUrl;
+        fetch("/api/gigs?mine=1", { credentials: "same-origin" })
+          .then((r) => (r.ok ? r.json() : null))
+          .then((data) => {
+            const first = data?.gigs?.[0];
+            if (first && first.latitude != null && first.longitude != null) {
+              applyCoords(first.latitude, first.longitude, avatarUrl);
+              return;
+            }
+            tryHomeOrModal(avatarUrl);
+          })
+          .catch(() => tryHomeOrModal(avatarUrl));
       });
   };
 
@@ -2589,14 +2628,15 @@ const MapComponent = () => {
     return null;
   };
 
-  // Zoom map to user location and add marker
-  const zoomToUserLocation = (location) => {
+  // Zoom map to user location and add marker (options.imageUrl = avatar or company logo)
+  const zoomToUserLocation = (location, options = {}) => {
     if (!mapInstanceRef.current || !location) return;
 
     const L = window.L;
     if (!L) return;
 
     const { lat, lng } = location;
+    const imageUrl = options?.imageUrl;
 
     // Remove existing user location marker if any
     if (userLocationMarkerRef.current) {
@@ -2604,11 +2644,16 @@ const MapComponent = () => {
       userLocationMarkerRef.current = null;
     }
 
-    // Create user location marker with theme-color glow to differentiate from other gig workers
+    // Build marker content: image (avatar/logo) when provided, else pin emoji; escape URL for HTML
+    const safeImageUrl = imageUrl && typeof imageUrl === "string" ? imageUrl.replace(/"/g, "&quot;") : "";
+    const innerContent = safeImageUrl
+      ? `<img src="${safeImageUrl}" alt="" class="user-location-marker-inner" onerror="this.onerror=null;this.src='/avatars/avatar1.png';">`
+      : "📍";
+
     const themeGlow = "rgba(248, 68, 22, 0.5)";
     const themeBorder = "#F84416";
     const userLocationIcon = L.divIcon({
-      html: `<div class="user-location-marker-glow" style="background-color:${themeBorder};border-radius:50%;width:44px;height:44px;display:flex;align-items:center;justify-content:center;font-size:22px;border:3px solid #FFFFFF;box-shadow:0 0 0 4px ${themeGlow}, 0 0 20px ${themeGlow}, 0 2px 12px rgba(0,0,0,0.25);opacity:0.95;">📍</div>`,
+      html: `<div class="user-location-marker-glow" style="background-color:${themeBorder};border-radius:50%;width:44px;height:44px;display:flex;align-items:center;justify-content:center;font-size:22px;border:3px solid #FFFFFF;box-shadow:0 0 0 4px ${themeGlow}, 0 0 20px ${themeGlow}, 0 2px 12px rgba(0,0,0,0.25);opacity:0.95;">${innerContent}</div>`,
       className: "user-location-marker",
       iconSize: [44, 44],
       iconAnchor: [22, 22],
@@ -4240,7 +4285,10 @@ const MapComponent = () => {
         onClose={() => setShowLocateMeCoordModal(false)}
         onLocation={(coords) => {
           if (coords?.lat != null && coords?.lng != null) {
-            zoomToUserLocation({ lat: coords.lat, lng: coords.lng });
+            zoomToUserLocation(
+              { lat: coords.lat, lng: coords.lng },
+              { imageUrl: meUser?.avatarUrl }
+            );
           }
           setShowLocateMeCoordModal(false);
         }}
