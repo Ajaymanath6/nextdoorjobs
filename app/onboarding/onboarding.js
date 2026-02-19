@@ -1760,23 +1760,14 @@ setCurrentField(GIG_FIELDS.CUSTOMERS_TILL_DATE);
   // Show loading state while checking authentication
   if (checkingAuth) {
     return (
-      <div 
-        className="min-h-screen relative overflow-hidden"
-        style={{
-          backgroundImage: 'url(/back.png)',
-          backgroundSize: 'cover',
-          backgroundPosition: 'center',
-          backgroundRepeat: 'no-repeat',
-          backgroundColor: '#f5f5f5',
-        }}
+      <div
+        className="min-h-screen relative overflow-hidden bg-brand-bg-fill bg-cover bg-center bg-no-repeat"
+        style={{ backgroundImage: "url(/back.png)" }}
       >
         <div className="absolute inset-0 z-10 flex items-center justify-center">
           <div className="text-center">
-            <div
-              className="rounded-full h-12 w-12 border-4 loading-spinner mx-auto mb-4"
-              style={{ borderColor: "rgba(0,0,0,0.1)", borderTopColor: "#F84416" }}
-            />
-            <p className="text-gray-600" style={{ fontFamily: "Open Sans, sans-serif" }}>Loading...</p>
+            <div className="rounded-full h-12 w-12 border-4 border-brand-stroke-weak border-t-brand loading-spinner mx-auto mb-4" />
+            <p className="text-brand-text-weak font-sans">Loading...</p>
           </div>
         </div>
       </div>
@@ -1786,16 +1777,7 @@ setCurrentField(GIG_FIELDS.CUSTOMERS_TILL_DATE);
   // Show email authentication overlay (only after checking auth to avoid flash)
   if (showAuth) {
     return (
-      <div
-        className="fixed inset-0 w-full h-full overflow-hidden"
-        style={{
-          backgroundImage: "url(/back.png)",
-          backgroundSize: "cover",
-          backgroundPosition: "center",
-          backgroundRepeat: "no-repeat",
-          backgroundColor: "#f5f5f5",
-        }}
-      >
+      <div className="fixed inset-0 w-full h-full overflow-hidden bg-brand-bg-fill bg-cover bg-center bg-no-repeat" style={{ backgroundImage: "url(/back.png)" }}>
         {/* Animated bubble background above the image */}
         <ProfileBubbleBackground />
         
@@ -1861,11 +1843,8 @@ setCurrentField(GIG_FIELDS.CUSTOMERS_TILL_DATE);
 
       {/* 2s loader when navigating to map */}
       {isNavigatingToMap && (
-        <div className="fixed inset-0 z-[100] flex flex-col items-center justify-center bg-white/90" style={{ fontFamily: "Open Sans, sans-serif" }}>
-          <div
-            className="rounded-full h-12 w-12 border-4 loading-spinner mx-auto mb-4"
-            style={{ borderColor: "rgba(0,0,0,0.1)", borderTopColor: "#F84416" }}
-          />
+        <div className="fixed inset-0 z-[100] flex flex-col items-center justify-center bg-white/90 font-sans">
+          <div className="rounded-full h-12 w-12 border-4 border-brand-stroke-weak border-t-brand loading-spinner mx-auto mb-4" />
           <p className="text-brand-text-weak font-medium">Taking you to the map…</p>
         </div>
       )}
@@ -1911,23 +1890,20 @@ setCurrentField(GIG_FIELDS.CUSTOMERS_TILL_DATE);
               <button
                 type="button"
                 onClick={async () => {
-                  const newState = !listViewActive;
-                  setListViewActive(newState);
-                  
-                  if (!newState) {
-                    // Toggling off - remove the last gigList/jobList message
+                  if (listViewActive) {
+                    // Back to chat: remove list view and remove the last list message
+                    setListViewActive(false);
                     setChatMessages((prev) => {
-                      const lastIndex = prev.map((m, i) => 
+                      const lastIndex = prev.map((m, i) =>
                         (m.type === "gigList" || m.type === "jobList") ? i : -1
-                      ).filter(i => i >= 0).pop();
-                      
+                      ).filter((i) => i >= 0).pop();
                       if (lastIndex == null) return prev;
                       return prev.filter((_, i) => i !== lastIndex);
                     });
                     return;
                   }
-                  
-                  // Toggling on - fetch and show list
+                  // Switch to list view - fetch and show list
+                  setListViewActive(true);
                   try {
                     if (userData?.accountType === "Individual") {
                       const res = await fetch("/api/gigs?mine=1", { credentials: "same-origin" });
@@ -1950,9 +1926,13 @@ setCurrentField(GIG_FIELDS.CUSTOMERS_TILL_DATE);
                   }
                 }}
                 className={`p-2 rounded-lg border border-brand-stroke-border transition-colors ${listViewActive ? "bg-brand-bg-fill" : "bg-brand-bg-white hover:bg-brand-bg-fill"}`}
-                title={userData?.accountType === "Individual" ? "Your posted gigs" : "Your job postings"}
+                title={listViewActive ? "Back to chat" : (userData?.accountType === "Individual" ? "Your posted gigs" : "Your job postings")}
               >
-                <List size={20} className="text-brand-text-strong" />
+                {listViewActive ? (
+                  <Chat size={20} className="text-brand-text-strong" />
+                ) : (
+                  <List size={20} className="text-brand-text-strong" />
+                )}
               </button>
               <div className="relative" ref={languageDropdownRef}>
               <button
@@ -2030,7 +2010,7 @@ setCurrentField(GIG_FIELDS.CUSTOMERS_TILL_DATE);
                       className="h-8 w-8 rounded-full object-cover border border-brand-stroke-weak"
                     />
                   ) : (
-                    <UserAvatar size={24} style={{ color: "#575757" }} />
+                    <UserAvatar size={24} className="text-brand-stroke-strong" />
                   )}
                 </button>
                 {showUserDropdown && (

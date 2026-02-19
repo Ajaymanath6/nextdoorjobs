@@ -119,6 +119,7 @@ model User {
   companies           Company[]
   onboardingSessions  OnboardingSession[]
   gigs                Gig[]
+  resume              Resume?
 
   @@index([email])
   @@index([clerkId])
@@ -238,4 +239,54 @@ model Gig {
   @@index([district])
   @@index([pincode])
   @@map("gigs")
+}
+
+model Resume {
+  id                              Int                    @id @default(autoincrement())
+  userId                          Int                    @unique @map("user_id")
+  resumeFilePath                  String?                @map("resume_file_path") @db.VarChar(500)
+  firstName                       String?                @map("first_name") @db.VarChar(255)
+  lastName                        String?                @map("last_name") @db.VarChar(255)
+  emailOverride                   String?                @map("email_override") @db.VarChar(255)
+  currentPosition                 String?                @map("current_position") @db.VarChar(255)
+  yearsExperience                 String?                @map("years_experience") @db.VarChar(50)
+  expectedSalaryPackage           String?                @map("expected_salary_package") @db.VarChar(100)
+  currentSalaryPackage            String?                @map("current_salary_package") @db.VarChar(100)
+  currentSalaryVisibleToRecruiter Boolean?               @default(false) @map("current_salary_visible_to_recruiter")
+  createdAt                       DateTime               @default(now()) @map("created_at")
+  updatedAt                       DateTime               @updatedAt @map("updated_at")
+  user                            User                   @relation(fields: [userId], references: [id], onDelete: Cascade)
+  workExperiences                 ResumeWorkExperience[]
+  educations                      ResumeEducation[]
+
+  @@map("resumes")
+}
+
+model ResumeWorkExperience {
+  id          Int     @id @default(autoincrement())
+  resumeId    Int     @map("resume_id")
+  companyName String? @map("company_name") @db.VarChar(255)
+  companyUrl  String? @map("company_url") @db.VarChar(500)
+  position    String? @db.VarChar(255)
+  duties      String? @db.Text
+  year        String? @db.VarChar(20)
+  orderIndex  Int     @default(0) @map("order_index")
+  resume      Resume  @relation(fields: [resumeId], references: [id], onDelete: Cascade)
+
+  @@index([resumeId])
+  @@map("resume_work_experiences")
+}
+
+model ResumeEducation {
+  id            Int     @id @default(autoincrement())
+  resumeId      Int     @map("resume_id")
+  universityName String? @map("university_name") @db.VarChar(255)
+  streamName    String? @map("stream_name") @db.VarChar(255)
+  marksOrScore  String? @map("marks_or_score") @db.VarChar(100)
+  yearOfPassing String? @map("year_of_passing") @db.VarChar(20)
+  orderIndex    Int     @default(0) @map("order_index")
+  resume        Resume  @relation(fields: [resumeId], references: [id], onDelete: Cascade)
+
+  @@index([resumeId])
+  @@map("resume_educations")
 }

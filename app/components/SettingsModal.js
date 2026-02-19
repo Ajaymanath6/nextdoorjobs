@@ -11,6 +11,7 @@ import {
   Edit,
   Add,
   Location,
+  Document,
 } from "@carbon/icons-react";
 import EditDisplayNameModal from "./EditDisplayNameModal";
 import EditCompanyLocationModal from "./EditCompanyLocationModal";
@@ -19,6 +20,7 @@ import { AVATARS } from "../../lib/avatars";
 
 const SECTIONS = [
   { id: "general", label: "General", icon: Settings },
+  { id: "resume", label: "Resume", icon: Document },
   { id: "company", label: "Company Details", icon: Receipt },
   { id: "subscription", label: "Subscription", icon: Receipt },
   { id: "integration", label: "Integration", icon: DataConnected, disabled: true },
@@ -44,6 +46,23 @@ export default function SettingsModal({ isOpen, onClose }) {
   const [showLocationEditModal, setShowLocationEditModal] = useState(false);
   const fileInputRef = useRef(null);
   const companyLogoInputRef = useRef(null);
+  const resumeFileInputRef = useRef(null);
+  const [resume, setResume] = useState(null);
+  const [resumeLoading, setResumeLoading] = useState(false);
+  const [resumeSaving, setResumeSaving] = useState(false);
+  const [resumeUploading, setResumeUploading] = useState(false);
+  const [resumeForm, setResumeForm] = useState({
+    firstName: "",
+    lastName: "",
+    emailOverride: "",
+    currentPosition: "",
+    yearsExperience: "",
+    workExperiences: [{ companyName: "", companyUrl: "", position: "", duties: "", year: "" }],
+    educations: [{ universityName: "", streamName: "", marksOrScore: "", yearOfPassing: "" }],
+    expectedSalaryPackage: "",
+    currentSalaryPackage: "",
+    currentSalaryVisibleToRecruiter: false,
+  });
 
   useEffect(() => {
     if (!isOpen) return;
@@ -97,6 +116,128 @@ export default function SettingsModal({ isOpen, onClose }) {
         if (data?.success && data.user) setUser(data.user);
       })
       .catch(() => {});
+  };
+
+  useEffect(() => {
+    if (!isOpen || activeSection !== "resume" || user?.accountType !== "Individual") return;
+    setResumeLoading(true);
+    fetch("/api/profile/resume", { credentials: "same-origin" })
+      .then((res) => (res.ok ? res.json() : res.status === 404 ? null : Promise.reject(res)))
+      .then((data) => {
+        if (data?.success && data.resume) {
+          const r = data.resume;
+          setResume(r);
+          const work = (r.workExperiences && r.workExperiences.length) ? r.workExperiences : [{ companyName: "", companyUrl: "", position: "", duties: "", year: "" }];
+          const edu = (r.educations && r.educations.length) ? r.educations : [{ universityName: "", streamName: "", marksOrScore: "", yearOfPassing: "" }];
+          setResumeForm({
+            firstName: r.firstName ?? "",
+            lastName: r.lastName ?? "",
+            emailOverride: r.emailOverride != null && r.emailOverride !== "" ? r.emailOverride : (user?.email ?? ""),
+            currentPosition: r.currentPosition ?? "",
+            yearsExperience: r.yearsExperience ?? "",
+            workExperiences: work.map((w) => ({
+              companyName: w.companyName ?? "",
+              companyUrl: w.companyUrl ?? "",
+              position: w.position ?? "",
+              duties: w.duties ?? "",
+              year: w.year ?? "",
+            })),
+            educations: edu.map((e) => ({
+              universityName: e.universityName ?? "",
+              streamName: e.streamName ?? "",
+              marksOrScore: e.marksOrScore ?? "",
+              yearOfPassing: e.yearOfPassing ?? "",
+            })),
+            expectedSalaryPackage: r.expectedSalaryPackage ?? "",
+            currentSalaryPackage: r.currentSalaryPackage ?? "",
+            currentSalaryVisibleToRecruiter: r.currentSalaryVisibleToRecruiter ?? false,
+          });
+        } else {
+          setResume(null);
+          setResumeForm({
+            firstName: "",
+            lastName: "",
+            emailOverride: user?.email ?? "",
+            currentPosition: "",
+            yearsExperience: "",
+            workExperiences: [{ companyName: "", companyUrl: "", position: "", duties: "", year: "" }],
+            educations: [{ universityName: "", streamName: "", marksOrScore: "", yearOfPassing: "" }],
+            expectedSalaryPackage: "",
+            currentSalaryPackage: "",
+            currentSalaryVisibleToRecruiter: false,
+          });
+        }
+      })
+      .catch(() => setResume(null))
+      .finally(() => setResumeLoading(false));
+  }, [isOpen, activeSection, user?.accountType]);
+
+  const handleResumeFileSelect = async (e) => {
+    const file = e.target?.files?.[0];
+    if (!file) return;
+    setResumeUploading(true);
+    try {
+      const formData = new FormData();
+      formData.append("file", file);
+      const res = await fetch("/api/profile/resume/upload", {
+        method: "POST",
+        body: formData,
+        credentials: "same-origin",
+      });
+      const data = await res.json().catch(() => ({}));
+      if (data.success && data.path) {
+        setResume((prev) => (prev ? { ...prev, resumeFilePath: data.path } : { resumeFilePath: data.path }));
+      }
+    } catch (err) {
+      console.error("Resume upload error:", err);
+    } finally {
+      setResumeUploading(false);
+      e.target.value = "";
+    }
+  };
+
+  const saveResume = async () => {
+    setResumeSaving(true);
+    try {
+      const res = await fetch("/api/profile/resume", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        credentials: "same-origin",
+        body: JSON.stringify({
+          firstName: resumeForm.firstName || null,
+          lastName: resumeForm.lastName || null,
+          emailOverride: resumeForm.emailOverride === (user?.email ?? "") ? null : (resumeForm.emailOverride || null),
+          currentPosition: resumeForm.currentPosition || null,
+          yearsExperience: resumeForm.yearsExperience || null,
+          workExperiences: resumeForm.workExperiences.filter(
+            (w) => w.companyName || w.companyUrl || w.position || w.duties || w.year
+          ).map((w, i) => ({
+            companyName: w.companyName,
+            companyUrl: w.companyUrl,
+            position: w.position,
+            duties: w.duties,
+            year: w.year,
+          })),
+          educations: resumeForm.educations.filter(
+            (e) => e.universityName || e.streamName || e.marksOrScore || e.yearOfPassing
+          ).map((e, i) => ({
+            universityName: e.universityName,
+            streamName: e.streamName,
+            marksOrScore: e.marksOrScore,
+            yearOfPassing: e.yearOfPassing,
+          })),
+          expectedSalaryPackage: resumeForm.expectedSalaryPackage || null,
+          currentSalaryPackage: resumeForm.currentSalaryPackage || null,
+          currentSalaryVisibleToRecruiter: resumeForm.currentSalaryVisibleToRecruiter,
+        }),
+      });
+      const data = await res.json().catch(() => ({}));
+      if (data.success && data.resume) setResume(data.resume);
+    } catch (err) {
+      console.error("Resume save error:", err);
+    } finally {
+      setResumeSaving(false);
+    }
   };
 
   const handleSelectAvatar = async (avatar) => {
@@ -276,8 +417,7 @@ export default function SettingsModal({ isOpen, onClose }) {
     <>
       <Modal isOpen={isOpen} onClose={onClose}>
         <div
-          className="fixed left-1/2 top-1/2 z-[1002] flex h-[85vh] max-h-[85vh] w-full max-w-3xl -translate-x-1/2 -translate-y-1/2 flex-col rounded-lg border border-brand-stroke-border bg-brand-bg-white p-6 shadow-lg"
-          style={{ fontFamily: "Open Sans, sans-serif" }}
+          className="fixed left-1/2 top-1/2 z-[1002] flex h-[85vh] max-h-[85vh] w-full max-w-3xl -translate-x-1/2 -translate-y-1/2 flex-col rounded-lg border border-brand-stroke-border bg-brand-bg-white p-6 shadow-lg font-sans"
           onClick={(e) => e.stopPropagation()}
         >
           {/* Header */}
@@ -301,10 +441,8 @@ export default function SettingsModal({ isOpen, onClose }) {
             <nav className="shrink-0 w-48 py-4 pr-0">
               <ul className="space-y-0.5">
                 {SECTIONS.filter(section => {
-                  // Only show company section for Company accounts
-                  if (section.id === "company") {
-                    return user?.accountType === "Company";
-                  }
+                  if (section.id === "company") return user?.accountType === "Company";
+                  if (section.id === "resume") return user?.accountType === "Individual";
                   return true;
                 }).map(({ id, label, icon: Icon, disabled }) => (
                   <li key={id}>
@@ -339,7 +477,7 @@ export default function SettingsModal({ isOpen, onClose }) {
                       My Account
                     </h2>
                     {user?.accountType && user.accountType.trim() !== "" && (
-                      <span className="text-xs font-medium" style={{ color: "#F84416" }}>
+                      <span className="text-xs font-medium text-brand">
                         {user.accountType === "Individual" ? "Gig/Jobseeker" : user.accountType}
                       </span>
                     )}
@@ -371,7 +509,7 @@ export default function SettingsModal({ isOpen, onClose }) {
                         setShowAvatarModal(true);
                       }}
                         className="text-sm font-medium text-brand underline underline-offset-2 hover:opacity-80"
-                        style={{ color: brand.color || "#F84416" }}
+                        className="text-brand"
                       >
                         Change photo
                       </button>
@@ -528,7 +666,7 @@ export default function SettingsModal({ isOpen, onClose }) {
                                   setShowCompanyLogoModal(true);
                                 }}
                                 className="text-sm font-medium text-brand underline underline-offset-2 hover:opacity-80"
-                                style={{ color: brand.color || "#F84416" }}
+                                className="text-brand"
                               >
                                 Change logo
                               </button>
@@ -557,7 +695,7 @@ export default function SettingsModal({ isOpen, onClose }) {
                                 type="button"
                                 onClick={() => setShowLocationEditModal(true)}
                                 className="text-sm font-medium text-brand underline underline-offset-2 hover:opacity-80"
-                                style={{ color: brand.color || "#F84416" }}
+                                className="text-brand"
                               >
                                 Edit
                               </button>
@@ -617,6 +755,292 @@ export default function SettingsModal({ isOpen, onClose }) {
                     </>
                   )}
                 </div>
+              ) : activeSection === "resume" ? (
+                <div className="space-y-6">
+                  <h2 className={`text-base font-semibold ${brand.text.strong}`}>
+                    My Resume
+                  </h2>
+                  <input
+                    ref={resumeFileInputRef}
+                    type="file"
+                    accept=".pdf,.doc,.docx,application/pdf,application/msword,application/vnd.openxmlformats-officedocument.wordprocessingml.document"
+                    className="hidden"
+                    onChange={handleResumeFileSelect}
+                  />
+                  <button
+                    type="button"
+                    onClick={() => resumeFileInputRef.current?.click()}
+                    disabled={resumeUploading}
+                    className="text-sm font-medium text-brand underline underline-offset-2 hover:opacity-80 inline-flex items-center gap-2"
+                    className="text-brand"
+                  >
+                    <Document size={20} className="shrink-0" />
+                    Add
+                  </button>
+                  {resume?.resumeFilePath && (
+                    <p className={`text-xs ${brand.text.weak}`}>
+                      Current file: {resume.resumeFilePath.split("/").pop()}
+                    </p>
+                  )}
+                  {resumeLoading ? (
+                    <p className={brand.text.weak}>Loading resume…</p>
+                  ) : (
+                    <>
+                      <div className="grid grid-cols-2 gap-3">
+                        <div>
+                          <label className={`block text-sm ${brand.text.strong} mb-1`}>First Name</label>
+                          <input
+                            value={resumeForm.firstName}
+                            onChange={(e) => setResumeForm((f) => ({ ...f, firstName: e.target.value }))}
+                            className="w-full rounded-lg border border-brand-stroke-border px-3 py-2 text-sm text-brand-text-strong focus:outline-none focus:ring-2 focus:ring-brand"
+                            placeholder="First name"
+                          />
+                        </div>
+                        <div>
+                          <label className={`block text-sm ${brand.text.strong} mb-1`}>Last Name</label>
+                          <input
+                            value={resumeForm.lastName}
+                            onChange={(e) => setResumeForm((f) => ({ ...f, lastName: e.target.value }))}
+                            className="w-full rounded-lg border border-brand-stroke-border px-3 py-2 text-sm text-brand-text-strong focus:outline-none focus:ring-2 focus:ring-brand"
+                            placeholder="Last name"
+                          />
+                        </div>
+                      </div>
+                      <div>
+                        <label className={`block text-sm ${brand.text.strong} mb-1`}>Email</label>
+                        <input
+                          type="email"
+                          value={resumeForm.emailOverride}
+                          onChange={(e) => setResumeForm((f) => ({ ...f, emailOverride: e.target.value }))}
+                          className="w-full rounded-lg border border-brand-stroke-border px-3 py-2 text-sm text-brand-text-strong focus:outline-none focus:ring-2 focus:ring-brand"
+                          placeholder="Email (from auth or your own)"
+                        />
+                        <p className={`text-xs ${brand.text.weak} mt-1`}>Pre-filled from account; you can change it.</p>
+                      </div>
+                      <div>
+                        <label className={`block text-sm ${brand.text.strong} mb-1`}>Current position</label>
+                        <input
+                          value={resumeForm.currentPosition}
+                          onChange={(e) => setResumeForm((f) => ({ ...f, currentPosition: e.target.value }))}
+                          className="w-full rounded-lg border border-brand-stroke-border px-3 py-2 text-sm text-brand-text-strong focus:outline-none focus:ring-2 focus:ring-brand"
+                          placeholder="e.g. Software Engineer"
+                        />
+                      </div>
+                      <div>
+                        <label className={`block text-sm ${brand.text.strong} mb-1`}>Years of experience</label>
+                        <input
+                          value={resumeForm.yearsExperience}
+                          onChange={(e) => setResumeForm((f) => ({ ...f, yearsExperience: e.target.value }))}
+                          className="w-full rounded-lg border border-brand-stroke-border px-3 py-2 text-sm text-brand-text-strong focus:outline-none focus:ring-2 focus:ring-brand"
+                          placeholder="e.g. 5"
+                        />
+                      </div>
+                      <div className="border-t border-brand-stroke-weak pt-4">
+                        <p className={`text-sm font-medium ${brand.text.strong} mb-3`}>Current / previous company</p>
+                        {resumeForm.workExperiences.map((w, idx) => (
+                          <div key={idx} className="mb-4 p-3 rounded-lg border border-brand-stroke-weak space-y-2">
+                            {idx > 0 && <p className={`text-xs ${brand.text.weak}`}>Previous company</p>}
+                            <input
+                              value={w.companyName}
+                              onChange={(e) =>
+                                setResumeForm((f) => ({
+                                  ...f,
+                                  workExperiences: f.workExperiences.map((x, i) =>
+                                    i === idx ? { ...x, companyName: e.target.value } : x
+                                  ),
+                                }))
+                              }
+                              className="w-full rounded-lg border border-brand-stroke-border px-3 py-2 text-sm"
+                              placeholder="Company name"
+                            />
+                            <input
+                              value={w.companyUrl}
+                              onChange={(e) =>
+                                setResumeForm((f) => ({
+                                  ...f,
+                                  workExperiences: f.workExperiences.map((x, i) =>
+                                    i === idx ? { ...x, companyUrl: e.target.value } : x
+                                  ),
+                                }))
+                              }
+                              className="w-full rounded-lg border border-brand-stroke-border px-3 py-2 text-sm"
+                              placeholder="Company URL"
+                            />
+                            <input
+                              value={w.position}
+                              onChange={(e) =>
+                                setResumeForm((f) => ({
+                                  ...f,
+                                  workExperiences: f.workExperiences.map((x, i) =>
+                                    i === idx ? { ...x, position: e.target.value } : x
+                                  ),
+                                }))
+                              }
+                              className="w-full rounded-lg border border-brand-stroke-border px-3 py-2 text-sm"
+                              placeholder="Your position"
+                            />
+                            <textarea
+                              value={w.duties}
+                              onChange={(e) =>
+                                setResumeForm((f) => ({
+                                  ...f,
+                                  workExperiences: f.workExperiences.map((x, i) =>
+                                    i === idx ? { ...x, duties: e.target.value } : x
+                                  ),
+                                }))
+                              }
+                              className="w-full rounded-lg border border-brand-stroke-border px-3 py-2 text-sm min-h-[60px]"
+                              placeholder="Duties"
+                            />
+                            <input
+                              value={w.year}
+                              onChange={(e) =>
+                                setResumeForm((f) => ({
+                                  ...f,
+                                  workExperiences: f.workExperiences.map((x, i) =>
+                                    i === idx ? { ...x, year: e.target.value } : x
+                                  ),
+                                }))
+                              }
+                              className="w-full rounded-lg border border-brand-stroke-border px-3 py-2 text-sm"
+                              placeholder="Year"
+                            />
+                          </div>
+                        ))}
+                        {resumeForm.workExperiences.length < 5 && (
+                          <button
+                            type="button"
+                            onClick={() =>
+                              setResumeForm((f) => ({
+                                ...f,
+                                workExperiences: [...f.workExperiences, { companyName: "", companyUrl: "", position: "", duties: "", year: "" }],
+                              }))
+                            }
+                            className="text-sm font-medium text-brand underline underline-offset-2"
+                            className="text-brand"
+                          >
+                            Add previous company
+                          </button>
+                        )}
+                      </div>
+                      <div className="border-t border-brand-stroke-weak pt-4">
+                        <p className={`text-sm font-medium ${brand.text.strong} mb-3`}>Education</p>
+                        {resumeForm.educations.map((e, idx) => (
+                          <div key={idx} className="mb-4 p-3 rounded-lg border border-brand-stroke-weak space-y-2">
+                            <input
+                              value={e.universityName}
+                              onChange={(ev) =>
+                                setResumeForm((f) => ({
+                                  ...f,
+                                  educations: f.educations.map((x, i) =>
+                                    i === idx ? { ...x, universityName: ev.target.value } : x
+                                  ),
+                                }))
+                              }
+                              className="w-full rounded-lg border border-brand-stroke-border px-3 py-2 text-sm"
+                              placeholder="University name"
+                            />
+                            <input
+                              value={e.streamName}
+                              onChange={(ev) =>
+                                setResumeForm((f) => ({
+                                  ...f,
+                                  educations: f.educations.map((x, i) =>
+                                    i === idx ? { ...x, streamName: ev.target.value } : x
+                                  ),
+                                }))
+                              }
+                              className="w-full rounded-lg border border-brand-stroke-border px-3 py-2 text-sm"
+                              placeholder="Stream name"
+                            />
+                            <input
+                              value={e.marksOrScore}
+                              onChange={(ev) =>
+                                setResumeForm((f) => ({
+                                  ...f,
+                                  educations: f.educations.map((x, i) =>
+                                    i === idx ? { ...x, marksOrScore: ev.target.value } : x
+                                  ),
+                                }))
+                              }
+                              className="w-full rounded-lg border border-brand-stroke-border px-3 py-2 text-sm"
+                              placeholder="Marks / Score"
+                            />
+                            <input
+                              value={e.yearOfPassing}
+                              onChange={(ev) =>
+                                setResumeForm((f) => ({
+                                  ...f,
+                                  educations: f.educations.map((x, i) =>
+                                    i === idx ? { ...x, yearOfPassing: ev.target.value } : x
+                                  ),
+                                }))
+                              }
+                              className="w-full rounded-lg border border-brand-stroke-border px-3 py-2 text-sm"
+                              placeholder="Year of passing"
+                            />
+                          </div>
+                        ))}
+                        {resumeForm.educations.length < 5 && (
+                          <button
+                            type="button"
+                            onClick={() =>
+                              setResumeForm((f) => ({
+                                ...f,
+                                educations: [...f.educations, { universityName: "", streamName: "", marksOrScore: "", yearOfPassing: "" }],
+                              }))
+                            }
+                            className="text-sm font-medium text-brand underline underline-offset-2"
+                            className="text-brand"
+                          >
+                            Add education
+                          </button>
+                        )}
+                      </div>
+                      <div className="grid grid-cols-2 gap-3">
+                        <div>
+                          <label className={`block text-sm ${brand.text.strong} mb-1`}>Expected salary package</label>
+                          <input
+                            value={resumeForm.expectedSalaryPackage}
+                            onChange={(e) => setResumeForm((f) => ({ ...f, expectedSalaryPackage: e.target.value }))}
+                            className="w-full rounded-lg border border-brand-stroke-border px-3 py-2 text-sm"
+                            placeholder="e.g. 10 LPA"
+                          />
+                        </div>
+                        <div>
+                          <label className={`block text-sm ${brand.text.strong} mb-1`}>Current salary package</label>
+                          <div className="flex items-center gap-2">
+                            <input
+                              value={resumeForm.currentSalaryPackage}
+                              onChange={(e) => setResumeForm((f) => ({ ...f, currentSalaryPackage: e.target.value }))}
+                              className="flex-1 rounded-lg border border-brand-stroke-border px-3 py-2 text-sm"
+                              placeholder="e.g. 8 LPA"
+                            />
+                            <label className="flex items-center gap-1.5 shrink-0 cursor-pointer">
+                              <input
+                                type="checkbox"
+                                checked={resumeForm.currentSalaryVisibleToRecruiter}
+                                onChange={(e) =>
+                                  setResumeForm((f) => ({ ...f, currentSalaryVisibleToRecruiter: e.target.checked }))
+                                }
+                                className="rounded border-brand-stroke-strong"
+                              />
+                              <span className={`text-xs ${brand.text.strong}`}>Visible to recruiter</span>
+                            </label>
+                          </div>
+                        </div>
+                      </div>
+                      <button
+                        type="button"
+                        onClick={saveResume}
+                        disabled={resumeSaving}
+                        className="px-4 py-2 rounded-md bg-brand text-brand-bg-white hover:bg-brand-hover font-medium text-sm disabled:opacity-50"
+                      >
+                        {resumeSaving ? "Saving…" : "Save resume"}
+                      </button>
+                    </>
+                  )}
+                </div>
               ) : activeSection === "subscription" ? (
                 <p className={brand.text.weak}>Subscription settings (placeholder).</p>
               ) : null}
@@ -634,8 +1058,7 @@ export default function SettingsModal({ isOpen, onClose }) {
 
       <Modal isOpen={showAvatarModal} onClose={() => !avatarSaving && !avatarUploading && setShowAvatarModal(false)}>
         <div
-          className="fixed left-1/2 top-1/2 z-[1003] w-full max-w-md -translate-x-1/2 -translate-y-1/2 rounded-lg border border-brand-stroke-border bg-brand-bg-white p-6 shadow-lg"
-          style={{ fontFamily: "Open Sans, sans-serif" }}
+          className="fixed left-1/2 top-1/2 z-[1003] w-full max-w-md -translate-x-1/2 -translate-y-1/2 rounded-lg border border-brand-stroke-border bg-brand-bg-white p-6 shadow-lg font-sans"
           onClick={(e) => e.stopPropagation()}
         >
           <div className="flex items-center justify-between border-b border-brand-stroke-weak pb-4 mb-4">
@@ -705,8 +1128,7 @@ export default function SettingsModal({ isOpen, onClose }) {
 
       <Modal isOpen={showCompanyLogoModal} onClose={() => !companyLogoUploading && setShowCompanyLogoModal(false)}>
         <div
-          className="fixed left-1/2 top-1/2 z-[1003] w-full max-w-md -translate-x-1/2 -translate-y-1/2 rounded-lg border border-brand-stroke-border bg-brand-bg-white p-6 shadow-lg"
-          style={{ fontFamily: "Open Sans, sans-serif" }}
+          className="fixed left-1/2 top-1/2 z-[1003] w-full max-w-md -translate-x-1/2 -translate-y-1/2 rounded-lg border border-brand-stroke-border bg-brand-bg-white p-6 shadow-lg font-sans"
           onClick={(e) => e.stopPropagation()}
         >
           <div className="flex items-center justify-between border-b border-brand-stroke-weak pb-4 mb-4">

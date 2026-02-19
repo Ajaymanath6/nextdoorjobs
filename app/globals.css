@@ -128,22 +128,126 @@ body {
   padding: 8px 12px !important;
   font-family: "Open Sans", sans-serif !important;
   font-size: 12px !important;
-  color: #1A1A1A !important;
+  color: var(--brand-text-strong) !important;
 }
 
 /* Company Popup */
 .company-popup {
-  background: white !important;
-  border: 1px solid #E5E5E5 !important;
+  background: var(--brand-bg-white) !important;
+  border: 1px solid var(--brand-stroke-weak) !important;
   border-radius: 8px !important;
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15) !important;
-  font-family: "Open Sans", sans-serif !important;
+  font-family: var(--font-geist-sans), sans-serif !important;
+}
+
+/* Gig / Candidate popup content - theme variables, no inline styles in JS */
+.gig-popup .map-popup-content {
+  padding: 12px;
+  min-width: 280px;
+  max-width: 360px;
+  font-family: var(--font-geist-sans), sans-serif;
+}
+.gig-popup .map-popup-content .map-popup-row {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  margin-bottom: 12px;
+}
+.gig-popup .map-popup-content .map-popup-avatar-wrap {
+  flex-shrink: 0;
+}
+.gig-popup .map-popup-content .map-popup-avatar {
+  width: 60px;
+  height: 60px;
+  border-radius: 50%;
+  object-fit: cover;
+  border: 3px solid var(--brand-stroke-weak);
+}
+.gig-popup .map-popup-content .map-popup-body {
+  flex: 1;
+  min-width: 0;
+}
+.gig-popup .map-popup-content .map-popup-title {
+  font-weight: 600;
+  font-size: 17px;
+  color: var(--brand-text-strong);
+  margin-bottom: 4px;
+}
+.gig-popup .map-popup-content .map-popup-sub {
+  font-size: 14px;
+  color: var(--brand-text-weak);
+}
+.gig-popup .map-popup-content .map-popup-meta {
+  font-size: 13px;
+  color: var(--brand-text-weak);
+  margin-bottom: 8px;
+}
+.gig-popup .map-popup-content .map-popup-meta.map-popup-desc {
+  line-height: 1.5;
+  margin-bottom: 10px;
+}
+.gig-popup .map-popup-content .map-popup-divider .map-popup-pincode {
+  margin-top: 4px;
+}
+.gig-popup .map-popup-content .map-popup-divider {
+  margin-top: 10px;
+  padding-top: 10px;
+  border-top: 1px solid var(--brand-stroke-weak);
+  font-size: 12px;
+  color: var(--brand-text-weak);
+}
+.gig-popup .map-popup-content .map-popup-section-title {
+  font-size: 12px;
+  color: var(--brand-text-strong);
+}
+.gig-popup .map-popup-content .map-popup-work-item,
+.gig-popup .map-popup-content .map-popup-edu-item {
+  font-size: 12px;
+  color: var(--brand-text-weak);
+  margin-bottom: 6px;
+  padding-bottom: 6px;
+  border-bottom: 1px solid var(--brand-stroke-weak);
+}
+.gig-popup .map-popup-content .map-popup-edu-item {
+  border-bottom: none;
+}
+.gig-popup .map-popup-content .map-popup-badge {
+  display: inline-block;
+  margin-top: 6px;
+  padding: 4px 10px;
+  border-radius: 9999px;
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--brand-text-strong);
+  background: var(--brand-bg-fill);
+  white-space: nowrap;
+}
+.gig-popup .map-popup-content .map-popup-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  padding: 6px 10px;
+  width: 100%;
+  font-size: 13px;
+  font-weight: 500;
+  cursor: pointer;
+  font-family: inherit;
+  background: var(--brand-bg-fill);
+  color: var(--brand-text-strong);
+  border: 1px solid var(--brand-stroke-weak);
+  border-radius: 6px;
+}
+.gig-popup .map-popup-content .map-popup-block {
+  margin-top: 10px;
+  padding-top: 8px;
+  border-top: 1px solid var(--brand-stroke-weak);
 }
 
 /* Cluster Tooltip */
 .cluster-tooltip {
-  background: white !important;
-  border: 1px solid #E5E5E5 !important;
+  background: var(--brand-bg-white) !important;
+  border: 1px solid var(--brand-stroke-weak) !important;
   border-radius: 8px !important;
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15) !important;
   font-family: "Open Sans", sans-serif !important;
@@ -166,10 +270,19 @@ body {
   display: block !important;
 }
 
+/* User location pindrop - theme glow to differentiate from other gig workers */
+.user-location-marker-glow {
+  animation: user-location-pulse 2s ease-in-out infinite;
+}
+@keyframes user-location-pulse {
+  0%, 100% { opacity: 0.95; transform: scale(1); }
+  50% { opacity: 1; transform: scale(1.05); }
+}
+
 /* No Companies Found Message */
 .no-companies-message .leaflet-popup-content-wrapper {
-  background: white !important;
-  border: 1px solid #E5E5E5 !important;
+  background: var(--brand-bg-white) !important;
+  border: 1px solid var(--brand-stroke-weak) !important;
   border-radius: 8px !important;
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15) !important;
   padding: 0 !important;

@@ -134,23 +134,17 @@ export async function GET(request) {
 
       const jobSeekers = await prisma.user.findMany({
         where: whereClause,
-        select: {
-          id: true,
-          name: true,
-          email: true,
-          avatarUrl: true,
-          avatarId: true,
-          homeLatitude: true,
-          homeLongitude: true,
-          homeState: true,
-          homeDistrict: true,
-          homeLocality: true,
-          jobSeekerSkills: true,
-          jobSeekerExperience: true,
+        include: {
+          resume: {
+            include: {
+              workExperiences: { orderBy: { orderIndex: "asc" } },
+              educations: { orderBy: { orderIndex: "asc" } },
+            },
+          },
         },
       });
 
-      // Transform to match gig structure for map rendering
+      // Transform to match gig structure for map rendering; attach resume for candidate popover
       const transformedJobSeekers = jobSeekers.map(seeker => ({
         id: seeker.id,
         title: seeker.name,
@@ -168,6 +162,8 @@ export async function GET(request) {
         },
         jobSeekerSkills: seeker.jobSeekerSkills,
         jobSeekerExperience: seeker.jobSeekerExperience,
+        resume: seeker.resume || null,
+        email: seeker.email,
       }));
 
       // Also fetch companies with active job postings

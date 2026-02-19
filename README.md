@@ -54,12 +54,28 @@ nextdoorjobs/
 ├── app/                # App Router directory
 │   ├── layout.js      # Root layout component
 │   ├── page.js        # Home page
-│   └── globals.css    # Global styles with Tailwind CSS
-├── public/            # Static assets
+│   ├── globals.css    # Global styles with Tailwind CSS
+│   ├── theme-guide.json        # Brand/theme color usage
+│   ├── theme-utility-classes.json # Theme utility class reference
+│   ├── onboarding/    # Onboarding flow
+│   ├── api/           # API routes (profile, gigs, etc.)
+│   └── components/    # Map, Sidebar, SettingsModal, etc.
+├── prisma/            # Schema and migrations
+├── public/            # Static assets (including uploads/resumes)
 ├── next.config.mjs    # Next.js configuration
 ├── postcss.config.mjs # PostCSS configuration
 └── package.json       # Dependencies and scripts
 ```
+
+## Features & architecture
+
+- **Theme:** All UI uses theme variables and utility classes from `app/theme-guide.json` and `app/theme-utility-classes.json`. No hex codes or inline styles in components; map popups use CSS classes in `app/globals.css` (e.g. `.gig-popup .map-popup-content`).
+- **Map:** Company view shows job pindrops with “X positions open” badge; person view shows gig workers or (for Company accounts) **Candidates** with resume popovers. Cluster tooltips describe companies/gigs in the cluster. “Locate me on map” in profile dropdowns zooms to user location with a themed marker.
+- **Resume & candidates:** Individual/Job seeker accounts can add a **Resume** in Settings (sidebar → Settings → Resume): upload file and/or fill form (name, email, position, experience, work, education, salary, visibility to recruiter). Company accounts see candidates on the map (person view) with resume popovers. Resume data is exposed via `GET /api/gigs` for Company viewers.
+- **APIs:**  
+  - `GET` / `PATCH` `app/api/profile/resume` — fetch/update resume for current user (Individual only).  
+  - `POST` `app/api/profile/resume/upload` — upload resume file (Individual only; stored under `public/uploads/resumes/{userId}/`).  
+  - `GET` `app/api/gigs` — for Company, includes job seekers’ resume (and email) for candidate map view.
 
 ## Available Scripts
 

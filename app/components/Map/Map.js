@@ -882,38 +882,84 @@ const MapComponent = () => {
         ? getAvatarUrlById(gig.user.avatarId)
         : gig.user?.avatarUrl || "/avatars/avatar1.png";
       const escapeHtml = (str) => (str || "").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
-      const serviceBadge = gig.serviceType
-        ? `<span style="display: inline-block; margin-top: 6px; padding: 4px 10px; border-radius: 9999px; font-size: 12px; font-weight: 500; color: #1A1A1A; background: #F5F5F5; white-space: nowrap;">${escapeHtml(gig.serviceType)}</span>`
-        : "";
-      const popupContent = `
-        <div style="font-family: 'Open Sans', sans-serif; padding: 12px; min-width: 280px; max-width: 320px;">
-          <div style="display: flex; align-items: flex-start; gap: 12px; margin-bottom: 12px;">
-            <div style="flex-shrink: 0;">
-              <img src="${userAvatarUrl}" alt="${escapeHtml(userName)}" style="width: 60px; height: 60px; border-radius: 50%; object-fit: cover; border: 3px solid #E5E5E5;" onerror="this.src='/avatars/avatar1.png'" />
+      const isCandidate = gig.serviceType === "Job Seeker" && gig.resume;
+      let popupContent;
+      if (isCandidate && gig.resume) {
+        const r = gig.resume;
+        const displayName = [r.firstName, r.lastName].filter(Boolean).join(" ") || gig.user?.name || "Candidate";
+        const displayEmail = r.emailOverride != null && r.emailOverride !== "" ? r.emailOverride : (gig.email || "—");
+        const workHtml = (r.workExperiences || []).length
+          ? (r.workExperiences || []).map((w) => `
+            <div class="map-popup-work-item">
+              <strong>${escapeHtml(w.companyName || "Company")}</strong>${w.year ? ` (${escapeHtml(w.year)})` : ""}<br/>
+              ${w.position ? escapeHtml(w.position) : ""}${w.companyUrl ? ` · <a href="${escapeHtml(w.companyUrl)}" target="_blank" rel="noopener">Link</a>` : ""}
+              ${w.duties ? `<br/>${escapeHtml(w.duties)}` : ""}
+            </div>`).join("")
+          : "";
+        const eduHtml = (r.educations || []).length
+          ? (r.educations || []).map((e) => `
+            <div class="map-popup-edu-item">
+              <strong>${escapeHtml(e.universityName || "—")}</strong>${e.yearOfPassing ? ` (${escapeHtml(e.yearOfPassing)})` : ""}<br/>
+              ${e.streamName ? escapeHtml(e.streamName) : ""}${e.marksOrScore ? ` · ${escapeHtml(e.marksOrScore)}` : ""}
+            </div>`).join("")
+          : "";
+        const currentSalaryHtml = r.currentSalaryVisibleToRecruiter && r.currentSalaryPackage
+          ? `<div class="map-popup-meta"><strong>Current salary:</strong> ${escapeHtml(r.currentSalaryPackage)}</div>`
+          : "";
+        popupContent = `
+        <div class="map-popup-content">
+          <div class="map-popup-row">
+            <div class="map-popup-avatar-wrap">
+              <img class="map-popup-avatar" src="${userAvatarUrl}" alt="${escapeHtml(displayName)}" onerror="this.src='/avatars/avatar1.png'" />
             </div>
-            <div style="flex: 1; min-width: 0;">
-              <div style="font-weight: 600; font-size: 17px; color: #0A0A0A; margin-bottom: 4px;">${escapeHtml(gig.title || "")}</div>
-              <div style="font-size: 14px; color: #737373; margin-bottom: 6px;">${escapeHtml(userName)}</div>
+            <div class="map-popup-body">
+              <div class="map-popup-title">${escapeHtml(displayName)}</div>
+              <div class="map-popup-sub">${escapeHtml(displayEmail)}</div>
+              ${r.currentPosition ? `<div class="map-popup-meta"><strong>Position:</strong> ${escapeHtml(r.currentPosition)}</div>` : ""}
+              ${r.yearsExperience ? `<div class="map-popup-meta"><strong>Experience:</strong> ${escapeHtml(r.yearsExperience)} years</div>` : ""}
+            </div>
+          </div>
+          ${workHtml ? `<div class="map-popup-block"><strong class="map-popup-section-title">Work</strong>${workHtml}</div>` : ""}
+          ${eduHtml ? `<div class="map-popup-block"><strong class="map-popup-section-title">Education</strong>${eduHtml}</div>` : ""}
+          ${r.expectedSalaryPackage ? `<div class="map-popup-meta"><strong>Expected salary:</strong> ${escapeHtml(r.expectedSalaryPackage)}</div>` : ""}
+          ${currentSalaryHtml}
+          <div class="map-popup-divider">
+            <strong>Location:</strong> ${escapeHtml(gig.district || "")}${gig.state ? `, ${escapeHtml(gig.state)}` : ""}
+          </div>
+        </div>`;
+      } else {
+        const serviceBadge = gig.serviceType
+          ? `<span class="map-popup-badge">${escapeHtml(gig.serviceType)}</span>`
+          : "";
+        popupContent = `
+        <div class="map-popup-content">
+          <div class="map-popup-row">
+            <div class="map-popup-avatar-wrap">
+              <img class="map-popup-avatar" src="${userAvatarUrl}" alt="${escapeHtml(userName)}" onerror="this.src='/avatars/avatar1.png'" />
+            </div>
+            <div class="map-popup-body">
+              <div class="map-popup-title">${escapeHtml(gig.title || "")}</div>
+              <div class="map-popup-sub">${escapeHtml(userName)}</div>
               ${serviceBadge}
             </div>
           </div>
-          ${gig.description ? `<div style="font-size: 13px; color: #1A1A1A; margin-bottom: 10px; line-height: 1.5;">${escapeHtml(gig.description)}</div>` : ""}
-          <div style="font-size: 13px; color: #575757; margin-bottom: 8px;"><strong>Service:</strong> ${escapeHtml(gig.serviceType || "—")}</div>
-          ${gig.expectedSalary ? `<div style="font-size: 13px; color: #575757; margin-bottom: 8px;"><strong>Expected Salary:</strong> ${escapeHtml(gig.expectedSalary)}</div>` : ""}
-          ${gig.experienceWithGig ? `<div style="font-size: 13px; color: #575757; margin-bottom: 8px;"><strong>Experience:</strong> ${escapeHtml(gig.experienceWithGig)}</div>` : ""}
-          ${gig.customersTillDate != null ? `<div style="font-size: 13px; color: #575757; margin-bottom: 8px;"><strong>Customers Served:</strong> ${gig.customersTillDate}</div>` : ""}
-          <div style="font-size: 12px; color: #737373; margin-top: 10px; padding-top: 10px; border-top: 1px solid #E5E5E5;">
+          ${gig.description ? `<div class="map-popup-meta map-popup-desc">${escapeHtml(gig.description)}</div>` : ""}
+          <div class="map-popup-meta"><strong>Service:</strong> ${escapeHtml(gig.serviceType || "—")}</div>
+          ${gig.expectedSalary ? `<div class="map-popup-meta"><strong>Expected Salary:</strong> ${escapeHtml(gig.expectedSalary)}</div>` : ""}
+          ${gig.experienceWithGig ? `<div class="map-popup-meta"><strong>Experience:</strong> ${escapeHtml(gig.experienceWithGig)}</div>` : ""}
+          ${gig.customersTillDate != null ? `<div class="map-popup-meta"><strong>Customers Served:</strong> ${gig.customersTillDate}</div>` : ""}
+          <div class="map-popup-divider">
             <div><strong>Location:</strong> ${escapeHtml(gig.district || "")}${gig.state ? `, ${escapeHtml(gig.state)}` : ""}</div>
-            ${gig.pincode ? `<div style="margin-top: 4px;">Pincode: ${escapeHtml(gig.pincode)}</div>` : ""}
+            ${gig.pincode ? `<div class="map-popup-pincode">Pincode: ${escapeHtml(gig.pincode)}</div>` : ""}
           </div>
-          <div style="margin-top: 10px; padding-top: 10px; border-top: 1px solid #E5E5E5;">
+          <div class="map-popup-block">
             ${
               hasHome
-                ? `<button type="button" data-action="see-distance" data-gig-id="${gig.id}" style="display:flex;align-items:center;gap:6px;padding:6px 10px;background:#F5F5F5;color:#1A1A1A;border:1px solid #E5E5E5;border-radius:6px;font-size:13px;font-weight:500;cursor:pointer;font-family:'Open Sans',sans-serif;width:100%;justify-content:center;">
+                ? `<button type="button" class="map-popup-btn" data-action="see-distance" data-gig-id="${gig.id}">
               <svg width="16" height="16" viewBox="0 0 32 32" fill="currentColor"><path d="M16 4L4 14v14h8v-8h8v8h8V14L16 4z"/></svg>
               See how far from your home
             </button>`
-                : `<button type="button" data-action="add-home" style="display:flex;align-items:center;gap:6px;padding:6px 10px;background:#F5F5F5;color:#1A1A1A;border:1px solid #E5E5E5;border-radius:6px;font-size:13px;font-weight:500;cursor:pointer;font-family:'Open Sans',sans-serif;width:100%;justify-content:center;">
+                : `<button type="button" class="map-popup-btn" data-action="add-home">
               <svg width="16" height="16" viewBox="0 0 32 32" fill="currentColor"><path d="M17 15V8h-2v7H8v2h7v7h2v-7h7v-2h-7z"/></svg>
               Add home to see distance
             </button>`
@@ -921,6 +967,7 @@ const MapComponent = () => {
           </div>
         </div>
       `;
+      }
       marker.bindPopup(popupContent, { className: "gig-popup", maxWidth: 320 });
       marker.on("popupopen", () => {
         const el = marker.getPopup()?.getElement();
@@ -1669,23 +1716,29 @@ const MapComponent = () => {
     };
   }, [isClient]);
 
-  // "Locate me on map" from sidebar profile: zoom to user location when flag is set
-  useEffect(() => {
-    if (!mapReady || !mapInstanceRef.current || typeof window === "undefined") return;
-    const flag = sessionStorage.getItem("locateMeOnMap");
-    if (!flag) return;
-    sessionStorage.removeItem("locateMeOnMap");
-    if (!navigator.geolocation) return;
+  // "Locate me on map": zoom to user location and show marker with glow (from sidebar or onboarding)
+  const runLocateMeOnMap = () => {
+    if (!mapInstanceRef.current || !window.L || !navigator.geolocation) return;
     navigator.geolocation.getCurrentPosition(
       (pos) => {
-        const map = mapInstanceRef.current;
-        if (!map) return;
-        const { latitude, longitude } = pos.coords;
-        map.flyTo([latitude, longitude], 14, { duration: 0.8 });
+        const { latitude, longitude, accuracy } = pos.coords;
+        zoomToUserLocation({ lat: latitude, lng: longitude, accuracy });
       },
       () => {},
       { enableHighAccuracy: true, timeout: 10000, maximumAge: 0 }
     );
+  };
+
+  useEffect(() => {
+    if (!mapReady || !mapInstanceRef.current || typeof window === "undefined") return;
+    const flag = sessionStorage.getItem("locateMeOnMap");
+    if (flag) {
+      sessionStorage.removeItem("locateMeOnMap");
+      runLocateMeOnMap();
+    }
+    const onLocateMe = () => runLocateMeOnMap();
+    window.addEventListener("locateMeOnMap", onLocateMe);
+    return () => window.removeEventListener("locateMeOnMap", onLocateMe);
   }, [mapReady]);
 
   // Add markers when locations data and map are ready (companies only when in company mode)
@@ -2515,12 +2568,14 @@ const MapComponent = () => {
       userLocationMarkerRef.current = null;
     }
 
-    // Create user location marker (distinct from home marker)
+    // Create user location marker with theme-color glow to differentiate from other gig workers
+    const themeGlow = "rgba(248, 68, 22, 0.5)";
+    const themeBorder = "#F84416";
     const userLocationIcon = L.divIcon({
-      html: `<div style="background-color:#9333EA;border-radius:50%;width:40px;height:40px;display:flex;align-items:center;justify-content:center;font-size:20px;border:3px solid #FFFFFF;box-shadow:0 2px 8px rgba(147,51,234,0.4);">📍</div>`,
-      className: 'user-location-marker',
-      iconSize: [40, 40],
-      iconAnchor: [20, 20],
+      html: `<div class="user-location-marker-glow" style="background-color:${themeBorder};border-radius:50%;width:44px;height:44px;display:flex;align-items:center;justify-content:center;font-size:22px;border:3px solid #FFFFFF;box-shadow:0 0 0 4px ${themeGlow}, 0 0 20px ${themeGlow}, 0 2px 12px rgba(0,0,0,0.25);opacity:0.95;">📍</div>`,
+      className: "user-location-marker",
+      iconSize: [44, 44],
+      iconAnchor: [22, 22],
     });
 
     // Add marker to map
@@ -3490,7 +3545,7 @@ const MapComponent = () => {
                     type="button"
                     onClick={() => setShowSearchModeDropdown(!showSearchModeDropdown)}
                     className={`h-[34px] w-[46px] flex items-center justify-center gap-0.5 p-1 rounded-lg border-r border-brand-stroke-border hover:bg-brand-bg-fill transition-colors shrink-0 ${searchMode ? "bg-brand-bg-fill" : "bg-transparent"}`}
-                    title={searchMode === "person" ? "Gig work" : "All companies"}
+                    title={searchMode === "person" ? (userAccountType === "Company" ? "Candidates" : "Gig work") : "All companies"}
                     aria-expanded={showSearchModeDropdown}
                     aria-haspopup="true"
                   >
@@ -3513,7 +3568,7 @@ const MapComponent = () => {
                           className="w-full flex items-center gap-2 px-3 py-2 text-left text-sm font-medium text-brand-text-strong hover:bg-brand-bg-fill transition-colors min-w-0"
                         >
                           <User size={20} className={`w-5 h-5 shrink-0 ${searchBar["toggle-segment-icon"]}`} />
-                          <span className="truncate">Gig Workers</span>
+                          <span className="truncate">{userAccountType === "Company" ? "Candidates" : "Gig Workers"}</span>
                         </button>
                       )}
                       {searchMode !== "company" && (
@@ -3539,7 +3594,7 @@ const MapComponent = () => {
                       type="button"
                       onClick={() => setSearchMode("person")}
                       className={`p-2 border-0 ${searchBar["toggle-segment"]} ${searchMode === "person" ? searchBar["toggle-segment-active"] : ""} !rounded-l-md !rounded-r-none`}
-                      title="Gig work"
+                      title={userAccountType === "Company" ? "Candidates" : "Gig work"}
                     >
                       <User
                         size={20}
@@ -4067,26 +4122,9 @@ const MapComponent = () => {
         >
           <div className="text-center">
             {/* Spinner */}
-            <div
-              className="w-12 h-12 border-4 rounded-full loading-spinner mx-auto mb-4"
-              style={{
-                width: '48px',
-                height: '48px',
-                borderColor: 'rgba(0,0,0,0.1)',
-                borderTopColor: '#F84416',
-                animation: 'spin 1s linear infinite'
-              }}
-            />
+            <div className="w-12 h-12 border-4 border-brand-stroke-weak border-t-brand rounded-full loading-spinner mx-auto mb-4" />
             {/* Loading Text */}
-            <p 
-              className="text-base font-medium"
-              style={{ 
-                fontFamily: 'Open Sans',
-                fontSize: '16px',
-                fontWeight: 500,
-                color: '#1A1A1A'
-              }}
-            >
+            <p className="text-base font-medium font-sans text-brand-text-strong">
               {isDetectingLocation 
                 ? 'Detecting your location...' 
                 : isFindingJobs 
@@ -4105,11 +4143,8 @@ const MapComponent = () => {
         {/* Statistics Badges - Show different content based on account type and search mode */}
         {userAccountType === "Company" ? (
           /* Company Account: Show Total Companies */
-          <div
-            className="bg-white border border-brand-stroke-border rounded-lg shadow-lg px-2 py-1.5 md:px-3 md:py-2 flex items-center gap-1.5 md:gap-2 pointer-events-auto"
-            style={{ fontFamily: "Open Sans" }}
-          >
-            <Enterprise size={14} className="shrink-0 text-brand" style={{ color: "#F84416" }} />
+          <div className="bg-white border border-brand-stroke-border rounded-lg shadow-lg px-2 py-1.5 md:px-3 md:py-2 flex items-center gap-1.5 md:gap-2 pointer-events-auto font-sans">
+            <Enterprise size={14} className="shrink-0 text-brand" />
             <div className="flex flex-col leading-tight">
               <span className="text-[10px] md:text-xs text-brand-text-weak font-normal">
                 Total Companies
@@ -4123,11 +4158,8 @@ const MapComponent = () => {
           /* Individual/Gig Worker Account: Show Total Gigs in person mode, Total Companies in company mode */
           <>
             {searchMode === "person" ? (
-              <div
-                className="bg-white border border-brand-stroke-border rounded-lg shadow-lg px-2 py-1.5 md:px-3 md:py-2 flex items-center gap-1.5 md:gap-2 pointer-events-auto"
-                style={{ fontFamily: "Open Sans" }}
-              >
-                <User size={14} className="shrink-0 text-brand" style={{ color: "#F84416" }} />
+              <div className="bg-white border border-brand-stroke-border rounded-lg shadow-lg px-2 py-1.5 md:px-3 md:py-2 flex items-center gap-1.5 md:gap-2 pointer-events-auto font-sans">
+                <User size={14} className="shrink-0 text-brand" />
                 <div className="flex flex-col leading-tight">
                   <span className="text-[10px] md:text-xs text-brand-text-weak font-normal">
                     Total Gigs
@@ -4138,11 +4170,8 @@ const MapComponent = () => {
                 </div>
               </div>
             ) : (
-              <div
-                className="bg-white border border-brand-stroke-border rounded-lg shadow-lg px-2 py-1.5 md:px-3 md:py-2 flex items-center gap-1.5 md:gap-2 pointer-events-auto"
-                style={{ fontFamily: "Open Sans" }}
-              >
-                <Enterprise size={14} className="shrink-0 text-brand" style={{ color: "#F84416" }} />
+              <div className="bg-white border border-brand-stroke-border rounded-lg shadow-lg px-2 py-1.5 md:px-3 md:py-2 flex items-center gap-1.5 md:gap-2 pointer-events-auto font-sans">
+                <Enterprise size={14} className="shrink-0 text-brand" />
                 <div className="flex flex-col leading-tight">
                   <span className="text-[10px] md:text-xs text-brand-text-weak font-normal">
                     Total Companies

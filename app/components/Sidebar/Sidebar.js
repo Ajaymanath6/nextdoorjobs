@@ -19,6 +19,7 @@ import {
   EarthFilled,
   User,
   Settings,
+  Location,
 } from "@carbon/icons-react";
 
 export default function Sidebar({ activeItem = "jobs-near-you", onToggle, isOpen: externalIsOpen, onOpenSettings }) {
@@ -374,6 +375,19 @@ export default function Sidebar({ activeItem = "jobs-near-you", onToggle, isOpen
               >
                 <Settings size={20} className="text-brand-stroke-strong shrink-0" />
                 <span>Settings</span>
+              </button>
+              <button
+                type="button"
+                role="menuitem"
+                className="w-full text-left px-4 py-2 text-sm text-brand-text-strong hover:bg-brand-bg-fill rounded transition-colors flex items-center gap-2"
+                onClick={() => {
+                  setShowUserDropdown(false);
+                  if (typeof sessionStorage !== "undefined") sessionStorage.setItem("locateMeOnMap", "1");
+                  window.dispatchEvent(new CustomEvent("locateMeOnMap"));
+                }}
+              >
+                <Location size={20} className="text-brand-stroke-strong shrink-0" />
+                <span>Locate me on map</span>
               </button>
               <div className="border-t border-brand-stroke-weak my-1" />
               <button
