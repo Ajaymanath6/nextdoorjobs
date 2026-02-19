@@ -1097,7 +1097,7 @@ const MapComponent = () => {
     if (searchMode !== "person" || !mapInstanceRef.current) return;
 
     const fetchGigs = () => {
-      fetch("/api/gigs")
+      fetch("/api/gigs", { credentials: "same-origin" })
         .then((r) => r.json())
         .then((data) => {
           if (data.success && Array.isArray(data.gigs)) {
@@ -1258,7 +1258,7 @@ const MapComponent = () => {
               const params = new URLSearchParams();
               if (state) params.set("state", state);
               if (district) params.set("district", district);
-              fetch(`/api/gigs?${params.toString()}`)
+              fetch(`/api/gigs?${params.toString()}`, { credentials: "same-origin" })
                 .then((r) => r.json())
                 .then((data) => {
                   if (data.success && Array.isArray(data.gigs)) {
@@ -2173,7 +2173,7 @@ const MapComponent = () => {
           if (district) params.set("district", district);
           const url = params.toString() ? `/api/gigs?${params.toString()}` : "/api/gigs";
           
-          fetch(url)
+          fetch(url, { credentials: "same-origin" })
             .then((r) => r.json())
             .then((data) => {
               if (data.success && Array.isArray(data.gigs)) {
@@ -2920,7 +2920,7 @@ const MapComponent = () => {
             const params = new URLSearchParams();
             if (dbData.state) params.set("state", dbData.state);
             if (dbData.district) params.set("district", dbData.district);
-            fetch(`/api/gigs?${params.toString()}`)
+            fetch(`/api/gigs?${params.toString()}`, { credentials: "same-origin" })
               .then((r) => r.json())
               .then((data) => {
                 if (data.success && Array.isArray(data.gigs)) {
