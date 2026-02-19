@@ -277,11 +277,23 @@ export default function SettingsModal({ isOpen, onClose }) {
 
       if (!res.ok) {
         const errorData = await res.json().catch(() => ({ error: `HTTP ${res.status}` }));
-        throw new Error(errorData.error || errorData.details || `Failed to save resume (${res.status})`);
+        const errorMessage = errorData.error || errorData.details || `Failed to save resume (${res.status})`;
+        if (process.env.NODE_ENV === "development" && errorData.details) {
+          console.error("Resume save API error details:", errorData);
+        }
+        throw new Error(errorMessage);
       }
 
       const data = await res.json();
-      if (data.success && data.resume) {
+      if (!data.success) {
+        const errorMessage = data.error || data.details || "Failed to save resume";
+        if (process.env.NODE_ENV === "development" && data.details) {
+          console.error("Resume save API error:", data);
+        }
+        throw new Error(errorMessage);
+      }
+      
+      if (data.resume) {
         setResume(data.resume);
         // Update form state with saved data to ensure form reflects what was saved
         const work = (data.resume.workExperiences && data.resume.workExperiences.length)

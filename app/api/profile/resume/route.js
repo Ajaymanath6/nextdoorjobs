@@ -145,13 +145,30 @@ export async function PATCH(request) {
     return NextResponse.json({ success: true, resume: updated });
   } catch (error) {
     console.error("PATCH /api/profile/resume error:", error);
-    return NextResponse.json(
-      {
-        success: false,
-        error: "Failed to save resume",
-        details: process.env.NODE_ENV === "development" ? error.message : undefined,
-      },
-      { status: 500 }
-    );
+    console.error("PATCH /api/profile/resume error stack:", error.stack);
+    console.error("PATCH /api/profile/resume error details:", {
+      message: error.message,
+      code: error.code,
+      meta: error.meta,
+    });
+    // Return detailed error in development, generic in production
+    const errorResponse = {
+      success: false,
+      error: "Failed to save resume",
+    };
+    
+    if (process.env.NODE_ENV === "development") {
+      errorResponse.details = error.message;
+      errorResponse.code = error.code;
+      if (error.meta) {
+        errorResponse.meta = error.meta;
+      }
+      // Include stack trace only in development
+      if (error.stack) {
+        errorResponse.stack = error.stack;
+      }
+    }
+    
+    return NextResponse.json(errorResponse, { status: 500 });
   }
 }
