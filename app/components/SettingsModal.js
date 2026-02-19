@@ -44,6 +44,7 @@ export default function SettingsModal({ isOpen, onClose }) {
   const [companyLogoUploading, setCompanyLogoUploading] = useState(false);
   const [companyLogoError, setCompanyLogoError] = useState(null);
   const [showLocationEditModal, setShowLocationEditModal] = useState(false);
+  const [showViewResumeModal, setShowViewResumeModal] = useState(false);
   const fileInputRef = useRef(null);
   const companyLogoInputRef = useRef(null);
   const resumeFileInputRef = useRef(null);
@@ -412,6 +413,8 @@ export default function SettingsModal({ isOpen, onClose }) {
   const emailDisplay = (user?.email && String(user.email)) || "—";
 
   const brand = themeClasses.brand;
+  const inputClass =
+    "w-full rounded-lg border border-brand-stroke-border px-3 py-2 text-sm text-brand-text-strong placeholder:text-brand-text-placeholder focus:outline-none focus:ring-2 focus:ring-brand";
 
   return (
     <>
@@ -422,7 +425,7 @@ export default function SettingsModal({ isOpen, onClose }) {
         >
           {/* Header */}
           <div className="flex shrink-0 items-center justify-between border-b border-brand-stroke-weak py-4">
-            <h1 className={`text-xl font-semibold ${brand.text.strong}`}>
+            <h1 className="text-xl font-semibold text-brand-text-strong">
               Settings
             </h1>
             <button
@@ -454,8 +457,8 @@ export default function SettingsModal({ isOpen, onClose }) {
                         disabled
                           ? "cursor-not-allowed opacity-60 text-brand-text-weak"
                           : activeSection === id
-                            ? `bg-brand/10 ${brand.text.strong} font-medium`
-                            : `text-brand-text-weak hover:bg-brand-bg-fill ${brand.text.strong}`
+                            ? "bg-brand/10 text-brand-text-strong font-medium"
+                            : "text-brand-text-weak hover:bg-brand-bg-fill text-brand-text-strong"
                       }`}
                     >
                       <Icon size={20} className="shrink-0" />
@@ -467,14 +470,14 @@ export default function SettingsModal({ isOpen, onClose }) {
             </nav>
 
             {/* Main content - no left border */}
-            <div className="flex-1 min-h-0 overflow-y-auto px-4 py-4">
+            <div className="flex-1 min-h-0 overflow-y-auto px-4 pt-6 pb-6">
               {loading ? (
-                <p className={brand.text.weak}>Loading…</p>
+                <p className="text-brand-text-weak">Loading…</p>
               ) : activeSection === "general" ? (
                 <div className="space-y-4">
                   <div className="flex items-center gap-2">
-                    <h2 className={`text-base font-semibold ${brand.text.strong}`}>
-                      My Account
+<h2 className="text-base font-semibold text-brand-text-strong">
+                    My Account
                     </h2>
                     {user?.accountType && user.accountType.trim() !== "" && (
                       <span className="text-xs font-medium text-brand">
@@ -485,7 +488,7 @@ export default function SettingsModal({ isOpen, onClose }) {
 
                   {/* Profile picture - label left, avatar + Change photo right */}
                   <div className="flex items-center justify-between gap-4 py-2">
-                    <span className={`text-sm ${brand.text.strong}`}>
+                    <span className="text-sm text-brand-text-strong">
                       Profile picture
                     </span>
                     <div className="flex items-center gap-3">
@@ -497,7 +500,7 @@ export default function SettingsModal({ isOpen, onClose }) {
                             className="h-full w-full object-cover"
                           />
                         ) : (
-                          <span className={`text-lg font-medium ${brand.text.weak}`}>
+                          <span className="text-lg font-medium text-brand-text-weak">
                             {user?.name?.charAt(0)?.toUpperCase() || "?"}
                           </span>
                         )}
@@ -505,11 +508,10 @@ export default function SettingsModal({ isOpen, onClose }) {
                       <button
                         type="button"
                         onClick={() => {
-                        setAvatarError(null);
-                        setShowAvatarModal(true);
-                      }}
+                          setAvatarError(null);
+                          setShowAvatarModal(true);
+                        }}
                         className="text-sm font-medium text-brand underline underline-offset-2 hover:opacity-80"
-                        className="text-brand"
                       >
                         Change photo
                       </button>
@@ -519,11 +521,11 @@ export default function SettingsModal({ isOpen, onClose }) {
 
                   {/* Display name */}
                   <div className="flex items-center justify-between gap-4 py-2">
-                    <span className={`text-sm ${brand.text.strong}`}>
+                    <span className="text-sm text-brand-text-strong">
                       Display name
                     </span>
                     <div className="flex items-center gap-2">
-                      <span className={`text-sm ${brand.text.strong}`}>
+                      <span className="text-sm text-brand-text-strong">
                         {displayName}
                       </span>
                       <button
@@ -540,17 +542,17 @@ export default function SettingsModal({ isOpen, onClose }) {
 
                   {/* Email address */}
                   <div className="flex items-center justify-between gap-4 py-2">
-                    <span className={`text-sm ${brand.text.strong}`}>
+                    <span className="text-sm text-brand-text-strong">
                       Email address
                     </span>
-                    <span className={`text-sm ${brand.text.strong} break-all`} title={emailDisplay}>
+                    <span className="text-sm text-brand-text-strong break-all" title={emailDisplay}>
                       {emailDisplay}
                     </span>
                   </div>
 
                   {/* Add another email - input */}
                   <div className="flex items-center justify-between gap-4 py-2">
-                    <span className={`text-sm ${brand.text.strong}`}>
+                    <span className="text-sm text-brand-text-strong">
                       Add another email address
                     </span>
                     <input
@@ -558,7 +560,7 @@ export default function SettingsModal({ isOpen, onClose }) {
                       value={addEmailValue}
                       onChange={(e) => setAddEmailValue(e.target.value)}
                       placeholder="Add email"
-                      className="w-48 rounded-lg border border-brand-stroke-border px-3 py-2 text-sm text-brand-text-strong focus:outline-none focus:ring-2 focus:ring-brand focus:border-brand"
+                      className="w-48 rounded-lg border border-brand-stroke-border px-3 py-2 text-sm text-brand-text-strong placeholder:text-brand-text-placeholder focus:outline-none focus:ring-2 focus:ring-brand"
                     />
                   </div>
 
@@ -568,10 +570,10 @@ export default function SettingsModal({ isOpen, onClose }) {
                       <div className="border-t border-brand-stroke-weak" />
                       <div className="flex items-center justify-between gap-4 py-3">
                         <div className="flex-1">
-                          <p className={`text-sm font-medium ${brand.text.strong}`}>
+                          <p className="text-sm font-medium text-brand-text-strong">
                             Available for full-time positions
                           </p>
-                          <p className={`text-xs ${brand.text.weak} mt-1`}>
+                          <p className="text-xs text-brand-text-weak mt-1">
                             Show your profile to companies looking for full-time employees
                           </p>
                         </div>
@@ -605,20 +607,20 @@ export default function SettingsModal({ isOpen, onClose }) {
                 </div>
               ) : activeSection === "company" ? (
                 <div className="space-y-4">
-                  <h2 className={`text-base font-semibold ${brand.text.strong}`}>
+                  <h2 className="text-base font-semibold text-brand-text-strong">
                     Company Details
                   </h2>
 
                   {companyLoading ? (
-                    <p className={brand.text.weak}>Loading company details...</p>
+                    <p className="text-brand-text-weak">Loading company details...</p>
                   ) : companies.length === 0 ? (
-                    <p className={brand.text.weak}>No company information found. Complete onboarding to add your company.</p>
+                    <p className="text-brand-text-weak">No company information found. Complete onboarding to add your company.</p>
                   ) : (
                     <>
                       {/* Company selector if multiple companies */}
                       {companies.length > 1 && (
                         <div className="flex items-center justify-between gap-4 py-2">
-                          <span className={`text-sm ${brand.text.strong}`}>
+                          <span className="text-sm text-brand-text-strong">
                             Select Company
                           </span>
                           <select
@@ -642,8 +644,8 @@ export default function SettingsModal({ isOpen, onClose }) {
                         <>
                           {/* Company logo */}
                           <div className="flex items-center justify-between gap-4 py-2">
-                            <span className={`text-sm ${brand.text.strong}`}>
-                              Company logo
+<span className="text-sm text-brand-text-strong">
+                            Company logo
                             </span>
                             <div className="flex items-center gap-3">
                               <div className="h-12 w-12 rounded-full overflow-hidden bg-brand-bg-fill flex items-center justify-center border border-brand-stroke-border shrink-0">
@@ -654,7 +656,7 @@ export default function SettingsModal({ isOpen, onClose }) {
                                     className="h-full w-full object-cover"
                                   />
                                 ) : (
-                                  <span className={`text-lg font-medium ${brand.text.weak}`}>
+                                  <span className="text-lg font-medium text-brand-text-weak">
                                     {selectedCompany.name?.charAt(0)?.toUpperCase() || "?"}
                                   </span>
                                 )}
@@ -666,7 +668,6 @@ export default function SettingsModal({ isOpen, onClose }) {
                                   setShowCompanyLogoModal(true);
                                 }}
                                 className="text-sm font-medium text-brand underline underline-offset-2 hover:opacity-80"
-                                className="text-brand"
                               >
                                 Change logo
                               </button>
@@ -676,10 +677,10 @@ export default function SettingsModal({ isOpen, onClose }) {
 
                           {/* Company name */}
                           <div className="flex items-center justify-between gap-4 py-2">
-                            <span className={`text-sm ${brand.text.strong}`}>
+                            <span className="text-sm text-brand-text-strong">
                               Company name
                             </span>
-                            <span className={`text-sm ${brand.text.strong}`}>
+                            <span className="text-sm text-brand-text-strong">
                               {selectedCompany.name}
                             </span>
                           </div>
@@ -688,26 +689,25 @@ export default function SettingsModal({ isOpen, onClose }) {
                           {/* Location */}
                           <div className="py-2">
                             <div className="flex items-start justify-between gap-4 mb-1">
-                              <span className={`text-sm ${brand.text.strong}`}>
+                              <span className="text-sm text-brand-text-strong">
                                 Company Location
                               </span>
                               <button
                                 type="button"
                                 onClick={() => setShowLocationEditModal(true)}
                                 className="text-sm font-medium text-brand underline underline-offset-2 hover:opacity-80"
-                                className="text-brand"
                               >
                                 Edit
                               </button>
                             </div>
                             <div className="flex items-start gap-2 mt-2">
-                              <Location size={16} className={`mt-0.5 ${brand.text.weak}`} />
+                              <Location size={16} className="mt-0.5 text-brand-text-weak" />
                               <div className="flex-1">
-                                <div className={`text-sm ${brand.text.strong}`}>
+                                <div className="text-sm text-brand-text-strong">
                                   {selectedCompany.district}, {selectedCompany.state}
                                 </div>
                                 {(selectedCompany.latitude || selectedCompany.longitude) && (
-                                  <div className={`text-xs ${brand.text.weak} mt-1`}>
+                                  <div className="text-xs text-brand-text-weak mt-1">
                                     Coordinates: {selectedCompany.latitude}, {selectedCompany.longitude}
                                   </div>
                                 )}
@@ -720,7 +720,7 @@ export default function SettingsModal({ isOpen, onClose }) {
                           {selectedCompany.websiteUrl && (
                             <>
                               <div className="flex items-center justify-between gap-4 py-2">
-                                <span className={`text-sm ${brand.text.strong}`}>
+                                <span className="text-sm text-brand-text-strong">
                                   Website
                                 </span>
                                 <a
@@ -740,10 +740,10 @@ export default function SettingsModal({ isOpen, onClose }) {
                           {selectedCompany.fundingSeries && (
                             <>
                               <div className="flex items-center justify-between gap-4 py-2">
-                                <span className={`text-sm ${brand.text.strong}`}>
+                                <span className="text-sm text-brand-text-strong">
                                   Funding
                                 </span>
-                                <span className={`text-sm ${brand.text.strong}`}>
+                                <span className="text-sm text-brand-text-strong">
                                   {selectedCompany.fundingSeries}
                                 </span>
                               </div>
@@ -757,7 +757,7 @@ export default function SettingsModal({ isOpen, onClose }) {
                 </div>
               ) : activeSection === "resume" ? (
                 <div className="space-y-6">
-                  <h2 className={`text-base font-semibold ${brand.text.strong}`}>
+                  <h2 className="text-base font-semibold text-brand-text-strong">
                     My Resume
                   </h2>
                   <input
@@ -771,75 +771,98 @@ export default function SettingsModal({ isOpen, onClose }) {
                     type="button"
                     onClick={() => resumeFileInputRef.current?.click()}
                     disabled={resumeUploading}
-                    className="text-sm font-medium text-brand underline underline-offset-2 hover:opacity-80 inline-flex items-center gap-2"
-                    className="text-brand"
+                    className="inline-flex flex-col items-center gap-1 text-brand underline underline-offset-2 hover:opacity-80 disabled:opacity-50"
                   >
                     <Document size={20} className="shrink-0" />
-                    Add
+                    <span>Add</span>
                   </button>
                   {resume?.resumeFilePath && (
-                    <p className={`text-xs ${brand.text.weak}`}>
+                    <p className="text-xs text-brand-text-weak">
                       Current file: {resume.resumeFilePath.split("/").pop()}
                     </p>
                   )}
+                  {resume && (resume.firstName || resume.lastName || resume.currentPosition || resume.resumeFilePath || (resume.workExperiences && resume.workExperiences.length) || (resume.educations && resume.educations.length)) && (
+                    <button
+                      type="button"
+                      onClick={() => setShowViewResumeModal(true)}
+                      className="text-sm font-medium text-brand underline underline-offset-2 hover:opacity-80"
+                    >
+                      View resume
+                    </button>
+                  )}
                   {resumeLoading ? (
-                    <p className={brand.text.weak}>Loading resume…</p>
+                    <p className="text-brand-text-weak">Loading resume…</p>
                   ) : (
                     <>
                       <div className="grid grid-cols-2 gap-3">
                         <div>
-                          <label className={`block text-sm ${brand.text.strong} mb-1`}>First Name</label>
+                          <label className="block text-sm text-brand-text-strong mb-1">First Name</label>
                           <input
                             value={resumeForm.firstName}
                             onChange={(e) => setResumeForm((f) => ({ ...f, firstName: e.target.value }))}
-                            className="w-full rounded-lg border border-brand-stroke-border px-3 py-2 text-sm text-brand-text-strong focus:outline-none focus:ring-2 focus:ring-brand"
+                            className={inputClass}
                             placeholder="First name"
                           />
                         </div>
                         <div>
-                          <label className={`block text-sm ${brand.text.strong} mb-1`}>Last Name</label>
+                          <label className="block text-sm text-brand-text-strong mb-1">Last Name</label>
                           <input
                             value={resumeForm.lastName}
                             onChange={(e) => setResumeForm((f) => ({ ...f, lastName: e.target.value }))}
-                            className="w-full rounded-lg border border-brand-stroke-border px-3 py-2 text-sm text-brand-text-strong focus:outline-none focus:ring-2 focus:ring-brand"
+                            className={inputClass}
                             placeholder="Last name"
                           />
                         </div>
                       </div>
                       <div>
-                        <label className={`block text-sm ${brand.text.strong} mb-1`}>Email</label>
+                        <label className="block text-sm text-brand-text-strong mb-1">Email</label>
                         <input
                           type="email"
                           value={resumeForm.emailOverride}
                           onChange={(e) => setResumeForm((f) => ({ ...f, emailOverride: e.target.value }))}
-                          className="w-full rounded-lg border border-brand-stroke-border px-3 py-2 text-sm text-brand-text-strong focus:outline-none focus:ring-2 focus:ring-brand"
+                          className={inputClass}
                           placeholder="Email (from auth or your own)"
                         />
-                        <p className={`text-xs ${brand.text.weak} mt-1`}>Pre-filled from account; you can change it.</p>
+                        <p className="text-xs text-brand-text-weak mt-1">Pre-filled from account; you can change it.</p>
                       </div>
                       <div>
-                        <label className={`block text-sm ${brand.text.strong} mb-1`}>Current position</label>
+                        <label className="block text-sm text-brand-text-strong mb-1">Current position</label>
                         <input
                           value={resumeForm.currentPosition}
                           onChange={(e) => setResumeForm((f) => ({ ...f, currentPosition: e.target.value }))}
-                          className="w-full rounded-lg border border-brand-stroke-border px-3 py-2 text-sm text-brand-text-strong focus:outline-none focus:ring-2 focus:ring-brand"
+                          className={inputClass}
                           placeholder="e.g. Software Engineer"
                         />
                       </div>
                       <div>
-                        <label className={`block text-sm ${brand.text.strong} mb-1`}>Years of experience</label>
+                        <label className="block text-sm text-brand-text-strong mb-1">Years of experience</label>
                         <input
                           value={resumeForm.yearsExperience}
                           onChange={(e) => setResumeForm((f) => ({ ...f, yearsExperience: e.target.value }))}
-                          className="w-full rounded-lg border border-brand-stroke-border px-3 py-2 text-sm text-brand-text-strong focus:outline-none focus:ring-2 focus:ring-brand"
+                          className={inputClass}
                           placeholder="e.g. 5"
                         />
                       </div>
                       <div className="border-t border-brand-stroke-weak pt-4">
-                        <p className={`text-sm font-medium ${brand.text.strong} mb-3`}>Current / previous company</p>
+                        <p className="text-sm font-medium text-brand-text-strong mb-3">Current / previous company</p>
                         {resumeForm.workExperiences.map((w, idx) => (
-                          <div key={idx} className="mb-4 p-3 rounded-lg border border-brand-stroke-weak space-y-2">
-                            {idx > 0 && <p className={`text-xs ${brand.text.weak}`}>Previous company</p>}
+                          <div key={idx} className="mb-4 p-3 rounded-lg border border-brand-stroke-weak space-y-2 relative">
+                            <div className="flex items-center justify-between gap-2">
+                              {idx > 0 && <p className="text-xs text-brand-text-weak">Previous company</p>}
+                              <button
+                                type="button"
+                                onClick={() =>
+                                  setResumeForm((f) => ({
+                                    ...f,
+                                    workExperiences: f.workExperiences.filter((_, i) => i !== idx),
+                                  }))
+                                }
+                                className="text-sm text-brand-text-weak hover:text-brand ml-auto"
+                                aria-label="Remove company"
+                              >
+                                Remove
+                              </button>
+                            </div>
                             <input
                               value={w.companyName}
                               onChange={(e) =>
@@ -850,7 +873,7 @@ export default function SettingsModal({ isOpen, onClose }) {
                                   ),
                                 }))
                               }
-                              className="w-full rounded-lg border border-brand-stroke-border px-3 py-2 text-sm"
+                              className={inputClass}
                               placeholder="Company name"
                             />
                             <input
@@ -863,7 +886,7 @@ export default function SettingsModal({ isOpen, onClose }) {
                                   ),
                                 }))
                               }
-                              className="w-full rounded-lg border border-brand-stroke-border px-3 py-2 text-sm"
+                              className={inputClass}
                               placeholder="Company URL"
                             />
                             <input
@@ -876,7 +899,7 @@ export default function SettingsModal({ isOpen, onClose }) {
                                   ),
                                 }))
                               }
-                              className="w-full rounded-lg border border-brand-stroke-border px-3 py-2 text-sm"
+                              className={inputClass}
                               placeholder="Your position"
                             />
                             <textarea
@@ -889,7 +912,7 @@ export default function SettingsModal({ isOpen, onClose }) {
                                   ),
                                 }))
                               }
-                              className="w-full rounded-lg border border-brand-stroke-border px-3 py-2 text-sm min-h-[60px]"
+                              className={`${inputClass} min-h-[60px]`}
                               placeholder="Duties"
                             />
                             <input
@@ -902,7 +925,7 @@ export default function SettingsModal({ isOpen, onClose }) {
                                   ),
                                 }))
                               }
-                              className="w-full rounded-lg border border-brand-stroke-border px-3 py-2 text-sm"
+                              className={inputClass}
                               placeholder="Year"
                             />
                           </div>
@@ -916,17 +939,31 @@ export default function SettingsModal({ isOpen, onClose }) {
                                 workExperiences: [...f.workExperiences, { companyName: "", companyUrl: "", position: "", duties: "", year: "" }],
                               }))
                             }
-                            className="text-sm font-medium text-brand underline underline-offset-2"
-                            className="text-brand"
+                            className="text-sm font-medium text-brand underline underline-offset-2 hover:opacity-80"
                           >
                             Add previous company
                           </button>
                         )}
                       </div>
                       <div className="border-t border-brand-stroke-weak pt-4">
-                        <p className={`text-sm font-medium ${brand.text.strong} mb-3`}>Education</p>
+                        <p className="text-sm font-medium text-brand-text-strong mb-3">Education</p>
                         {resumeForm.educations.map((e, idx) => (
                           <div key={idx} className="mb-4 p-3 rounded-lg border border-brand-stroke-weak space-y-2">
+                            <div className="flex justify-end">
+                              <button
+                                type="button"
+                                onClick={() =>
+                                  setResumeForm((f) => ({
+                                    ...f,
+                                    educations: f.educations.filter((_, i) => i !== idx),
+                                  }))
+                                }
+                                className="text-sm text-brand-text-weak hover:text-brand"
+                                aria-label="Remove education"
+                              >
+                                Remove
+                              </button>
+                            </div>
                             <input
                               value={e.universityName}
                               onChange={(ev) =>
@@ -937,7 +974,7 @@ export default function SettingsModal({ isOpen, onClose }) {
                                   ),
                                 }))
                               }
-                              className="w-full rounded-lg border border-brand-stroke-border px-3 py-2 text-sm"
+                              className={inputClass}
                               placeholder="University name"
                             />
                             <input
@@ -950,7 +987,7 @@ export default function SettingsModal({ isOpen, onClose }) {
                                   ),
                                 }))
                               }
-                              className="w-full rounded-lg border border-brand-stroke-border px-3 py-2 text-sm"
+                              className={inputClass}
                               placeholder="Stream name"
                             />
                             <input
@@ -963,7 +1000,7 @@ export default function SettingsModal({ isOpen, onClose }) {
                                   ),
                                 }))
                               }
-                              className="w-full rounded-lg border border-brand-stroke-border px-3 py-2 text-sm"
+                              className={inputClass}
                               placeholder="Marks / Score"
                             />
                             <input
@@ -976,7 +1013,7 @@ export default function SettingsModal({ isOpen, onClose }) {
                                   ),
                                 }))
                               }
-                              className="w-full rounded-lg border border-brand-stroke-border px-3 py-2 text-sm"
+                              className={inputClass}
                               placeholder="Year of passing"
                             />
                           </div>
@@ -990,8 +1027,7 @@ export default function SettingsModal({ isOpen, onClose }) {
                                 educations: [...f.educations, { universityName: "", streamName: "", marksOrScore: "", yearOfPassing: "" }],
                               }))
                             }
-                            className="text-sm font-medium text-brand underline underline-offset-2"
-                            className="text-brand"
+                            className="text-sm font-medium text-brand underline underline-offset-2 hover:opacity-80"
                           >
                             Add education
                           </button>
@@ -999,21 +1035,21 @@ export default function SettingsModal({ isOpen, onClose }) {
                       </div>
                       <div className="grid grid-cols-2 gap-3">
                         <div>
-                          <label className={`block text-sm ${brand.text.strong} mb-1`}>Expected salary package</label>
+                          <label className="block text-sm text-brand-text-strong mb-1">Expected salary package</label>
                           <input
                             value={resumeForm.expectedSalaryPackage}
                             onChange={(e) => setResumeForm((f) => ({ ...f, expectedSalaryPackage: e.target.value }))}
-                            className="w-full rounded-lg border border-brand-stroke-border px-3 py-2 text-sm"
+                            className={inputClass}
                             placeholder="e.g. 10 LPA"
                           />
                         </div>
                         <div>
-                          <label className={`block text-sm ${brand.text.strong} mb-1`}>Current salary package</label>
+                          <label className="block text-sm text-brand-text-strong mb-1">Current salary package</label>
                           <div className="flex items-center gap-2">
                             <input
                               value={resumeForm.currentSalaryPackage}
                               onChange={(e) => setResumeForm((f) => ({ ...f, currentSalaryPackage: e.target.value }))}
-                              className="flex-1 rounded-lg border border-brand-stroke-border px-3 py-2 text-sm"
+                              className={`${inputClass} flex-1`}
                               placeholder="e.g. 8 LPA"
                             />
                             <label className="flex items-center gap-1.5 shrink-0 cursor-pointer">
@@ -1025,7 +1061,7 @@ export default function SettingsModal({ isOpen, onClose }) {
                                 }
                                 className="rounded border-brand-stroke-strong"
                               />
-                              <span className={`text-xs ${brand.text.strong}`}>Visible to recruiter</span>
+                              <span className="text-xs text-brand-text-strong">Visible to recruiter</span>
                             </label>
                           </div>
                         </div>
@@ -1042,9 +1078,104 @@ export default function SettingsModal({ isOpen, onClose }) {
                   )}
                 </div>
               ) : activeSection === "subscription" ? (
-                <p className={brand.text.weak}>Subscription settings (placeholder).</p>
+                <p className="text-brand-text-weak">Subscription settings (placeholder).</p>
               ) : null}
             </div>
+          </div>
+        </div>
+      </Modal>
+
+      <Modal isOpen={showViewResumeModal} onClose={() => setShowViewResumeModal(false)}>
+        <div
+          className="fixed left-1/2 top-1/2 z-[1003] flex max-h-[85vh] w-full max-w-lg -translate-x-1/2 -translate-y-1/2 flex-col rounded-lg border border-brand-stroke-border bg-brand-bg-white shadow-lg font-sans pt-6 pb-6 px-6"
+          onClick={(e) => e.stopPropagation()}
+        >
+          <div className="flex shrink-0 items-center justify-between border-b border-brand-stroke-weak pb-4 mb-4">
+            <h2 className="text-lg font-semibold text-brand-text-strong">Resume</h2>
+            <button
+              type="button"
+              onClick={() => setShowViewResumeModal(false)}
+              className="p-2 rounded-lg hover:bg-brand-bg-fill transition-colors"
+              aria-label="Close"
+            >
+              <Close size={20} className="text-brand-stroke-strong" />
+            </button>
+          </div>
+          <div className="flex-1 min-h-0 overflow-y-auto space-y-4 text-sm">
+            {resume && (
+              <>
+                <div>
+                  <p className="font-semibold text-brand-text-strong text-base">
+                    {[resume.firstName, resume.lastName].filter(Boolean).join(" ") || "—"}
+                  </p>
+                  {resume.emailOverride && (
+                    <p className="text-brand-text-weak mt-0.5">{resume.emailOverride}</p>
+                  )}
+                </div>
+                {(resume.currentPosition || resume.yearsExperience) && (
+                  <div className="border-t border-brand-stroke-weak pt-3">
+                    {resume.currentPosition && (
+                      <p className="text-brand-text-strong"><span className="font-medium">Position:</span> {resume.currentPosition}</p>
+                    )}
+                    {resume.yearsExperience && (
+                      <p className="text-brand-text-weak mt-0.5"><span className="font-medium text-brand-text-strong">Experience:</span> {resume.yearsExperience} years</p>
+                    )}
+                  </div>
+                )}
+                {resume.workExperiences && resume.workExperiences.length > 0 && (
+                  <div className="border-t border-brand-stroke-weak pt-3">
+                    <p className="font-medium text-brand-text-strong mb-2">Work</p>
+                    {resume.workExperiences.map((w, i) => (
+                      <div key={i} className="mb-3 text-brand-text-weak">
+                        <p className="font-medium text-brand-text-strong">{w.companyName || "Company"}{w.year ? ` (${w.year})` : ""}</p>
+                        {w.position && <p>{w.position}</p>}
+                        {w.duties && <p className="mt-0.5">{w.duties}</p>}
+                      </div>
+                    ))}
+                  </div>
+                )}
+                {resume.educations && resume.educations.length > 0 && (
+                  <div className="border-t border-brand-stroke-weak pt-3">
+                    <p className="font-medium text-brand-text-strong mb-2">Education</p>
+                    {resume.educations.map((e, i) => (
+                      <div key={i} className="mb-3 text-brand-text-weak">
+                        <p className="font-medium text-brand-text-strong">{e.universityName || "—"}{e.yearOfPassing ? ` (${e.yearOfPassing})` : ""}</p>
+                        {(e.streamName || e.marksOrScore) && <p>{[e.streamName, e.marksOrScore].filter(Boolean).join(" · ")}</p>}
+                      </div>
+                    ))}
+                  </div>
+                )}
+                {(resume.expectedSalaryPackage || resume.currentSalaryPackage) && (
+                  <div className="border-t border-brand-stroke-weak pt-3">
+                    {resume.expectedSalaryPackage && <p className="text-brand-text-weak"><span className="font-medium text-brand-text-strong">Expected salary:</span> {resume.expectedSalaryPackage}</p>}
+                    {resume.currentSalaryVisibleToRecruiter && resume.currentSalaryPackage && (
+                      <p className="text-brand-text-weak mt-0.5"><span className="font-medium text-brand-text-strong">Current salary:</span> {resume.currentSalaryPackage}</p>
+                    )}
+                  </div>
+                )}
+                {resume.resumeFilePath && (
+                  <div className="border-t border-brand-stroke-weak pt-3">
+                    <p className="text-brand-text-weak"><span className="font-medium text-brand-text-strong">Attached file:</span> {resume.resumeFilePath.split("/").pop()}</p>
+                  </div>
+                )}
+          </>
+            )}
+          </div>
+          <div className="flex shrink-0 gap-2 pt-4 border-t border-brand-stroke-weak mt-4">
+            <button
+              type="button"
+              onClick={() => { setShowViewResumeModal(false); }}
+              className="px-4 py-2 rounded-md border border-brand-stroke-weak text-brand-text-strong hover:bg-brand-bg-fill text-sm font-medium"
+            >
+              Close
+            </button>
+            <button
+              type="button"
+              onClick={() => { setShowViewResumeModal(false); }}
+              className="px-4 py-2 rounded-md bg-brand text-brand-bg-white hover:bg-brand-hover font-medium text-sm"
+            >
+              Edit resume
+            </button>
           </div>
         </div>
       </Modal>
@@ -1062,7 +1193,7 @@ export default function SettingsModal({ isOpen, onClose }) {
           onClick={(e) => e.stopPropagation()}
         >
           <div className="flex items-center justify-between border-b border-brand-stroke-weak pb-4 mb-4">
-            <h2 className={`text-lg font-semibold ${brand.text.strong}`}>
+            <h2 className="text-lg font-semibold text-brand-text-strong">
               Change photo
             </h2>
             <button
@@ -1114,7 +1245,7 @@ export default function SettingsModal({ isOpen, onClose }) {
             ))}
           </div>
           {(avatarSaving || avatarUploading) && (
-            <p className={`mt-4 text-sm ${brand.text.weak}`}>
+            <p className="mt-4 text-sm text-brand-text-weak">
               {avatarUploading ? "Uploading…" : "Saving…"}
             </p>
           )}
@@ -1132,7 +1263,7 @@ export default function SettingsModal({ isOpen, onClose }) {
           onClick={(e) => e.stopPropagation()}
         >
           <div className="flex items-center justify-between border-b border-brand-stroke-weak pb-4 mb-4">
-            <h2 className={`text-lg font-semibold ${brand.text.strong}`}>
+            <h2 className="text-lg font-semibold text-brand-text-strong">
               Change company logo
             </h2>
             <button
@@ -1166,16 +1297,16 @@ export default function SettingsModal({ isOpen, onClose }) {
               aria-label="Upload logo from device"
             >
               <Add size={24} className="text-brand-stroke-strong" />
-              <span className={`text-sm font-medium ${brand.text.strong}`}>
+              <span className="text-sm font-medium text-brand-text-strong">
                 Upload company logo
               </span>
             </button>
-            <p className={`text-xs text-center ${brand.text.weak}`}>
+            <p className="text-xs text-center text-brand-text-weak">
               Only image upload is supported for company logos
             </p>
           </div>
           {companyLogoUploading && (
-            <p className={`mt-4 text-sm ${brand.text.weak}`}>
+            <p className="mt-4 text-sm text-brand-text-weak">
               Uploading...
             </p>
           )}
