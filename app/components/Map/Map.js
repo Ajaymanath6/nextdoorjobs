@@ -726,9 +726,9 @@ const MapComponent = () => {
       return false;
     };
 
-    // Filter by selected gig type if one is selected (matches serviceType and title)
+    // Filter by selected gig type only for gig workers; candidates view shows all candidates
     let filteredGigs = gigsToRender || [];
-    if (selectedGigType) {
+    if (selectedGigType && userAccountType !== "Company") {
       filteredGigs = filteredGigs.filter((g) => gigMatchesFilter(g, selectedGigType));
     }
 

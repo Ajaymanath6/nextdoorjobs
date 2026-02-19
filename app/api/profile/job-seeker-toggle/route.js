@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { prisma } from "../../../../lib/prisma";
 import { getCurrentUser } from "../../../../lib/getCurrentUser";
+import { cacheService } from "../../../../lib/services/cache.service";
 
 /**
  * PATCH /api/profile/job-seeker-toggle
@@ -36,6 +37,12 @@ export async function PATCH(request) {
       where: { id: user.id },
       data: { isJobSeeker },
     });
+
+    // Invalidate user caches so /api/auth/me and next getCurrentUser return fresh isJobSeeker
+    await cacheService.del(`user:id:${user.id}`);
+    if (user.email) {
+      await cacheService.del(`user:email:${String(user.email).toLowerCase().trim()}`);
+    }
 
     return NextResponse.json({
       success: true,

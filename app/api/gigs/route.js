@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { getCurrentUser } from "../../../lib/getCurrentUser";
+import { authService } from "../../../lib/services/auth.service";
 import { gigService } from "../../../lib/services/gig.service";
 import { prisma } from "../../../lib/prisma";
 
@@ -110,9 +111,9 @@ export async function GET(request) {
       return NextResponse.json({ success: true, gigs });
     }
 
-    // Check if requesting user is a Company
-    const currentUser = await getCurrentUser();
-    
+    // Check if requesting user is a Company (use same auth as /api/auth/me so map sees candidates)
+    const currentUser = await authService.getCurrentUser() || await getCurrentUser();
+
     // If Company account, return job seekers and companies with jobs
     if (currentUser && currentUser.accountType === "Company") {
       const filters = {
