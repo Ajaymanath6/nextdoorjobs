@@ -42,7 +42,7 @@ export async function POST(request) {
 
 /**
  * GET /api/chat/conversations
- * List conversations for current user (recruiter) with last message preview and candidate summary.
+ * List conversations for current user (recruiter or candidate) with last message preview and other party summary.
  */
 export async function GET() {
   try {
@@ -52,13 +52,24 @@ export async function GET() {
     }
 
     const conversations = await prisma.conversation.findMany({
-      where: { recruiterId: user.id },
+      where: {
+        OR: [{ recruiterId: user.id }, { candidateId: user.id }],
+      },
       orderBy: { updatedAt: "desc" },
       select: {
         id: true,
+        recruiterId: true,
         candidateId: true,
         updatedAt: true,
-        candidate: { select: { id: true, name: true } },
+        candidate: { select: { id: true, name: true, email: true } },
+        recruiter: {
+          select: {
+            id: true,
+            name: true,
+            email: true,
+            companies: { take: 1, select: { name: true } },
+          },
+        },
         messages: {
           orderBy: { createdAt: "desc" },
           take: 1,
@@ -78,10 +89,22 @@ export async function GET() {
           preview = "[encrypted]";
         }
       }
+      const isRecruiter = c.recruiterId === user.id;
+      const otherPartyName = isRecruiter
+        ? (c.candidate?.name ?? null)
+        : (c.recruiter?.name ?? c.recruiter?.companies?.[0]?.name ?? "Recruiter");
+      const otherPartyId = isRecruiter ? c.candidateId : c.recruiterId;
+      const otherPartyEmail = isRecruiter ? c.candidate?.email ?? null : c.recruiter?.email ?? null;
+
       return {
         id: c.id,
         candidateId: c.candidateId,
         candidateName: c.candidate?.name ?? null,
+        recruiterId: c.recruiterId,
+        recruiterName: c.recruiter?.name ?? null,
+        otherPartyId,
+        otherPartyName,
+        otherPartyEmail,
         updatedAt: c.updatedAt,
         lastMessagePreview: preview,
         lastMessageAt: last?.createdAt ?? null,

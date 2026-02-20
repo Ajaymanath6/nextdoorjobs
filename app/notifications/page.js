@@ -42,6 +42,11 @@ export default function NotificationsPage() {
         prev.map((n) => (n.id === notif.id ? { ...n, isRead: true } : n))
       );
       setNotificationCount((prev) => Math.max(0, prev - 1));
+
+      // If notification has conversationId, deep-link to onboarding chat
+      if (notif.conversationId) {
+        router.push(`/onboarding?openNotifications=1&conversationId=${notif.conversationId}`);
+      }
     } catch (error) {
       console.error("Error marking notification as read:", error);
     }
@@ -52,7 +57,7 @@ export default function NotificationsPage() {
       <div className="flex items-center justify-between border-b border-[#E5E5E5] px-4 py-3 shrink-0">
         <button
           type="button"
-          onClick={() => router.push("/jobs-near-you")}
+          onClick={() => router.push("/")}
           className="p-2 rounded-lg hover:bg-gray-100 transition-colors flex items-center gap-2 text-brand-text-strong"
           aria-label="Back"
         >

@@ -172,7 +172,7 @@ export async function POST(request, { params }) {
         });
 
         // Send email notification
-        const conversationLink = `${process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'}/jobs-near-you`;
+        const conversationLink = `${process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'}/notifications`;
         await sendMessageNotificationEmail({
           recipientEmail: recipient.email,
           recipientName: recipient.name,

@@ -64,7 +64,7 @@ export default function Sidebar({ activeItem = "jobs-near-you", onToggle, isOpen
   const postGigLabel = viewMode === "person" ? "Post a gig" : "Post a job";
   const navigationItems = [
     { id: "jobs-near-you", label: jobsNearYouLabel, icon: EarthFilled, route: "/jobs-near-you" },
-    { id: "notifications", label: "Notifications", icon: Notification, route: "/notifications", badge: true },
+    { id: "notifications", label: "Notifications", icon: Notification, route: "/onboarding?openNotifications=1", badge: true },
     { id: "post-gig", label: postGigLabel, icon: Add, route: "/onboarding" },
     { id: "manage-resume", label: "Manage Resume", icon: Document, route: "/manage-resume", openSettingsSection: "resume" },
     { id: "manage-jds", label: "Manage JDs", icon: Archive, route: "/manage-jds" },
@@ -131,8 +131,8 @@ export default function Sidebar({ activeItem = "jobs-near-you", onToggle, isOpen
           {navigationItems.map((item) => {
             const IconComponent = item.icon;
             const isActive = activeItem === item.id;
-            const isComingSoon = !isDev && item.id !== "jobs-near-you" && item.id !== "post-gig" && item.id !== "manage-resume" && item.id !== "settings";
-            const isDisabled = isComingSoon || (!isActive && item.id !== "jobs-near-you" && item.id !== "post-gig" && item.id !== "manage-resume" && item.id !== "settings");
+            const isComingSoon = !isDev && item.id !== "jobs-near-you" && item.id !== "notifications" && item.id !== "post-gig" && item.id !== "manage-resume" && item.id !== "settings";
+            const isDisabled = isComingSoon || (!isActive && item.id !== "jobs-near-you" && item.id !== "notifications" && item.id !== "post-gig" && item.id !== "manage-resume" && item.id !== "settings");
             const tooltipContent = !isOpen ? (isComingSoon ? "Coming soon" : item.label) : "";
             return (
               <li key={item.id} className="w-full">

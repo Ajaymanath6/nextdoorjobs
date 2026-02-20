@@ -3,7 +3,7 @@
 import { useState, useEffect, useRef } from "react";
 import { useRouter } from "next/navigation";
 import { useUser, useClerk } from "@clerk/nextjs";
-import { WatsonHealthRotate_360, List, UserAvatar, User, Settings, Logout, EarthFilled, Chat, ArrowLeft, Location } from "@carbon/icons-react";
+import { WatsonHealthRotate_360, List, UserAvatar, User, Settings, Logout, EarthFilled, Chat, ArrowLeft, Location, Notification } from "@carbon/icons-react";
 import ChatInterface from "../components/Onboarding/ChatInterface";
 import SettingsModal from "../components/SettingsModal";
 import EmailAuthForm from "../components/Onboarding/EmailAuthForm";
@@ -19,6 +19,7 @@ import ServiceTypeSelector from "../components/Onboarding/ServiceTypeSelector";
 import SalaryInput from "../components/Onboarding/SalaryInput";
 import ExperienceInput from "../components/Onboarding/ExperienceInput";
 import ProfileBubbleBackground from "../components/Onboarding/ProfileBubbleBackground";
+import RecruiterChatPanel from "../components/RecruiterChatPanel";
 
 // Field collection states
 const COMPANY_FIELDS = {
@@ -149,6 +150,13 @@ export default function OnboardingPage() {
   const [isMobile, setIsMobile] = useState(false);
   const [isNavigatingToMap, setIsNavigatingToMap] = useState(false);
   const [listViewActive, setListViewActive] = useState(false);
+  const [notificationCount, setNotificationCount] = useState(0);
+  const [showNotificationsPanel, setShowNotificationsPanel] = useState(false);
+  const [notifications, setNotifications] = useState([]);
+  const [notificationsLoading, setNotificationsLoading] = useState(false);
+  const [activeChatConversationId, setActiveChatConversationId] = useState(null);
+  const [activeChatRecruiterName, setActiveChatRecruiterName] = useState("");
+  const [activeChatRecruiterEmail, setActiveChatRecruiterEmail] = useState("");
   const onboardingSessionIdRef = useRef(null);
   const conversationOrderRef = useRef(0);
   const lastAIMessageTextRef = useRef("");
@@ -165,6 +173,65 @@ export default function OnboardingPage() {
   useEffect(() => {
     onboardingSessionIdRef.current = onboardingSessionId;
   }, [onboardingSessionId]);
+
+  // Read URL params: openNotifications, conversationId (from sidebar or email link)
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    const params = new URLSearchParams(window.location.search);
+    if (params.get("openNotifications") === "1") {
+      setShowNotificationsPanel(true);
+      setNotificationsLoading(true);
+      fetch("/api/notifications", { credentials: "same-origin" })
+        .then((r) => (r.ok ? r.json() : { notifications: [] }))
+        .then((data) => {
+          setNotifications(Array.isArray(data.notifications) ? data.notifications : []);
+          setNotificationCount(data.unreadCount || 0);
+        })
+        .catch(() => setNotifications([]))
+        .finally(() => setNotificationsLoading(false));
+    }
+    const convId = params.get("conversationId");
+    if (convId) {
+      const id = parseInt(convId, 10);
+      if (!Number.isNaN(id)) {
+        setShowNotificationsPanel(true);
+        setActiveChatConversationId(id);
+        setNotificationsLoading(true);
+        fetch("/api/notifications", { credentials: "same-origin" })
+          .then((r) => (r.ok ? r.json() : { notifications: [] }))
+          .then((data) => {
+            const list = Array.isArray(data.notifications) ? data.notifications : [];
+            setNotifications(list);
+            setNotificationCount(data.unreadCount || 0);
+            const notif = list.find((n) => n.conversationId === id);
+            if (notif) {
+              setActiveChatRecruiterName(notif.senderName || notif.senderOrgName || "Recruiter");
+              setActiveChatRecruiterEmail(notif.senderEmail || "");
+            }
+          })
+          .catch(() => setNotifications([]))
+          .finally(() => setNotificationsLoading(false));
+      }
+    }
+  }, []);
+
+  // Poll notification count
+  useEffect(() => {
+    const fetchCount = async () => {
+      try {
+        const res = await fetch("/api/notifications/unread-count", { credentials: "same-origin" });
+        if (res.ok) {
+          const data = await res.json();
+          setNotificationCount(data.count || 0);
+        }
+      } catch (error) {
+        console.error("Error fetching notification count:", error);
+      }
+    };
+    fetchCount();
+    const interval = setInterval(fetchCount, 30000);
+    return () => clearInterval(interval);
+  }, []);
 
   // Guard: Redirect Company users to /onboarding.org
   useEffect(() => {
@@ -1937,6 +2004,30 @@ setCurrentField(GIG_FIELDS.CUSTOMERS_TILL_DATE);
                   {listViewActive ? "Back to chat" : (userData?.accountType === "Individual" ? "Your posted gigs" : "Your job postings")}
                 </span>
               </button>
+              <button
+                type="button"
+                onClick={() => {
+                  setShowNotificationsPanel(true);
+                  setNotificationsLoading(true);
+                  fetch("/api/notifications", { credentials: "same-origin" })
+                    .then((r) => (r.ok ? r.json() : { notifications: [] }))
+                    .then((data) => {
+                      setNotifications(Array.isArray(data.notifications) ? data.notifications : []);
+                      setNotificationCount(data.unreadCount || 0);
+                    })
+                    .catch(() => setNotifications([]))
+                    .finally(() => setNotificationsLoading(false));
+                }}
+                className="p-2 rounded-lg hover:bg-brand-bg-fill transition-colors relative"
+                title="Notifications"
+              >
+                <Notification size={20} className="text-brand-text-weak" />
+                {notificationCount > 0 && (
+                  <span className="absolute -top-1 -right-1 bg-brand text-white text-xs font-bold rounded-full min-w-[18px] h-[18px] flex items-center justify-center px-1" style={{ fontSize: "10px" }}>
+                    {notificationCount}
+                  </span>
+                )}
+              </button>
               <div className="relative" ref={languageDropdownRef}>
               <button
                 onClick={() => setShowLanguageDropdown(!showLanguageDropdown)}
@@ -2062,8 +2153,92 @@ setCurrentField(GIG_FIELDS.CUSTOMERS_TILL_DATE);
             </div>
           </div>
 
-          {/* Content - Always show chat interface; overflow-hidden so only this area clips */}
+          {/* Content - Chat interface, or notifications panel, or recruiter chat panel */}
           <div className="flex-1 relative z-10 overflow-hidden rounded-b-lg min-h-0">
+            {activeChatConversationId ? (
+              <RecruiterChatPanel
+                conversationId={activeChatConversationId}
+                otherPartyName={activeChatRecruiterName}
+                otherPartyEmail={activeChatRecruiterEmail}
+                onClose={() => {
+                  setActiveChatConversationId(null);
+                  setActiveChatRecruiterName("");
+                  setActiveChatRecruiterEmail("");
+                }}
+                onNotificationCountChange={(count) => setNotificationCount(count)}
+              />
+            ) : showNotificationsPanel ? (
+              <div className="h-full flex flex-col bg-white">
+                <div className="flex items-center justify-between border-b border-[#E5E5E5] px-4 py-2 shrink-0">
+                  <button
+                    type="button"
+                    onClick={() => setShowNotificationsPanel(false)}
+                    className="p-2 rounded-lg hover:bg-gray-100 transition-colors flex items-center gap-2 text-brand-text-strong"
+                    aria-label="Back"
+                  >
+                    <ArrowLeft size={18} />
+                  </button>
+                  <h2 className="text-lg font-semibold text-brand-text-strong">Notifications</h2>
+                  <div className="w-10"></div>
+                </div>
+                <div className="flex-1 overflow-y-auto p-4 min-h-0">
+                  {notificationsLoading ? (
+                    <p className="text-sm text-brand-text-weak">Loading…</p>
+                  ) : notifications.length === 0 ? (
+                    <p className="text-sm text-brand-text-weak">No notifications yet.</p>
+                  ) : (
+                    <ul className="space-y-2">
+                      {notifications.map((notif) => (
+                        <li
+                          key={notif.id}
+                          className={`flex flex-col gap-1 p-3 rounded-lg border border-[#E5E5E5] hover:bg-gray-50 cursor-pointer ${
+                            !notif.isRead ? "bg-brand/5" : ""
+                          }`}
+                          onClick={async () => {
+                            try {
+                              await fetch("/api/notifications/mark-read", {
+                                method: "POST",
+                                headers: { "Content-Type": "application/json" },
+                                credentials: "same-origin",
+                                body: JSON.stringify({ notificationIds: [notif.id] }),
+                              });
+                              setNotifications((prev) =>
+                                prev.map((n) => (n.id === notif.id ? { ...n, isRead: true } : n))
+                              );
+                              setNotificationCount((prev) => Math.max(0, prev - 1));
+                              if (notif.conversationId) {
+                                setActiveChatConversationId(notif.conversationId);
+                                setActiveChatRecruiterName(notif.senderName || notif.senderOrgName || "Recruiter");
+                                setActiveChatRecruiterEmail(notif.senderEmail || "");
+                              }
+                            } catch (error) {
+                              console.error("Error marking notification as read:", error);
+                            }
+                          }}
+                        >
+                          <div className="flex items-start justify-between">
+                            <span className="font-medium text-brand-text-strong">{notif.title}</span>
+                            {!notif.isRead && (
+                              <span className="w-2 h-2 bg-brand rounded-full shrink-0 mt-1"></span>
+                            )}
+                          </div>
+                          <span className="text-sm text-brand-text-weak">{notif.message}</span>
+                          {notif.senderOrgName && (
+                            <span className="text-xs text-brand-text-weak">From: {notif.senderOrgName}</span>
+                          )}
+                          {notif.senderEmail && (
+                            <span className="text-xs text-brand-text-weak">Email: {notif.senderEmail}</span>
+                          )}
+                          <span className="text-xs text-brand-text-weak">
+                            {new Date(notif.createdAt).toLocaleString()}
+                          </span>
+                        </li>
+                      ))}
+                    </ul>
+                  )}
+                </div>
+              </div>
+            ) : (
             <ChatInterface
               messages={chatMessages}
               onSendMessage={handleChatMessage}
@@ -2113,6 +2288,7 @@ setCurrentField(GIG_FIELDS.CUSTOMERS_TILL_DATE);
                 }
               }}
             />
+            )}
           </div>
         </div>
       </div>
