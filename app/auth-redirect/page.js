@@ -18,13 +18,15 @@ export default function AuthRedirect() {
     fetch("/api/auth/me", { credentials: "same-origin" })
       .then((res) => (res.ok ? res.json() : null))
       .then((data) => {
-        if (data?.success && data.user?.accountType) {
+        const accountType = data?.user?.accountType;
+        const hasAccountType = accountType === "Individual" || accountType === "Company";
+        if (data?.success && data.user && hasAccountType) {
           router.replace("/");
         } else {
           router.replace("/who-are-you");
         }
       })
-      .catch(() => router.replace("/who-are-you"));
+      .catch(() => router.replace("/"));
   }, [isLoaded, userId, router]);
 
   return (

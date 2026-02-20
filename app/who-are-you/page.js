@@ -43,13 +43,18 @@ export default function WhoAreYouPage() {
     fetch("/api/auth/me", { credentials: "same-origin" })
       .then((res) => (res.ok ? res.json() : null))
       .then((data) => {
-        if (data?.success && data.user?.accountType) {
+        const accountType = data?.user?.accountType;
+        const hasAccountType = accountType === "Individual" || accountType === "Company";
+        if (data?.success && data.user && hasAccountType) {
           router.replace("/");
           return;
         }
         setChecking(false);
       })
-      .catch(() => setChecking(false));
+      .catch(() => {
+        // On network/API error, send to map so we don't show who-are-you to existing users
+        router.replace("/");
+      });
   }, [isLoaded, userId, router]);
 
   const handleSelect = async (value) => {

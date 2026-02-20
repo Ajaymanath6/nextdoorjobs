@@ -71,7 +71,9 @@ const clerkHandler = clerkMiddleware(async (auth, req) => {
           where: { email: emailNorm },
           select: { accountType: true },
         });
-        if (user?.accountType) {
+        // Only allow through to map when accountType is explicitly set (Individual or Company)
+        const hasAccountType = user?.accountType === 'Individual' || user?.accountType === 'Company';
+        if (hasAccountType) {
           return NextResponse.next();
         }
         // User in DB but no accountType, or user not in DB yet -> who-are-you first
