@@ -26,7 +26,6 @@ import {
   Add,
   Settings,
   Logout,
-  SendAlt,
 } from "@carbon/icons-react";
 import { RiArrowDownSLine } from "@remixicon/react";
 import FilterDropdown from "./FilterDropdown";
@@ -179,12 +178,11 @@ const MapComponent = ({ onOpenSettings, onViewModeChange }) => {
   const homeSuggestionsRef = useRef(null);
   const [showDistanceFromHome, setShowDistanceFromHome] = useState(false);
   const [selectedGigForDistance, setSelectedGigForDistance] = useState(null);
-  const [chatModalOpen, setChatModalOpen] = useState(false);
+  const [activeChatPopupGigId, setActiveChatPopupGigId] = useState(null);
   const [chatCandidateId, setChatCandidateId] = useState(null);
   const [chatCandidateName, setChatCandidateName] = useState("");
   const [chatCandidateEmail, setChatCandidateEmail] = useState("");
   const [chatConversationId, setChatConversationId] = useState(null);
-  const [chatModalAnchor, setChatModalAnchor] = useState(null);
   const [chatMessages, setChatMessages] = useState([]);
   const [chatInput, setChatInput] = useState("");
   const [chatLoading, setChatLoading] = useState(false);
@@ -192,6 +190,7 @@ const MapComponent = ({ onOpenSettings, onViewModeChange }) => {
   const chatMessagesEndRef = useRef(null);
   const eventSourceRef = useRef(null);
   const chatSourceMarkerRef = useRef(null);
+  const chatConversationIdRef = useRef(null);
   const homeMarkerRef = useRef(null);
   const homeToGigLineRef = useRef(null);
 
@@ -962,8 +961,7 @@ const MapComponent = ({ onOpenSettings, onViewModeChange }) => {
         const currentSalaryHtml = r.currentSalaryVisibleToRecruiter && r.currentSalaryPackage
           ? `<div class="map-popup-meta"><strong>Current salary:</strong> ${escapeHtml(r.currentSalaryPackage)}</div>`
           : "";
-        popupContent = `
-        <div class="map-popup-with-twin">
+        const resumePanelHtml = `
           <div class="map-popup-resume-panel">
             <div class="map-popup-content">
               <div class="map-popup-row">
@@ -995,16 +993,9 @@ const MapComponent = ({ onOpenSettings, onViewModeChange }) => {
                 </a>
               </div>
             </div>
-          </div>
-          <div class="map-popup-twin-panel">
-            <div class="map-popup-twin-inner">
-              <input type="text" class="map-popup-twin-input" placeholder="type here" readonly />
-              <button type="button" class="map-popup-twin-send" aria-label="Send" title="Send">
-                <svg width="20" height="20" viewBox="0 0 32 32" fill="currentColor" xmlns="http://www.w3.org/2000/svg"><path d="M27.45,15.11l-22-10a1,1,0,0,0-1.08.12,1,1,0,0,0-.37,1L6,16,3.94,25.81A1,1,0,0,0,4.94,27a1,1,0,0,0,.66-.25L16,19l8.6,6.16a1,1,0,0,0,1.19.13,1,1,0,0,0,.6-.91V16A1,1,0,0,0,27.45,15.11ZM5.92,24.63l1.36-6.86,4.42,4.42Zm2.48-7.26L21.5,15,9.8,10.63ZM26,22.13,18.24,16,26,9.87Z"/></svg>
-              </button>
-            </div>
-          </div>
-        </div>`;
+          </div>`;
+        marker._resumePanelHtml = resumePanelHtml;
+        popupContent = resumePanelHtml;
       } else {
         const serviceBadge = gig.serviceType
           ? `<span class="map-popup-badge">${escapeHtml(gig.serviceType)}</span>`
@@ -1046,7 +1037,7 @@ const MapComponent = ({ onOpenSettings, onViewModeChange }) => {
         </div>
       `;
       }
-      marker.bindPopup(popupContent, { className: "gig-popup", maxWidth: isCandidate && gig.resume ? 560 : 320 });
+      marker.bindPopup(popupContent, { className: "gig-popup", maxWidth: isCandidate && gig.resume ? 600 : 320 });
       marker.on("popupopen", () => {
         const el = marker.getPopup()?.getElement();
         if (!el) return;
@@ -1089,30 +1080,84 @@ const MapComponent = ({ onOpenSettings, onViewModeChange }) => {
               setChatCandidateId(candidateId);
               setChatCandidateName(gig.user?.name || "Candidate");
               setChatCandidateEmail(displayEmail || "");
-              // Position chat box below the popover
-              const popupElement = marker.getPopup()?.getElement();
-              if (popupElement) {
-                const popupRect = popupElement.getBoundingClientRect();
-                setChatModalAnchor({ 
-                  top: popupRect.bottom, 
-                  left: popupRect.left,
-                  width: popupRect.width 
-                });
-              } else if (map) {
-                const latlng = marker.getLatLng();
-                const point = map.latLngToContainerPoint(latlng);
-                const container = map.getContainer();
-                const containerRect = container.getBoundingClientRect();
-                setChatModalAnchor({ top: containerRect.top + point.y + 200, left: containerRect.left + point.x - 160 });
-              } else {
-                const rect = el.getBoundingClientRect();
-                setChatModalAnchor({ top: rect.bottom, left: rect.left, width: rect.width });
-              }
-              setChatModalOpen(true);
+              setActiveChatPopupGigId(gig.id);
+              const initialMsgHtml = '<div class="map-popup-twin-msg-placeholder">Loading…</div>';
+              const sendSvg = '<svg width="20" height="20" viewBox="0 0 32 32" fill="currentColor" xmlns="http://www.w3.org/2000/svg"><path d="M27.45,15.11l-22-10a1,1,0,0,0-1.08.12,1,1,0,0,0-.37,1L6,16,3.94,25.81A1,1,0,0,0,4.94,27a1,1,0,0,0,.66-.25L16,19l8.6,6.16a1,1,0,0,0,1.19.13,1,1,0,0,0,.6-.91V16A1,1,0,0,0,27.45,15.11ZM5.92,24.63l1.36-6.86,4.42,4.42Zm2.48-7.26L21.5,15,9.8,10.63ZM26,22.13,18.24,16,26,9.87Z"/></svg>';
+              const twinHtml = `
+                <div class="map-popup-twin-panel">
+                  <div class="map-popup-twin-header">
+                    <div class="map-popup-twin-header-text">
+                      <div class="map-popup-twin-name">${escapeHtml(gig.user?.name || "Candidate")}</div>
+                      <div class="map-popup-twin-email">${escapeHtml(displayEmail || "")}</div>
+                    </div>
+                    <button type="button" class="map-popup-twin-close" aria-label="Close">×</button>
+                  </div>
+                  <div class="map-popup-twin-messages">
+                    <div class="map-popup-twin-messages-inner">${initialMsgHtml}</div>
+                    <div class="map-popup-twin-messages-end"></div>
+                  </div>
+                  <div class="map-popup-twin-input-wrapper">
+                    <input type="text" class="map-popup-twin-input" placeholder="type here" />
+                    <button type="button" class="map-popup-twin-send-inside" aria-label="Send">${sendSvg}</button>
+                  </div>
+                </div>`;
+              const fullContent = '<div class="map-popup-with-twin">' + resumePanelHtml + twinHtml + '</div>';
+              marker.getPopup().setContent(fullContent);
+              setTimeout(() => {
+                const popupEl = marker.getPopup()?.getElement();
+                if (!popupEl) return;
+                const seeBtn = popupEl.querySelector('[data-action="see-distance"]');
+                if (seeBtn) seeBtn.onclick = () => { setSelectedGigForDistance(gig); setShowDistanceFromHome(true); };
+                const addBtn = popupEl.querySelector('[data-action="add-home"]');
+                if (addBtn) addBtn.onclick = () => { setSelectedGigForDistance(gig); setShowAddHomeModal(true); };
+                const closeBtn = popupEl.querySelector('.map-popup-twin-close');
+                if (closeBtn) closeBtn.onclick = () => {
+                  chatSourceMarkerRef.current = null;
+                  setActiveChatPopupGigId(null);
+                  setChatConversationId(null);
+                  setChatCandidateId(null);
+                  setChatCandidateName("");
+                  setChatCandidateEmail("");
+                  setChatInput("");
+                  if (marker._resumePanelHtml) marker.getPopup().setContent(marker._resumePanelHtml);
+                };
+                const inputEl = popupEl.querySelector('.map-popup-twin-input');
+                const sendBtn = popupEl.querySelector('.map-popup-twin-send-inside');
+                if (inputEl) inputEl.oninput = (e) => setChatInput(e.target.value);
+                if (inputEl) inputEl.value = '';
+                const doSend = async () => {
+                  const text = (inputEl?.value || '').trim();
+                  const convId = chatConversationIdRef.current;
+                  if (!text || !convId || chatSending) return;
+                  setChatSending(true);
+                  try {
+                    const r = await fetch(`/api/chat/conversations/${convId}/messages`, { method: "POST", headers: { "Content-Type": "application/json" }, credentials: "same-origin", body: JSON.stringify({ body: text }) });
+                    const d = await r.json().catch(() => ({}));
+                    if (r.ok && d.id) {
+                      setChatMessages((prev) => [...prev, { id: d.id, senderId: d.senderId, body: d.body, createdAt: d.createdAt }]);
+                      if (inputEl) inputEl.value = '';
+                      setChatInput('');
+                    }
+                  } finally { setChatSending(false); }
+                };
+                if (sendBtn) sendBtn.onclick = (e) => { e.preventDefault(); doSend(); };
+                if (inputEl) inputEl.onkeydown = (e) => { if (e.key === 'Enter') { e.preventDefault(); doSend(); } };
+              }, 0);
             } catch (err) {
               alert("Could not start chat");
             }
           };
+        }
+      });
+      marker.on("popupclose", () => {
+        if (chatSourceMarkerRef.current === marker) {
+          chatSourceMarkerRef.current = null;
+          setActiveChatPopupGigId(null);
+          setChatConversationId(null);
+          setChatCandidateId(null);
+          setChatCandidateName("");
+          setChatCandidateEmail("");
+          setChatInput("");
         }
       });
       clusterGroup.addLayer(marker);
@@ -1958,10 +2003,13 @@ const MapComponent = ({ onOpenSettings, onViewModeChange }) => {
       });
   };
 
-  // Load chat messages when modal opens
+  const chatTwinOpen = activeChatPopupGigId !== null;
+  chatConversationIdRef.current = chatConversationId;
+
+  // Load chat messages when twin panel opens
   useEffect(() => {
-    if (!chatModalOpen || !chatConversationId) {
-      if (!chatModalOpen) setChatMessages([]);
+    if (!chatTwinOpen || !chatConversationId) {
+      if (!chatTwinOpen) setChatMessages([]);
       return;
     }
     setChatLoading(true);
@@ -1973,16 +2021,37 @@ const MapComponent = ({ onOpenSettings, onViewModeChange }) => {
         setChatLoading(false);
       })
       .catch(() => setChatLoading(false));
-  }, [chatModalOpen, chatConversationId]);
+  }, [chatTwinOpen, chatConversationId]);
 
   useEffect(() => {
-    if (chatModalOpen && chatMessages.length) {
-      setTimeout(() => chatMessagesEndRef.current?.scrollIntoView({ behavior: "smooth" }), 50);
+    if (chatTwinOpen && chatMessages.length) {
+      const messagesEl = document.querySelector(".map-popup-twin-messages-end");
+      if (messagesEl) setTimeout(() => messagesEl.scrollIntoView({ behavior: "smooth" }), 50);
     }
-  }, [chatModalOpen, chatMessages]);
+  }, [chatTwinOpen, chatMessages]);
+
+  // Update twin panel messages in popup DOM when chatMessages or chatLoading change
+  useEffect(() => {
+    if (!chatTwinOpen || !chatSourceMarkerRef.current) return;
+    const popupEl = chatSourceMarkerRef.current.getPopup()?.getElement();
+    if (!popupEl) return;
+    const inner = popupEl.querySelector(".map-popup-twin-messages-inner");
+    if (!inner) return;
+    const escapeHtml = (str) => (str || "").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
+    if (chatLoading) {
+      inner.innerHTML = '<div class="map-popup-twin-msg-placeholder">Loading…</div>';
+    } else if (chatMessages.length === 0) {
+      inner.innerHTML = '<div class="map-popup-twin-msg-placeholder">Messages are stored for one month.</div>';
+    } else {
+      inner.innerHTML = chatMessages.map((m) => {
+        const isMe = m.senderId === meUser?.id;
+        return `<div class="map-popup-twin-msg ${isMe ? "map-popup-twin-msg-me" : "map-popup-twin-msg-them"}">${escapeHtml(m.body)}</div>`;
+      }).join("");
+    }
+  }, [chatTwinOpen, chatMessages, chatLoading, meUser?.id]);
 
   useEffect(() => {
-    if (!chatModalOpen || !chatConversationId) {
+    if (!chatTwinOpen || !chatConversationId) {
       if (eventSourceRef.current) {
         eventSourceRef.current.close();
         eventSourceRef.current = null;
@@ -2012,48 +2081,7 @@ const MapComponent = ({ onOpenSettings, onViewModeChange }) => {
     return () => {
       eventSource.close();
     };
-  }, [chatModalOpen, chatConversationId, meUser?.id]);
-
-  // Keep chat panel position tied to popover on map move/zoom (sticky to popup)
-  useEffect(() => {
-    if (!chatModalOpen || !chatSourceMarkerRef.current || !mapInstanceRef.current) return;
-    const map = mapInstanceRef.current;
-    const marker = chatSourceMarkerRef.current;
-    const updateAnchor = () => {
-      // Get the popover element and position chat box below it
-      const popupElement = marker.getPopup()?.getElement();
-      if (popupElement) {
-        const popupRect = popupElement.getBoundingClientRect();
-        setChatModalAnchor({ 
-          top: popupRect.bottom, 
-          left: popupRect.left,
-          width: popupRect.width 
-        });
-      } else {
-        // Fallback to marker position if popover not found
-        const latlng = marker.getLatLng();
-        const point = map.latLngToContainerPoint(latlng);
-        const container = map.getContainer();
-        const containerRect = container.getBoundingClientRect();
-        setChatModalAnchor({ top: containerRect.top + point.y + 200, left: containerRect.left + point.x - 160 });
-      }
-    };
-    map.on("moveend", updateAnchor);
-    map.on("zoomend", updateAnchor);
-    map.on("popupopen", updateAnchor);
-    map.on("popupclose", updateAnchor);
-    // Also update on popover open/close
-    marker.on("popupopen", updateAnchor);
-    marker.on("popupclose", updateAnchor);
-    return () => {
-      map.off("moveend", updateAnchor);
-      map.off("zoomend", updateAnchor);
-      map.off("popupopen", updateAnchor);
-      map.off("popupclose", updateAnchor);
-      marker.off("popupopen", updateAnchor);
-      marker.off("popupclose", updateAnchor);
-    };
-  }, [chatModalOpen]);
+  }, [chatTwinOpen, chatConversationId, meUser?.id]);
 
   useEffect(() => {
     if (!mapReady || !mapInstanceRef.current || typeof window === "undefined") return;
@@ -2978,8 +3006,7 @@ const MapComponent = ({ onOpenSettings, onViewModeChange }) => {
         const currentSalaryHtml = r.currentSalaryVisibleToRecruiter && r.currentSalaryPackage
           ? `<div class="map-popup-meta"><strong>Current salary:</strong> ${escapeHtml(r.currentSalaryPackage)}</div>`
           : "";
-        popupContent = `
-        <div class="map-popup-with-twin">
+        const resumePanelHtml = `
           <div class="map-popup-resume-panel">
             <div class="map-popup-content">
               <div class="map-popup-row">
@@ -3011,16 +3038,9 @@ const MapComponent = ({ onOpenSettings, onViewModeChange }) => {
                 </a>
               </div>
             </div>
-          </div>
-          <div class="map-popup-twin-panel">
-            <div class="map-popup-twin-inner">
-              <input type="text" class="map-popup-twin-input" placeholder="type here" readonly />
-              <button type="button" class="map-popup-twin-send" aria-label="Send" title="Send">
-                <svg width="20" height="20" viewBox="0 0 32 32" fill="currentColor" xmlns="http://www.w3.org/2000/svg"><path d="M27.45,15.11l-22-10a1,1,0,0,0-1.08.12,1,1,0,0,0-.37,1L6,16,3.94,25.81A1,1,0,0,0,4.94,27a1,1,0,0,0,.66-.25L16,19l8.6,6.16a1,1,0,0,0,1.19.13,1,1,0,0,0,.6-.91V16A1,1,0,0,0,27.45,15.11ZM5.92,24.63l1.36-6.86,4.42,4.42Zm2.48-7.26L21.5,15,9.8,10.63ZM26,22.13,18.24,16,26,9.87Z"/></svg>
-              </button>
-            </div>
-          </div>
-        </div>`;
+          </div>`;
+        marker._resumePanelHtml = resumePanelHtml;
+        popupContent = resumePanelHtml;
       } else {
         const serviceBadge = gig.serviceType
           ? `<span class="map-popup-badge">${escapeHtml(gig.serviceType)}</span>`
@@ -3062,7 +3082,7 @@ const MapComponent = ({ onOpenSettings, onViewModeChange }) => {
         </div>
       `;
       }
-      marker.bindPopup(popupContent, { className: "gig-popup", maxWidth: isCandidate && gig.resume ? 560 : 320 });
+      marker.bindPopup(popupContent, { className: "gig-popup", maxWidth: isCandidate && gig.resume ? 600 : 320 });
       marker.on("popupopen", () => {
         const el = marker.getPopup()?.getElement();
         if (!el) return;
@@ -3105,30 +3125,84 @@ const MapComponent = ({ onOpenSettings, onViewModeChange }) => {
               setChatCandidateId(candidateId);
               setChatCandidateName(gig.user?.name || "Candidate");
               setChatCandidateEmail(displayEmail || "");
-              // Position chat box below the popover
-              const popupElement = marker.getPopup()?.getElement();
-              if (popupElement) {
-                const popupRect = popupElement.getBoundingClientRect();
-                setChatModalAnchor({ 
-                  top: popupRect.bottom, 
-                  left: popupRect.left,
-                  width: popupRect.width 
-                });
-              } else if (map) {
-                const latlng = marker.getLatLng();
-                const point = map.latLngToContainerPoint(latlng);
-                const container = map.getContainer();
-                const containerRect = container.getBoundingClientRect();
-                setChatModalAnchor({ top: containerRect.top + point.y + 200, left: containerRect.left + point.x - 160 });
-              } else {
-                const rect = el.getBoundingClientRect();
-                setChatModalAnchor({ top: rect.bottom, left: rect.left, width: rect.width });
-              }
-              setChatModalOpen(true);
+              setActiveChatPopupGigId(gig.id);
+              const initialMsgHtml = '<div class="map-popup-twin-msg-placeholder">Loading…</div>';
+              const sendSvg = '<svg width="20" height="20" viewBox="0 0 32 32" fill="currentColor" xmlns="http://www.w3.org/2000/svg"><path d="M27.45,15.11l-22-10a1,1,0,0,0-1.08.12,1,1,0,0,0-.37,1L6,16,3.94,25.81A1,1,0,0,0,4.94,27a1,1,0,0,0,.66-.25L16,19l8.6,6.16a1,1,0,0,0,1.19.13,1,1,0,0,0,.6-.91V16A1,1,0,0,0,27.45,15.11ZM5.92,24.63l1.36-6.86,4.42,4.42Zm2.48-7.26L21.5,15,9.8,10.63ZM26,22.13,18.24,16,26,9.87Z"/></svg>';
+              const twinHtml = `
+                <div class="map-popup-twin-panel">
+                  <div class="map-popup-twin-header">
+                    <div class="map-popup-twin-header-text">
+                      <div class="map-popup-twin-name">${escapeHtml(gig.user?.name || "Candidate")}</div>
+                      <div class="map-popup-twin-email">${escapeHtml(displayEmail || "")}</div>
+                    </div>
+                    <button type="button" class="map-popup-twin-close" aria-label="Close">×</button>
+                  </div>
+                  <div class="map-popup-twin-messages">
+                    <div class="map-popup-twin-messages-inner">${initialMsgHtml}</div>
+                    <div class="map-popup-twin-messages-end"></div>
+                  </div>
+                  <div class="map-popup-twin-input-wrapper">
+                    <input type="text" class="map-popup-twin-input" placeholder="type here" />
+                    <button type="button" class="map-popup-twin-send-inside" aria-label="Send">${sendSvg}</button>
+                  </div>
+                </div>`;
+              const fullContent = '<div class="map-popup-with-twin">' + resumePanelHtml + twinHtml + '</div>';
+              marker.getPopup().setContent(fullContent);
+              setTimeout(() => {
+                const popupEl = marker.getPopup()?.getElement();
+                if (!popupEl) return;
+                const seeBtn = popupEl.querySelector('[data-action="see-distance"]');
+                if (seeBtn) seeBtn.onclick = () => { setSelectedGigForDistance(gig); setShowDistanceFromHome(true); };
+                const addBtn = popupEl.querySelector('[data-action="add-home"]');
+                if (addBtn) addBtn.onclick = () => { setSelectedGigForDistance(gig); setShowAddHomeModal(true); };
+                const closeBtn = popupEl.querySelector('.map-popup-twin-close');
+                if (closeBtn) closeBtn.onclick = () => {
+                  chatSourceMarkerRef.current = null;
+                  setActiveChatPopupGigId(null);
+                  setChatConversationId(null);
+                  setChatCandidateId(null);
+                  setChatCandidateName("");
+                  setChatCandidateEmail("");
+                  setChatInput("");
+                  if (marker._resumePanelHtml) marker.getPopup().setContent(marker._resumePanelHtml);
+                };
+                const inputEl = popupEl.querySelector('.map-popup-twin-input');
+                const sendBtn = popupEl.querySelector('.map-popup-twin-send-inside');
+                if (inputEl) inputEl.oninput = (e) => setChatInput(e.target.value);
+                if (inputEl) inputEl.value = '';
+                const doSend = async () => {
+                  const text = (inputEl?.value || '').trim();
+                  const convId = chatConversationIdRef.current;
+                  if (!text || !convId || chatSending) return;
+                  setChatSending(true);
+                  try {
+                    const r = await fetch(`/api/chat/conversations/${convId}/messages`, { method: "POST", headers: { "Content-Type": "application/json" }, credentials: "same-origin", body: JSON.stringify({ body: text }) });
+                    const d = await r.json().catch(() => ({}));
+                    if (r.ok && d.id) {
+                      setChatMessages((prev) => [...prev, { id: d.id, senderId: d.senderId, body: d.body, createdAt: d.createdAt }]);
+                      if (inputEl) inputEl.value = '';
+                      setChatInput('');
+                    }
+                  } finally { setChatSending(false); }
+                };
+                if (sendBtn) sendBtn.onclick = (e) => { e.preventDefault(); doSend(); };
+                if (inputEl) inputEl.onkeydown = (e) => { if (e.key === 'Enter') { e.preventDefault(); doSend(); } };
+              }, 0);
             } catch (err) {
               alert("Could not start chat");
             }
           };
+        }
+      });
+      marker.on("popupclose", () => {
+        if (chatSourceMarkerRef.current === marker) {
+          chatSourceMarkerRef.current = null;
+          setActiveChatPopupGigId(null);
+          setChatConversationId(null);
+          setChatCandidateId(null);
+          setChatCandidateName("");
+          setChatCandidateEmail("");
+          setChatInput("");
         }
       });
     } else {
@@ -4873,108 +4947,6 @@ const MapComponent = ({ onOpenSettings, onViewModeChange }) => {
           setShowLocateMeCoordModal(false);
         }}
       />
-
-      {/* Chat modal (attached below resume popup) */}
-      {chatModalOpen && (
-        <div
-          className="fixed z-[2000] flex flex-col border-t-0 rounded-b-lg border border-brand-stroke-border bg-white shadow-xl"
-          style={{
-            width: chatModalAnchor?.width ? chatModalAnchor.width : 360,
-            maxHeight: "80vh",
-            left: chatModalAnchor?.left != null ? chatModalAnchor.left : (chatModalAnchor?.right != null ? chatModalAnchor.right + 8 : "50%"),
-            top: chatModalAnchor ? chatModalAnchor.top : "50%",
-            transform: chatModalAnchor ? undefined : "translate(-50%, -50%)",
-            borderRadius: chatModalAnchor ? "0 0 8px 8px" : "8px",
-          }}
-        >
-          <div className="flex items-center justify-between gap-2 border-b border-brand-stroke-border px-3 py-2 shrink-0">
-            <div className="min-w-0 flex-1">
-              <div className="truncate font-medium text-brand-text-strong">{chatCandidateName || "Chat"}</div>
-              {chatCandidateEmail ? (
-                <span className="text-xs text-brand-text-weak truncate block">{chatCandidateEmail}</span>
-              ) : null}
-            </div>
-            <button
-              type="button"
-              onClick={() => {
-                chatSourceMarkerRef.current = null;
-                setChatModalOpen(false);
-                setChatConversationId(null);
-                setChatCandidateId(null);
-                setChatCandidateName("");
-                setChatCandidateEmail("");
-                setChatModalAnchor(null);
-                setChatInput("");
-              }}
-              className="shrink-0 p-1 rounded hover:bg-brand-bg-fill"
-              aria-label="Close chat"
-            >
-              <Close size={20} className="text-brand-text-weak" />
-            </button>
-          </div>
-          <div className="flex-1 min-h-[200px] max-h-[50vh] overflow-y-auto p-2 flex flex-col gap-2">
-            {chatLoading ? (
-              <div className="text-sm text-brand-text-weak py-4 text-center">Loading…</div>
-            ) : chatMessages.length === 0 ? (
-              <div className="text-sm text-brand-text-weak py-4 text-center">Messages are stored for one month.</div>
-            ) : (
-              chatMessages.map((m) => (
-                <div
-                  key={m.id}
-                  className={`max-w-[85%] rounded-lg px-3 py-2 text-sm ${
-                    m.senderId === meUser?.id
-                      ? "self-end bg-brand-bg-brand text-white"
-                      : "self-start bg-brand-bg-fill text-brand-text-strong"
-                  }`}
-                >
-                  {m.body}
-                </div>
-              ))
-            )}
-            <div ref={chatMessagesEndRef} />
-          </div>
-          <form
-            className="flex border-t border-brand-stroke-border p-2 shrink-0 gap-0 rounded-b-lg overflow-hidden"
-            onSubmit={async (e) => {
-              e.preventDefault();
-              const text = chatInput.trim();
-              if (!text || !chatConversationId || chatSending) return;
-              setChatSending(true);
-              try {
-                const res = await fetch(`/api/chat/conversations/${chatConversationId}/messages`, {
-                  method: "POST",
-                  headers: { "Content-Type": "application/json" },
-                  credentials: "same-origin",
-                  body: JSON.stringify({ body: text }),
-                });
-                const data = await res.json().catch(() => ({}));
-                if (res.ok && data.id) {
-                  setChatMessages((prev) => [...prev, { id: data.id, senderId: data.senderId, body: data.body, createdAt: data.createdAt }]);
-                  setChatInput("");
-                }
-              } finally {
-                setChatSending(false);
-              }
-            }}
-          >
-            <input
-              type="text"
-              value={chatInput}
-              onChange={(e) => setChatInput(e.target.value)}
-              placeholder="Type a message…"
-              className="flex-1 min-w-0 rounded-l border border-brand-stroke-border border-r-0 px-3 py-2 text-sm"
-            />
-            <button
-              type="submit"
-              disabled={chatSending || !chatInput.trim()}
-              className={`shrink-0 p-2 rounded-r border border-brand-stroke-border border-l-0 ${chatInput.trim() && !chatSending ? "bg-brand-bg-brand text-white" : "bg-brand-bg-fill text-brand-text-weak opacity-50"}`}
-              aria-label="Send"
-            >
-              <SendAlt size={20} />
-            </button>
-          </form>
-        </div>
-      )}
 
       <CompanyJobsSidebar
         company={selectedCompanyForSidebar}

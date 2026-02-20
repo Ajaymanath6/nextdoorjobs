@@ -274,11 +274,12 @@ body {
   display: flex;
   align-items: stretch;
   min-width: 0;
+  width: 100%;
 }
 .gig-popup .map-popup-resume-panel {
   flex: 0 0 auto;
+  width: 320px;
   min-width: 280px;
-  max-width: 320px;
   border-right: 1px solid var(--brand-stroke-weak);
 }
 .gig-popup .map-popup-resume-panel .map-popup-content {
@@ -286,52 +287,149 @@ body {
   min-width: 0;
 }
 .gig-popup .map-popup-twin-panel {
-  flex: 0 0 200px;
+  flex: 0 0 280px;
+  width: 280px;
   display: flex;
   flex-direction: column;
   background: var(--brand-bg-white);
-  min-height: 80px;
+  min-height: 200px;
+  max-height: 70vh;
 }
-.gig-popup .map-popup-twin-inner {
+.gig-popup .map-popup-twin-header {
   display: flex;
-  align-items: center;
+  align-items: flex-start;
+  justify-content: space-between;
   gap: 8px;
-  padding: 10px 12px;
-  border: 0;
+  padding: 8px 10px;
+  border-bottom: 1px solid var(--brand-stroke-weak);
+  flex-shrink: 0;
+}
+.gig-popup .map-popup-twin-header-text {
+  min-width: 0;
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+.gig-popup .map-popup-twin-name {
+  font-weight: 600;
+  font-size: 14px;
+  color: var(--brand-text-strong);
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.gig-popup .map-popup-twin-email {
+  font-size: 12px;
+  color: var(--brand-text-weak);
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.gig-popup .map-popup-twin-close {
+  flex-shrink: 0;
+  width: 28px;
+  height: 28px;
+  padding: 0;
+  border: none;
+  border-radius: 6px;
+  background: transparent;
+  color: var(--brand-text-weak);
+  font-size: 18px;
+  line-height: 1;
+  cursor: pointer;
+  transition: background 0.15s ease, color 0.15s ease;
+}
+.gig-popup .map-popup-twin-close:hover {
+  background: var(--brand-bg-fill);
+  color: var(--brand-text-strong);
+}
+.gig-popup .map-popup-twin-messages {
+  flex: 1;
+  min-height: 80px;
+  overflow-y: auto;
+  padding: 8px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.gig-popup .map-popup-twin-messages-inner {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.gig-popup .map-popup-twin-msg-placeholder {
+  font-size: 13px;
+  color: var(--brand-text-weak);
+  padding: 12px 0;
+  text-align: center;
+}
+.gig-popup .map-popup-twin-msg {
+  max-width: 85%;
+  padding: 8px 10px;
+  border-radius: 8px;
+  font-size: 13px;
+  word-break: break-word;
+}
+.gig-popup .map-popup-twin-msg-me {
+  align-self: flex-end;
+  background: var(--brand-color, #7c00ff);
+  color: white;
+}
+.gig-popup .map-popup-twin-msg-them {
+  align-self: flex-start;
+  background: var(--brand-bg-fill);
+  color: var(--brand-text-strong);
+}
+.gig-popup .map-popup-twin-input-wrapper {
+  position: relative;
+  flex-shrink: 0;
+  padding: 8px 10px;
+  border-top: 1px solid var(--brand-stroke-weak);
 }
 .gig-popup .map-popup-twin-input {
-  flex: 1;
+  width: 100%;
   min-width: 0;
-  padding: 8px 10px;
+  padding: 8px 44px 8px 10px;
   font-size: 14px;
   font-family: var(--font-geist-sans), sans-serif;
   color: var(--brand-text-strong);
   background: var(--brand-bg-fill);
   border: 1px solid var(--brand-stroke-weak);
-  border-radius: 6px;
+  border-radius: 8px;
   outline: none;
+  box-sizing: border-box;
 }
 .gig-popup .map-popup-twin-input::placeholder {
   color: var(--brand-text-placeholder, #a5a5a5);
 }
-.gig-popup .map-popup-twin-send {
-  flex-shrink: 0;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  width: 36px;
-  height: 36px;
+.gig-popup .map-popup-twin-send-inside {
+  position: absolute;
+  right: 14px;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 32px;
+  height: 32px;
   padding: 0;
   border: none;
   border-radius: 6px;
-  background: var(--brand-bg-fill);
+  background: transparent;
   color: var(--brand-text-strong);
   cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
   transition: background 0.15s ease, color 0.15s ease;
 }
-.gig-popup .map-popup-twin-send:hover {
-  background: var(--brand-color, #7c00ff);
-  color: white;
+.gig-popup .map-popup-twin-send-inside:hover {
+  background: var(--brand-bg-fill);
+  color: var(--brand-color, #7c00ff);
+}
+.gig-popup .map-popup-twin-send-inside svg {
+  width: 18px;
+  height: 18px;
 }
 
 /* Cluster Tooltip */
