@@ -1,8 +1,8 @@
 import { NextResponse } from "next/server";
-import { prisma } from "../../../../../lib/prisma";
-import { getCurrentUser } from "../../../../../lib/getCurrentUser";
-import { encrypt, decrypt } from "../../../../../lib/chatEncryption";
-import { broadcastNewMessage } from "../../../../../lib/socket";
+import { prisma } from "@/lib/prisma";
+import { getCurrentUser } from "@/lib/getCurrentUser";
+import { encrypt, decrypt } from "@/lib/chatEncryption";
+import { broadcastNewMessage } from "@/lib/socket";
 
 const DEFAULT_LIMIT = 50;
 const MAX_LIMIT = 100;

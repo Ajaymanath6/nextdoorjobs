@@ -1,5 +1,5 @@
-import { getCurrentUser } from "../../../../lib/getCurrentUser";
-import { subscribeToConversation } from "../../../../lib/socket";
+import { getCurrentUser } from "@/lib/getCurrentUser";
+import { subscribeToConversation } from "@/lib/socket";
 
 export const dynamic = "force-dynamic";
 
