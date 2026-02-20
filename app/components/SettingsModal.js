@@ -13,6 +13,8 @@ import {
   Add,
   Location,
   Document,
+  ArrowRight,
+  Checkmark,
 } from "@carbon/icons-react";
 import EditDisplayNameModal from "./EditDisplayNameModal";
 import EditCompanyLocationModal from "./EditCompanyLocationModal";
@@ -29,6 +31,40 @@ const SECTIONS = [
 ];
 
 const VALID_SECTIONS = ["general", "resume", "company", "subscription", "integration", "other"];
+
+const SUBSCRIPTION_PLANS = [
+  {
+    id: "starter",
+    name: "Starter",
+    subheading: "For gig workers getting started",
+    badge: "Popular",
+    price: 320,
+    priceLabel: "/ month",
+    features: [
+      "Unlimited AI chat",
+      "5 lecture transcriptions / day",
+      "5 flashcard & practice sets / day",
+      "3 video generations / day",
+    ],
+  },
+  {
+    id: "pro",
+    name: "Pro",
+    subheading: "For serious job seekers",
+    badge: "Best value",
+    price: 1000,
+    priceLabel: "/ month",
+    features: [
+      "Everything in Starter",
+      "Unlimited transcriptions",
+      "Unlimited flashcard & practice sets",
+      "Unlimited video generations",
+      "Priority support",
+    ],
+  },
+];
+
+const SUBSCRIPTION_CHECKOUT_URL = process.env.NEXT_PUBLIC_SUBSCRIPTION_CHECKOUT_URL || "";
 
 export default function SettingsModal({ isOpen, onClose, initialSection }) {
   const router = useRouter();
@@ -56,6 +92,8 @@ export default function SettingsModal({ isOpen, onClose, initialSection }) {
   const [companyLogoError, setCompanyLogoError] = useState(null);
   const [showLocationEditModal, setShowLocationEditModal] = useState(false);
   const [showViewResumeModal, setShowViewResumeModal] = useState(false);
+  const [showUpgradeModal, setShowUpgradeModal] = useState(false);
+  const [selectedPlanId, setSelectedPlanId] = useState(null);
   const [firstGigForLocation, setFirstGigForLocation] = useState(null);
   const fileInputRef = useRef(null);
   const companyLogoInputRef = useRef(null);
@@ -566,6 +604,7 @@ export default function SettingsModal({ isOpen, onClose, initialSection }) {
                 {SECTIONS.filter(section => {
                   if (section.id === "company") return user?.accountType === "Company";
                   if (section.id === "resume") return user?.accountType === "Individual";
+                  if (section.id === "subscription") return user?.accountType === "Individual";
                   return true;
                 }).map(({ id, label, icon: Icon, disabled }) => (
                   <li key={id}>
@@ -1287,7 +1326,32 @@ export default function SettingsModal({ isOpen, onClose, initialSection }) {
                   )}
                 </div>
               ) : activeSection === "subscription" ? (
-                <p className="text-brand-text-weak">Subscription settings (placeholder).</p>
+                <div className="space-y-6">
+                  <h2 className="text-xl font-semibold text-brand-text-strong">Subscription or billing</h2>
+
+                  <div className="flex items-center justify-between gap-4 py-3 px-4 rounded-lg border border-brand-stroke-weak bg-brand-bg-white">
+                    <div>
+                      <p className="text-sm font-medium text-brand-text-strong">Current plan</p>
+                      <p className="text-sm text-brand-text-weak mt-0.5">Status: Free</p>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setSelectedPlanId(SUBSCRIPTION_PLANS[0]?.id ?? null);
+                        setShowUpgradeModal(true);
+                      }}
+                      className="flex items-center gap-2 px-4 py-2 rounded-md bg-brand text-brand-bg-white hover:opacity-90 text-sm font-medium shrink-0"
+                    >
+                      Upgrade
+                      <ArrowRight size={20} className="shrink-0" />
+                    </button>
+                  </div>
+
+                  <div className="py-3 px-4 rounded-lg border border-brand-stroke-weak bg-brand-bg-white">
+                    <p className="text-sm font-medium text-brand-text-strong">Status</p>
+                    <p className="text-sm text-brand-text-weak mt-0.5">Free plan – upgrade for more features.</p>
+                  </div>
+                </div>
               ) : null}
             </div>
           </div>
@@ -1385,6 +1449,92 @@ export default function SettingsModal({ isOpen, onClose, initialSection }) {
             >
               Edit resume
             </button>
+          </div>
+        </div>
+      </Modal>
+
+      <Modal isOpen={showUpgradeModal} onClose={() => { setShowUpgradeModal(false); setSelectedPlanId(null); }}>
+        <div
+          className="fixed left-1/2 top-1/2 z-[1003] flex max-h-[90vh] w-full max-w-2xl -translate-x-1/2 -translate-y-1/2 flex-col rounded-lg border border-brand-stroke-border bg-brand-bg-white shadow-lg font-sans pt-6 pb-6 px-6"
+          onClick={(e) => e.stopPropagation()}
+        >
+          <div className="flex shrink-0 items-center justify-between border-b border-brand-stroke-weak pb-4 mb-4">
+            <h2 className="text-lg font-semibold text-brand-text-strong">Go further with mapmyGig</h2>
+            <button
+              type="button"
+              onClick={() => { setShowUpgradeModal(false); setSelectedPlanId(null); }}
+              className="p-2 rounded-lg hover:bg-brand-bg-fill transition-colors"
+              aria-label="Close"
+            >
+              <Close size={20} className="text-brand-stroke-strong" />
+            </button>
+          </div>
+          <div className="flex-1 min-h-0 overflow-y-auto space-y-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              {SUBSCRIPTION_PLANS.map((plan) => {
+                const isSelected = selectedPlanId === plan.id;
+                return (
+                  <button
+                    key={plan.id}
+                    type="button"
+                    onClick={() => setSelectedPlanId(plan.id)}
+                    className={`flex flex-col text-left p-4 rounded-lg border-[1.5px] transition-colors ${
+                      isSelected ? "border-brand bg-brand/5" : "border-brand-stroke-weak hover:bg-brand-bg-fill"
+                    }`}
+                  >
+                    <div className="flex items-start justify-between gap-2">
+                      <div>
+                        <h3 className="text-base font-semibold text-brand-text-strong">{plan.name}</h3>
+                        <p className="text-xs text-brand-text-weak mt-0.5">{plan.subheading}</p>
+                      </div>
+                      {plan.badge && (
+                        <span className="shrink-0 text-xs font-medium px-2 py-0.5 rounded-md bg-brand/10 text-brand">
+                          {plan.badge}
+                        </span>
+                      )}
+                    </div>
+                    <div className="mt-3 flex items-baseline gap-1">
+                      <span className="text-xl font-bold text-brand-text-strong">₹{plan.price}</span>
+                      <span className="text-sm text-brand-text-weak">{plan.priceLabel}</span>
+                    </div>
+                    <div className="mt-3 flex justify-end text-brand-stroke-strong" aria-hidden>
+                      <Receipt size={32} className="opacity-60" />
+                    </div>
+                    <ul className="mt-3 space-y-1.5">
+                      {plan.features.map((feature, i) => (
+                        <li key={i} className="flex items-center gap-2 text-sm text-brand-text-weak">
+                          <Checkmark size={16} className="shrink-0 text-brand" />
+                          <span>{feature}</span>
+                        </li>
+                      ))}
+                    </ul>
+                  </button>
+                );
+              })}
+            </div>
+            {selectedPlanId && (
+              <div className="pt-2">
+                <button
+                  type="button"
+                  onClick={() => {
+                    const plan = SUBSCRIPTION_PLANS.find((p) => p.id === selectedPlanId);
+                    if (SUBSCRIPTION_CHECKOUT_URL) {
+                      const url = `${SUBSCRIPTION_CHECKOUT_URL}${SUBSCRIPTION_CHECKOUT_URL.includes("?") ? "&" : "?"}plan=${selectedPlanId}`;
+                      window.location.href = url;
+                    } else {
+                      alert(`Checkout for ${plan?.name ?? selectedPlanId} will open here. Set NEXT_PUBLIC_SUBSCRIPTION_CHECKOUT_URL for Razorpay.`);
+                    }
+                  }}
+                  className="w-full flex items-center justify-center gap-2 px-4 py-3 rounded-md bg-brand text-brand-bg-white hover:opacity-90 font-medium text-sm"
+                >
+                  {(() => {
+                    const plan = SUBSCRIPTION_PLANS.find((p) => p.id === selectedPlanId);
+                    return plan ? `Continue with ${plan.name}` : "Continue";
+                  })()}
+                  <ArrowRight size={20} className="shrink-0" />
+                </button>
+              </div>
+            )}
           </div>
         </div>
       </Modal>
