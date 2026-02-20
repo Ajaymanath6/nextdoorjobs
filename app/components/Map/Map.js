@@ -26,6 +26,7 @@ import {
   Add,
   Settings,
   Logout,
+  SendAlt,
 } from "@carbon/icons-react";
 import { RiArrowDownSLine } from "@remixicon/react";
 import FilterDropdown from "./FilterDropdown";
@@ -181,6 +182,7 @@ const MapComponent = ({ onOpenSettings, onViewModeChange }) => {
   const [chatModalOpen, setChatModalOpen] = useState(false);
   const [chatCandidateId, setChatCandidateId] = useState(null);
   const [chatCandidateName, setChatCandidateName] = useState("");
+  const [chatCandidateEmail, setChatCandidateEmail] = useState("");
   const [chatConversationId, setChatConversationId] = useState(null);
   const [chatModalAnchor, setChatModalAnchor] = useState(null);
   const [chatMessages, setChatMessages] = useState([]);
@@ -189,6 +191,7 @@ const MapComponent = ({ onOpenSettings, onViewModeChange }) => {
   const [chatSending, setChatSending] = useState(false);
   const chatMessagesEndRef = useRef(null);
   const eventSourceRef = useRef(null);
+  const chatSourceMarkerRef = useRef(null);
   const homeMarkerRef = useRef(null);
   const homeToGigLineRef = useRef(null);
 
@@ -982,7 +985,7 @@ const MapComponent = ({ onOpenSettings, onViewModeChange }) => {
           </div>
           <div class="map-popup-divider"></div>
           <div class="map-popup-actions">
-            <a href="mailto:${escapeHtml(displayEmail)}" class="map-popup-action-link" title="Email" aria-label="Email" target="_blank" rel="noopener">
+            <a href="${(displayEmail && displayEmail !== "—") ? `https://mail.google.com/mail/?view=cm&fs=1&to=${encodeURIComponent(displayEmail)}` : `mailto:${escapeHtml(displayEmail || "")}`}" class="map-popup-action-link" title="Email" aria-label="Email" target="_blank" rel="noopener noreferrer">
               <svg width="20" height="20" viewBox="0 0 32 32" fill="currentColor" xmlns="http://www.w3.org/2000/svg"><path d="M28,6H4A2,2,0,0,0,2,8V24a2,2,0,0,0,2,2H28a2,2,0,0,0,2-2V8A2,2,0,0,0,28,6ZM25.8,8,16,14.78,6.2,8ZM4,24V8.91l11.43,7.91a1,1,0,0,0,1.14,0L28,8.91V24Z"/></svg>
             </a>
             <a href="#" class="map-popup-action-link map-popup-action-chat" title="Chat" aria-label="Chat" data-action="chat" data-gig-id="${gig.id}">
@@ -1055,7 +1058,8 @@ const MapComponent = ({ onOpenSettings, onViewModeChange }) => {
             e.preventDefault();
             const candidateId = gig.user?.id;
             if (!candidateId) return;
-            const rect = el.getBoundingClientRect();
+            const map = mapInstanceRef.current;
+            const displayEmail = (gig.resume?.emailOverride != null && gig.resume.emailOverride !== "") ? gig.resume.emailOverride : (gig.email || gig.user?.email || "");
             try {
               const res = await fetch("/api/chat/conversations", {
                 method: "POST",
@@ -1068,10 +1072,21 @@ const MapComponent = ({ onOpenSettings, onViewModeChange }) => {
                 alert("Could not start chat");
                 return;
               }
+              chatSourceMarkerRef.current = marker;
               setChatConversationId(data.id);
               setChatCandidateId(candidateId);
               setChatCandidateName(gig.user?.name || "Candidate");
-              setChatModalAnchor({ top: rect.top, right: rect.right, height: rect.height });
+              setChatCandidateEmail(displayEmail || "");
+              if (map) {
+                const latlng = marker.getLatLng();
+                const point = map.latLngToContainerPoint(latlng);
+                const container = map.getContainer();
+                const containerRect = container.getBoundingClientRect();
+                setChatModalAnchor({ top: containerRect.top + point.y - 60, left: containerRect.left + point.x + 100 });
+              } else {
+                const rect = el.getBoundingClientRect();
+                setChatModalAnchor({ top: rect.top, left: rect.right + 8 });
+              }
               setChatModalOpen(true);
             } catch (err) {
               alert("Could not start chat");
@@ -1977,6 +1992,26 @@ const MapComponent = ({ onOpenSettings, onViewModeChange }) => {
       eventSource.close();
     };
   }, [chatModalOpen, chatConversationId, meUser?.id]);
+
+  // Keep chat panel position tied to marker on map move/zoom (sticky to popup)
+  useEffect(() => {
+    if (!chatModalOpen || !chatSourceMarkerRef.current || !mapInstanceRef.current) return;
+    const map = mapInstanceRef.current;
+    const marker = chatSourceMarkerRef.current;
+    const updateAnchor = () => {
+      const latlng = marker.getLatLng();
+      const point = map.latLngToContainerPoint(latlng);
+      const container = map.getContainer();
+      const containerRect = container.getBoundingClientRect();
+      setChatModalAnchor({ top: containerRect.top + point.y - 60, left: containerRect.left + point.x + 100 });
+    };
+    map.on("moveend", updateAnchor);
+    map.on("zoomend", updateAnchor);
+    return () => {
+      map.off("moveend", updateAnchor);
+      map.off("zoomend", updateAnchor);
+    };
+  }, [chatModalOpen]);
 
   useEffect(() => {
     if (!mapReady || !mapInstanceRef.current || typeof window === "undefined") return;
@@ -2924,7 +2959,7 @@ const MapComponent = ({ onOpenSettings, onViewModeChange }) => {
           </div>
           <div class="map-popup-divider"></div>
           <div class="map-popup-actions">
-            <a href="mailto:${escapeHtml(displayEmail)}" class="map-popup-action-link" title="Email" aria-label="Email" target="_blank" rel="noopener">
+            <a href="${(displayEmail && displayEmail !== "—") ? `https://mail.google.com/mail/?view=cm&fs=1&to=${encodeURIComponent(displayEmail)}` : `mailto:${escapeHtml(displayEmail || "")}`}" class="map-popup-action-link" title="Email" aria-label="Email" target="_blank" rel="noopener noreferrer">
               <svg width="20" height="20" viewBox="0 0 32 32" fill="currentColor" xmlns="http://www.w3.org/2000/svg"><path d="M28,6H4A2,2,0,0,0,2,8V24a2,2,0,0,0,2,2H28a2,2,0,0,0,2-2V8A2,2,0,0,0,28,6ZM25.8,8,16,14.78,6.2,8ZM4,24V8.91l11.43,7.91a1,1,0,0,0,1.14,0L28,8.91V24Z"/></svg>
             </a>
             <a href="#" class="map-popup-action-link map-popup-action-chat" title="Chat" aria-label="Chat" data-action="chat" data-gig-id="${gig.id}">
@@ -2997,7 +3032,8 @@ const MapComponent = ({ onOpenSettings, onViewModeChange }) => {
             e.preventDefault();
             const candidateId = gig.user?.id;
             if (!candidateId) return;
-            const rect = el.getBoundingClientRect();
+            const map = mapInstanceRef.current;
+            const displayEmail = (gig.resume?.emailOverride != null && gig.resume.emailOverride !== "") ? gig.resume.emailOverride : (gig.email || gig.user?.email || "");
             try {
               const res = await fetch("/api/chat/conversations", {
                 method: "POST",
@@ -3010,10 +3046,21 @@ const MapComponent = ({ onOpenSettings, onViewModeChange }) => {
                 alert("Could not start chat");
                 return;
               }
+              chatSourceMarkerRef.current = marker;
               setChatConversationId(data.id);
               setChatCandidateId(candidateId);
               setChatCandidateName(gig.user?.name || "Candidate");
-              setChatModalAnchor({ top: rect.top, right: rect.right, height: rect.height });
+              setChatCandidateEmail(displayEmail || "");
+              if (map) {
+                const latlng = marker.getLatLng();
+                const point = map.latLngToContainerPoint(latlng);
+                const container = map.getContainer();
+                const containerRect = container.getBoundingClientRect();
+                setChatModalAnchor({ top: containerRect.top + point.y - 60, left: containerRect.left + point.x + 100 });
+              } else {
+                const rect = el.getBoundingClientRect();
+                setChatModalAnchor({ top: rect.top, left: rect.right + 8 });
+              }
               setChatModalOpen(true);
             } catch (err) {
               alert("Could not start chat");
@@ -4771,7 +4818,7 @@ const MapComponent = ({ onOpenSettings, onViewModeChange }) => {
           style={{
             width: 360,
             maxHeight: "80vh",
-            left: chatModalAnchor ? chatModalAnchor.right + 8 : "50%",
+            left: chatModalAnchor?.left != null ? chatModalAnchor.left : (chatModalAnchor?.right != null ? chatModalAnchor.right + 8 : "50%"),
             top: chatModalAnchor ? chatModalAnchor.top : "50%",
             transform: chatModalAnchor ? undefined : "translate(-50%, -50%)",
           }}
@@ -4779,22 +4826,19 @@ const MapComponent = ({ onOpenSettings, onViewModeChange }) => {
           <div className="flex items-center justify-between gap-2 border-b border-brand-stroke-border px-3 py-2 shrink-0">
             <div className="min-w-0 flex-1">
               <div className="truncate font-medium text-brand-text-strong">{chatCandidateName || "Chat"}</div>
-              <a
-                href="/onboarding.org?view=candidates"
-                className="text-xs text-brand-text-link hover:underline"
-                target="_blank"
-                rel="noopener noreferrer"
-              >
-                Candidate list
-              </a>
+              {chatCandidateEmail ? (
+                <span className="text-xs text-brand-text-weak truncate block">{chatCandidateEmail}</span>
+              ) : null}
             </div>
             <button
               type="button"
               onClick={() => {
+                chatSourceMarkerRef.current = null;
                 setChatModalOpen(false);
                 setChatConversationId(null);
                 setChatCandidateId(null);
                 setChatCandidateName("");
+                setChatCandidateEmail("");
                 setChatModalAnchor(null);
                 setChatInput("");
               }}
@@ -4807,6 +4851,8 @@ const MapComponent = ({ onOpenSettings, onViewModeChange }) => {
           <div className="flex-1 min-h-[200px] max-h-[50vh] overflow-y-auto p-2 flex flex-col gap-2">
             {chatLoading ? (
               <div className="text-sm text-brand-text-weak py-4 text-center">Loading…</div>
+            ) : chatMessages.length === 0 ? (
+              <div className="text-sm text-brand-text-weak py-4 text-center">Messages are stored for one month.</div>
             ) : (
               chatMessages.map((m) => (
                 <div
@@ -4824,7 +4870,7 @@ const MapComponent = ({ onOpenSettings, onViewModeChange }) => {
             <div ref={chatMessagesEndRef} />
           </div>
           <form
-            className="flex gap-2 border-t border-brand-stroke-border p-2 shrink-0"
+            className="flex border-t border-brand-stroke-border p-2 shrink-0 gap-0 rounded-b-lg overflow-hidden"
             onSubmit={async (e) => {
               e.preventDefault();
               const text = chatInput.trim();
@@ -4852,10 +4898,15 @@ const MapComponent = ({ onOpenSettings, onViewModeChange }) => {
               value={chatInput}
               onChange={(e) => setChatInput(e.target.value)}
               placeholder="Type a message…"
-              className="flex-1 min-w-0 rounded border border-brand-stroke-border px-3 py-2 text-sm"
+              className="flex-1 min-w-0 rounded-l border border-brand-stroke-border border-r-0 px-3 py-2 text-sm"
             />
-            <button type="submit" disabled={chatSending || !chatInput.trim()} className="shrink-0 px-3 py-2 rounded bg-brand-bg-brand text-white text-sm font-medium disabled:opacity-50">
-              Send
+            <button
+              type="submit"
+              disabled={chatSending || !chatInput.trim()}
+              className={`shrink-0 p-2 rounded-r border border-brand-stroke-border border-l-0 ${chatInput.trim() && !chatSending ? "bg-brand-bg-brand text-white" : "bg-brand-bg-fill text-brand-text-weak opacity-50"}`}
+              aria-label="Send"
+            >
+              <SendAlt size={20} />
             </button>
           </form>
         </div>

@@ -2152,9 +2152,9 @@ export default function OnboardingPage() {
                     type="button"
                     onClick={() => setShowCandidateListView(false)}
                     className="p-2 rounded-lg hover:bg-gray-100 transition-colors flex items-center gap-2 text-brand-text-strong"
+                    aria-label="Back"
                   >
                     <ArrowLeft size={18} />
-                    <span className="text-sm font-medium">Back to chat</span>
                   </button>
                 </div>
                 <div className="flex border-b border-[#E5E5E5] shrink-0">

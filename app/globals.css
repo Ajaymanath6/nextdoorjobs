@@ -261,6 +261,13 @@ body {
   color: var(--brand-color);
   opacity: 0.9;
 }
+.gig-popup .map-popup-content .map-popup-actions .map-popup-action-chat {
+  color: var(--brand-color);
+}
+.gig-popup .map-popup-content .map-popup-actions .map-popup-action-chat:hover {
+  color: var(--brand-color);
+  opacity: 0.9;
+}
 
 /* Cluster Tooltip */
 .cluster-tooltip {
