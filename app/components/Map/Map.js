@@ -1095,14 +1095,15 @@ const MapComponent = ({ onOpenSettings, onViewModeChange }) => {
         
         // Handle toggle for own gigs
         if (showToggle) {
-          const toggleInput = el.querySelector('.map-popup-toggle-input');
-          if (toggleInput) {
-            toggleInput.checked = marker._showResumeView || false;
-            toggleInput.onchange = async () => {
-              marker._showResumeView = toggleInput.checked;
+          // Create toggle handler function once and store it on marker for reuse
+          if (!marker._toggleHandler) {
+            marker._toggleHandler = async function() {
+              const toggleInput = this; // 'this' refers to the checkbox input
+              const isChecked = toggleInput.checked;
+              marker._showResumeView = isChecked;
               
               // If switching to resume view and resume data not loaded, fetch it
-              if (toggleInput.checked && !marker._resumePanelHtml) {
+              if (isChecked && !marker._resumePanelHtml) {
                 try {
                   const res = await fetch("/api/profile/resume", { credentials: "same-origin" });
                   if (res.ok) {
@@ -1121,13 +1122,13 @@ const MapComponent = ({ onOpenSettings, onViewModeChange }) => {
                 }
               }
               
-              const newContent = toggleInput.checked ? (marker._resumePanelHtml || '<div class="map-popup-content"><p>Loading resume...</p></div>') : marker._gigDetailsHtml;
+              const newContent = isChecked ? (marker._resumePanelHtml || '<div class="map-popup-content"><p>Loading resume...</p></div>') : marker._gigDetailsHtml;
               const toggleHtml = `
                 <div class="map-popup-toggle-wrapper">
                   <div class="map-popup-toggle-header">
                     <span class="map-popup-toggle-label">Gig Details</span>
                     <label class="map-popup-toggle-switch">
-                      <input type="checkbox" class="map-popup-toggle-input" data-action="toggle-view" ${toggleInput.checked ? 'checked' : ''} />
+                      <input type="checkbox" class="map-popup-toggle-input" data-action="toggle-view" ${isChecked ? 'checked' : ''} />
                       <span class="map-popup-toggle-slider"></span>
                     </label>
                     <span class="map-popup-toggle-label">Resume</span>
@@ -1153,14 +1154,16 @@ const MapComponent = ({ onOpenSettings, onViewModeChange }) => {
                     setShowAddHomeModal(true);
                   };
                 }
+                // Re-attach toggle handler to new toggle input using stored handler
                 const newToggleInput = popupEl.querySelector('.map-popup-toggle-input');
-                if (newToggleInput) {
-                  newToggleInput.onchange = toggleInput.onchange;
+                if (newToggleInput && marker._toggleHandler) {
+                  newToggleInput.checked = isChecked;
+                  newToggleInput.onchange = marker._toggleHandler; // Use stored handler
                 }
                 // Handle chat button - disable if resume view
                 const chatLink = popupEl.querySelector(".map-popup-action-chat");
                 if (chatLink) {
-                  if (toggleInput.checked) {
+                  if (isChecked) {
                     chatLink.classList.add('map-popup-action-chat-disabled');
                     chatLink.onclick = (e) => {
                       e.preventDefault();
@@ -1174,6 +1177,12 @@ const MapComponent = ({ onOpenSettings, onViewModeChange }) => {
                 }
               }, 0);
             };
+          }
+          
+          const toggleInput = el.querySelector('.map-popup-toggle-input');
+          if (toggleInput) {
+            toggleInput.checked = marker._showResumeView || false;
+            toggleInput.onchange = marker._toggleHandler;
           }
         }
         
@@ -3304,14 +3313,15 @@ const MapComponent = ({ onOpenSettings, onViewModeChange }) => {
         
         // Handle toggle for own gigs
         if (showToggle) {
-          const toggleInput = el.querySelector('.map-popup-toggle-input');
-          if (toggleInput) {
-            toggleInput.checked = marker._showResumeView || false;
-            toggleInput.onchange = async () => {
-              marker._showResumeView = toggleInput.checked;
+          // Create toggle handler function once and store it on marker for reuse
+          if (!marker._toggleHandler) {
+            marker._toggleHandler = async function() {
+              const toggleInput = this; // 'this' refers to the checkbox input
+              const isChecked = toggleInput.checked;
+              marker._showResumeView = isChecked;
               
               // If switching to resume view and resume data not loaded, fetch it
-              if (toggleInput.checked && !marker._resumePanelHtml) {
+              if (isChecked && !marker._resumePanelHtml) {
                 try {
                   const res = await fetch("/api/profile/resume", { credentials: "same-origin" });
                   if (res.ok) {
@@ -3330,13 +3340,13 @@ const MapComponent = ({ onOpenSettings, onViewModeChange }) => {
                 }
               }
               
-              const newContent = toggleInput.checked ? (marker._resumePanelHtml || '<div class="map-popup-content"><p>Loading resume...</p></div>') : marker._gigDetailsHtml;
+              const newContent = isChecked ? (marker._resumePanelHtml || '<div class="map-popup-content"><p>Loading resume...</p></div>') : marker._gigDetailsHtml;
               const toggleHtml = `
                 <div class="map-popup-toggle-wrapper">
                   <div class="map-popup-toggle-header">
                     <span class="map-popup-toggle-label">Gig Details</span>
                     <label class="map-popup-toggle-switch">
-                      <input type="checkbox" class="map-popup-toggle-input" data-action="toggle-view" ${toggleInput.checked ? 'checked' : ''} />
+                      <input type="checkbox" class="map-popup-toggle-input" data-action="toggle-view" ${isChecked ? 'checked' : ''} />
                       <span class="map-popup-toggle-slider"></span>
                     </label>
                     <span class="map-popup-toggle-label">Resume</span>
@@ -3362,14 +3372,16 @@ const MapComponent = ({ onOpenSettings, onViewModeChange }) => {
                     setShowAddHomeModal(true);
                   };
                 }
+                // Re-attach toggle handler to new toggle input using stored handler
                 const newToggleInput = popupEl.querySelector('.map-popup-toggle-input');
-                if (newToggleInput) {
-                  newToggleInput.onchange = toggleInput.onchange;
+                if (newToggleInput && marker._toggleHandler) {
+                  newToggleInput.checked = isChecked;
+                  newToggleInput.onchange = marker._toggleHandler; // Use stored handler
                 }
                 // Handle chat button - disable if resume view
                 const chatLink = popupEl.querySelector(".map-popup-action-chat");
                 if (chatLink) {
-                  if (toggleInput.checked) {
+                  if (isChecked) {
                     chatLink.classList.add('map-popup-action-chat-disabled');
                     chatLink.onclick = (e) => {
                       e.preventDefault();
@@ -3383,6 +3395,12 @@ const MapComponent = ({ onOpenSettings, onViewModeChange }) => {
                 }
               }, 0);
             };
+          }
+          
+          const toggleInput = el.querySelector('.map-popup-toggle-input');
+          if (toggleInput) {
+            toggleInput.checked = marker._showResumeView || false;
+            toggleInput.onchange = marker._toggleHandler;
           }
         }
         
