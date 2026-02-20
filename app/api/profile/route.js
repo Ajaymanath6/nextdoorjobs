@@ -49,8 +49,10 @@ export async function GET() {
 /**
  * PATCH /api/profile
  * Update current user profile (e.g. display name, account type, home location).
- * Body: { name?: string, accountType?: "Company" | "Individual", homeLatitude?: number, homeLongitude?: number, homeLocality?: string, homeDistrict?: string, homeState?: string }
+ * Body: { name?: string, accountType?: "Company" | "Individual", homeLatitude?: number, homeLongitude?: number, homeLocality?: string, homeDistrict?: string, homeState?: string, phone?: string, phoneVisibleToRecruiters?: boolean }
  */
+const PHONE_MAX_LENGTH = 20;
+
 export async function PATCH(request) {
   try {
     const user = await getCurrentUser();
@@ -70,6 +72,8 @@ export async function PATCH(request) {
       homeLocality: rawHomeLocality,
       homeDistrict: rawHomeDistrict,
       homeState: rawHomeState,
+      phone: rawPhone,
+      phoneVisibleToRecruiters: rawPhoneVisibleToRecruiters,
     } = body;
 
     const hasUpdate =
@@ -79,7 +83,9 @@ export async function PATCH(request) {
       rawHomeLongitude !== undefined ||
       rawHomeLocality !== undefined ||
       rawHomeDistrict !== undefined ||
-      rawHomeState !== undefined;
+      rawHomeState !== undefined ||
+      rawPhone !== undefined ||
+      rawPhoneVisibleToRecruiters !== undefined;
 
     if (!hasUpdate) {
       return NextResponse.json(
@@ -130,6 +136,13 @@ export async function PATCH(request) {
     }
     if (rawHomeState !== undefined) {
       updateData.homeState = typeof rawHomeState === "string" ? rawHomeState.trim().slice(0, 100) || null : null;
+    }
+    if (rawPhone !== undefined) {
+      const phone = typeof rawPhone === "string" ? rawPhone.trim().slice(0, PHONE_MAX_LENGTH) || null : null;
+      updateData.phone = phone;
+    }
+    if (rawPhoneVisibleToRecruiters !== undefined) {
+      updateData.phoneVisibleToRecruiters = typeof rawPhoneVisibleToRecruiters === "boolean" ? rawPhoneVisibleToRecruiters : Boolean(rawPhoneVisibleToRecruiters);
     }
 
     // Use service layer with cache invalidation

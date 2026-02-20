@@ -40,7 +40,7 @@ const SUBSCRIPTION_PLANS = [
     subheading: "For gig workers getting started",
     badge: "Popular",
     price: 320,
-    priceLabel: "/ month",
+    priceLabel: "/ year",
     features: [
       "Unlimited AI chat",
       "5 lecture transcriptions / day",
@@ -54,7 +54,7 @@ const SUBSCRIPTION_PLANS = [
     subheading: "For serious job seekers",
     badge: "Best value",
     price: 800,
-    priceLabel: "/ month",
+    priceLabel: "/ year",
     features: [
       "Everything in Starter",
       "Unlimited transcriptions",
@@ -85,6 +85,8 @@ export default function SettingsModal({ isOpen, onClose, initialSection }) {
   const [avatarUploading, setAvatarUploading] = useState(false);
   const [avatarError, setAvatarError] = useState(null);
   const [addEmailValue, setAddEmailValue] = useState("");
+  const [phoneValue, setPhoneValue] = useState("");
+  const [phoneSaving, setPhoneSaving] = useState(false);
   const [companies, setCompanies] = useState([]);
   const [selectedCompany, setSelectedCompany] = useState(null);
   const [companyLoading, setCompanyLoading] = useState(false);
@@ -201,6 +203,13 @@ export default function SettingsModal({ isOpen, onClose, initialSection }) {
       setFirstGigForLocation(null);
     }
   }, [isOpen, activeSection, user?.accountType, user?.homeLatitude, user?.homeLongitude]);
+
+  // Sync phone input from user when in General
+  useEffect(() => {
+    if (user && activeSection === "general") {
+      setPhoneValue(user.phone ?? "");
+    }
+  }, [user?.phone, activeSection, user?.id]);
 
   useEffect(() => {
     if (!isOpen || activeSection !== "resume" || user?.accountType !== "Individual") return;
@@ -724,6 +733,75 @@ export default function SettingsModal({ isOpen, onClose, initialSection }) {
                       className="w-48 rounded-lg border border-brand-stroke-border px-3 py-2 text-sm text-brand-text-strong placeholder:text-brand-text-placeholder focus:outline-none focus:ring-2 focus:ring-brand"
                     />
                   </div>
+
+                  {/* Phone number + visibility - Only for Individual (job seeker) */}
+                  {user?.accountType === "Individual" && (
+                    <>
+                      <div className="border-t border-brand-stroke-weak" />
+                      <div className="flex items-center justify-between gap-4 py-2">
+                        <span className="text-sm text-brand-text-strong">
+                          Phone number
+                        </span>
+                        <input
+                          type="tel"
+                          value={phoneValue}
+                          onChange={(e) => setPhoneValue(e.target.value)}
+                          onBlur={async () => {
+                            const trimmed = (phoneValue ?? "").trim().slice(0, 20);
+                            if (trimmed === (user?.phone ?? "")) return;
+                            setPhoneSaving(true);
+                            try {
+                              const res = await fetch("/api/profile", {
+                                method: "PATCH",
+                                headers: { "Content-Type": "application/json" },
+                                credentials: "same-origin",
+                                body: JSON.stringify({ phone: trimmed || null }),
+                              });
+                              const data = await res.json().catch(() => ({}));
+                              if (data?.success && data.user) setUser((prev) => ({ ...prev, ...data.user }));
+                            } finally {
+                              setPhoneSaving(false);
+                            }
+                          }}
+                          placeholder="Add phone"
+                          className="w-48 rounded-lg border border-brand-stroke-border px-3 py-2 text-sm text-brand-text-strong placeholder:text-brand-text-placeholder focus:outline-none focus:ring-2 focus:ring-brand"
+                          disabled={phoneSaving}
+                        />
+                      </div>
+                      <div className="flex items-center justify-between gap-4 py-2">
+                        <span className="text-sm text-brand-text-strong">
+                          Show phone to recruiters and on gig popup
+                        </span>
+                        <button
+                          type="button"
+                          role="switch"
+                          aria-checked={user?.phoneVisibleToRecruiters ?? false}
+                          onClick={async () => {
+                            const next = !(user?.phoneVisibleToRecruiters ?? false);
+                            try {
+                              const res = await fetch("/api/profile", {
+                                method: "PATCH",
+                                headers: { "Content-Type": "application/json" },
+                                credentials: "same-origin",
+                                body: JSON.stringify({ phoneVisibleToRecruiters: next }),
+                              });
+                              const data = await res.json().catch(() => ({}));
+                              if (data?.success && data.user) setUser((prev) => ({ ...prev, ...data.user }));
+                            } catch (_) {}
+                          }}
+                          className={`relative inline-flex h-6 w-11 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors focus:outline-none focus:ring-2 focus:ring-brand focus:ring-offset-2 ${
+                            user?.phoneVisibleToRecruiters ? "bg-brand" : "bg-brand-stroke-weak"
+                          }`}
+                        >
+                          <span
+                            className={`pointer-events-none inline-block h-5 w-5 transform rounded-full bg-white shadow ring-0 transition ${
+                              user?.phoneVisibleToRecruiters ? "translate-x-5" : "translate-x-1"
+                            }`}
+                          />
+                        </button>
+                      </div>
+                    </>
+                  )}
 
                   {/* Location - Only for Individual/Gig Worker accounts (same as home; used for gigs too) */}
                   {user?.accountType === "Individual" && (
@@ -1493,6 +1571,7 @@ export default function SettingsModal({ isOpen, onClose, initialSection }) {
                       <span className="text-xl font-bold text-brand-text-strong">₹{plan.price}</span>
                       <span className="text-sm text-brand-text-weak">{plan.priceLabel}</span>
                     </div>
+                    <p className="text-xs text-brand-text-weak mt-0.5">Billed yearly</p>
                     <div className="mt-3 flex justify-end text-brand-stroke-strong" aria-hidden>
                       <Receipt size={32} className="opacity-60" />
                     </div>

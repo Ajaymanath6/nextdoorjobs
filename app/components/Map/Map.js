@@ -929,6 +929,7 @@ const MapComponent = ({ onOpenSettings, onViewModeChange }) => {
         const r = gig.resume;
         const displayName = [r.firstName, r.lastName].filter(Boolean).join(" ") || gig.user?.name || "Candidate";
         const displayEmail = r.emailOverride != null && r.emailOverride !== "" ? r.emailOverride : (gig.email || "—");
+        const displayPhone = (gig.user?.phoneVisibleToRecruiters && gig.user?.phone) ? gig.user.phone : null;
         const workHtml = (r.workExperiences || []).length
           ? (r.workExperiences || []).map((w) => `
             <div class="map-popup-work-item">
@@ -956,6 +957,7 @@ const MapComponent = ({ onOpenSettings, onViewModeChange }) => {
             <div class="map-popup-body">
               <div class="map-popup-title">${escapeHtml(displayName)}</div>
               <div class="map-popup-sub">${escapeHtml(displayEmail)}</div>
+              ${displayPhone ? `<div class="map-popup-meta"><strong>Phone:</strong> ${escapeHtml(displayPhone)}</div>` : ""}
               ${r.currentPosition ? `<div class="map-popup-meta"><strong>Position:</strong> ${escapeHtml(r.currentPosition)}</div>` : ""}
               ${r.yearsExperience ? `<div class="map-popup-meta"><strong>Experience:</strong> ${escapeHtml(r.yearsExperience)} years</div>` : ""}
             </div>
@@ -966,6 +968,15 @@ const MapComponent = ({ onOpenSettings, onViewModeChange }) => {
           ${currentSalaryHtml}
           <div class="map-popup-divider">
             <strong>Location:</strong> ${escapeHtml(gig.district || "")}${gig.state ? `, ${escapeHtml(gig.state)}` : ""}
+          </div>
+          <div class="map-popup-divider"></div>
+          <div class="map-popup-actions">
+            <a href="mailto:${escapeHtml(displayEmail)}" class="map-popup-action-link" title="Email" aria-label="Email">
+              <svg width="20" height="20" viewBox="0 0 32 32" fill="currentColor" xmlns="http://www.w3.org/2000/svg"><path d="M28,6H4A2,2,0,0,0,2,8V24a2,2,0,0,0,2,2H28a2,2,0,0,0,2-2V8A2,2,0,0,0,28,6ZM25.8,8,16,14.78,6.2,8ZM4,24V8.91l11.43,7.91a1,1,0,0,0,1.14,0L28,8.91V24Z"/></svg>
+            </a>
+            <a href="#" class="map-popup-action-link map-popup-action-chat" title="Chat" aria-label="Chat" data-action="chat" data-gig-id="${gig.id}">
+              <svg width="20" height="20" viewBox="0 0 32 32" fill="currentColor" xmlns="http://www.w3.org/2000/svg"><path d="M17.74,30,16,29l4-7h6a2,2,0,0,0,2-2V8a2,2,0,0,0-2-2H6A2,2,0,0,0,4,8V20a2,2,0,0,0,2,2h9v2H6a4,4,0,0,1-4-4V8A4,4,0,0,1,6,4H26a4,4,0,0,1,4,4V20a4,4,0,0,1-4,4H21.16Z"/><path d="M8 10H24V12H8zM8 16H18V18H8z"/></svg>
+            </a>
           </div>
         </div>`;
       } else {
@@ -2775,6 +2786,7 @@ const MapComponent = ({ onOpenSettings, onViewModeChange }) => {
         const r = gig.resume;
         const displayName = [r.firstName, r.lastName].filter(Boolean).join(" ") || gig.user?.name || "Candidate";
         const displayEmail = r.emailOverride != null && r.emailOverride !== "" ? r.emailOverride : (gig.email || "—");
+        const displayPhone = (gig.user?.phoneVisibleToRecruiters && gig.user?.phone) ? gig.user.phone : null;
         const workHtml = (r.workExperiences || []).length
           ? (r.workExperiences || []).map((w) => `
             <div class="map-popup-work-item">
@@ -2802,6 +2814,7 @@ const MapComponent = ({ onOpenSettings, onViewModeChange }) => {
             <div class="map-popup-body">
               <div class="map-popup-title">${escapeHtml(displayName)}</div>
               <div class="map-popup-sub">${escapeHtml(displayEmail)}</div>
+              ${displayPhone ? `<div class="map-popup-meta"><strong>Phone:</strong> ${escapeHtml(displayPhone)}</div>` : ""}
               ${r.currentPosition ? `<div class="map-popup-meta"><strong>Position:</strong> ${escapeHtml(r.currentPosition)}</div>` : ""}
               ${r.yearsExperience ? `<div class="map-popup-meta"><strong>Experience:</strong> ${escapeHtml(r.yearsExperience)} years</div>` : ""}
             </div>
@@ -2812,6 +2825,15 @@ const MapComponent = ({ onOpenSettings, onViewModeChange }) => {
           ${currentSalaryHtml}
           <div class="map-popup-divider">
             <strong>Location:</strong> ${escapeHtml(gig.district || "")}${gig.state ? `, ${escapeHtml(gig.state)}` : ""}
+          </div>
+          <div class="map-popup-divider"></div>
+          <div class="map-popup-actions">
+            <a href="mailto:${escapeHtml(displayEmail)}" class="map-popup-action-link" title="Email" aria-label="Email">
+              <svg width="20" height="20" viewBox="0 0 32 32" fill="currentColor" xmlns="http://www.w3.org/2000/svg"><path d="M28,6H4A2,2,0,0,0,2,8V24a2,2,0,0,0,2,2H28a2,2,0,0,0,2-2V8A2,2,0,0,0,28,6ZM25.8,8,16,14.78,6.2,8ZM4,24V8.91l11.43,7.91a1,1,0,0,0,1.14,0L28,8.91V24Z"/></svg>
+            </a>
+            <a href="#" class="map-popup-action-link map-popup-action-chat" title="Chat" aria-label="Chat" data-action="chat" data-gig-id="${gig.id}">
+              <svg width="20" height="20" viewBox="0 0 32 32" fill="currentColor" xmlns="http://www.w3.org/2000/svg"><path d="M17.74,30,16,29l4-7h6a2,2,0,0,0,2-2V8a2,2,0,0,0-2-2H6A2,2,0,0,0,4,8V20a2,2,0,0,0,2,2h9v2H6a4,4,0,0,1-4-4V8A4,4,0,0,1,6,4H26a4,4,0,0,1,4,4V20a4,4,0,0,1-4,4H21.16Z"/><path d="M8 10H24V12H8zM8 16H18V18H8z"/></svg>
+            </a>
           </div>
         </div>`;
       } else {
@@ -2872,6 +2894,10 @@ const MapComponent = ({ onOpenSettings, onViewModeChange }) => {
             setSelectedGigForDistance(gig);
             setShowAddHomeModal(true);
           };
+        }
+        const chatLink = el.querySelector('.map-popup-action-chat');
+        if (chatLink) {
+          chatLink.onclick = (e) => { e.preventDefault(); /* future: open chat */ };
         }
       });
     } else {

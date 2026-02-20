@@ -39,11 +39,12 @@ export default function Sidebar({ activeItem = "jobs-near-you", onToggle, isOpen
     }
   };
 
-  // Navigation items: 1 Jobs/Gigs near you, 2 Post a gig, 3 Manage Resume, 4 Manage JDs, 5 Settings
-  const jobsNearYouLabel = viewMode === "person" ? "Gigs near you" : "Jobs near you";
+  // Navigation items: 1 Gigs/Candidates near you, 2 Post a gig/job, 3 Manage Resume, 4 Manage JDs, 5 Settings
+  const jobsNearYouLabel = viewMode === "person" ? "Gigs near you" : "Candidates near you";
+  const postGigLabel = viewMode === "person" ? "Post a gig" : "Post a job";
   const navigationItems = [
     { id: "jobs-near-you", label: jobsNearYouLabel, icon: EarthFilled, route: "/jobs-near-you" },
-    { id: "post-gig", label: "Post a gig", icon: Add, route: "/onboarding" },
+    { id: "post-gig", label: postGigLabel, icon: Add, route: "/onboarding" },
     { id: "manage-resume", label: "Manage Resume", icon: Document, route: "/manage-resume", openSettingsSection: "resume" },
     { id: "manage-jds", label: "Manage JDs", icon: Archive, route: "/manage-jds" },
     { id: "settings", label: "Settings", icon: Settings, route: "/", openSettingsSection: "general" },

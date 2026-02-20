@@ -243,6 +243,24 @@ body {
   padding-top: 8px;
   border-top: 1px solid var(--brand-stroke-weak);
 }
+.gig-popup .map-popup-content .map-popup-actions {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-top: 10px;
+  padding-top: 10px;
+}
+.gig-popup .map-popup-content .map-popup-action-link {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--brand-text-strong);
+  transition: color 0.15s ease, opacity 0.15s ease;
+}
+.gig-popup .map-popup-content .map-popup-action-link:hover {
+  color: var(--brand-color);
+  opacity: 0.9;
+}
 
 /* Cluster Tooltip */
 .cluster-tooltip {
