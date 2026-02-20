@@ -204,8 +204,17 @@ export default function OnboardingPage() {
       fetch("/api/notifications", { credentials: "same-origin" })
         .then((r) => (r.ok ? r.json() : { notifications: [] }))
         .then((data) => {
-          setNotifications(Array.isArray(data.notifications) ? data.notifications : []);
-          setNotificationCount(data.unreadCount || 0);
+          const list = Array.isArray(data.notifications) ? data.notifications : [];
+          setNotifications(list);
+          setNotificationCount(0);
+          fetch("/api/notifications/mark-read", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            credentials: "same-origin",
+            body: JSON.stringify({ markAll: true }),
+          }).then(() => {
+            setNotifications((prev) => prev.map((n) => ({ ...n, isRead: true })));
+          }).catch(() => {});
         })
         .catch(() => setNotifications([]))
         .finally(() => setNotificationsLoading(false));
@@ -2070,8 +2079,17 @@ export default function OnboardingPage() {
                   fetch("/api/notifications", { credentials: "same-origin" })
                     .then((r) => (r.ok ? r.json() : { notifications: [] }))
                     .then((data) => {
-                      setNotifications(Array.isArray(data.notifications) ? data.notifications : []);
-                      setNotificationCount(data.unreadCount || 0);
+                      const list = Array.isArray(data.notifications) ? data.notifications : [];
+                      setNotifications(list);
+                      setNotificationCount(0);
+                      fetch("/api/notifications/mark-read", {
+                        method: "POST",
+                        headers: { "Content-Type": "application/json" },
+                        credentials: "same-origin",
+                        body: JSON.stringify({ markAll: true }),
+                      }).then(() => {
+                        setNotifications((prev) => prev.map((n) => ({ ...n, isRead: true })));
+                      }).catch(() => {});
                     })
                     .catch(() => setNotifications([]))
                     .finally(() => setNotificationsLoading(false));

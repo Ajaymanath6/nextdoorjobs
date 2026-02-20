@@ -165,7 +165,7 @@ export default function Sidebar({ activeItem = "jobs-near-you", onToggle, isOpen
                         size={24}
                         style={{ color: "rgba(87, 87, 87, 1)" }}
                       />
-                      {item.badge && notificationCount > 0 && (
+                      {!isOpen && item.badge && notificationCount > 0 && (
                         <span className="absolute -top-1 -right-1 bg-brand text-white text-xs font-bold rounded-full min-w-[18px] h-[18px] flex items-center justify-center px-1" style={{ fontSize: "10px" }}>
                           {notificationCount}
                         </span>
