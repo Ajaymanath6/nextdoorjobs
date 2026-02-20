@@ -18,6 +18,7 @@ import {
 } from "@carbon/icons-react";
 import EditDisplayNameModal from "./EditDisplayNameModal";
 import EditCompanyLocationModal from "./EditCompanyLocationModal";
+import AddHomeModal from "./Map/AddHomeModal";
 import themeClasses from "../theme-utility-classes.json";
 import { AVATARS } from "../../lib/avatars";
 
@@ -52,7 +53,7 @@ const SUBSCRIPTION_PLANS = [
     name: "Pro",
     subheading: "For serious job seekers",
     badge: "Best value",
-    price: 1000,
+    price: 800,
     priceLabel: "/ month",
     features: [
       "Everything in Starter",
@@ -91,6 +92,7 @@ export default function SettingsModal({ isOpen, onClose, initialSection }) {
   const [companyLogoUploading, setCompanyLogoUploading] = useState(false);
   const [companyLogoError, setCompanyLogoError] = useState(null);
   const [showLocationEditModal, setShowLocationEditModal] = useState(false);
+  const [showEditHomeModal, setShowEditHomeModal] = useState(false);
   const [showViewResumeModal, setShowViewResumeModal] = useState(false);
   const [showUpgradeModal, setShowUpgradeModal] = useState(false);
   const [selectedPlanId, setSelectedPlanId] = useState(null);
@@ -723,15 +725,24 @@ export default function SettingsModal({ isOpen, onClose, initialSection }) {
                     />
                   </div>
 
-                  {/* Location - Only for Individual/Gig Worker accounts */}
+                  {/* Location - Only for Individual/Gig Worker accounts (same as home; used for gigs too) */}
                   {user?.accountType === "Individual" && (
                     <>
                       <div className="border-t border-brand-stroke-weak" />
-                      <div className="flex items-center justify-between gap-4 py-2">
-                        <span className="text-sm text-brand-text-strong">
-                          Location
-                        </span>
-                        <div className="flex items-center gap-2">
+                      <div className="flex flex-col gap-2 py-2">
+                        <div className="flex items-center justify-between gap-4">
+                          <span className="text-sm text-brand-text-strong">
+                            Location
+                          </span>
+                          <button
+                            type="button"
+                            onClick={() => setShowEditHomeModal(true)}
+                            className="text-sm font-medium text-brand underline underline-offset-2 hover:opacity-80"
+                          >
+                            Edit address
+                          </button>
+                        </div>
+                        <div className="flex flex-col gap-1">
                           {(() => {
                             // Priority 1: Home location
                             if (user?.homeLatitude != null && user?.homeLongitude != null) {
@@ -740,14 +751,14 @@ export default function SettingsModal({ isOpen, onClose, initialSection }) {
                               if (user.homeDistrict) parts.push(user.homeDistrict);
                               if (user.homeState) parts.push(user.homeState);
                               return (
-                                <div className="flex flex-col items-end gap-1">
+                                <>
                                   <span className="text-sm text-brand-text-strong">
                                     {parts.length > 0 ? parts.join(", ") : "Location set"}
                                   </span>
                                   <span className="text-xs text-brand-text-weak">
                                     Coordinates: {user.homeLatitude}, {user.homeLongitude}
                                   </span>
-                                </div>
+                                </>
                               );
                             }
                             // Priority 2: First gig location
@@ -758,7 +769,7 @@ export default function SettingsModal({ isOpen, onClose, initialSection }) {
                               if (firstGigForLocation.state) parts.push(firstGigForLocation.state);
                               if (firstGigForLocation.pincode) parts.push(`Pincode: ${firstGigForLocation.pincode}`);
                               return (
-                                <div className="flex flex-col items-end gap-1">
+                                <>
                                   <span className="text-sm text-brand-text-strong">
                                     {parts.length > 0 ? parts.join(", ") : "Location set"}
                                   </span>
@@ -767,29 +778,14 @@ export default function SettingsModal({ isOpen, onClose, initialSection }) {
                                       Coordinates: {firstGigForLocation.latitude || "N/A"}, {firstGigForLocation.longitude || "N/A"}
                                     </span>
                                   )}
-                                </div>
+                                </>
                               );
                             }
                             // Empty state
                             return (
-                              <div className="flex flex-col items-end gap-1 text-right">
-                                <span className="text-sm text-brand-text-weak">
-                                  No location set. Set your location on the map so companies can find you.
-                                </span>
-                                <button
-                                  type="button"
-                                  onClick={() => {
-                                    if (typeof window !== "undefined") {
-                                      sessionStorage.setItem("openAddHomeModal", "1");
-                                    }
-                                    onClose();
-                                    router.push("/");
-                                  }}
-                                  className="text-sm font-medium text-brand underline underline-offset-2 hover:opacity-80"
-                                >
-                                  Set location on map
-                                </button>
-                              </div>
+                              <span className="text-sm text-brand-text-weak">
+                                No location set. Click Edit address to set your home location (used for gigs and map).
+                              </span>
                             );
                           })()}
                         </div>
@@ -1686,6 +1682,32 @@ export default function SettingsModal({ isOpen, onClose, initialSection }) {
           setCompanies((prev) =>
             prev.map((c) => (c.id === updatedCompany.id ? updatedCompany : c))
           );
+        }}
+      />
+
+      <AddHomeModal
+        isOpen={showEditHomeModal}
+        onClose={() => setShowEditHomeModal(false)}
+        initialHome={
+          user?.homeLatitude != null && user?.homeLongitude != null
+            ? {
+                homeLatitude: user.homeLatitude,
+                homeLongitude: user.homeLongitude,
+                homeLocality: user.homeLocality,
+                homeDistrict: user.homeDistrict,
+                homeState: user.homeState,
+              }
+            : null
+        }
+        onSaved={(updatedUser) => {
+          if (updatedUser) setUser((prev) => ({ ...prev, ...updatedUser }));
+          setShowEditHomeModal(false);
+          fetch("/api/auth/me", { credentials: "same-origin" })
+            .then((res) => (res.ok ? res.json() : null))
+            .then((data) => {
+              if (data?.success && data.user) setUser(data.user);
+            })
+            .catch(() => {});
         }}
       />
     </>

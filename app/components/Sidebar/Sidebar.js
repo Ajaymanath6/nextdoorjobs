@@ -12,7 +12,9 @@ import {
   Add,
   Bullhorn,
   EarthFilled,
+  Settings,
 } from "@carbon/icons-react";
+import Tooltip from "../Tooltip";
 
 export default function Sidebar({ activeItem = "jobs-near-you", onToggle, isOpen: externalIsOpen, onOpenSettingsWithSection, viewMode = "person" }) {
   const router = useRouter();
@@ -37,13 +39,14 @@ export default function Sidebar({ activeItem = "jobs-near-you", onToggle, isOpen
     }
   };
 
-  // Navigation items: 1 Jobs/Gigs near you (label depends on viewMode), 2 Post a gig, 3 Manage Resume, 4 Manage JDs
+  // Navigation items: 1 Jobs/Gigs near you, 2 Post a gig, 3 Manage Resume, 4 Manage JDs, 5 Settings
   const jobsNearYouLabel = viewMode === "person" ? "Gigs near you" : "Jobs near you";
   const navigationItems = [
     { id: "jobs-near-you", label: jobsNearYouLabel, icon: EarthFilled, route: "/jobs-near-you" },
     { id: "post-gig", label: "Post a gig", icon: Add, route: "/onboarding" },
     { id: "manage-resume", label: "Manage Resume", icon: Document, route: "/manage-resume", openSettingsSection: "resume" },
     { id: "manage-jds", label: "Manage JDs", icon: Archive, route: "/manage-jds" },
+    { id: "settings", label: "Settings", icon: Settings, route: "/", openSettingsSection: "general" },
   ];
 
   const isDev = process.env.NODE_ENV !== "production";
@@ -106,30 +109,33 @@ export default function Sidebar({ activeItem = "jobs-near-you", onToggle, isOpen
           {navigationItems.map((item) => {
             const IconComponent = item.icon;
             const isActive = activeItem === item.id;
-            const isComingSoon = !isDev && item.id !== "jobs-near-you" && item.id !== "post-gig" && item.id !== "manage-resume";
-            const isDisabled = isComingSoon || (!isActive && item.id !== "jobs-near-you" && item.id !== "post-gig" && item.id !== "manage-resume");
+            const isComingSoon = !isDev && item.id !== "jobs-near-you" && item.id !== "post-gig" && item.id !== "manage-resume" && item.id !== "settings";
+            const isDisabled = isComingSoon || (!isActive && item.id !== "jobs-near-you" && item.id !== "post-gig" && item.id !== "manage-resume" && item.id !== "settings");
+            const tooltipContent = !isOpen ? (isComingSoon ? "Coming soon" : item.label) : "";
             return (
               <li key={item.id}>
-                <button
-                  onClick={() => !isDisabled && handleNavigation(item)}
-                  disabled={isDisabled}
-                  title={isComingSoon ? "Coming soon" : !isOpen ? item.label : undefined}
-                  className={`${sidebar["nav-button"]} ${
-                    isOpen ? sidebar["nav-button-expanded"] : sidebar["nav-button-collapsed"]
-                  } ${isActive ? sidebar["nav-button-active"] : "hover:bg-brand-bg-fill"} ${
-                    isDisabled ? "opacity-50 cursor-not-allowed" : ""
-                  }`}
-                >
-                  <div className={sidebar["nav-icon-container"]}>
-                    <IconComponent
-                      size={24}
-                      style={{ color: "rgba(87, 87, 87, 1)" }}
-                    />
-                  </div>
-                  {isOpen && (
-                    <span className={sidebar["nav-text"]}>{item.label}</span>
-                  )}
-                </button>
+                <Tooltip content={tooltipContent} as="span" className={!isOpen ? "block w-full" : ""}>
+                  <button
+                    onClick={() => !isDisabled && handleNavigation(item)}
+                    disabled={isDisabled}
+                    aria-label={item.label}
+                    className={`${sidebar["nav-button"]} ${!isOpen ? "w-full" : ""} ${
+                      isOpen ? sidebar["nav-button-expanded"] : sidebar["nav-button-collapsed"]
+                    } ${isActive ? sidebar["nav-button-active"] : "hover:bg-brand-bg-fill"} ${
+                      isDisabled ? "opacity-50 cursor-not-allowed" : ""
+                    }`}
+                  >
+                    <div className={sidebar["nav-icon-container"]}>
+                      <IconComponent
+                        size={24}
+                        style={{ color: "rgba(87, 87, 87, 1)" }}
+                      />
+                    </div>
+                    {isOpen && (
+                      <span className={sidebar["nav-text"]}>{item.label}</span>
+                    )}
+                  </button>
+                </Tooltip>
               </li>
             );
           })}
@@ -138,22 +144,25 @@ export default function Sidebar({ activeItem = "jobs-near-you", onToggle, isOpen
 
       {/* What's New Section */}
       <div className="p-2 pt-1 pb-1">
-        <button
-          onClick={isDev ? () => handleNavigation({ route: "/roadmap" }) : undefined}
-          disabled={!isDev}
-          title={!isOpen ? "What's New" : (isDev ? undefined : "Coming soon")}
-          className={`${sidebar["nav-button"]} ${
-            isOpen ? sidebar["nav-button-expanded"] : sidebar["nav-button-collapsed"]
-          } hover:bg-brand-bg-fill ${!isDev ? "opacity-50 cursor-not-allowed" : ""}`}
+        <Tooltip
+          content={!isOpen ? (isDev ? "What's New" : "Coming soon") : ""}
+          as="span"
+          className={!isOpen ? "block w-full" : ""}
         >
-          <div className={sidebar["nav-icon-container"]}>
-            <Bullhorn
-              size={24}
-              style={{ color: "rgba(87, 87, 87, 1)" }}
-            />
-          </div>
-          {isOpen && <span className={sidebar["nav-text"]}>What's New</span>}
-        </button>
+          <button
+            onClick={isDev ? () => handleNavigation({ route: "/roadmap" }) : undefined}
+            disabled={!isDev}
+            aria-label="What's New"
+            className={`${sidebar["nav-button"]} ${!isOpen ? "w-full" : ""} ${
+              isOpen ? sidebar["nav-button-expanded"] : sidebar["nav-button-collapsed"]
+            } hover:bg-brand-bg-fill ${!isDev ? "opacity-50 cursor-not-allowed" : ""}`}
+          >
+            <div className={sidebar["nav-icon-container"]}>
+              <Bullhorn size={24} style={{ color: "rgba(87, 87, 87, 1)" }} />
+            </div>
+            {isOpen && <span className={sidebar["nav-text"]}>What's New</span>}
+          </button>
+        </Tooltip>
       </div>
 
     </aside>
