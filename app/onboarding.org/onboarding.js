@@ -3,7 +3,7 @@
 import { useState, useEffect, useRef } from "react";
 import { useRouter } from "next/navigation";
 import { useUser, useClerk } from "@clerk/nextjs";
-import { WatsonHealthRotate_360, List, UserAvatar, User, Settings, Logout, EarthFilled, Chat, ArrowLeft, UserMultiple, Briefcase } from "@carbon/icons-react";
+import { WatsonHealthRotate_360, UserAvatar, User, Settings, Logout, EarthFilled, Chat, ArrowLeft, UserMultiple, Briefcase } from "@carbon/icons-react";
 import ChatInterface from "../components/Onboarding/ChatInterface";
 import SettingsModal from "../components/SettingsModal";
 import JobListingsModal from "../components/JobListingsModal";
@@ -156,6 +156,7 @@ export default function OnboardingPage() {
   const [candidateListTab, setCandidateListTab] = useState("chats");
   const [jobsPosted, setJobsPosted] = useState([]);
   const [jobsPostedLoading, setJobsPostedLoading] = useState(false);
+  const [showJobsBelowChat, setShowJobsBelowChat] = useState(false);
   const [candidateChats, setCandidateChats] = useState([]);
   const [candidateChatsLoading, setCandidateChatsLoading] = useState(false);
   const onboardingSessionIdRef = useRef(null);
@@ -1952,58 +1953,39 @@ export default function OnboardingPage() {
               <button
                 type="button"
                 onClick={async () => {
-                  console.log('📋 List button clicked');
-                  console.log('🔍 User data:', userData);
-                  console.log('🔍 Account type:', userData?.accountType);
-                  
-                  if (!userData) {
-                    console.log('⏳ User data not loaded yet');
-                    setChatMessages((prev) => [...prev, { 
-                      type: "ai", 
-                      text: "Loading user data, please try again in a moment." 
-                    }]);
-                    return;
-                  }
-                  
-                  if (userData.accountType !== "Company") {
-                    console.log('⚠️ Account type mismatch:', userData.accountType, 'vs Company');
-                    setChatMessages((prev) => [...prev, { 
-                      type: "ai", 
-                      text: `Job postings are only available for Company accounts. Your account type is: ${userData.accountType || 'not set'}` 
-                    }]);
-                    return;
-                  }
-                  
-                  console.log('📋 Fetching job list from /api/onboarding/my-jobs');
-                  try {
-                    const res = await fetch("/api/onboarding/my-jobs");
-                    console.log('📡 Job list API response status:', res.status);
-                    const data = await res.json().catch(() => ({}));
-                    console.log('📊 Job list data:', data);
-                    
-                    if (!res.ok) {
-                      console.error('❌ API error:', data.error || res.statusText);
-                      setChatMessages((prev) => [...prev, { 
-                        type: "ai", 
-                        text: data.error || "Failed to fetch job postings. Please try again." 
-                      }]);
-                      return;
+                  if (!userData || userData.accountType !== "Company") {
+                    if (!userData) {
+                      setChatMessages((prev) => [...prev, { type: "ai", text: "Loading user data, please try again in a moment." }]);
+                    } else {
+                      setChatMessages((prev) => [...prev, { type: "ai", text: `Job postings are only available for Company accounts. Your account type is: ${userData.accountType || "not set"}` }]);
                     }
-                    
-                    const jobs = data.success ? (data.jobs || []) : [];
-                    console.log('✅ Jobs to display:', jobs.length);
-                    console.log('✅ Jobs array:', jobs);
+                    return;
+                  }
+                  setShowCandidateListView(false);
+                  if (showJobsBelowChat) {
+                    setShowJobsBelowChat(false);
+                    return;
+                  }
+                  setJobsPostedLoading(true);
+                  setShowJobsBelowChat(true);
+                  try {
+                    const res = await fetch("/api/onboarding/my-jobs", { credentials: "same-origin" });
+                    const data = await res.json().catch(() => ({}));
+                    const jobs = res.ok && data.success ? (data.jobs || []) : [];
+                    setJobsPosted(jobs);
                     setJobCount(jobs.length);
-                    setChatMessages((prev) => [...prev, { type: "jobList", jobs }]);
                   } catch (e) {
-                    console.error("❌ Error fetching list:", e);
-                    setChatMessages((prev) => [...prev, { type: "jobList", jobs: [] }]);
+                    console.error("Error fetching job list:", e);
+                    setJobsPosted([]);
+                  } finally {
+                    setJobsPostedLoading(false);
                   }
                 }}
-                className="p-2 rounded-lg hover:bg-gray-100 transition-colors relative"
-                title="Your job postings"
+                className="p-2 rounded-lg hover:bg-gray-100 transition-colors flex items-center gap-1.5 relative"
+                title="Job posting"
               >
-                <List size={20} style={{ color: "#575757" }} />
+                <Briefcase size={20} style={{ color: "#575757" }} />
+                <span className="text-sm font-medium text-[#575757] hidden sm:inline">Job posting</span>
                 {jobCount > 0 && (
                   <span 
                     className="absolute -top-1 -right-1 bg-brand text-white text-xs font-bold rounded-full min-w-[18px] h-[18px] flex items-center justify-center px-1"
@@ -2031,24 +2013,6 @@ export default function OnboardingPage() {
               >
                 <UserMultiple size={20} style={{ color: "#575757" }} />
                 <span className="text-sm font-medium text-[#575757] hidden sm:inline">Candidate list</span>
-              </button>
-              <button
-                type="button"
-                onClick={() => {
-                  setCandidateListTab("jobs");
-                  setShowCandidateListView(true);
-                  setJobsPostedLoading(true);
-                  fetch("/api/jobs", { credentials: "same-origin" })
-                    .then((r) => (r.ok ? r.json() : []))
-                    .then((list) => setJobsPosted(Array.isArray(list) ? list : []))
-                    .catch(() => setJobsPosted([]))
-                    .finally(() => setJobsPostedLoading(false));
-                }}
-                className="p-2 rounded-lg hover:bg-gray-100 transition-colors flex items-center gap-1.5"
-                title="Job posting"
-              >
-                <List size={20} style={{ color: "#575757" }} />
-                <span className="text-sm font-medium text-[#575757] hidden sm:inline">Job posting</span>
               </button>
               <div className="relative" ref={languageDropdownRef}>
               <button
@@ -2208,25 +2172,6 @@ export default function OnboardingPage() {
                   >
                     Candidate chats
                   </button>
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setCandidateListTab("jobs");
-                      setJobsPostedLoading(true);
-                      fetch("/api/jobs", { credentials: "same-origin" })
-                        .then((r) => (r.ok ? r.json() : []))
-                        .then((list) => setJobsPosted(Array.isArray(list) ? list : []))
-                        .catch(() => setJobsPosted([]))
-                        .finally(() => setJobsPostedLoading(false));
-                    }}
-                    className={`flex-1 px-4 py-3 text-sm font-medium transition-colors ${
-                      candidateListTab === "jobs"
-                        ? "border-b-2 border-brand text-brand bg-brand/5"
-                        : "text-brand-text-weak hover:bg-gray-50"
-                    }`}
-                  >
-                    Jobs posted
-                  </button>
                 </div>
                 <div className="flex-1 overflow-y-auto p-4 min-h-0">
                   {candidateListTab === "list" && (
@@ -2260,101 +2205,98 @@ export default function OnboardingPage() {
                       )}
                     </>
                   )}
-                  {candidateListTab === "jobs" && (
-                    <>
-                      {jobsPostedLoading ? (
-                        <p className="text-sm text-brand-text-weak">Loading…</p>
-                      ) : jobsPosted.length === 0 ? (
-                        <p className="text-sm text-brand-text-weak">No jobs posted yet. Create your first job posting to attract candidates.</p>
-                      ) : (
-                        <ul className="space-y-2">
-                          {jobsPosted.map((job) => (
-                            <li
-                              key={job.id}
-                              className="flex flex-col gap-0.5 p-3 rounded-lg border border-[#E5E5E5] hover:bg-gray-50"
-                            >
-                              <span className="font-medium text-brand-text-strong">{job.title || "Job Title"}</span>
-                              {job.description && (
-                                <span className="text-sm text-brand-text-weak truncate">{job.description}</span>
-                              )}
-                              {job.createdAt && (
-                                <span className="text-xs text-brand-text-weak">
-                                  Posted: {new Date(job.createdAt).toLocaleDateString()}
-                                </span>
-                              )}
-                            </li>
-                          ))}
-                        </ul>
-                      )}
-                    </>
-                  )}
                 </div>
               </div>
             ) : (
-            <ChatInterface
-              messages={chatMessages}
-              onSendMessage={handleChatMessage}
-              isLoading={isLoading}
-              inlineComponent={inlineComponent}
-              typingText={isTyping ? typingText : null}
-              onScrollRequest={(scrollFn) => {
-                scrollToInlineRef.current = scrollFn;
-              }}
-              onSave={handleSave}
-              onViewOnMap={handleViewOnMap}
-              onStartNext={handleStartNext}
-              showFindOrPostButtons={chatMessages.length === 1 && !hasChosenPostGig}
-              accountType="Company"
-              onPostGig={handlePostGig}
-              onFindCandidates={handleFindCandidates}
-              onShowJobListings={handleShowJobListings}
-              onJobDeleted={async () => {
-                // Refetch job list
-                try {
-                  const res = await fetch("/api/onboarding/my-jobs");
-                  if (res.ok) {
-                    const data = await res.json();
-                    const jobs = data.success ? (data.jobs || []) : [];
-                    setJobCount(jobs.length);
-                    // Update the job list in chat messages
-                    setChatMessages((prev) => {
-                      const lastJobListIndex = prev.map((m, i) => m.type === "jobList" ? i : -1).filter(i => i >= 0).pop();
-                      if (lastJobListIndex != null) {
-                        const updated = [...prev];
-                        updated[lastJobListIndex] = { type: "jobList", jobs };
-                        return updated;
+            <div className="h-full flex flex-col min-h-0">
+              <div className="flex-1 min-h-0 overflow-hidden">
+                <ChatInterface
+                  messages={chatMessages}
+                  onSendMessage={handleChatMessage}
+                  isLoading={isLoading}
+                  inlineComponent={inlineComponent}
+                  typingText={isTyping ? typingText : null}
+                  onScrollRequest={(scrollFn) => {
+                    scrollToInlineRef.current = scrollFn;
+                  }}
+                  onSave={handleSave}
+                  onViewOnMap={handleViewOnMap}
+                  onStartNext={handleStartNext}
+                  showFindOrPostButtons={chatMessages.length === 1 && !hasChosenPostGig}
+                  accountType="Company"
+                  onPostGig={handlePostGig}
+                  onFindCandidates={handleFindCandidates}
+                  onShowJobListings={handleShowJobListings}
+                  onJobDeleted={async () => {
+                    try {
+                      const res = await fetch("/api/onboarding/my-jobs", { credentials: "same-origin" });
+                      if (res.ok) {
+                        const data = await res.json();
+                        const jobs = data.success ? (data.jobs || []) : [];
+                        setJobCount(jobs.length);
+                        setJobsPosted(jobs);
                       }
-                      return prev;
-                    });
-                  }
-                } catch (e) {
-                  console.error("Error refetching jobs:", e);
-                }
-              }}
-              onJobEdited={async (updatedJob) => {
-                // Refetch job list to get updated data
-                try {
-                  const res = await fetch("/api/onboarding/my-jobs");
-                  if (res.ok) {
-                    const data = await res.json();
-                    const jobs = data.success ? (data.jobs || []) : [];
-                    setJobCount(jobs.length);
-                    // Update the job list in chat messages
-                    setChatMessages((prev) => {
-                      const lastJobListIndex = prev.map((m, i) => m.type === "jobList" ? i : -1).filter(i => i >= 0).pop();
-                      if (lastJobListIndex != null) {
-                        const updated = [...prev];
-                        updated[lastJobListIndex] = { type: "jobList", jobs };
-                        return updated;
+                    } catch (e) {
+                      console.error("Error refetching jobs:", e);
+                    }
+                  }}
+                  onJobEdited={async () => {
+                    try {
+                      const res = await fetch("/api/onboarding/my-jobs", { credentials: "same-origin" });
+                      if (res.ok) {
+                        const data = await res.json();
+                        const jobs = data.success ? (data.jobs || []) : [];
+                        setJobCount(jobs.length);
+                        setJobsPosted(jobs);
                       }
-                      return prev;
-                    });
-                  }
-                } catch (e) {
-                  console.error("Error refetching jobs:", e);
-                }
-              }}
-            />
+                    } catch (e) {
+                      console.error("Error refetching jobs:", e);
+                    }
+                  }}
+                />
+              </div>
+              {showJobsBelowChat && (
+                <div className="shrink-0 border-t border-[#E5E5E5] bg-white rounded-b-lg flex flex-col max-h-[40%] min-h-0">
+                  <div className="flex items-center justify-between px-4 py-2 border-b border-[#E5E5E5]">
+                    <span className="text-sm font-medium text-brand-text-strong">Job postings</span>
+                    <button
+                      type="button"
+                      onClick={() => setShowJobsBelowChat(false)}
+                      className="p-1 rounded hover:bg-gray-100 text-brand-text-weak"
+                      aria-label="Close"
+                    >
+                      ×
+                    </button>
+                  </div>
+                  <div className="flex-1 overflow-y-auto p-4 min-h-0">
+                    {jobsPostedLoading ? (
+                      <p className="text-sm text-brand-text-weak">Loading…</p>
+                    ) : jobsPosted.length === 0 ? (
+                      <p className="text-sm text-brand-text-weak">No jobs posted yet. Create your first job posting to attract candidates.</p>
+                    ) : (
+                      <ul className="space-y-2">
+                        {jobsPosted.map((job) => (
+                          <li
+                            key={job.id}
+                            className="flex flex-col gap-0.5 p-3 rounded-lg border border-[#E5E5E5] hover:bg-gray-50"
+                          >
+                            <span className="font-medium text-brand-text-strong">{job.title || "Job Title"}</span>
+                            {(job.description || job.role) && (
+                              <span className="text-sm text-brand-text-weak truncate">{job.description || job.role}</span>
+                            )}
+                            {(job.createdAt || job.created_at) && (
+                              <span className="text-xs text-brand-text-weak">
+                                Posted: {new Date(job.createdAt || job.created_at).toLocaleDateString()}
+                              </span>
+                            )}
+                          </li>
+                        ))}
+                      </ul>
+                    )}
+                  </div>
+                </div>
+              )}
+            </div>
             )}
           </div>
         </div>
