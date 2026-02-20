@@ -778,6 +778,7 @@ export default function SettingsModal({ isOpen, onClose, initialSection }) {
                           aria-checked={user?.phoneVisibleToRecruiters ?? false}
                           onClick={async () => {
                             const next = !(user?.phoneVisibleToRecruiters ?? false);
+                            setUser((prev) => ({ ...prev, phoneVisibleToRecruiters: next }));
                             try {
                               const res = await fetch("/api/profile", {
                                 method: "PATCH",
@@ -787,7 +788,10 @@ export default function SettingsModal({ isOpen, onClose, initialSection }) {
                               });
                               const data = await res.json().catch(() => ({}));
                               if (data?.success && data.user) setUser((prev) => ({ ...prev, ...data.user }));
-                            } catch (_) {}
+                              if (!res.ok) setUser((prev) => ({ ...prev, phoneVisibleToRecruiters: !next }));
+                            } catch (_) {
+                              setUser((prev) => ({ ...prev, phoneVisibleToRecruiters: !next }));
+                            }
                           }}
                           className={`relative inline-flex h-6 w-11 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors focus:outline-none focus:ring-2 focus:ring-brand focus:ring-offset-2 ${
                             user?.phoneVisibleToRecruiters ? "bg-brand" : "bg-brand-stroke-weak"
@@ -884,30 +888,38 @@ export default function SettingsModal({ isOpen, onClose, initialSection }) {
                             Show your profile to companies looking for full-time employees
                           </p>
                         </div>
-                        <label className="relative inline-flex items-center cursor-pointer">
-                          <input
-                            type="checkbox"
-                            checked={user.isJobSeeker || false}
-                            onChange={async (e) => {
-                              const newValue = e.target.checked;
-                              try {
-                                const res = await fetch("/api/profile/job-seeker-toggle", {
-                                  method: "PATCH",
-                                  headers: { "Content-Type": "application/json" },
-                                  body: JSON.stringify({ isJobSeeker: newValue }),
-                                  credentials: "same-origin",
-                                });
-                                if (res.ok) {
-                                  setUser((prev) => ({ ...prev, isJobSeeker: newValue }));
-                                }
-                              } catch (e) {
-                                console.error("Failed to update job seeker status:", e);
-                              }
-                            }}
-                            className="sr-only peer"
+                        <button
+                          type="button"
+                          role="switch"
+                          aria-checked={user?.isJobSeeker ?? false}
+                          onClick={async () => {
+                            const next = !(user?.isJobSeeker ?? false);
+                            setUser((prev) => ({ ...prev, isJobSeeker: next }));
+                            try {
+                              const res = await fetch("/api/profile/job-seeker-toggle", {
+                                method: "PATCH",
+                                headers: { "Content-Type": "application/json" },
+                                body: JSON.stringify({ isJobSeeker: next }),
+                                credentials: "same-origin",
+                              });
+                              const data = await res.json().catch(() => ({}));
+                              if (data?.success && data.user) setUser((prev) => ({ ...prev, ...data.user }));
+                              if (!res.ok) setUser((prev) => ({ ...prev, isJobSeeker: !next }));
+                            } catch (e) {
+                              console.error("Failed to update job seeker status:", e);
+                              setUser((prev) => ({ ...prev, isJobSeeker: !next }));
+                            }
+                          }}
+                          className={`relative inline-flex h-6 w-11 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors focus:outline-none focus:ring-2 focus:ring-brand focus:ring-offset-2 ${
+                            user?.isJobSeeker ? "bg-brand" : "bg-brand-stroke-weak"
+                          }`}
+                        >
+                          <span
+                            className={`pointer-events-none inline-block h-5 w-5 transform rounded-full bg-white shadow ring-0 transition ${
+                              user?.isJobSeeker ? "translate-x-5" : "translate-x-1"
+                            }`}
                           />
-                          <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-2 peer-focus:ring-brand rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-brand"></div>
-                        </label>
+                        </button>
                       </div>
                     </>
                   )}

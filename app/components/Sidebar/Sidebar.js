@@ -62,13 +62,13 @@ export default function Sidebar({ activeItem = "jobs-near-you", onToggle, isOpen
 
   return (
     <aside
-      className={`h-screen flex flex-col bg-white ${
+      className={`h-screen flex flex-col bg-white overflow-x-hidden min-w-0 ${
         isOpen ? sidebar["container-expanded"] : sidebar["container-collapsed"]
       }`}
     >
       {/* Logo & Toggle Section - small logo; right icon (OpenPanelLeft) when panel open */}
-      <div className={`${sidebar["logo-section"]} relative`}>
-        <div className="flex items-center justify-between">
+      <div className={`${sidebar["logo-section"]} relative min-w-0 shrink-0`}>
+        <div className="flex items-center justify-between min-w-0">
           {isOpen ? (
             <div className="flex items-center min-w-0">
               <div className="h-6 flex items-center justify-center shrink-0">
@@ -105,8 +105,8 @@ export default function Sidebar({ activeItem = "jobs-near-you", onToggle, isOpen
       </div>
 
       {/* Navigation Section */}
-      <nav className={`flex-1 overflow-y-auto ${sidebar["nav-container"]}`}>
-        <ul className="space-y-2">
+      <nav className={`flex-1 overflow-y-auto overflow-x-hidden min-w-0 ${sidebar["nav-container"]}`}>
+        <ul className="space-y-2 min-w-0">
           {navigationItems.map((item) => {
             const IconComponent = item.icon;
             const isActive = activeItem === item.id;
@@ -120,7 +120,7 @@ export default function Sidebar({ activeItem = "jobs-near-you", onToggle, isOpen
                     onClick={() => !isDisabled && handleNavigation(item)}
                     disabled={isDisabled}
                     aria-label={item.label}
-                    className={`${sidebar["nav-button"]} ${!isOpen ? "w-full" : ""} ${
+                    className={`${sidebar["nav-button"]} min-w-0 ${!isOpen ? "w-full" : ""} ${
                       isOpen ? sidebar["nav-button-expanded"] : sidebar["nav-button-collapsed"]
                     } ${isActive ? sidebar["nav-button-active"] : "hover:bg-brand-bg-fill"} ${
                       isDisabled ? "opacity-50 cursor-not-allowed" : ""
@@ -133,7 +133,7 @@ export default function Sidebar({ activeItem = "jobs-near-you", onToggle, isOpen
                       />
                     </div>
                     {isOpen && (
-                      <span className={sidebar["nav-text"]}>{item.label}</span>
+                      <span className={`${sidebar["nav-text"]} min-w-0 truncate`}>{item.label}</span>
                     )}
                   </button>
                 </Tooltip>
@@ -161,7 +161,7 @@ export default function Sidebar({ activeItem = "jobs-near-you", onToggle, isOpen
             <div className={sidebar["nav-icon-container"]}>
               <Bullhorn size={24} style={{ color: "rgba(87, 87, 87, 1)" }} />
             </div>
-            {isOpen && <span className={sidebar["nav-text"]}>What's New</span>}
+            {isOpen && <span className={`${sidebar["nav-text"]} min-w-0 truncate`}>What's New</span>}
           </button>
         </Tooltip>
       </div>
