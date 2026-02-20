@@ -24,6 +24,7 @@ import SeniorityLevelSelector from "../components/Onboarding/SeniorityLevelSelec
 import TeamSizeSelector from "../components/Onboarding/TeamSizeSelector";
 import PerksSelector from "../components/Onboarding/PerksSelector";
 import HolidaysInput from "../components/Onboarding/HolidaysInput";
+import RecruiterChatPanel from "../components/RecruiterChatPanel";
 
 // Field collection states
 const COMPANY_FIELDS = {
@@ -159,6 +160,9 @@ export default function OnboardingPage() {
   const [showJobPostingsPanel, setShowJobPostingsPanel] = useState(false);
   const [candidateChats, setCandidateChats] = useState([]);
   const [candidateChatsLoading, setCandidateChatsLoading] = useState(false);
+  const [activeRecruiterChatConversationId, setActiveRecruiterChatConversationId] = useState(null);
+  const [activeRecruiterChatCandidateName, setActiveRecruiterChatCandidateName] = useState("");
+  const [activeRecruiterChatCandidateEmail, setActiveRecruiterChatCandidateEmail] = useState("");
   const [notificationCount, setNotificationCount] = useState(0);
   const [showNotificationsPanel, setShowNotificationsPanel] = useState(false);
   const [notificationTab, setNotificationTab] = useState("recruiter-messages");
@@ -2295,6 +2299,18 @@ export default function OnboardingPage() {
                 </div>
               </div>
             ) : showCandidateListView ? (
+              activeRecruiterChatConversationId ? (
+                <RecruiterChatPanel
+                  conversationId={activeRecruiterChatConversationId}
+                  otherPartyName={activeRecruiterChatCandidateName}
+                  otherPartyEmail={activeRecruiterChatCandidateEmail}
+                  onClose={() => {
+                    setActiveRecruiterChatConversationId(null);
+                    setActiveRecruiterChatCandidateName("");
+                    setActiveRecruiterChatCandidateEmail("");
+                  }}
+                />
+              ) : (
               <div className="h-full flex flex-col bg-white">
                 <div className="flex items-center justify-between border-b border-[#E5E5E5] px-4 py-2 shrink-0">
                   <button
@@ -2353,7 +2369,12 @@ export default function OnboardingPage() {
                           {candidateChats.map((c) => (
                             <li
                               key={c.id}
-                              className="flex flex-col gap-0.5 p-3 rounded-lg border border-[#E5E5E5] hover:bg-gray-50"
+                              onClick={() => {
+                                setActiveRecruiterChatConversationId(c.id);
+                                setActiveRecruiterChatCandidateName(c.candidateName || "Candidate");
+                                setActiveRecruiterChatCandidateEmail(c.otherPartyEmail || "");
+                              }}
+                              className="flex flex-col gap-0.5 p-3 rounded-lg border border-[#E5E5E5] hover:bg-gray-50 cursor-pointer"
                             >
                               <span className="font-medium text-brand-text-strong">{c.candidateName || "Candidate"}</span>
                               {c.lastMessagePreview && (
@@ -2372,6 +2393,7 @@ export default function OnboardingPage() {
                   )}
                 </div>
               </div>
+              )
             ) : (
             <ChatInterface
               messages={chatMessages}

@@ -2076,10 +2076,14 @@ const MapComponent = ({ onOpenSettings, onViewModeChange }) => {
 
     eventSource.onmessage = (event) => {
       try {
-        const message = JSON.parse(event.data);
-        if (message.senderId !== meUser?.id) {
-          setChatMessages((prev) => [...prev, message]);
-        }
+        const data = event.data?.trim();
+        if (!data || data.startsWith(":")) return; // skip comments/keepalive
+        const message = JSON.parse(data);
+        if (!message.id || message.senderId === meUser?.id) return; // only show messages from the other party
+        setChatMessages((prev) => {
+          if (prev.some((m) => m.id === message.id)) return prev; // avoid duplicates
+          return [...prev, message];
+        });
       } catch (err) {
         console.error("Error parsing SSE message:", err);
       }
