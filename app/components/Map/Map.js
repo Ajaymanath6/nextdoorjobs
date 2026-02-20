@@ -938,7 +938,8 @@ const MapComponent = ({ onOpenSettings, onViewModeChange }) => {
       const escapeHtml = (str) => (str || "").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
       const isCandidate = gig.serviceType === "Job Seeker" && gig.resume;
       const isOwnGig = meUser?.id != null && gig.user?.id === meUser.id;
-      const showToggle = isOwnGig && userAccountType === "Individual" && gig.resume;
+      // Show toggle for own gigs if Individual account (resume will be fetched if needed)
+      const showToggle = isOwnGig && userAccountType === "Individual";
       
       // Helper function to generate resume HTML
       const generateResumeHtml = (r, displayEmail, displayPhone, disableChat = false) => {
@@ -1040,27 +1041,25 @@ const MapComponent = ({ onOpenSettings, onViewModeChange }) => {
       }
       
       let popupContent;
-      if (isCandidate && gig.resume) {
-        const r = gig.resume;
-        const displayEmail = r.emailOverride != null && r.emailOverride !== "" ? r.emailOverride : (gig.email || "—");
-        const displayPhone = (gig.user?.phoneVisibleToRecruiters && gig.user?.phone) ? gig.user.phone : null;
-        const resumePanelHtml = generateResumeHtml(r, displayEmail, displayPhone);
-        marker._resumePanelHtml = resumePanelHtml;
-        popupContent = resumePanelHtml;
-      } else {
-        const gigDetailsHtml = generateGigDetailsHtml();
-        marker._gigDetailsHtml = gigDetailsHtml;
-        popupContent = gigDetailsHtml;
-      }
       
-      // For own gigs with resume, store both HTML versions and add toggle
+      // For own gigs with resume, always show toggle (check this FIRST before candidate check)
       if (showToggle) {
-        const r = gig.resume;
-        const displayEmail = r.emailOverride != null && r.emailOverride !== "" ? r.emailOverride : (gig.email || gig.user?.email || "");
-        const displayPhone = (gig.user?.phoneVisibleToRecruiters && gig.user?.phone) ? gig.user.phone : null;
-        marker._resumePanelHtml = generateResumeHtml(r, displayEmail, displayPhone, true); // Disable chat in resume view for own gigs
         marker._gigDetailsHtml = generateGigDetailsHtml();
         marker._showResumeView = false; // Start with gig details view
+        marker._gigData = gig; // Store gig data for later use
+        marker._generateResumeHtmlFn = generateResumeHtml; // Store function reference
+        marker._generateGigDetailsHtmlFn = generateGigDetailsHtml; // Store function reference
+        marker._userAvatarUrl = userAvatarUrl; // Store avatar URL
+        marker._escapeHtml = escapeHtml; // Store escape function
+        
+        // Generate resume HTML if resume data is available
+        if (gig.resume) {
+          const r = gig.resume;
+          const displayEmail = r.emailOverride != null && r.emailOverride !== "" ? r.emailOverride : (gig.email || gig.user?.email || "");
+          const displayPhone = (gig.user?.phoneVisibleToRecruiters && gig.user?.phone) ? gig.user.phone : null;
+          marker._resumePanelHtml = generateResumeHtml(r, displayEmail, displayPhone, true);
+        }
+        
         // Wrap content with toggle button
         const toggleHtml = `
           <div class="map-popup-toggle-wrapper">
@@ -1075,6 +1074,19 @@ const MapComponent = ({ onOpenSettings, onViewModeChange }) => {
           </div>
         `;
         popupContent = toggleHtml + marker._gigDetailsHtml;
+      } else if (isCandidate && gig.resume) {
+        // For candidates (recruiters viewing job seekers), show resume directly
+        const r = gig.resume;
+        const displayEmail = r.emailOverride != null && r.emailOverride !== "" ? r.emailOverride : (gig.email || "—");
+        const displayPhone = (gig.user?.phoneVisibleToRecruiters && gig.user?.phone) ? gig.user.phone : null;
+        const resumePanelHtml = generateResumeHtml(r, displayEmail, displayPhone);
+        marker._resumePanelHtml = resumePanelHtml;
+        popupContent = resumePanelHtml;
+      } else {
+        // Regular gig details view
+        const gigDetailsHtml = generateGigDetailsHtml();
+        marker._gigDetailsHtml = gigDetailsHtml;
+        popupContent = gigDetailsHtml;
       }
       marker.bindPopup(popupContent, { className: "gig-popup", maxWidth: isCandidate && gig.resume ? 600 : 320 });
       marker.on("popupopen", () => {
@@ -1086,9 +1098,30 @@ const MapComponent = ({ onOpenSettings, onViewModeChange }) => {
           const toggleInput = el.querySelector('.map-popup-toggle-input');
           if (toggleInput) {
             toggleInput.checked = marker._showResumeView || false;
-            toggleInput.onchange = () => {
+            toggleInput.onchange = async () => {
               marker._showResumeView = toggleInput.checked;
-              const newContent = toggleInput.checked ? marker._resumePanelHtml : marker._gigDetailsHtml;
+              
+              // If switching to resume view and resume data not loaded, fetch it
+              if (toggleInput.checked && !marker._resumePanelHtml) {
+                try {
+                  const res = await fetch("/api/profile/resume", { credentials: "same-origin" });
+                  if (res.ok) {
+                    const data = await res.json();
+                    if (data?.success && data.resume) {
+                      const r = data.resume;
+                      const displayEmail = r.emailOverride != null && r.emailOverride !== "" ? r.emailOverride : (marker._gigData?.email || marker._gigData?.user?.email || "");
+                      const displayPhone = (marker._gigData?.user?.phoneVisibleToRecruiters && marker._gigData?.user?.phone) ? marker._gigData.user.phone : null;
+                      if (marker._generateResumeHtmlFn) {
+                        marker._resumePanelHtml = marker._generateResumeHtmlFn(r, displayEmail, displayPhone, true);
+                      }
+                    }
+                  }
+                } catch (err) {
+                  console.error("Failed to fetch resume:", err);
+                }
+              }
+              
+              const newContent = toggleInput.checked ? (marker._resumePanelHtml || '<div class="map-popup-content"><p>Loading resume...</p></div>') : marker._gigDetailsHtml;
               const toggleHtml = `
                 <div class="map-popup-toggle-wrapper">
                   <div class="map-popup-toggle-header">
@@ -3114,7 +3147,8 @@ const MapComponent = ({ onOpenSettings, onViewModeChange }) => {
         : gig.user?.avatarUrl || "/avatars/avatar1.png";
       const isCandidate = gig.serviceType === "Job Seeker" && gig.resume;
       const isOwnGig = meUser?.id != null && gig.user?.id === meUser.id;
-      const showToggle = isOwnGig && userAccountType === "Individual" && gig.resume;
+      // Show toggle for own gigs if Individual account (resume will be fetched if needed)
+      const showToggle = isOwnGig && userAccountType === "Individual";
       
       // Helper function to generate resume HTML
       const generateResumeHtml = (r, displayEmail, displayPhone, disableChat = false) => {
@@ -3216,27 +3250,25 @@ const MapComponent = ({ onOpenSettings, onViewModeChange }) => {
       }
       
       let popupContent;
-      if (isCandidate && gig.resume) {
-        const r = gig.resume;
-        const displayEmail = r.emailOverride != null && r.emailOverride !== "" ? r.emailOverride : (gig.email || "—");
-        const displayPhone = (gig.user?.phoneVisibleToRecruiters && gig.user?.phone) ? gig.user.phone : null;
-        const resumePanelHtml = generateResumeHtml(r, displayEmail, displayPhone);
-        marker._resumePanelHtml = resumePanelHtml;
-        popupContent = resumePanelHtml;
-      } else {
-        const gigDetailsHtml = generateGigDetailsHtml();
-        marker._gigDetailsHtml = gigDetailsHtml;
-        popupContent = gigDetailsHtml;
-      }
       
-      // For own gigs with resume, store both HTML versions and add toggle
+      // For own gigs with resume, always show toggle (check this FIRST before candidate check)
       if (showToggle) {
-        const r = gig.resume;
-        const displayEmail = r.emailOverride != null && r.emailOverride !== "" ? r.emailOverride : (gig.email || gig.user?.email || "");
-        const displayPhone = (gig.user?.phoneVisibleToRecruiters && gig.user?.phone) ? gig.user.phone : null;
-        marker._resumePanelHtml = generateResumeHtml(r, displayEmail, displayPhone, true); // Disable chat in resume view for own gigs
         marker._gigDetailsHtml = generateGigDetailsHtml();
         marker._showResumeView = false; // Start with gig details view
+        marker._gigData = gig; // Store gig data for later use
+        marker._generateResumeHtmlFn = generateResumeHtml; // Store function reference
+        marker._generateGigDetailsHtmlFn = generateGigDetailsHtml; // Store function reference
+        marker._userAvatarUrl = userAvatarUrl; // Store avatar URL
+        marker._escapeHtml = escapeHtml; // Store escape function
+        
+        // Generate resume HTML if resume data is available
+        if (gig.resume) {
+          const r = gig.resume;
+          const displayEmail = r.emailOverride != null && r.emailOverride !== "" ? r.emailOverride : (gig.email || gig.user?.email || "");
+          const displayPhone = (gig.user?.phoneVisibleToRecruiters && gig.user?.phone) ? gig.user.phone : null;
+          marker._resumePanelHtml = generateResumeHtml(r, displayEmail, displayPhone, true);
+        }
+        
         // Wrap content with toggle button
         const toggleHtml = `
           <div class="map-popup-toggle-wrapper">
@@ -3251,6 +3283,19 @@ const MapComponent = ({ onOpenSettings, onViewModeChange }) => {
           </div>
         `;
         popupContent = toggleHtml + marker._gigDetailsHtml;
+      } else if (isCandidate && gig.resume) {
+        // For candidates (recruiters viewing job seekers), show resume directly
+        const r = gig.resume;
+        const displayEmail = r.emailOverride != null && r.emailOverride !== "" ? r.emailOverride : (gig.email || "—");
+        const displayPhone = (gig.user?.phoneVisibleToRecruiters && gig.user?.phone) ? gig.user.phone : null;
+        const resumePanelHtml = generateResumeHtml(r, displayEmail, displayPhone);
+        marker._resumePanelHtml = resumePanelHtml;
+        popupContent = resumePanelHtml;
+      } else {
+        // Regular gig details view
+        const gigDetailsHtml = generateGigDetailsHtml();
+        marker._gigDetailsHtml = gigDetailsHtml;
+        popupContent = gigDetailsHtml;
       }
       marker.bindPopup(popupContent, { className: "gig-popup", maxWidth: isCandidate && gig.resume ? 600 : 320 });
       marker.on("popupopen", () => {
@@ -3262,9 +3307,30 @@ const MapComponent = ({ onOpenSettings, onViewModeChange }) => {
           const toggleInput = el.querySelector('.map-popup-toggle-input');
           if (toggleInput) {
             toggleInput.checked = marker._showResumeView || false;
-            toggleInput.onchange = () => {
+            toggleInput.onchange = async () => {
               marker._showResumeView = toggleInput.checked;
-              const newContent = toggleInput.checked ? marker._resumePanelHtml : marker._gigDetailsHtml;
+              
+              // If switching to resume view and resume data not loaded, fetch it
+              if (toggleInput.checked && !marker._resumePanelHtml) {
+                try {
+                  const res = await fetch("/api/profile/resume", { credentials: "same-origin" });
+                  if (res.ok) {
+                    const data = await res.json();
+                    if (data?.success && data.resume) {
+                      const r = data.resume;
+                      const displayEmail = r.emailOverride != null && r.emailOverride !== "" ? r.emailOverride : (marker._gigData?.email || marker._gigData?.user?.email || "");
+                      const displayPhone = (marker._gigData?.user?.phoneVisibleToRecruiters && marker._gigData?.user?.phone) ? marker._gigData.user.phone : null;
+                      if (marker._generateResumeHtmlFn) {
+                        marker._resumePanelHtml = marker._generateResumeHtmlFn(r, displayEmail, displayPhone, true);
+                      }
+                    }
+                  }
+                } catch (err) {
+                  console.error("Failed to fetch resume:", err);
+                }
+              }
+              
+              const newContent = toggleInput.checked ? (marker._resumePanelHtml || '<div class="map-popup-content"><p>Loading resume...</p></div>') : marker._gigDetailsHtml;
               const toggleHtml = `
                 <div class="map-popup-toggle-wrapper">
                   <div class="map-popup-toggle-header">
