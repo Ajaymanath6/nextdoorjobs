@@ -1077,15 +1077,24 @@ const MapComponent = ({ onOpenSettings, onViewModeChange }) => {
               setChatCandidateId(candidateId);
               setChatCandidateName(gig.user?.name || "Candidate");
               setChatCandidateEmail(displayEmail || "");
-              if (map) {
+              // Position chat box below the popover
+              const popupElement = marker.getPopup()?.getElement();
+              if (popupElement) {
+                const popupRect = popupElement.getBoundingClientRect();
+                setChatModalAnchor({ 
+                  top: popupRect.bottom, 
+                  left: popupRect.left,
+                  width: popupRect.width 
+                });
+              } else if (map) {
                 const latlng = marker.getLatLng();
                 const point = map.latLngToContainerPoint(latlng);
                 const container = map.getContainer();
                 const containerRect = container.getBoundingClientRect();
-                setChatModalAnchor({ top: containerRect.top + point.y - 60, left: containerRect.left + point.x + 100 });
+                setChatModalAnchor({ top: containerRect.top + point.y + 200, left: containerRect.left + point.x - 160 });
               } else {
                 const rect = el.getBoundingClientRect();
-                setChatModalAnchor({ top: rect.top, left: rect.right + 8 });
+                setChatModalAnchor({ top: rect.bottom, left: rect.left, width: rect.width });
               }
               setChatModalOpen(true);
             } catch (err) {
@@ -1993,23 +2002,44 @@ const MapComponent = ({ onOpenSettings, onViewModeChange }) => {
     };
   }, [chatModalOpen, chatConversationId, meUser?.id]);
 
-  // Keep chat panel position tied to marker on map move/zoom (sticky to popup)
+  // Keep chat panel position tied to popover on map move/zoom (sticky to popup)
   useEffect(() => {
     if (!chatModalOpen || !chatSourceMarkerRef.current || !mapInstanceRef.current) return;
     const map = mapInstanceRef.current;
     const marker = chatSourceMarkerRef.current;
     const updateAnchor = () => {
-      const latlng = marker.getLatLng();
-      const point = map.latLngToContainerPoint(latlng);
-      const container = map.getContainer();
-      const containerRect = container.getBoundingClientRect();
-      setChatModalAnchor({ top: containerRect.top + point.y - 60, left: containerRect.left + point.x + 100 });
+      // Get the popover element and position chat box below it
+      const popupElement = marker.getPopup()?.getElement();
+      if (popupElement) {
+        const popupRect = popupElement.getBoundingClientRect();
+        setChatModalAnchor({ 
+          top: popupRect.bottom, 
+          left: popupRect.left,
+          width: popupRect.width 
+        });
+      } else {
+        // Fallback to marker position if popover not found
+        const latlng = marker.getLatLng();
+        const point = map.latLngToContainerPoint(latlng);
+        const container = map.getContainer();
+        const containerRect = container.getBoundingClientRect();
+        setChatModalAnchor({ top: containerRect.top + point.y + 200, left: containerRect.left + point.x - 160 });
+      }
     };
     map.on("moveend", updateAnchor);
     map.on("zoomend", updateAnchor);
+    map.on("popupopen", updateAnchor);
+    map.on("popupclose", updateAnchor);
+    // Also update on popover open/close
+    marker.on("popupopen", updateAnchor);
+    marker.on("popupclose", updateAnchor);
     return () => {
       map.off("moveend", updateAnchor);
       map.off("zoomend", updateAnchor);
+      map.off("popupopen", updateAnchor);
+      map.off("popupclose", updateAnchor);
+      marker.off("popupopen", updateAnchor);
+      marker.off("popupclose", updateAnchor);
     };
   }, [chatModalOpen]);
 
@@ -3051,15 +3081,24 @@ const MapComponent = ({ onOpenSettings, onViewModeChange }) => {
               setChatCandidateId(candidateId);
               setChatCandidateName(gig.user?.name || "Candidate");
               setChatCandidateEmail(displayEmail || "");
-              if (map) {
+              // Position chat box below the popover
+              const popupElement = marker.getPopup()?.getElement();
+              if (popupElement) {
+                const popupRect = popupElement.getBoundingClientRect();
+                setChatModalAnchor({ 
+                  top: popupRect.bottom, 
+                  left: popupRect.left,
+                  width: popupRect.width 
+                });
+              } else if (map) {
                 const latlng = marker.getLatLng();
                 const point = map.latLngToContainerPoint(latlng);
                 const container = map.getContainer();
                 const containerRect = container.getBoundingClientRect();
-                setChatModalAnchor({ top: containerRect.top + point.y - 60, left: containerRect.left + point.x + 100 });
+                setChatModalAnchor({ top: containerRect.top + point.y + 200, left: containerRect.left + point.x - 160 });
               } else {
                 const rect = el.getBoundingClientRect();
-                setChatModalAnchor({ top: rect.top, left: rect.right + 8 });
+                setChatModalAnchor({ top: rect.bottom, left: rect.left, width: rect.width });
               }
               setChatModalOpen(true);
             } catch (err) {
@@ -4811,16 +4850,17 @@ const MapComponent = ({ onOpenSettings, onViewModeChange }) => {
         }}
       />
 
-      {/* Chat modal (right of resume popup) */}
+      {/* Chat modal (attached below resume popup) */}
       {chatModalOpen && (
         <div
-          className="fixed z-[2000] flex flex-col rounded-lg border border-brand-stroke-border bg-white shadow-xl"
+          className="fixed z-[2000] flex flex-col border-t-0 rounded-b-lg border border-brand-stroke-border bg-white shadow-xl"
           style={{
-            width: 360,
+            width: chatModalAnchor?.width ? chatModalAnchor.width : 360,
             maxHeight: "80vh",
             left: chatModalAnchor?.left != null ? chatModalAnchor.left : (chatModalAnchor?.right != null ? chatModalAnchor.right + 8 : "50%"),
             top: chatModalAnchor ? chatModalAnchor.top : "50%",
             transform: chatModalAnchor ? undefined : "translate(-50%, -50%)",
+            borderRadius: chatModalAnchor ? "0 0 8px 8px" : "8px",
           }}
         >
           <div className="flex items-center justify-between gap-2 border-b border-brand-stroke-border px-3 py-2 shrink-0">

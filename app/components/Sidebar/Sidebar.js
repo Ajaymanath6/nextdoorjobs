@@ -40,7 +40,7 @@ export default function Sidebar({ activeItem = "jobs-near-you", onToggle, isOpen
   };
 
   // Navigation items: 1 Gigs/Candidates near you, 2 Post a gig/job, 3 Manage Resume, 4 Manage JDs, 5 Settings
-  const jobsNearYouLabel = viewMode === "person" ? "Gigs near you" : "Candidates near you";
+  const jobsNearYouLabel = viewMode === "person" ? "Candidates near you" : "Candidates near you";
   const postGigLabel = viewMode === "person" ? "Post a gig" : "Post a job";
   const navigationItems = [
     { id: "jobs-near-you", label: jobsNearYouLabel, icon: EarthFilled, route: "/jobs-near-you" },
@@ -106,7 +106,7 @@ export default function Sidebar({ activeItem = "jobs-near-you", onToggle, isOpen
 
       {/* Navigation Section */}
       <nav className={`flex-1 overflow-y-auto overflow-x-hidden min-w-0 ${sidebar["nav-container"]}`}>
-        <ul className="space-y-2 min-w-0">
+        <ul className="space-y-2 min-w-0 w-full">
           {navigationItems.map((item) => {
             const IconComponent = item.icon;
             const isActive = activeItem === item.id;
@@ -114,13 +114,13 @@ export default function Sidebar({ activeItem = "jobs-near-you", onToggle, isOpen
             const isDisabled = isComingSoon || (!isActive && item.id !== "jobs-near-you" && item.id !== "post-gig" && item.id !== "manage-resume" && item.id !== "settings");
             const tooltipContent = !isOpen ? (isComingSoon ? "Coming soon" : item.label) : "";
             return (
-              <li key={item.id}>
-                <Tooltip content={tooltipContent} as="span" className={!isOpen ? "block w-full" : ""}>
+              <li key={item.id} className="w-full">
+                <Tooltip content={tooltipContent} as="span" className={!isOpen ? "block w-full" : "block w-full"}>
                   <button
                     onClick={() => !isDisabled && handleNavigation(item)}
                     disabled={isDisabled}
                     aria-label={item.label}
-                    className={`${sidebar["nav-button"]} min-w-0 ${!isOpen ? "w-full" : ""} ${
+                    className={`${sidebar["nav-button"]} w-full ${!isOpen ? "w-full" : "w-full"} ${
                       isOpen ? sidebar["nav-button-expanded"] : sidebar["nav-button-collapsed"]
                     } ${isActive ? sidebar["nav-button-active"] : "hover:bg-brand-bg-fill"} ${
                       isDisabled ? "opacity-50 cursor-not-allowed" : ""
@@ -148,13 +148,13 @@ export default function Sidebar({ activeItem = "jobs-near-you", onToggle, isOpen
         <Tooltip
           content={!isOpen ? (isDev ? "What's New" : "Coming soon") : ""}
           as="span"
-          className={!isOpen ? "block w-full" : ""}
+          className="block w-full"
         >
           <button
             onClick={isDev ? () => handleNavigation({ route: "/roadmap" }) : undefined}
             disabled={!isDev}
             aria-label="What's New"
-            className={`${sidebar["nav-button"]} ${!isOpen ? "w-full" : ""} ${
+            className={`${sidebar["nav-button"]} w-full ${
               isOpen ? sidebar["nav-button-expanded"] : sidebar["nav-button-collapsed"]
             } hover:bg-brand-bg-fill ${!isDev ? "opacity-50 cursor-not-allowed" : ""}`}
           >
