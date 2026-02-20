@@ -3,7 +3,7 @@
 import { useState, useEffect, useRef } from "react";
 import { useRouter } from "next/navigation";
 import { useUser, useClerk } from "@clerk/nextjs";
-import { WatsonHealthRotate_360, UserAvatar, User, Settings, Logout, EarthFilled, Chat, ArrowLeft, UserMultiple, Briefcase } from "@carbon/icons-react";
+import { WatsonHealthRotate_360, UserAvatar, User, Settings, Logout, EarthFilled, Chat, ArrowLeft, UserMultiple, List } from "@carbon/icons-react";
 import ChatInterface from "../components/Onboarding/ChatInterface";
 import SettingsModal from "../components/SettingsModal";
 import JobListingsModal from "../components/JobListingsModal";
@@ -1984,7 +1984,7 @@ export default function OnboardingPage() {
                 className="p-2 rounded-lg hover:bg-gray-100 transition-colors flex items-center gap-1.5 relative"
                 title="Job posting"
               >
-                <Briefcase size={20} style={{ color: "#575757" }} />
+                <List size={20} style={{ color: "#575757" }} />
                 <span className="text-sm font-medium text-[#575757] hidden sm:inline">Job posting</span>
                 {jobCount > 0 && (
                   <span 
