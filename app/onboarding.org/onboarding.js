@@ -3,7 +3,7 @@
 import { useState, useEffect, useRef } from "react";
 import { useRouter } from "next/navigation";
 import { useUser, useClerk } from "@clerk/nextjs";
-import { WatsonHealthRotate_360, UserAvatar, User, Settings, Logout, EarthFilled, Chat, ArrowLeft, UserMultiple, List } from "@carbon/icons-react";
+import { WatsonHealthRotate_360, UserAvatar, User, Settings, Logout, EarthFilled, Chat, ArrowLeft, UserMultiple, List, Notification } from "@carbon/icons-react";
 import ChatInterface from "../components/Onboarding/ChatInterface";
 import SettingsModal from "../components/SettingsModal";
 import JobListingsModal from "../components/JobListingsModal";
@@ -156,13 +156,36 @@ export default function OnboardingPage() {
   const [candidateListTab, setCandidateListTab] = useState("chats");
   const [jobsPosted, setJobsPosted] = useState([]);
   const [jobsPostedLoading, setJobsPostedLoading] = useState(false);
-  const [showJobsBelowChat, setShowJobsBelowChat] = useState(false);
+  const [showJobPostingsPanel, setShowJobPostingsPanel] = useState(false);
   const [candidateChats, setCandidateChats] = useState([]);
   const [candidateChatsLoading, setCandidateChatsLoading] = useState(false);
+  const [notificationCount, setNotificationCount] = useState(0);
+  const [showNotificationsPanel, setShowNotificationsPanel] = useState(false);
+  const [notificationTab, setNotificationTab] = useState("recruiter-messages");
+  const [notifications, setNotifications] = useState([]);
+  const [notificationsLoading, setNotificationsLoading] = useState(false);
   const onboardingSessionIdRef = useRef(null);
   const conversationOrderRef = useRef(0);
   const lastAIMessageTextRef = useRef("");
   const scrollToInlineRef = useRef(null);
+
+  // Fetch notification count periodically
+  useEffect(() => {
+    const fetchCount = async () => {
+      try {
+        const res = await fetch('/api/notifications/unread-count', { credentials: 'same-origin' });
+        if (res.ok) {
+          const data = await res.json();
+          setNotificationCount(data.count || 0);
+        }
+      } catch (error) {
+        console.error('Error fetching notification count:', error);
+      }
+    };
+    fetchCount();
+    const interval = setInterval(fetchCount, 30000); // Every 30s
+    return () => clearInterval(interval);
+  }, []);
   const [suggestedCompanyName, setSuggestedCompanyName] = useState(null);
 
   useEffect(() => {
@@ -1961,13 +1984,8 @@ export default function OnboardingPage() {
                     }
                     return;
                   }
-                  setShowCandidateListView(false);
-                  if (showJobsBelowChat) {
-                    setShowJobsBelowChat(false);
-                    return;
-                  }
+                  setShowJobPostingsPanel(true);
                   setJobsPostedLoading(true);
-                  setShowJobsBelowChat(true);
                   try {
                     const res = await fetch("/api/onboarding/my-jobs", { credentials: "same-origin" });
                     const data = await res.json().catch(() => ({}));
@@ -1995,10 +2013,40 @@ export default function OnboardingPage() {
                   </span>
                 )}
               </button>
+              {userData?.accountType === "Individual" && (
+                <button
+                  type="button"
+                  onClick={() => {
+                    setShowNotificationsPanel(true);
+                    setShowCandidateListView(false);
+                    setShowJobPostingsPanel(false);
+                    setNotificationsLoading(true);
+                    fetch("/api/notifications", { credentials: "same-origin" })
+                      .then((r) => (r.ok ? r.json() : { notifications: [] }))
+                      .then((data) => {
+                        setNotifications(Array.isArray(data.notifications) ? data.notifications : []);
+                        setNotificationCount(data.unreadCount || 0);
+                      })
+                      .catch(() => setNotifications([]))
+                      .finally(() => setNotificationsLoading(false));
+                  }}
+                  className="p-2 rounded-lg hover:bg-gray-100 transition-colors relative"
+                  title="Notifications"
+                >
+                  <Notification size={20} style={{ color: "#575757" }} />
+                  {notificationCount > 0 && (
+                    <span className="absolute -top-1 -right-1 bg-brand text-white text-xs font-bold rounded-full min-w-[18px] h-[18px] flex items-center justify-center px-1" style={{ fontFamily: "Open Sans, sans-serif", fontSize: "10px" }}>
+                      {notificationCount}
+                    </span>
+                  )}
+                </button>
+              )}
               <button
                 type="button"
                 onClick={() => {
                   setShowCandidateListView(true);
+                  setShowNotificationsPanel(false);
+                  setShowJobPostingsPanel(false);
                   if (candidateListTab === "chats") {
                     setCandidateChatsLoading(true);
                     fetch("/api/chat/conversations", { credentials: "same-origin" })
@@ -2127,9 +2175,126 @@ export default function OnboardingPage() {
             </div>
           </div>
 
-          {/* Content - Chat interface or Candidate list view */}
+          {/* Content - Chat interface or Candidate list view or Job postings panel or Notifications panel */}
           <div className="flex-1 relative z-10 overflow-hidden rounded-b-lg min-h-0">
-            {showCandidateListView ? (
+            {showNotificationsPanel ? (
+              <div className="h-full flex flex-col bg-white">
+                <div className="flex items-center justify-between border-b border-[#E5E5E5] px-4 py-2 shrink-0">
+                  <button
+                    type="button"
+                    onClick={() => setShowNotificationsPanel(false)}
+                    className="p-2 rounded-lg hover:bg-gray-100 transition-colors flex items-center gap-2 text-brand-text-strong"
+                    aria-label="Back"
+                  >
+                    <ArrowLeft size={18} />
+                  </button>
+                  <h2 className="text-lg font-semibold text-brand-text-strong">Notifications</h2>
+                  <div className="w-10"></div>
+                </div>
+                <div className="flex border-b border-[#E5E5E5] shrink-0">
+                  <button
+                    type="button"
+                    onClick={() => setNotificationTab("recruiter-messages")}
+                    className={`flex-1 px-4 py-3 text-sm font-medium transition-colors ${
+                      notificationTab === "recruiter-messages"
+                        ? "border-b-2 border-brand text-brand bg-brand/5"
+                        : "text-brand-text-weak hover:bg-gray-50"
+                    }`}
+                  >
+                    Recruiter messages
+                  </button>
+                </div>
+                <div className="flex-1 overflow-y-auto p-4 min-h-0">
+                  {notificationsLoading ? (
+                    <p className="text-sm text-brand-text-weak">Loading…</p>
+                  ) : notifications.length === 0 ? (
+                    <p className="text-sm text-brand-text-weak">No notifications yet.</p>
+                  ) : (
+                    <ul className="space-y-2">
+                      {notifications.map((notif) => (
+                        <li
+                          key={notif.id}
+                          className={`flex flex-col gap-1 p-3 rounded-lg border border-[#E5E5E5] hover:bg-gray-50 cursor-pointer ${
+                            !notif.isRead ? 'bg-brand/5' : ''
+                          }`}
+                          onClick={async () => {
+                            try {
+                              await fetch('/api/notifications/mark-read', {
+                                method: 'POST',
+                                headers: { 'Content-Type': 'application/json' },
+                                credentials: 'same-origin',
+                                body: JSON.stringify({ notificationIds: [notif.id] }),
+                              });
+                              setNotifications((prev) =>
+                                prev.map((n) => (n.id === notif.id ? { ...n, isRead: true } : n))
+                              );
+                              setNotificationCount((prev) => Math.max(0, prev - 1));
+                            } catch (error) {
+                              console.error('Error marking notification as read:', error);
+                            }
+                          }}
+                        >
+                          <div className="flex items-start justify-between">
+                            <span className="font-medium text-brand-text-strong">{notif.title}</span>
+                            {!notif.isRead && (
+                              <span className="w-2 h-2 bg-brand rounded-full shrink-0 mt-1"></span>
+                            )}
+                          </div>
+                          <span className="text-sm text-brand-text-weak">{notif.message}</span>
+                          {notif.senderOrgName && (
+                            <span className="text-xs text-brand-text-weak">From: {notif.senderOrgName}</span>
+                          )}
+                          <span className="text-xs text-brand-text-weak">
+                            {new Date(notif.createdAt).toLocaleString()}
+                          </span>
+                        </li>
+                      ))}
+                    </ul>
+                  )}
+                </div>
+              </div>
+            ) : showJobPostingsPanel ? (
+              <div className="h-full flex flex-col bg-white">
+                <div className="flex items-center justify-between border-b border-[#E5E5E5] px-4 py-2 shrink-0">
+                  <button
+                    type="button"
+                    onClick={() => setShowJobPostingsPanel(false)}
+                    className="p-2 rounded-lg hover:bg-gray-100 transition-colors flex items-center gap-2 text-brand-text-strong"
+                    aria-label="Back"
+                  >
+                    <ArrowLeft size={18} />
+                  </button>
+                  <h2 className="text-lg font-semibold text-brand-text-strong">Job postings</h2>
+                  <div className="w-10"></div>
+                </div>
+                <div className="flex-1 overflow-y-auto p-4 min-h-0">
+                  {jobsPostedLoading ? (
+                    <p className="text-sm text-brand-text-weak">Loading…</p>
+                  ) : jobsPosted.length === 0 ? (
+                    <p className="text-sm text-brand-text-weak">No jobs posted yet. Create your first job posting to attract candidates.</p>
+                  ) : (
+                    <ul className="space-y-2">
+                      {jobsPosted.map((job) => (
+                        <li
+                          key={job.id}
+                          className="flex flex-col gap-0.5 p-3 rounded-lg border border-[#E5E5E5] hover:bg-gray-50"
+                        >
+                          <span className="font-medium text-brand-text-strong">{job.title || "Job Title"}</span>
+                          {(job.description || job.role) && (
+                            <span className="text-sm text-brand-text-weak truncate">{job.description || job.role}</span>
+                          )}
+                          {(job.createdAt || job.created_at) && (
+                            <span className="text-xs text-brand-text-weak">
+                              Posted: {new Date(job.createdAt || job.created_at).toLocaleDateString()}
+                            </span>
+                          )}
+                        </li>
+                      ))}
+                    </ul>
+                  )}
+                </div>
+              </div>
+            ) : showCandidateListView ? (
               <div className="h-full flex flex-col bg-white">
                 <div className="flex items-center justify-between border-b border-[#E5E5E5] px-4 py-2 shrink-0">
                   <button
@@ -2208,95 +2373,50 @@ export default function OnboardingPage() {
                 </div>
               </div>
             ) : (
-            <div className="h-full flex flex-col min-h-0">
-              <div className="flex-1 min-h-0 overflow-hidden">
-                <ChatInterface
-                  messages={chatMessages}
-                  onSendMessage={handleChatMessage}
-                  isLoading={isLoading}
-                  inlineComponent={inlineComponent}
-                  typingText={isTyping ? typingText : null}
-                  onScrollRequest={(scrollFn) => {
-                    scrollToInlineRef.current = scrollFn;
-                  }}
-                  onSave={handleSave}
-                  onViewOnMap={handleViewOnMap}
-                  onStartNext={handleStartNext}
-                  showFindOrPostButtons={chatMessages.length === 1 && !hasChosenPostGig}
-                  accountType="Company"
-                  onPostGig={handlePostGig}
-                  onFindCandidates={handleFindCandidates}
-                  onShowJobListings={handleShowJobListings}
-                  onJobDeleted={async () => {
-                    try {
-                      const res = await fetch("/api/onboarding/my-jobs", { credentials: "same-origin" });
-                      if (res.ok) {
-                        const data = await res.json();
-                        const jobs = data.success ? (data.jobs || []) : [];
-                        setJobCount(jobs.length);
-                        setJobsPosted(jobs);
-                      }
-                    } catch (e) {
-                      console.error("Error refetching jobs:", e);
-                    }
-                  }}
-                  onJobEdited={async () => {
-                    try {
-                      const res = await fetch("/api/onboarding/my-jobs", { credentials: "same-origin" });
-                      if (res.ok) {
-                        const data = await res.json();
-                        const jobs = data.success ? (data.jobs || []) : [];
-                        setJobCount(jobs.length);
-                        setJobsPosted(jobs);
-                      }
-                    } catch (e) {
-                      console.error("Error refetching jobs:", e);
-                    }
-                  }}
-                />
-              </div>
-              {showJobsBelowChat && (
-                <div className="shrink-0 border-t border-[#E5E5E5] bg-white rounded-b-lg flex flex-col max-h-[40%] min-h-0">
-                  <div className="flex items-center justify-between px-4 py-2 border-b border-[#E5E5E5]">
-                    <span className="text-sm font-medium text-brand-text-strong">Job postings</span>
-                    <button
-                      type="button"
-                      onClick={() => setShowJobsBelowChat(false)}
-                      className="p-1 rounded hover:bg-gray-100 text-brand-text-weak"
-                      aria-label="Close"
-                    >
-                      ×
-                    </button>
-                  </div>
-                  <div className="flex-1 overflow-y-auto p-4 min-h-0">
-                    {jobsPostedLoading ? (
-                      <p className="text-sm text-brand-text-weak">Loading…</p>
-                    ) : jobsPosted.length === 0 ? (
-                      <p className="text-sm text-brand-text-weak">No jobs posted yet. Create your first job posting to attract candidates.</p>
-                    ) : (
-                      <ul className="space-y-2">
-                        {jobsPosted.map((job) => (
-                          <li
-                            key={job.id}
-                            className="flex flex-col gap-0.5 p-3 rounded-lg border border-[#E5E5E5] hover:bg-gray-50"
-                          >
-                            <span className="font-medium text-brand-text-strong">{job.title || "Job Title"}</span>
-                            {(job.description || job.role) && (
-                              <span className="text-sm text-brand-text-weak truncate">{job.description || job.role}</span>
-                            )}
-                            {(job.createdAt || job.created_at) && (
-                              <span className="text-xs text-brand-text-weak">
-                                Posted: {new Date(job.createdAt || job.created_at).toLocaleDateString()}
-                              </span>
-                            )}
-                          </li>
-                        ))}
-                      </ul>
-                    )}
-                  </div>
-                </div>
-              )}
-            </div>
+            <ChatInterface
+              messages={chatMessages}
+              onSendMessage={handleChatMessage}
+              isLoading={isLoading}
+              inlineComponent={inlineComponent}
+              typingText={isTyping ? typingText : null}
+              onScrollRequest={(scrollFn) => {
+                scrollToInlineRef.current = scrollFn;
+              }}
+              onSave={handleSave}
+              onViewOnMap={handleViewOnMap}
+              onStartNext={handleStartNext}
+              showFindOrPostButtons={chatMessages.length === 1 && !hasChosenPostGig}
+              accountType="Company"
+              onPostGig={handlePostGig}
+              onFindCandidates={handleFindCandidates}
+              onShowJobListings={handleShowJobListings}
+              onJobDeleted={async () => {
+                try {
+                  const res = await fetch("/api/onboarding/my-jobs", { credentials: "same-origin" });
+                  if (res.ok) {
+                    const data = await res.json();
+                    const jobs = data.success ? (data.jobs || []) : [];
+                    setJobCount(jobs.length);
+                    setJobsPosted(jobs);
+                  }
+                } catch (e) {
+                  console.error("Error refetching jobs:", e);
+                }
+              }}
+              onJobEdited={async () => {
+                try {
+                  const res = await fetch("/api/onboarding/my-jobs", { credentials: "same-origin" });
+                  if (res.ok) {
+                    const data = await res.json();
+                    const jobs = data.success ? (data.jobs || []) : [];
+                    setJobCount(jobs.length);
+                    setJobsPosted(jobs);
+                  }
+                } catch (e) {
+                  console.error("Error refetching jobs:", e);
+                }
+              }}
+            />
             )}
           </div>
         </div>

@@ -124,6 +124,8 @@ model User {
   conversationsAsRecruiter Conversation[] @relation("RecruiterConversations")
   conversationsAsCandidate  Conversation[] @relation("CandidateConversations")
   chatMessagesSent    ChatMessage[]
+  notifications       Notification[]
+  notificationsSent   Notification[] @relation("NotificationSender")
 
   @@index([email])
   @@index([clerkId])
@@ -296,14 +298,15 @@ model ResumeEducation {
 }
 
 model Conversation {
-  id          Int          @id @default(autoincrement())
-  recruiterId Int          @map("recruiter_id")
-  candidateId Int          @map("candidate_id")
-  createdAt   DateTime    @default(now()) @map("created_at")
-  updatedAt   DateTime    @updatedAt @map("updated_at")
-  recruiter   User         @relation("RecruiterConversations", fields: [recruiterId], references: [id], onDelete: Cascade)
-  candidate   User         @relation("CandidateConversations", fields: [candidateId], references: [id], onDelete: Cascade)
-  messages    ChatMessage[]
+  id            Int            @id @default(autoincrement())
+  recruiterId   Int            @map("recruiter_id")
+  candidateId   Int            @map("candidate_id")
+  createdAt     DateTime      @default(now()) @map("created_at")
+  updatedAt     DateTime      @updatedAt @map("updated_at")
+  recruiter     User           @relation("RecruiterConversations", fields: [recruiterId], references: [id], onDelete: Cascade)
+  candidate     User           @relation("CandidateConversations", fields: [candidateId], references: [id], onDelete: Cascade)
+  messages      ChatMessage[]
+  notifications Notification[]
 
   @@unique([recruiterId, candidateId])
   @@index([recruiterId])
@@ -323,4 +326,32 @@ model ChatMessage {
   @@index([conversationId])
   @@index([senderId])
   @@map("chat_messages")
+}
+
+model Notification {
+  id             Int              @id @default(autoincrement())
+  userId         Int              @map("user_id")
+  type           NotificationType
+  title          String           @db.VarChar(255)
+  message        String           @db.Text
+  conversationId Int?             @map("conversation_id")
+  senderId       Int?             @map("sender_id")
+  senderName     String?          @map("sender_name") @db.VarChar(255)
+  senderEmail    String?          @map("sender_email") @db.VarChar(255)
+  senderOrgName  String?          @map("sender_org_name") @db.VarChar(255)
+  isRead         Boolean          @default(false) @map("is_read")
+  createdAt      DateTime        @default(now()) @map("created_at")
+  user           User             @relation(fields: [userId], references: [id], onDelete: Cascade)
+  conversation   Conversation?    @relation(fields: [conversationId], references: [id], onDelete: SetNull)
+  sender         User?            @relation("NotificationSender", fields: [senderId], references: [id], onDelete: SetNull)
+
+  @@index([userId])
+  @@index([userId, isRead])
+  @@index([conversationId])
+  @@map("notifications")
+}
+
+enum NotificationType {
+  MESSAGE
+  SYSTEM
 }

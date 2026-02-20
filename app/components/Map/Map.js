@@ -1107,6 +1107,8 @@ const MapComponent = ({ onOpenSettings, onViewModeChange }) => {
               setTimeout(() => {
                 const popupEl = marker.getPopup()?.getElement();
                 if (!popupEl) return;
+                const chatIconLink = popupEl.querySelector('.map-popup-action-chat');
+                if (chatIconLink) chatIconLink.classList.add('active');
                 const seeBtn = popupEl.querySelector('[data-action="see-distance"]');
                 if (seeBtn) seeBtn.onclick = () => { setSelectedGigForDistance(gig); setShowDistanceFromHome(true); };
                 const addBtn = popupEl.querySelector('[data-action="add-home"]');
@@ -1120,7 +1122,16 @@ const MapComponent = ({ onOpenSettings, onViewModeChange }) => {
                   setChatCandidateName("");
                   setChatCandidateEmail("");
                   setChatInput("");
-                  if (marker._resumePanelHtml) marker.getPopup().setContent(marker._resumePanelHtml);
+                  if (marker._resumePanelHtml) {
+                    marker.getPopup().setContent(marker._resumePanelHtml);
+                    setTimeout(() => {
+                      const popupEl2 = marker.getPopup()?.getElement();
+                      if (popupEl2) {
+                        const chatLink2 = popupEl2.querySelector('.map-popup-action-chat');
+                        if (chatLink2) chatLink2.classList.remove('active');
+                      }
+                    }, 0);
+                  }
                 };
                 const inputEl = popupEl.querySelector('.map-popup-twin-input');
                 const sendBtn = popupEl.querySelector('.map-popup-twin-send-inside');
@@ -3153,6 +3164,8 @@ const MapComponent = ({ onOpenSettings, onViewModeChange }) => {
               setTimeout(() => {
                 const popupEl = marker.getPopup()?.getElement();
                 if (!popupEl) return;
+                const chatIconLink = popupEl.querySelector('.map-popup-action-chat');
+                if (chatIconLink) chatIconLink.classList.add('active');
                 const seeBtn = popupEl.querySelector('[data-action="see-distance"]');
                 if (seeBtn) seeBtn.onclick = () => { setSelectedGigForDistance(gig); setShowDistanceFromHome(true); };
                 const addBtn = popupEl.querySelector('[data-action="add-home"]');
@@ -3166,7 +3179,16 @@ const MapComponent = ({ onOpenSettings, onViewModeChange }) => {
                   setChatCandidateName("");
                   setChatCandidateEmail("");
                   setChatInput("");
-                  if (marker._resumePanelHtml) marker.getPopup().setContent(marker._resumePanelHtml);
+                  if (marker._resumePanelHtml) {
+                    marker.getPopup().setContent(marker._resumePanelHtml);
+                    setTimeout(() => {
+                      const popupEl2 = marker.getPopup()?.getElement();
+                      if (popupEl2) {
+                        const chatLink2 = popupEl2.querySelector('.map-popup-action-chat');
+                        if (chatLink2) chatLink2.classList.remove('active');
+                      }
+                    }, 0);
+                  }
                 };
                 const inputEl = popupEl.querySelector('.map-popup-twin-input');
                 const sendBtn = popupEl.querySelector('.map-popup-twin-send-inside');

@@ -262,6 +262,9 @@ body {
   opacity: 0.9;
 }
 .gig-popup .map-popup-content .map-popup-actions .map-popup-action-chat {
+  color: var(--brand-text-weak);
+}
+.gig-popup .map-popup-content .map-popup-actions .map-popup-action-chat.active {
   color: var(--brand-color);
 }
 .gig-popup .map-popup-content .map-popup-actions .map-popup-action-chat:hover {

@@ -13,12 +13,14 @@ import {
   Bullhorn,
   EarthFilled,
   Settings,
+  Notification,
 } from "@carbon/icons-react";
 import Tooltip from "../Tooltip";
 
 export default function Sidebar({ activeItem = "jobs-near-you", onToggle, isOpen: externalIsOpen, onOpenSettingsWithSection, viewMode = "person" }) {
   const router = useRouter();
   const [isOpen, setIsOpen] = useState(externalIsOpen !== undefined ? externalIsOpen : true);
+  const [notificationCount, setNotificationCount] = useState(0);
 
   const sidebar = themeClasses.components.sidebar;
   const brand = themeClasses.brand;
@@ -30,6 +32,24 @@ export default function Sidebar({ activeItem = "jobs-near-you", onToggle, isOpen
     }
   }, [externalIsOpen]);
 
+  // Fetch notification count
+  useEffect(() => {
+    const fetchCount = async () => {
+      try {
+        const res = await fetch('/api/notifications/unread-count', { credentials: 'same-origin' });
+        if (res.ok) {
+          const data = await res.json();
+          setNotificationCount(data.count || 0);
+        }
+      } catch (error) {
+        console.error('Error fetching notification count:', error);
+      }
+    };
+    fetchCount();
+    const interval = setInterval(fetchCount, 30000); // Every 30s
+    return () => clearInterval(interval);
+  }, []);
+
   // Handle toggle
   const handleToggle = () => {
     const newState = !isOpen;
@@ -39,11 +59,12 @@ export default function Sidebar({ activeItem = "jobs-near-you", onToggle, isOpen
     }
   };
 
-  // Navigation items: 1 Gigs/Candidates near you, 2 Post a gig/job, 3 Manage Resume, 4 Manage JDs, 5 Settings
+  // Navigation items: 1 Gigs/Candidates near you, 2 Notifications, 3 Post a gig/job, 4 Manage Resume, 5 Manage JDs, 6 Settings
   const jobsNearYouLabel = viewMode === "person" ? "Candidates near you" : "Candidates near you";
   const postGigLabel = viewMode === "person" ? "Post a gig" : "Post a job";
   const navigationItems = [
     { id: "jobs-near-you", label: jobsNearYouLabel, icon: EarthFilled, route: "/jobs-near-you" },
+    { id: "notifications", label: "Notifications", icon: Notification, route: "/notifications", badge: true },
     { id: "post-gig", label: postGigLabel, icon: Add, route: "/onboarding" },
     { id: "manage-resume", label: "Manage Resume", icon: Document, route: "/manage-resume", openSettingsSection: "resume" },
     { id: "manage-jds", label: "Manage JDs", icon: Archive, route: "/manage-jds" },
@@ -124,16 +145,26 @@ export default function Sidebar({ activeItem = "jobs-near-you", onToggle, isOpen
                       isOpen ? sidebar["nav-button-expanded"] : sidebar["nav-button-collapsed"]
                     } ${isActive ? sidebar["nav-button-active"] : "hover:bg-brand-bg-fill"} ${
                       isDisabled ? "opacity-50 cursor-not-allowed" : ""
-                    }`}
+                    } relative`}
                   >
                     <div className={sidebar["nav-icon-container"]}>
                       <IconComponent
                         size={24}
                         style={{ color: "rgba(87, 87, 87, 1)" }}
                       />
+                      {item.badge && notificationCount > 0 && (
+                        <span className="absolute -top-1 -right-1 bg-brand text-white text-xs font-bold rounded-full min-w-[18px] h-[18px] flex items-center justify-center px-1" style={{ fontSize: "10px" }}>
+                          {notificationCount}
+                        </span>
+                      )}
                     </div>
                     {isOpen && (
                       <span className={`${sidebar["nav-text"]} min-w-0 truncate`}>{item.label}</span>
+                    )}
+                    {isOpen && item.badge && notificationCount > 0 && (
+                      <span className="ml-auto bg-brand text-white text-xs font-bold rounded-full min-w-[20px] h-[20px] flex items-center justify-center px-1.5" style={{ fontSize: "10px" }}>
+                        {notificationCount}
+                      </span>
                     )}
                   </button>
                 </Tooltip>

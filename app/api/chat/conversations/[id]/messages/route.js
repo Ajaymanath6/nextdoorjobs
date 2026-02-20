@@ -3,6 +3,7 @@ import { prisma } from "@/lib/prisma";
 import { getCurrentUser } from "@/lib/getCurrentUser";
 import { encrypt, decrypt } from "@/lib/chatEncryption";
 import { broadcastNewMessage } from "@/lib/socket";
+import { sendMessageNotificationEmail } from "@/lib/email";
 
 const DEFAULT_LIMIT = 50;
 const MAX_LIMIT = 100;
@@ -129,6 +130,63 @@ export async function POST(request, { params }) {
       body: text,
       createdAt: message.createdAt,
     };
+
+    // Determine recipient (the other person in the conversation)
+    const recipientId = conversation.recruiterId === user.id ? conversation.candidateId : conversation.recruiterId;
+
+    // Get recipient and sender details for notification
+    const [recipient, sender, senderCompany] = await Promise.all([
+      prisma.user.findUnique({
+        where: { id: recipientId },
+        select: { id: true, name: true, email: true },
+      }),
+      prisma.user.findUnique({
+        where: { id: user.id },
+        select: { id: true, name: true, email: true },
+      }),
+      user.id === conversation.recruiterId
+        ? prisma.company.findFirst({
+            where: { userId: user.id },
+            select: { name: true },
+          })
+        : null,
+    ]);
+
+    // Create notification for recipient
+    if (recipient) {
+      try {
+        const messagePreview = text.length > 100 ? text.slice(0, 100) + '…' : text;
+        
+        await prisma.notification.create({
+          data: {
+            userId: recipientId,
+            type: 'MESSAGE',
+            title: `New message from ${sender?.name || 'Someone'}`,
+            message: messagePreview,
+            conversationId: conversationId,
+            senderId: user.id,
+            senderName: sender?.name || null,
+            senderEmail: sender?.email || null,
+            senderOrgName: senderCompany?.name || null,
+          },
+        });
+
+        // Send email notification
+        const conversationLink = `${process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'}/jobs-near-you`;
+        await sendMessageNotificationEmail({
+          recipientEmail: recipient.email,
+          recipientName: recipient.name,
+          senderName: sender?.name || 'Someone',
+          senderEmail: sender?.email || '',
+          senderOrgName: senderCompany?.name || null,
+          messagePreview,
+          conversationLink,
+        });
+      } catch (notifError) {
+        console.error('Error creating notification:', notifError);
+        // Don't fail the message send if notification fails
+      }
+    }
 
     try {
       broadcastNewMessage(conversationId, response);
