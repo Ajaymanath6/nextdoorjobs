@@ -59,7 +59,7 @@ function haversineKm(lat1, lon1, lat2, lon2) {
 }
 
 // Dynamic import of Leaflet to avoid SSR issues
-const MapComponent = ({ onOpenSettings }) => {
+const MapComponent = ({ onOpenSettings, onViewModeChange }) => {
   const router = useRouter();
   const { signOut } = useClerk();
   const mapRef = useRef(null);
@@ -162,6 +162,13 @@ const MapComponent = ({ onOpenSettings }) => {
   const [showGigFilterDropdown, setShowGigFilterDropdown] = useState(false);
   const gigFilterDropdownRef = useRef(null);
   const gigFilterButtonRef = useRef(null);
+
+  // Notify parent of view mode (person = gigs, company = jobs) for sidebar label
+  useEffect(() => {
+    if (typeof onViewModeChange === "function") {
+      onViewModeChange(searchMode);
+    }
+  }, [searchMode, onViewModeChange]);
 
   // Home location (from profile)
   const [homeLocation, setHomeLocation] = useState(null);
@@ -4354,27 +4361,8 @@ const MapComponent = ({ onOpenSettings }) => {
               >
                 <Return size={20} className={searchBar["return-button-icon"]} />
               </button> */}
-            </div>
           </div>
-
-          {/* Profile button - outside search bar, same line right end; same height as search bar (34px mobile, 40px desktop) */}
-          <div className={`shrink-0 ${mobileSearchExpanded || showFilterDropdown ? "hidden md:!flex" : ""}`} ref={profileRef}>
-            <button
-              type="button"
-              onClick={() => setShowProfileDropdown((v) => !v)}
-              className="h-[34px] w-[34px] md:h-10 md:w-10 flex items-center justify-center rounded-full border border-brand-stroke-border bg-white hover:bg-brand-bg-fill transition-colors shrink-0 shadow-sm"
-              aria-label="Profile menu"
-              aria-expanded={showProfileDropdown}
-            >
-              {meUser?.avatarUrl ? (
-                <img src={meUser.avatarUrl} alt="" className="h-6 w-6 md:h-8 md:w-8 rounded-full object-cover" />
-              ) : meUser?.avatarId ? (
-                <img src={getAvatarUrlById(meUser.avatarId)} alt="" className="h-6 w-6 md:h-8 md:w-8 rounded-full object-cover" />
-              ) : (
-                <UserAvatar size={24} className="text-brand-stroke-strong w-6 h-6 shrink-0" />
-              )}
-            </button>
-          </div>
+        </div>
         </div>
 
           {/* Home badge - below search bar, when user has home and in person mode */}
@@ -4422,6 +4410,25 @@ const MapComponent = ({ onOpenSettings }) => {
           </div>
         </div>
       )}
+
+      {/* Profile button - fixed at right corner of viewport, 60x60 */}
+      <div className={`fixed right-4 top-4 z-[1000] ${mobileSearchExpanded || showFilterDropdown ? "hidden md:flex" : "flex"}`} ref={profileRef}>
+        <button
+          type="button"
+          onClick={() => setShowProfileDropdown((v) => !v)}
+          className="h-[60px] w-[60px] flex items-center justify-center rounded-full border border-brand-stroke-border bg-white hover:bg-brand-bg-fill transition-colors shadow-sm"
+          aria-label="Profile menu"
+          aria-expanded={showProfileDropdown}
+        >
+          {meUser?.avatarUrl ? (
+            <img src={meUser.avatarUrl} alt="" className="h-full w-full rounded-full object-cover" />
+          ) : meUser?.avatarId ? (
+            <img src={getAvatarUrlById(meUser.avatarId)} alt="" className="h-full w-full rounded-full object-cover" />
+          ) : (
+            <UserAvatar size={32} className="text-brand-stroke-strong shrink-0" />
+          )}
+        </button>
+      </div>
 
       {/* Empty State Overlay */}
       <EmptyState

@@ -8,6 +8,7 @@ import SettingsModal from "./components/SettingsModal";
 export default function Home() {
   const [showSettingsModal, setShowSettingsModal] = useState(false);
   const [settingsInitialSection, setSettingsInitialSection] = useState(null);
+  const [viewMode, setViewMode] = useState("person");
 
   const handleOpenSettings = (section = null) => {
     setSettingsInitialSection(section ?? null);
@@ -26,11 +27,12 @@ export default function Home() {
         <Sidebar
           activeItem="jobs-near-you"
           onOpenSettingsWithSection={handleOpenSettings}
+          viewMode={viewMode}
         />
       </div>
 
       {/* Map Component - Right Side (Main Content) */}
-      <Map onOpenSettings={() => handleOpenSettings()} />
+      <Map onOpenSettings={() => handleOpenSettings()} onViewModeChange={setViewMode} />
 
       <SettingsModal
         isOpen={showSettingsModal}

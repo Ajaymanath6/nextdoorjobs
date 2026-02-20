@@ -14,7 +14,7 @@ import {
   EarthFilled,
 } from "@carbon/icons-react";
 
-export default function Sidebar({ activeItem = "jobs-near-you", onToggle, isOpen: externalIsOpen, onOpenSettingsWithSection }) {
+export default function Sidebar({ activeItem = "jobs-near-you", onToggle, isOpen: externalIsOpen, onOpenSettingsWithSection, viewMode = "person" }) {
   const router = useRouter();
   const [isOpen, setIsOpen] = useState(externalIsOpen !== undefined ? externalIsOpen : true);
 
@@ -37,9 +37,10 @@ export default function Sidebar({ activeItem = "jobs-near-you", onToggle, isOpen
     }
   };
 
-  // Navigation items: 1 Jobs near you, 2 Post a gig, 3 Manage Resume, 4 Manage JDs
+  // Navigation items: 1 Jobs/Gigs near you (label depends on viewMode), 2 Post a gig, 3 Manage Resume, 4 Manage JDs
+  const jobsNearYouLabel = viewMode === "person" ? "Gigs near you" : "Jobs near you";
   const navigationItems = [
-    { id: "jobs-near-you", label: "Jobs Near You", icon: EarthFilled, route: "/jobs-near-you" },
+    { id: "jobs-near-you", label: jobsNearYouLabel, icon: EarthFilled, route: "/jobs-near-you" },
     { id: "post-gig", label: "Post a gig", icon: Add, route: "/onboarding" },
     { id: "manage-resume", label: "Manage Resume", icon: Document, route: "/manage-resume", openSettingsSection: "resume" },
     { id: "manage-jds", label: "Manage JDs", icon: Archive, route: "/manage-jds" },
@@ -112,7 +113,7 @@ export default function Sidebar({ activeItem = "jobs-near-you", onToggle, isOpen
                 <button
                   onClick={() => !isDisabled && handleNavigation(item)}
                   disabled={isDisabled}
-                  title={isComingSoon ? "Coming soon" : undefined}
+                  title={isComingSoon ? "Coming soon" : !isOpen ? item.label : undefined}
                   className={`${sidebar["nav-button"]} ${
                     isOpen ? sidebar["nav-button-expanded"] : sidebar["nav-button-collapsed"]
                   } ${isActive ? sidebar["nav-button-active"] : "hover:bg-brand-bg-fill"} ${
@@ -138,9 +139,9 @@ export default function Sidebar({ activeItem = "jobs-near-you", onToggle, isOpen
       {/* What's New Section */}
       <div className="p-2 pt-1 pb-1">
         <button
-          onClick={isDev ? () => handleNavigation("/roadmap") : undefined}
+          onClick={isDev ? () => handleNavigation({ route: "/roadmap" }) : undefined}
           disabled={!isDev}
-          title={isDev ? "What's New" : "Coming soon"}
+          title={!isOpen ? "What's New" : (isDev ? undefined : "Coming soon")}
           className={`${sidebar["nav-button"]} ${
             isOpen ? sidebar["nav-button-expanded"] : sidebar["nav-button-collapsed"]
           } hover:bg-brand-bg-fill ${!isDev ? "opacity-50 cursor-not-allowed" : ""}`}
