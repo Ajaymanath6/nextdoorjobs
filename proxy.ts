@@ -7,9 +7,15 @@ function clerkFapiProxy(req: Request) {
   const url = new URL(req.url);
   if (!url.pathname.startsWith('/__clerk')) return null;
 
-  const proxyUrl = process.env.NEXT_PUBLIC_CLERK_PROXY_URL || '';
   const secretKey = process.env.CLERK_SECRET_KEY || '';
-  if (!proxyUrl || !secretKey) return null;
+  if (!secretKey) return null;
+
+  // Derive proxy URL from request if not explicitly set
+  let proxyUrl = process.env.NEXT_PUBLIC_CLERK_PROXY_URL || '';
+  if (!proxyUrl) {
+    const baseUrl = process.env.NEXT_PUBLIC_APP_URL || url.origin;
+    proxyUrl = `${baseUrl.replace(/\/$/, '')}/__clerk`;
+  }
 
   const proxyHeaders = new Headers(req.headers);
   proxyHeaders.set('Clerk-Proxy-Url', proxyUrl.endsWith('/') ? proxyUrl.slice(0, -1) : proxyUrl);
