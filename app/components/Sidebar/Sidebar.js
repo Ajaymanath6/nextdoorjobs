@@ -21,6 +21,7 @@ export default function Sidebar({ activeItem = "jobs-near-you", onToggle, isOpen
   const router = useRouter();
   const [isOpen, setIsOpen] = useState(externalIsOpen !== undefined ? externalIsOpen : true);
   const [notificationCount, setNotificationCount] = useState(0);
+  const [accountType, setAccountType] = useState(null);
 
   const sidebar = themeClasses.components.sidebar;
   const brand = themeClasses.brand;
@@ -31,6 +32,16 @@ export default function Sidebar({ activeItem = "jobs-near-you", onToggle, isOpen
       setIsOpen(externalIsOpen);
     }
   }, [externalIsOpen]);
+
+  // Fetch user account type for Post a gig vs Post a job
+  useEffect(() => {
+    fetch("/api/auth/me", { credentials: "same-origin" })
+      .then((r) => (r.ok ? r.json() : null))
+      .then((data) => {
+        if (data?.success && data?.user?.accountType) setAccountType(data.user.accountType);
+      })
+      .catch(() => {});
+  }, []);
 
   // Fetch notification count
   useEffect(() => {
@@ -60,12 +71,14 @@ export default function Sidebar({ activeItem = "jobs-near-you", onToggle, isOpen
   };
 
   // Navigation items: 1 Gigs/Candidates near you, 2 Notifications, 3 Post a gig/job, 4 Manage Resume, 5 Manage JDs, 6 Settings
-  const jobsNearYouLabel = viewMode === "person" ? "Candidates near you" : "Candidates near you";
-  const postGigLabel = viewMode === "person" ? "Post a gig" : "Post a job";
+  const jobsNearYouLabel = "Candidates near you";
+  const postLabel = accountType === "Company" ? "Post a job" : "Post a gig";
+  const postRoute = accountType === "Company" ? "/onboarding.org" : "/onboarding";
+  const notificationsRoute = accountType === "Company" ? "/onboarding.org?openNotifications=1" : "/onboarding?openNotifications=1";
   const navigationItems = [
     { id: "jobs-near-you", label: jobsNearYouLabel, icon: EarthFilled, route: "/jobs-near-you" },
-    { id: "notifications", label: "Notifications", icon: Notification, route: "/onboarding?openNotifications=1", badge: true },
-    { id: "post-gig", label: postGigLabel, icon: Add, route: "/onboarding" },
+    { id: "notifications", label: "Notifications", icon: Notification, route: notificationsRoute, badge: true },
+    { id: "post-gig", label: postLabel, icon: Add, route: postRoute },
     { id: "manage-resume", label: "Manage Resume", icon: Document, route: "/manage-resume", openSettingsSection: "resume" },
     { id: "manage-jds", label: "Manage JDs", icon: Archive, route: "/manage-jds" },
     { id: "settings", label: "Settings", icon: Settings, route: "/", openSettingsSection: "general" },

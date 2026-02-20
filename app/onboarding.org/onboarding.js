@@ -163,6 +163,9 @@ export default function OnboardingPage() {
   const [activeRecruiterChatConversationId, setActiveRecruiterChatConversationId] = useState(null);
   const [activeRecruiterChatCandidateName, setActiveRecruiterChatCandidateName] = useState("");
   const [activeRecruiterChatCandidateEmail, setActiveRecruiterChatCandidateEmail] = useState("");
+  const [activeNotificationChatConversationId, setActiveNotificationChatConversationId] = useState(null);
+  const [activeNotificationChatName, setActiveNotificationChatName] = useState("");
+  const [activeNotificationChatEmail, setActiveNotificationChatEmail] = useState("");
   const [notificationCount, setNotificationCount] = useState(0);
   const [showNotificationsPanel, setShowNotificationsPanel] = useState(false);
   const [notificationTab, setNotificationTab] = useState("recruiter-messages");
@@ -190,6 +193,25 @@ export default function OnboardingPage() {
     const interval = setInterval(fetchCount, 30000); // Every 30s
     return () => clearInterval(interval);
   }, []);
+
+  // Open notifications panel when URL has openNotifications=1 (e.g. from sidebar)
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    const params = new URLSearchParams(window.location.search);
+    if (params.get("openNotifications") === "1") {
+      setShowNotificationsPanel(true);
+      setNotificationsLoading(true);
+      fetch("/api/notifications", { credentials: "same-origin" })
+        .then((r) => (r.ok ? r.json() : { notifications: [] }))
+        .then((data) => {
+          setNotifications(Array.isArray(data.notifications) ? data.notifications : []);
+          setNotificationCount(data.unreadCount || 0);
+        })
+        .catch(() => setNotifications([]))
+        .finally(() => setNotificationsLoading(false));
+    }
+  }, []);
+
   const [suggestedCompanyName, setSuggestedCompanyName] = useState(null);
 
   useEffect(() => {
@@ -2180,6 +2202,18 @@ export default function OnboardingPage() {
           {/* Content - Chat interface or Candidate list view or Job postings panel or Notifications panel */}
           <div className="flex-1 relative z-10 overflow-hidden rounded-b-lg min-h-0">
             {showNotificationsPanel ? (
+              activeNotificationChatConversationId ? (
+                <RecruiterChatPanel
+                  conversationId={activeNotificationChatConversationId}
+                  otherPartyName={activeNotificationChatName}
+                  otherPartyEmail={activeNotificationChatEmail}
+                  onClose={() => {
+                    setActiveNotificationChatConversationId(null);
+                    setActiveNotificationChatName("");
+                    setActiveNotificationChatEmail("");
+                  }}
+                />
+              ) : (
               <div className="h-full flex flex-col bg-white">
                 <div className="flex items-center justify-between border-b border-[#E5E5E5] px-4 py-2 shrink-0">
                   <button
@@ -2212,13 +2246,11 @@ export default function OnboardingPage() {
                   ) : notifications.length === 0 ? (
                     <p className="text-sm text-brand-text-weak">No notifications yet.</p>
                   ) : (
-                    <ul className="space-y-2">
+                    <ul className="space-y-0">
                       {notifications.map((notif) => (
                         <li
                           key={notif.id}
-                          className={`flex flex-col gap-1 p-3 rounded-lg border border-[#E5E5E5] hover:bg-gray-50 cursor-pointer ${
-                            !notif.isRead ? 'bg-brand/5' : ''
-                          }`}
+                          className="flex flex-col gap-1 p-3 border-b border-[#E5E5E5] hover:bg-gray-50 cursor-pointer last:border-b-0"
                           onClick={async () => {
                             try {
                               await fetch('/api/notifications/mark-read', {
@@ -2232,30 +2264,22 @@ export default function OnboardingPage() {
                               );
                               setNotificationCount((prev) => Math.max(0, prev - 1));
                               if (notif.conversationId) {
-                                setShowNotificationsPanel(false);
-                                setShowCandidateListView(true);
-                                setCandidateListTab('chats');
-                                setCandidateChatsLoading(true);
-                                fetch('/api/chat/conversations', { credentials: 'same-origin' })
-                                  .then((r) => (r.ok ? r.json() : []))
-                                  .then((list) => {
-                                    setCandidateChats(Array.isArray(list) ? list : []);
-                                    setActiveRecruiterChatConversationId(notif.conversationId);
-                                    setActiveRecruiterChatCandidateName(notif.senderName || notif.senderOrgName || 'Candidate');
-                                    setActiveRecruiterChatCandidateEmail(notif.senderEmail || '');
-                                  })
-                                  .catch(() => setCandidateChats([]))
-                                  .finally(() => setCandidateChatsLoading(false));
+                                setActiveNotificationChatConversationId(notif.conversationId);
+                                setActiveNotificationChatName(notif.senderName || notif.senderOrgName || 'Candidate');
+                                setActiveNotificationChatEmail(notif.senderEmail || '');
                               }
                             } catch (error) {
                               console.error('Error marking notification as read:', error);
                             }
                           }}
                         >
-                          <div className="flex items-start justify-between">
-                            <span className="font-medium text-brand-text-strong">{notif.title}</span>
+                          <div className="flex items-start justify-between gap-2">
+                            <span className="font-medium text-brand-text-strong min-w-0">{notif.title}</span>
+                            {notif.senderEmail && (
+                              <span className="text-xs text-brand-text-weak shrink-0">{notif.senderEmail}</span>
+                            )}
                             {!notif.isRead && (
-                              <span className="w-2 h-2 bg-brand rounded-full shrink-0 mt-1"></span>
+                              <span className="w-2 h-2 bg-brand rounded-full shrink-0 mt-1.5" />
                             )}
                           </div>
                           <span className="text-sm text-brand-text-weak">{notif.message}</span>
@@ -2271,6 +2295,7 @@ export default function OnboardingPage() {
                   )}
                 </div>
               </div>
+              )
             ) : showJobPostingsPanel ? (
               <div className="h-full flex flex-col bg-white">
                 <div className="flex items-center justify-between border-b border-[#E5E5E5] px-4 py-2 shrink-0">

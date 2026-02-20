@@ -2187,13 +2187,11 @@ setCurrentField(GIG_FIELDS.CUSTOMERS_TILL_DATE);
                   ) : notifications.length === 0 ? (
                     <p className="text-sm text-brand-text-weak">No notifications yet.</p>
                   ) : (
-                    <ul className="space-y-2">
+                    <ul className="space-y-0">
                       {notifications.map((notif) => (
                         <li
                           key={notif.id}
-                          className={`flex flex-col gap-1 p-3 rounded-lg border border-[#E5E5E5] hover:bg-gray-50 cursor-pointer ${
-                            !notif.isRead ? "bg-brand/5" : ""
-                          }`}
+                          className="flex flex-col gap-1 p-3 border-b border-[#E5E5E5] hover:bg-gray-50 cursor-pointer last:border-b-0"
                           onClick={async () => {
                             try {
                               await fetch("/api/notifications/mark-read", {
@@ -2216,18 +2214,18 @@ setCurrentField(GIG_FIELDS.CUSTOMERS_TILL_DATE);
                             }
                           }}
                         >
-                          <div className="flex items-start justify-between">
-                            <span className="font-medium text-brand-text-strong">{notif.title}</span>
+                          <div className="flex items-start justify-between gap-2">
+                            <span className="font-medium text-brand-text-strong min-w-0">{notif.title}</span>
+                            {notif.senderEmail && (
+                              <span className="text-xs text-brand-text-weak shrink-0">{notif.senderEmail}</span>
+                            )}
                             {!notif.isRead && (
-                              <span className="w-2 h-2 bg-brand rounded-full shrink-0 mt-1"></span>
+                              <span className="w-2 h-2 bg-brand rounded-full shrink-0 mt-1.5" />
                             )}
                           </div>
                           <span className="text-sm text-brand-text-weak">{notif.message}</span>
                           {notif.senderOrgName && (
                             <span className="text-xs text-brand-text-weak">From: {notif.senderOrgName}</span>
-                          )}
-                          {notif.senderEmail && (
-                            <span className="text-xs text-brand-text-weak">Email: {notif.senderEmail}</span>
                           )}
                           <span className="text-xs text-brand-text-weak">
                             {new Date(notif.createdAt).toLocaleString()}
