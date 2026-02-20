@@ -1072,7 +1072,8 @@ const MapComponent = ({ onOpenSettings, onViewModeChange }) => {
               });
               const data = await res.json().catch(() => ({}));
               if (!res.ok) {
-                alert("Could not start chat");
+                console.error("Chat API error:", res.status, data);
+                alert(`Could not start chat: ${data.error || 'Unknown error'}`);
                 return;
               }
               chatSourceMarkerRef.current = marker;
@@ -1101,7 +1102,7 @@ const MapComponent = ({ onOpenSettings, onViewModeChange }) => {
                     <button type="button" class="map-popup-twin-send-inside" aria-label="Send">${sendSvg}</button>
                   </div>
                 </div>`;
-              const fullContent = '<div class="map-popup-with-twin">' + resumePanelHtml + twinHtml + '</div>';
+              const fullContent = '<div class="map-popup-with-twin">' + (marker._resumePanelHtml || '') + twinHtml + '</div>';
               marker.getPopup().setContent(fullContent);
               setTimeout(() => {
                 const popupEl = marker.getPopup()?.getElement();
@@ -3117,7 +3118,8 @@ const MapComponent = ({ onOpenSettings, onViewModeChange }) => {
               });
               const data = await res.json().catch(() => ({}));
               if (!res.ok) {
-                alert("Could not start chat");
+                console.error("Chat API error:", res.status, data);
+                alert(`Could not start chat: ${data.error || 'Unknown error'}`);
                 return;
               }
               chatSourceMarkerRef.current = marker;
@@ -3146,7 +3148,7 @@ const MapComponent = ({ onOpenSettings, onViewModeChange }) => {
                     <button type="button" class="map-popup-twin-send-inside" aria-label="Send">${sendSvg}</button>
                   </div>
                 </div>`;
-              const fullContent = '<div class="map-popup-with-twin">' + resumePanelHtml + twinHtml + '</div>';
+              const fullContent = '<div class="map-popup-with-twin">' + (marker._resumePanelHtml || '') + twinHtml + '</div>';
               marker.getPopup().setContent(fullContent);
               setTimeout(() => {
                 const popupEl = marker.getPopup()?.getElement();
