@@ -84,10 +84,14 @@ export default function WhoAreYouPage() {
           <link rel="preload" href="/account-type-bg.png" as="image" />
         </Head>
         <div
-          className="min-h-screen flex items-center justify-center bg-brand-bg-fill"
+          className="min-h-screen flex flex-col items-center justify-center gap-3 bg-brand-bg-fill"
           style={{ fontFamily: "Open Sans, sans-serif" }}
         >
-          <p className={brand.text.weak}>Loading…</p>
+          <div
+            className="rounded-full h-10 w-10 border-2 border-brand-stroke-weak border-t-brand animate-spin"
+            aria-hidden
+          />
+          <p className="text-brand-text-strong text-sm">Loading…</p>
         </div>
       </>
     );

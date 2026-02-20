@@ -58,29 +58,28 @@ const clerkHandler = clerkMiddleware(async (auth, req) => {
       if (!userId) {
         return NextResponse.redirect(new URL('/onboarding', req.url));
       }
-      // Signed-in user must have accountType set before accessing map; otherwise redirect to who-are-you (new users or missing type)
+      // Only redirect to who-are-you when we have confirmed the user has no accountType. Otherwise allow through so existing users are not shown who-are-you.
       try {
         const clerkUser = await currentUser();
         const email = clerkUser?.emailAddresses?.[0]?.emailAddress;
         if (!clerkUser || !email) {
-          // Clerk user not yet available or no email: send to who-are-you so they complete flow (avoids showing map then redirecting later)
-          return NextResponse.redirect(new URL('/who-are-you', req.url));
+          // Clerk not ready or no email: allow through; do not redirect (avoids showing who-are-you to existing users)
+          return NextResponse.next();
         }
         const emailNorm = email.toLowerCase().trim();
         const user = await prisma.user.findUnique({
           where: { email: emailNorm },
           select: { accountType: true },
         });
-        // Only allow map access when user exists in DB and has accountType set
         if (user?.accountType) {
           return NextResponse.next();
         }
-        // User not in DB yet, or accountType is null/empty -> who-are-you first
+        // User in DB but no accountType, or user not in DB yet -> who-are-you first
         return NextResponse.redirect(new URL('/who-are-you', req.url));
       } catch (err) {
-        // If DB lookup fails, send to who-are-you so we don't show map to users who may need to set accountType
+        // On error, allow through so we never block users who already have accountType
         console.error("[proxy] Error checking accountType:", err instanceof Error ? err.message : String(err));
-        return NextResponse.redirect(new URL('/who-are-you', req.url));
+        return NextResponse.next();
       }
     }
 
