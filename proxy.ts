@@ -61,28 +61,27 @@ const clerkHandler = clerkMiddleware(async (auth, req) => {
       // Signed-in user must have accountType set before accessing map; otherwise redirect to who-are-you (new users or missing type)
       try {
         const clerkUser = await currentUser();
-        if (clerkUser) {
-          const email = clerkUser.emailAddresses[0]?.emailAddress;
-          if (email) {
-            const emailNorm = email.toLowerCase().trim();
-            const user = await prisma.user.findUnique({
-              where: { email: emailNorm },
-              select: { accountType: true },
-            });
-            // Only allow map access when user exists in DB and has accountType set
-            if (user?.accountType) {
-              return NextResponse.next();
-            }
-            // User not in DB yet, or accountType is null/empty -> who-are-you first
-            return NextResponse.redirect(new URL('/who-are-you', req.url));
-          }
+        const email = clerkUser?.emailAddresses?.[0]?.emailAddress;
+        if (!clerkUser || !email) {
+          // Clerk user not yet available or no email: send to who-are-you so they complete flow (avoids showing map then redirecting later)
+          return NextResponse.redirect(new URL('/who-are-you', req.url));
         }
+        const emailNorm = email.toLowerCase().trim();
+        const user = await prisma.user.findUnique({
+          where: { email: emailNorm },
+          select: { accountType: true },
+        });
+        // Only allow map access when user exists in DB and has accountType set
+        if (user?.accountType) {
+          return NextResponse.next();
+        }
+        // User not in DB yet, or accountType is null/empty -> who-are-you first
+        return NextResponse.redirect(new URL('/who-are-you', req.url));
       } catch (err) {
-        // If DB lookup fails, allow access to map (graceful degradation)
+        // If DB lookup fails, send to who-are-you so we don't show map to users who may need to set accountType
         console.error("[proxy] Error checking accountType:", err instanceof Error ? err.message : String(err));
-        return NextResponse.next();
+        return NextResponse.redirect(new URL('/who-are-you', req.url));
       }
-      return NextResponse.next();
     }
 
     // Protect all other routes except public ones

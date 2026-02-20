@@ -37,12 +37,12 @@ export default function Sidebar({ activeItem = "jobs-near-you", onToggle, isOpen
     }
   };
 
-  // Navigation items (Home and Get Vetted removed)
+  // Navigation items: 1 Jobs near you, 2 Post a gig, 3 Manage Resume, 4 Manage JDs
   const navigationItems = [
-    { id: "manage-resume", label: "Manage Resume", icon: Document, route: "/manage-resume", openSettingsSection: "resume" },
-    { id: "manage-jds", label: "Manage JDs", icon: Archive, route: "/manage-jds" },
     { id: "jobs-near-you", label: "Jobs Near You", icon: EarthFilled, route: "/jobs-near-you" },
     { id: "post-gig", label: "Post a gig", icon: Add, route: "/onboarding" },
+    { id: "manage-resume", label: "Manage Resume", icon: Document, route: "/manage-resume", openSettingsSection: "resume" },
+    { id: "manage-jds", label: "Manage JDs", icon: Archive, route: "/manage-jds" },
   ];
 
   const isDev = process.env.NODE_ENV !== "production";
@@ -115,7 +115,7 @@ export default function Sidebar({ activeItem = "jobs-near-you", onToggle, isOpen
                   title={isComingSoon ? "Coming soon" : undefined}
                   className={`${sidebar["nav-button"]} ${
                     isOpen ? sidebar["nav-button-expanded"] : sidebar["nav-button-collapsed"]
-                  } ${isActive ? sidebar["nav-button-active"] : sidebar["nav-button-hover"]} ${
+                  } ${isActive ? sidebar["nav-button-active"] : "hover:bg-brand-bg-fill"} ${
                     isDisabled ? "opacity-50 cursor-not-allowed" : ""
                   }`}
                 >
@@ -143,7 +143,7 @@ export default function Sidebar({ activeItem = "jobs-near-you", onToggle, isOpen
           title={isDev ? "What's New" : "Coming soon"}
           className={`${sidebar["nav-button"]} ${
             isOpen ? sidebar["nav-button-expanded"] : sidebar["nav-button-collapsed"]
-          } ${sidebar["nav-button-hover"]} ${!isDev ? "opacity-50 cursor-not-allowed" : ""}`}
+          } hover:bg-brand-bg-fill ${!isDev ? "opacity-50 cursor-not-allowed" : ""}`}
         >
           <div className={sidebar["nav-icon-container"]}>
             <Bullhorn

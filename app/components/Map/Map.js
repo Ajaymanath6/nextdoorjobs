@@ -3819,11 +3819,10 @@ const MapComponent = ({ onOpenSettings }) => {
 
       {/* Search Bar - visible on all viewports */}
       {isGlobeView && (
-        <div
-          className={`flex flex-col top-3 md:top-4 gap-4 ${searchBar.container} w-[calc(100vw-16px)] max-w-[800px]`}
-        >
-          {/* Search Bar Card - same corner radius as show distance button (rounded-full), white bg. */}
-          <div className={`bg-brand-bg-white rounded-full border border-brand-stroke-border shadow-lg w-full px-1.5 py-1.5 md:px-4 md:py-2`}>
+        <div className={`flex flex-col gap-4 top-3 md:top-4 ${searchBar.container} w-[calc(100vw-16px)] max-w-[800px]`}>
+        <div className="flex flex-row items-center gap-2 w-full">
+          {/* Search Bar Card - same corner radius (rounded-full), white bg; profile button is outside to the right. */}
+          <div className={`flex-1 min-w-0 bg-brand-bg-white rounded-full border border-brand-stroke-border shadow-lg px-1.5 py-1.5 md:px-4 md:py-2`}>
             {/* Mobile: single bar (Person/Job + input + Filter + Profile). Desktop: no bar, separate bordered controls. */}
             <div className={`flex items-center gap-0 w-full rounded-full border border-brand-stroke-border bg-brand-bg-white min-h-[34px] overflow-visible md:border-0 md:bg-transparent md:rounded-none md:min-h-0`}>
               {/* View Selector Button - Hidden for now, will add in later stages */}
@@ -4063,7 +4062,7 @@ const MapComponent = ({ onOpenSettings }) => {
                     fontFamily: "Open Sans",
                     boxShadow: "0 1px 6px rgba(32,33,36,0.08)",
                   }}
-                  placeholder="Search for locality, pincode, job"
+                  placeholder={searchMode === "company" ? "Jobs near you" : "Gigs near you"}
                 />
                 
                 {/* Right side: mobile = cross when typing; desktop = clear (when typing) + filter */}
@@ -4334,25 +4333,6 @@ const MapComponent = ({ onOpenSettings }) => {
                     </button>
                   </div>
                 </div>
-
-                {/* Profile button - round white, right end; mobile: hide when search focused or filter open */}
-                <div className={`shrink-0 ${mobileSearchExpanded || showFilterDropdown ? "hidden md:!flex" : ""} md:ml-2`} ref={profileRef}>
-                  <button
-                    type="button"
-                    onClick={() => setShowProfileDropdown((v) => !v)}
-                    className="h-[34px] w-[34px] md:h-10 md:w-10 flex items-center justify-center rounded-full border border-brand-stroke-border bg-brand-bg-white hover:bg-brand-bg-fill transition-colors shrink-0 shadow-sm"
-                    aria-label="Profile menu"
-                    aria-expanded={showProfileDropdown}
-                  >
-                    {meUser?.avatarUrl ? (
-                      <img src={meUser.avatarUrl} alt="" className="h-6 w-6 md:h-8 md:w-8 rounded-full object-cover" />
-                    ) : meUser?.avatarId ? (
-                      <img src={getAvatarUrlById(meUser.avatarId)} alt="" className="h-6 w-6 md:h-8 md:w-8 rounded-full object-cover" />
-                    ) : (
-                      <UserAvatar size={24} className="text-brand-stroke-strong w-6 h-6 shrink-0" />
-                    )}
-                  </button>
-                </div>
               </div>
 
               {/* Mobile: bottom sheet */}
@@ -4376,6 +4356,26 @@ const MapComponent = ({ onOpenSettings }) => {
               </button> */}
             </div>
           </div>
+
+          {/* Profile button - outside search bar, same line right end; same height as search bar (34px mobile, 40px desktop) */}
+          <div className={`shrink-0 ${mobileSearchExpanded || showFilterDropdown ? "hidden md:!flex" : ""}`} ref={profileRef}>
+            <button
+              type="button"
+              onClick={() => setShowProfileDropdown((v) => !v)}
+              className="h-[34px] w-[34px] md:h-10 md:w-10 flex items-center justify-center rounded-full border border-brand-stroke-border bg-white hover:bg-brand-bg-fill transition-colors shrink-0 shadow-sm"
+              aria-label="Profile menu"
+              aria-expanded={showProfileDropdown}
+            >
+              {meUser?.avatarUrl ? (
+                <img src={meUser.avatarUrl} alt="" className="h-6 w-6 md:h-8 md:w-8 rounded-full object-cover" />
+              ) : meUser?.avatarId ? (
+                <img src={getAvatarUrlById(meUser.avatarId)} alt="" className="h-6 w-6 md:h-8 md:w-8 rounded-full object-cover" />
+              ) : (
+                <UserAvatar size={24} className="text-brand-stroke-strong w-6 h-6 shrink-0" />
+              )}
+            </button>
+          </div>
+        </div>
 
           {/* Home badge - below search bar, when user has home and in person mode */}
           {homeLocation && searchMode === "person" && (
