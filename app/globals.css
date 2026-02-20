@@ -271,6 +271,79 @@ body {
   color: var(--brand-color);
   opacity: 0.9;
 }
+.gig-popup .map-popup-content .map-popup-actions .map-popup-action-chat.map-popup-action-chat-disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+  pointer-events: none;
+}
+.gig-popup .map-popup-content .map-popup-actions .map-popup-action-chat.map-popup-action-chat-disabled:hover {
+  color: var(--brand-text-weak);
+  opacity: 0.4;
+}
+
+/* Toggle button styles */
+.gig-popup .map-popup-toggle-wrapper {
+  padding: 8px 12px;
+  border-bottom: 1px solid var(--brand-stroke-weak);
+  background: var(--brand-bg-fill);
+}
+.gig-popup .map-popup-toggle-header {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--brand-text-strong);
+}
+.gig-popup .map-popup-toggle-label {
+  font-size: 12px;
+  color: var(--brand-text-weak);
+  user-select: none;
+}
+.gig-popup .map-popup-toggle-switch {
+  position: relative;
+  display: inline-block;
+  width: 44px;
+  height: 24px;
+  cursor: pointer;
+}
+.gig-popup .map-popup-toggle-input {
+  opacity: 0;
+  width: 0;
+  height: 0;
+}
+.gig-popup .map-popup-toggle-slider {
+  position: absolute;
+  cursor: pointer;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-color: var(--brand-stroke-weak);
+  transition: 0.3s;
+  border-radius: 24px;
+}
+.gig-popup .map-popup-toggle-slider:before {
+  position: absolute;
+  content: "";
+  height: 18px;
+  width: 18px;
+  left: 3px;
+  bottom: 3px;
+  background-color: white;
+  transition: 0.3s;
+  border-radius: 50%;
+}
+.gig-popup .map-popup-toggle-input:checked + .map-popup-toggle-slider {
+  background-color: var(--brand-color);
+}
+.gig-popup .map-popup-toggle-input:checked + .map-popup-toggle-slider:before {
+  transform: translateX(20px);
+}
+.gig-popup .map-popup-toggle-input:focus + .map-popup-toggle-slider {
+  box-shadow: 0 0 1px var(--brand-color);
+}
 
 /* Resume popup with twin panel (message extension) */
 .gig-popup .map-popup-with-twin {

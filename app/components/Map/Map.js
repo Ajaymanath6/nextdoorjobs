@@ -937,12 +937,12 @@ const MapComponent = ({ onOpenSettings, onViewModeChange }) => {
         : gig.user?.avatarUrl || "/avatars/avatar1.png";
       const escapeHtml = (str) => (str || "").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
       const isCandidate = gig.serviceType === "Job Seeker" && gig.resume;
-      let popupContent;
-      if (isCandidate && gig.resume) {
-        const r = gig.resume;
+      const isOwnGig = meUser?.id != null && gig.user?.id === meUser.id;
+      const showToggle = isOwnGig && userAccountType === "Individual" && gig.resume;
+      
+      // Helper function to generate resume HTML
+      const generateResumeHtml = (r, displayEmail, displayPhone, disableChat = false) => {
         const displayName = [r.firstName, r.lastName].filter(Boolean).join(" ") || gig.user?.name || "Candidate";
-        const displayEmail = r.emailOverride != null && r.emailOverride !== "" ? r.emailOverride : (gig.email || "—");
-        const displayPhone = (gig.user?.phoneVisibleToRecruiters && gig.user?.phone) ? gig.user.phone : null;
         const workHtml = (r.workExperiences || []).length
           ? (r.workExperiences || []).map((w) => `
             <div class="map-popup-work-item">
@@ -961,7 +961,7 @@ const MapComponent = ({ onOpenSettings, onViewModeChange }) => {
         const currentSalaryHtml = r.currentSalaryVisibleToRecruiter && r.currentSalaryPackage
           ? `<div class="map-popup-meta"><strong>Current salary:</strong> ${escapeHtml(r.currentSalaryPackage)}</div>`
           : "";
-        const resumePanelHtml = `
+        return `
           <div class="map-popup-resume-panel">
             <div class="map-popup-content">
               <div class="map-popup-row">
@@ -988,19 +988,20 @@ const MapComponent = ({ onOpenSettings, onViewModeChange }) => {
                 <a href="${(displayEmail && displayEmail !== "—") ? `https://mail.google.com/mail/?view=cm&fs=1&to=${encodeURIComponent(displayEmail)}` : `mailto:${escapeHtml(displayEmail || "")}`}" class="map-popup-action-link" title="Email" aria-label="Email" target="_blank" rel="noopener noreferrer">
                   <svg width="20" height="20" viewBox="0 0 32 32" fill="currentColor" xmlns="http://www.w3.org/2000/svg"><path d="M28,6H4A2,2,0,0,0,2,8V24a2,2,0,0,0,2,2H28a2,2,0,0,0,2-2V8A2,2,0,0,0,28,6ZM25.8,8,16,14.78,6.2,8ZM4,24V8.91l11.43,7.91a1,1,0,0,0,1.14,0L28,8.91V24Z"/></svg>
                 </a>
-                <a href="#" class="map-popup-action-link map-popup-action-chat" title="Chat" aria-label="Chat" data-action="chat" data-gig-id="${gig.id}">
+                <a href="#" class="map-popup-action-link map-popup-action-chat ${disableChat ? 'map-popup-action-chat-disabled' : ''}" title="Chat" aria-label="Chat" data-action="chat" data-gig-id="${gig.id}">
                   <svg width="20" height="20" viewBox="0 0 32 32" fill="currentColor" xmlns="http://www.w3.org/2000/svg"><path d="M17.74,30,16,29l4-7h6a2,2,0,0,0,2-2V8a2,2,0,0,0-2-2H6A2,2,0,0,0,4,8V20a2,2,0,0,0,2,2h9v2H6a4,4,0,0,1-4-4V8A4,4,0,0,1,6,4H26a4,4,0,0,1,4,4V20a4,4,0,0,1-4,4H21.16Z"/><path d="M8 10H24V12H8zM8 16H18V18H8z"/></svg>
                 </a>
               </div>
             </div>
           </div>`;
-        marker._resumePanelHtml = resumePanelHtml;
-        popupContent = resumePanelHtml;
-      } else {
+      };
+      
+      // Helper function to generate gig details HTML
+      const generateGigDetailsHtml = () => {
         const serviceBadge = gig.serviceType
           ? `<span class="map-popup-badge">${escapeHtml(gig.serviceType)}</span>`
           : "";
-        popupContent = `
+        return `
         <div class="map-popup-content">
           <div class="map-popup-row">
             <div class="map-popup-avatar-wrap">
@@ -1037,10 +1038,112 @@ const MapComponent = ({ onOpenSettings, onViewModeChange }) => {
         </div>
       `;
       }
+      
+      let popupContent;
+      if (isCandidate && gig.resume) {
+        const r = gig.resume;
+        const displayEmail = r.emailOverride != null && r.emailOverride !== "" ? r.emailOverride : (gig.email || "—");
+        const displayPhone = (gig.user?.phoneVisibleToRecruiters && gig.user?.phone) ? gig.user.phone : null;
+        const resumePanelHtml = generateResumeHtml(r, displayEmail, displayPhone);
+        marker._resumePanelHtml = resumePanelHtml;
+        popupContent = resumePanelHtml;
+      } else {
+        const gigDetailsHtml = generateGigDetailsHtml();
+        marker._gigDetailsHtml = gigDetailsHtml;
+        popupContent = gigDetailsHtml;
+      }
+      
+      // For own gigs with resume, store both HTML versions and add toggle
+      if (showToggle) {
+        const r = gig.resume;
+        const displayEmail = r.emailOverride != null && r.emailOverride !== "" ? r.emailOverride : (gig.email || gig.user?.email || "");
+        const displayPhone = (gig.user?.phoneVisibleToRecruiters && gig.user?.phone) ? gig.user.phone : null;
+        marker._resumePanelHtml = generateResumeHtml(r, displayEmail, displayPhone, true); // Disable chat in resume view for own gigs
+        marker._gigDetailsHtml = generateGigDetailsHtml();
+        marker._showResumeView = false; // Start with gig details view
+        // Wrap content with toggle button
+        const toggleHtml = `
+          <div class="map-popup-toggle-wrapper">
+            <div class="map-popup-toggle-header">
+              <span class="map-popup-toggle-label">Gig Details</span>
+              <label class="map-popup-toggle-switch">
+                <input type="checkbox" class="map-popup-toggle-input" data-action="toggle-view" />
+                <span class="map-popup-toggle-slider"></span>
+              </label>
+              <span class="map-popup-toggle-label">Resume</span>
+            </div>
+          </div>
+        `;
+        popupContent = toggleHtml + marker._gigDetailsHtml;
+      }
       marker.bindPopup(popupContent, { className: "gig-popup", maxWidth: isCandidate && gig.resume ? 600 : 320 });
       marker.on("popupopen", () => {
         const el = marker.getPopup()?.getElement();
         if (!el) return;
+        
+        // Handle toggle for own gigs
+        if (showToggle) {
+          const toggleInput = el.querySelector('.map-popup-toggle-input');
+          if (toggleInput) {
+            toggleInput.checked = marker._showResumeView || false;
+            toggleInput.onchange = () => {
+              marker._showResumeView = toggleInput.checked;
+              const newContent = toggleInput.checked ? marker._resumePanelHtml : marker._gigDetailsHtml;
+              const toggleHtml = `
+                <div class="map-popup-toggle-wrapper">
+                  <div class="map-popup-toggle-header">
+                    <span class="map-popup-toggle-label">Gig Details</span>
+                    <label class="map-popup-toggle-switch">
+                      <input type="checkbox" class="map-popup-toggle-input" data-action="toggle-view" ${toggleInput.checked ? 'checked' : ''} />
+                      <span class="map-popup-toggle-slider"></span>
+                    </label>
+                    <span class="map-popup-toggle-label">Resume</span>
+                  </div>
+                </div>
+              `;
+              marker.getPopup().setContent(toggleHtml + newContent);
+              setTimeout(() => {
+                const popupEl = marker.getPopup()?.getElement();
+                if (!popupEl) return;
+                // Re-attach event handlers
+                const seeBtn = popupEl.querySelector('[data-action="see-distance"]');
+                if (seeBtn) {
+                  seeBtn.onclick = () => {
+                    setSelectedGigForDistance(gig);
+                    setShowDistanceFromHome(true);
+                  };
+                }
+                const addBtn = popupEl.querySelector('[data-action="add-home"]');
+                if (addBtn) {
+                  addBtn.onclick = () => {
+                    setSelectedGigForDistance(gig);
+                    setShowAddHomeModal(true);
+                  };
+                }
+                const newToggleInput = popupEl.querySelector('.map-popup-toggle-input');
+                if (newToggleInput) {
+                  newToggleInput.onchange = toggleInput.onchange;
+                }
+                // Handle chat button - disable if resume view
+                const chatLink = popupEl.querySelector(".map-popup-action-chat");
+                if (chatLink) {
+                  if (toggleInput.checked) {
+                    chatLink.classList.add('map-popup-action-chat-disabled');
+                    chatLink.onclick = (e) => {
+                      e.preventDefault();
+                      e.stopPropagation();
+                      return false;
+                    };
+                  } else {
+                    chatLink.classList.remove('map-popup-action-chat-disabled');
+                    chatLink.onclick = null; // Will be set below
+                  }
+                }
+              }, 0);
+            };
+          }
+        }
+        
         const seeBtn = el.querySelector('[data-action="see-distance"]');
         if (seeBtn) {
           seeBtn.onclick = () => {
@@ -1056,7 +1159,15 @@ const MapComponent = ({ onOpenSettings, onViewModeChange }) => {
           };
         }
         const chatLink = el.querySelector(".map-popup-action-chat");
-        if (chatLink) {
+        // Disable chat button if showing resume view for own gig
+        if (chatLink && showToggle && marker._showResumeView) {
+          chatLink.classList.add('map-popup-action-chat-disabled');
+          chatLink.onclick = (e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            return false;
+          };
+        } else if (chatLink) {
           chatLink.onclick = async (e) => {
             e.preventDefault();
             const candidateId = gig.user?.id;
@@ -1170,6 +1281,10 @@ const MapComponent = ({ onOpenSettings, onViewModeChange }) => {
           setChatCandidateName("");
           setChatCandidateEmail("");
           setChatInput("");
+        }
+        // Reset toggle state when popover closes
+        if (showToggle) {
+          marker._showResumeView = false;
         }
       });
       clusterGroup.addLayer(marker);
@@ -2998,12 +3113,12 @@ const MapComponent = ({ onOpenSettings, onViewModeChange }) => {
         ? getAvatarUrlById(gig.user.avatarId)
         : gig.user?.avatarUrl || "/avatars/avatar1.png";
       const isCandidate = gig.serviceType === "Job Seeker" && gig.resume;
-      let popupContent;
-      if (isCandidate && gig.resume) {
-        const r = gig.resume;
+      const isOwnGig = meUser?.id != null && gig.user?.id === meUser.id;
+      const showToggle = isOwnGig && userAccountType === "Individual" && gig.resume;
+      
+      // Helper function to generate resume HTML
+      const generateResumeHtml = (r, displayEmail, displayPhone, disableChat = false) => {
         const displayName = [r.firstName, r.lastName].filter(Boolean).join(" ") || gig.user?.name || "Candidate";
-        const displayEmail = r.emailOverride != null && r.emailOverride !== "" ? r.emailOverride : (gig.email || "—");
-        const displayPhone = (gig.user?.phoneVisibleToRecruiters && gig.user?.phone) ? gig.user.phone : null;
         const workHtml = (r.workExperiences || []).length
           ? (r.workExperiences || []).map((w) => `
             <div class="map-popup-work-item">
@@ -3022,7 +3137,7 @@ const MapComponent = ({ onOpenSettings, onViewModeChange }) => {
         const currentSalaryHtml = r.currentSalaryVisibleToRecruiter && r.currentSalaryPackage
           ? `<div class="map-popup-meta"><strong>Current salary:</strong> ${escapeHtml(r.currentSalaryPackage)}</div>`
           : "";
-        const resumePanelHtml = `
+        return `
           <div class="map-popup-resume-panel">
             <div class="map-popup-content">
               <div class="map-popup-row">
@@ -3049,19 +3164,20 @@ const MapComponent = ({ onOpenSettings, onViewModeChange }) => {
                 <a href="${(displayEmail && displayEmail !== "—") ? `https://mail.google.com/mail/?view=cm&fs=1&to=${encodeURIComponent(displayEmail)}` : `mailto:${escapeHtml(displayEmail || "")}`}" class="map-popup-action-link" title="Email" aria-label="Email" target="_blank" rel="noopener noreferrer">
                   <svg width="20" height="20" viewBox="0 0 32 32" fill="currentColor" xmlns="http://www.w3.org/2000/svg"><path d="M28,6H4A2,2,0,0,0,2,8V24a2,2,0,0,0,2,2H28a2,2,0,0,0,2-2V8A2,2,0,0,0,28,6ZM25.8,8,16,14.78,6.2,8ZM4,24V8.91l11.43,7.91a1,1,0,0,0,1.14,0L28,8.91V24Z"/></svg>
                 </a>
-                <a href="#" class="map-popup-action-link map-popup-action-chat" title="Chat" aria-label="Chat" data-action="chat" data-gig-id="${gig.id}">
+                <a href="#" class="map-popup-action-link map-popup-action-chat ${disableChat ? 'map-popup-action-chat-disabled' : ''}" title="Chat" aria-label="Chat" data-action="chat" data-gig-id="${gig.id}">
                   <svg width="20" height="20" viewBox="0 0 32 32" fill="currentColor" xmlns="http://www.w3.org/2000/svg"><path d="M17.74,30,16,29l4-7h6a2,2,0,0,0,2-2V8a2,2,0,0,0-2-2H6A2,2,0,0,0,4,8V20a2,2,0,0,0,2,2h9v2H6a4,4,0,0,1-4-4V8A4,4,0,0,1,6,4H26a4,4,0,0,1,4,4V20a4,4,0,0,1-4,4H21.16Z"/><path d="M8 10H24V12H8zM8 16H18V18H8z"/></svg>
                 </a>
               </div>
             </div>
           </div>`;
-        marker._resumePanelHtml = resumePanelHtml;
-        popupContent = resumePanelHtml;
-      } else {
+      };
+      
+      // Helper function to generate gig details HTML
+      const generateGigDetailsHtml = () => {
         const serviceBadge = gig.serviceType
           ? `<span class="map-popup-badge">${escapeHtml(gig.serviceType)}</span>`
           : "";
-        popupContent = `
+        return `
         <div class="map-popup-content">
           <div class="map-popup-row">
             <div class="map-popup-avatar-wrap">
@@ -3098,10 +3214,112 @@ const MapComponent = ({ onOpenSettings, onViewModeChange }) => {
         </div>
       `;
       }
+      
+      let popupContent;
+      if (isCandidate && gig.resume) {
+        const r = gig.resume;
+        const displayEmail = r.emailOverride != null && r.emailOverride !== "" ? r.emailOverride : (gig.email || "—");
+        const displayPhone = (gig.user?.phoneVisibleToRecruiters && gig.user?.phone) ? gig.user.phone : null;
+        const resumePanelHtml = generateResumeHtml(r, displayEmail, displayPhone);
+        marker._resumePanelHtml = resumePanelHtml;
+        popupContent = resumePanelHtml;
+      } else {
+        const gigDetailsHtml = generateGigDetailsHtml();
+        marker._gigDetailsHtml = gigDetailsHtml;
+        popupContent = gigDetailsHtml;
+      }
+      
+      // For own gigs with resume, store both HTML versions and add toggle
+      if (showToggle) {
+        const r = gig.resume;
+        const displayEmail = r.emailOverride != null && r.emailOverride !== "" ? r.emailOverride : (gig.email || gig.user?.email || "");
+        const displayPhone = (gig.user?.phoneVisibleToRecruiters && gig.user?.phone) ? gig.user.phone : null;
+        marker._resumePanelHtml = generateResumeHtml(r, displayEmail, displayPhone, true); // Disable chat in resume view for own gigs
+        marker._gigDetailsHtml = generateGigDetailsHtml();
+        marker._showResumeView = false; // Start with gig details view
+        // Wrap content with toggle button
+        const toggleHtml = `
+          <div class="map-popup-toggle-wrapper">
+            <div class="map-popup-toggle-header">
+              <span class="map-popup-toggle-label">Gig Details</span>
+              <label class="map-popup-toggle-switch">
+                <input type="checkbox" class="map-popup-toggle-input" data-action="toggle-view" />
+                <span class="map-popup-toggle-slider"></span>
+              </label>
+              <span class="map-popup-toggle-label">Resume</span>
+            </div>
+          </div>
+        `;
+        popupContent = toggleHtml + marker._gigDetailsHtml;
+      }
       marker.bindPopup(popupContent, { className: "gig-popup", maxWidth: isCandidate && gig.resume ? 600 : 320 });
       marker.on("popupopen", () => {
         const el = marker.getPopup()?.getElement();
         if (!el) return;
+        
+        // Handle toggle for own gigs
+        if (showToggle) {
+          const toggleInput = el.querySelector('.map-popup-toggle-input');
+          if (toggleInput) {
+            toggleInput.checked = marker._showResumeView || false;
+            toggleInput.onchange = () => {
+              marker._showResumeView = toggleInput.checked;
+              const newContent = toggleInput.checked ? marker._resumePanelHtml : marker._gigDetailsHtml;
+              const toggleHtml = `
+                <div class="map-popup-toggle-wrapper">
+                  <div class="map-popup-toggle-header">
+                    <span class="map-popup-toggle-label">Gig Details</span>
+                    <label class="map-popup-toggle-switch">
+                      <input type="checkbox" class="map-popup-toggle-input" data-action="toggle-view" ${toggleInput.checked ? 'checked' : ''} />
+                      <span class="map-popup-toggle-slider"></span>
+                    </label>
+                    <span class="map-popup-toggle-label">Resume</span>
+                  </div>
+                </div>
+              `;
+              marker.getPopup().setContent(toggleHtml + newContent);
+              setTimeout(() => {
+                const popupEl = marker.getPopup()?.getElement();
+                if (!popupEl) return;
+                // Re-attach event handlers
+                const seeBtn = popupEl.querySelector('[data-action="see-distance"]');
+                if (seeBtn) {
+                  seeBtn.onclick = () => {
+                    setSelectedGigForDistance(gig);
+                    setShowDistanceFromHome(true);
+                  };
+                }
+                const addBtn = popupEl.querySelector('[data-action="add-home"]');
+                if (addBtn) {
+                  addBtn.onclick = () => {
+                    setSelectedGigForDistance(gig);
+                    setShowAddHomeModal(true);
+                  };
+                }
+                const newToggleInput = popupEl.querySelector('.map-popup-toggle-input');
+                if (newToggleInput) {
+                  newToggleInput.onchange = toggleInput.onchange;
+                }
+                // Handle chat button - disable if resume view
+                const chatLink = popupEl.querySelector(".map-popup-action-chat");
+                if (chatLink) {
+                  if (toggleInput.checked) {
+                    chatLink.classList.add('map-popup-action-chat-disabled');
+                    chatLink.onclick = (e) => {
+                      e.preventDefault();
+                      e.stopPropagation();
+                      return false;
+                    };
+                  } else {
+                    chatLink.classList.remove('map-popup-action-chat-disabled');
+                    chatLink.onclick = null; // Will be set below
+                  }
+                }
+              }, 0);
+            };
+          }
+        }
+        
         const seeBtn = el.querySelector('[data-action="see-distance"]');
         if (seeBtn) {
           seeBtn.onclick = () => {
@@ -3117,7 +3335,15 @@ const MapComponent = ({ onOpenSettings, onViewModeChange }) => {
           };
         }
         const chatLink = el.querySelector(".map-popup-action-chat");
-        if (chatLink) {
+        // Disable chat button if showing resume view for own gig
+        if (chatLink && showToggle && marker._showResumeView) {
+          chatLink.classList.add('map-popup-action-chat-disabled');
+          chatLink.onclick = (e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            return false;
+          };
+        } else if (chatLink) {
           chatLink.onclick = async (e) => {
             e.preventDefault();
             const candidateId = gig.user?.id;
@@ -3231,6 +3457,10 @@ const MapComponent = ({ onOpenSettings, onViewModeChange }) => {
           setChatCandidateName("");
           setChatCandidateEmail("");
           setChatInput("");
+        }
+        // Reset toggle state when popover closes
+        if (showToggle) {
+          marker._showResumeView = false;
         }
       });
     } else {
