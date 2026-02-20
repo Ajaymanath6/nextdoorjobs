@@ -2017,34 +2017,6 @@ export default function OnboardingPage() {
                   </span>
                 )}
               </button>
-              {userData?.accountType === "Individual" && (
-                <button
-                  type="button"
-                  onClick={() => {
-                    setShowNotificationsPanel(true);
-                    setShowCandidateListView(false);
-                    setShowJobPostingsPanel(false);
-                    setNotificationsLoading(true);
-                    fetch("/api/notifications", { credentials: "same-origin" })
-                      .then((r) => (r.ok ? r.json() : { notifications: [] }))
-                      .then((data) => {
-                        setNotifications(Array.isArray(data.notifications) ? data.notifications : []);
-                        setNotificationCount(data.unreadCount || 0);
-                      })
-                      .catch(() => setNotifications([]))
-                      .finally(() => setNotificationsLoading(false));
-                  }}
-                  className="p-2 rounded-lg hover:bg-gray-100 transition-colors relative"
-                  title="Notifications"
-                >
-                  <Notification size={20} style={{ color: "#575757" }} />
-                  {notificationCount > 0 && (
-                    <span className="absolute -top-1 -right-1 bg-brand text-white text-xs font-bold rounded-full min-w-[18px] h-[18px] flex items-center justify-center px-1" style={{ fontFamily: "Open Sans, sans-serif", fontSize: "10px" }}>
-                      {notificationCount}
-                    </span>
-                  )}
-                </button>
-              )}
               <button
                 type="button"
                 onClick={() => {
@@ -2065,6 +2037,32 @@ export default function OnboardingPage() {
               >
                 <UserMultiple size={20} style={{ color: "#575757" }} />
                 <span className="text-sm font-medium text-[#575757] hidden sm:inline">Candidate list</span>
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  setShowNotificationsPanel(true);
+                  setShowCandidateListView(false);
+                  setShowJobPostingsPanel(false);
+                  setNotificationsLoading(true);
+                  fetch("/api/notifications", { credentials: "same-origin" })
+                    .then((r) => (r.ok ? r.json() : { notifications: [] }))
+                    .then((data) => {
+                      setNotifications(Array.isArray(data.notifications) ? data.notifications : []);
+                      setNotificationCount(data.unreadCount || 0);
+                    })
+                    .catch(() => setNotifications([]))
+                    .finally(() => setNotificationsLoading(false));
+                }}
+                className="p-2 rounded-lg hover:bg-gray-100 transition-colors relative"
+                title="Notifications"
+              >
+                <Notification size={20} style={{ color: "#575757" }} />
+                {notificationCount > 0 && (
+                  <span className="absolute -top-1 -right-1 bg-brand text-white text-xs font-bold rounded-full min-w-[18px] h-[18px] flex items-center justify-center px-1" style={{ fontFamily: "Open Sans, sans-serif", fontSize: "10px" }}>
+                    {notificationCount}
+                  </span>
+                )}
               </button>
               <div className="relative" ref={languageDropdownRef}>
               <button
@@ -2233,6 +2231,22 @@ export default function OnboardingPage() {
                                 prev.map((n) => (n.id === notif.id ? { ...n, isRead: true } : n))
                               );
                               setNotificationCount((prev) => Math.max(0, prev - 1));
+                              if (notif.conversationId) {
+                                setShowNotificationsPanel(false);
+                                setShowCandidateListView(true);
+                                setCandidateListTab('chats');
+                                setCandidateChatsLoading(true);
+                                fetch('/api/chat/conversations', { credentials: 'same-origin' })
+                                  .then((r) => (r.ok ? r.json() : []))
+                                  .then((list) => {
+                                    setCandidateChats(Array.isArray(list) ? list : []);
+                                    setActiveRecruiterChatConversationId(notif.conversationId);
+                                    setActiveRecruiterChatCandidateName(notif.senderName || notif.senderOrgName || 'Candidate');
+                                    setActiveRecruiterChatCandidateEmail(notif.senderEmail || '');
+                                  })
+                                  .catch(() => setCandidateChats([]))
+                                  .finally(() => setCandidateChatsLoading(false));
+                              }
                             } catch (error) {
                               console.error('Error marking notification as read:', error);
                             }

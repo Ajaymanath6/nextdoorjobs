@@ -378,13 +378,15 @@ body {
 }
 .gig-popup .map-popup-twin-msg-me {
   align-self: flex-end;
-  background: var(--brand-color, #7c00ff);
-  color: white;
+  background: var(--brand-bg-fill);
+  color: var(--brand-text-strong);
+  border: 1px solid var(--brand-stroke-weak);
 }
 .gig-popup .map-popup-twin-msg-them {
   align-self: flex-start;
   background: var(--brand-bg-fill);
   color: var(--brand-text-strong);
+  border: 1px solid var(--brand-stroke-weak);
 }
 .gig-popup .map-popup-twin-input-wrapper {
   position: relative;
