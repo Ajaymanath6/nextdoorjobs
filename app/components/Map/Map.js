@@ -5,7 +5,6 @@ import { createPortal } from "react-dom";
 import dynamic from "next/dynamic";
 import { useRouter } from "next/navigation";
 import { useClerk } from "@clerk/nextjs";
-import { io } from "socket.io-client";
 import themeClasses from "../../theme-utility-classes.json";
 import {
   EarthFilled,
@@ -189,7 +188,7 @@ const MapComponent = ({ onOpenSettings, onViewModeChange }) => {
   const [chatLoading, setChatLoading] = useState(false);
   const [chatSending, setChatSending] = useState(false);
   const chatMessagesEndRef = useRef(null);
-  const socketRef = useRef(null);
+  const eventSourceRef = useRef(null);
   const homeMarkerRef = useRef(null);
   const homeToGigLineRef = useRef(null);
 
@@ -1948,32 +1947,34 @@ const MapComponent = ({ onOpenSettings, onViewModeChange }) => {
 
   useEffect(() => {
     if (!chatModalOpen || !chatConversationId) {
-      if (socketRef.current) {
-        socketRef.current.disconnect();
-        socketRef.current = null;
+      if (eventSourceRef.current) {
+        eventSourceRef.current.close();
+        eventSourceRef.current = null;
       }
       return;
     }
 
-    if (!socketRef.current) {
-      socketRef.current = io({ path: "/api/socket" });
-    }
+    const eventSource = new EventSource(`/api/chat/socket?conversationId=${chatConversationId}`);
+    eventSourceRef.current = eventSource;
 
-    const socket = socketRef.current;
-
-    socket.emit("join-conversation", chatConversationId);
-
-    const handleNewMessage = (message) => {
-      if (message.senderId !== meUser?.id) {
-        setChatMessages((prev) => [...prev, message]);
+    eventSource.onmessage = (event) => {
+      try {
+        const message = JSON.parse(event.data);
+        if (message.senderId !== meUser?.id) {
+          setChatMessages((prev) => [...prev, message]);
+        }
+      } catch (err) {
+        console.error("Error parsing SSE message:", err);
       }
     };
 
-    socket.on("new-message", handleNewMessage);
+    eventSource.onerror = (err) => {
+      console.error("SSE connection error:", err);
+      eventSource.close();
+    };
 
     return () => {
-      socket.off("new-message", handleNewMessage);
-      socket.emit("leave-conversation", chatConversationId);
+      eventSource.close();
     };
   }, [chatModalOpen, chatConversationId, meUser?.id]);
 
