@@ -177,9 +177,24 @@ export async function GET(request) {
           console.log("[GET /api/gigs] Where clause:", JSON.stringify(whereClause, null, 2));
         }
 
+        // Explicit select so we don't require phone_visible_to_recruiters (column may not exist yet)
         const jobSeekers = await prisma.user.findMany({
           where: whereClause,
-          include: {
+          select: {
+            id: true,
+            name: true,
+            email: true,
+            phone: true,
+            avatarId: true,
+            avatarUrl: true,
+            isJobSeeker: true,
+            homeLatitude: true,
+            homeLongitude: true,
+            homeLocality: true,
+            homeDistrict: true,
+            homeState: true,
+            jobSeekerSkills: true,
+            jobSeekerExperience: true,
             resume: {
               include: {
                 workExperiences: { orderBy: { orderIndex: "asc" } },
@@ -312,7 +327,21 @@ export async function GET(request) {
         try {
           fallbackSeekers = await prisma.user.findMany({
             where: fallbackWhere,
-            include: {
+            select: {
+              id: true,
+              name: true,
+              email: true,
+              phone: true,
+              avatarId: true,
+              avatarUrl: true,
+              isJobSeeker: true,
+              homeLatitude: true,
+              homeLongitude: true,
+              homeLocality: true,
+              homeDistrict: true,
+              homeState: true,
+              jobSeekerSkills: true,
+              jobSeekerExperience: true,
               resume: {
                 include: {
                   workExperiences: { orderBy: { orderIndex: "asc" } },
