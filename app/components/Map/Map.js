@@ -759,13 +759,17 @@ const MapComponent = ({ onOpenSettings }) => {
       }
     }
 
-    const withCoords = filteredGigs.filter(
+    let withCoords = filteredGigs.filter(
       (g) =>
         g.latitude != null &&
         g.longitude != null &&
         Number.isFinite(Number(g.latitude)) &&
         Number.isFinite(Number(g.longitude))
     );
+    // Exclude current user's gigs so only the orange user-location marker represents "me"
+    if (meUser?.id != null) {
+      withCoords = withCoords.filter((g) => g.user?.id !== meUser.id);
+    }
     if (withCoords.length === 0) return;
 
     const clusterGroup = L.markerClusterGroup({
@@ -1780,9 +1784,9 @@ const MapComponent = ({ onOpenSettings }) => {
   const runLocateMeOnMap = () => {
     if (!mapInstanceRef.current || !window.L) return;
 
-    const applyCoords = (lat, lng, imageUrl) => {
+    const applyCoords = (lat, lng, imageUrl, gigForPopup = null) => {
       if (lat != null && lng != null && Number.isFinite(lat) && Number.isFinite(lng)) {
-        zoomToUserLocation({ lat, lng }, { imageUrl });
+        zoomToUserLocation({ lat, lng }, { imageUrl, gigForPopup });
       }
     };
 
@@ -1830,13 +1834,13 @@ const MapComponent = ({ onOpenSettings }) => {
           return;
         }
 
-        // Individual: first gig, else home, else modal
+        // Individual: first gig, else home, else modal (pass first gig so orange marker shows gig popup)
         fetch("/api/gigs?mine=1", { credentials: "same-origin" })
           .then((r) => (r.ok ? r.json() : null))
           .then((data) => {
             const first = data?.gigs?.[0];
             if (first && first.latitude != null && first.longitude != null) {
-              applyCoords(first.latitude, first.longitude, avatarUrl);
+              applyCoords(first.latitude, first.longitude, avatarUrl, first);
               return;
             }
             tryHomeOrModal(avatarUrl);
@@ -1851,7 +1855,7 @@ const MapComponent = ({ onOpenSettings }) => {
           .then((data) => {
             const first = data?.gigs?.[0];
             if (first && first.latitude != null && first.longitude != null) {
-              applyCoords(first.latitude, first.longitude, avatarUrl);
+              applyCoords(first.latitude, first.longitude, avatarUrl, first);
               return;
             }
             tryHomeOrModal(avatarUrl);
@@ -2706,7 +2710,7 @@ const MapComponent = ({ onOpenSettings }) => {
     return null;
   };
 
-  // Zoom map to user location and add marker (options.imageUrl = avatar or company logo)
+  // Zoom map to user location and add marker (options.imageUrl = avatar or company logo; options.gigForPopup = gig to show in popup on click)
   const zoomToUserLocation = (location, options = {}) => {
     if (!mapInstanceRef.current || !location) return;
 
@@ -2715,6 +2719,7 @@ const MapComponent = ({ onOpenSettings }) => {
 
     const { lat, lng } = location;
     const imageUrl = options?.imageUrl;
+    const gigForPopup = options?.gigForPopup;
 
     // Remove existing user location marker if any
     if (userLocationMarkerRef.current) {
@@ -2744,21 +2749,140 @@ const MapComponent = ({ onOpenSettings }) => {
       interactive: true,
     }).addTo(mapInstanceRef.current);
 
-    // Add accuracy info to tooltip if available
-    const accuracyText = location.accuracy 
-      ? ` (±${Math.round(location.accuracy)}m)` 
-      : '';
-    const methodText = location.accuracy && location.accuracy < 100 
-      ? ' [GPS]' 
-      : location.accuracy && location.accuracy < 1000 
-        ? ' [WiFi]' 
-        : '';
-    
-    marker.bindTooltip(`Your current location${accuracyText}${methodText}`, {
-      permanent: false,
-      direction: 'top',
-      className: 'user-location-tooltip',
-    });
+    if (gigForPopup) {
+      // Bind gig-details popup so click on orange avatar shows gig details
+      const gig = gigForPopup;
+      const hasHome =
+        homeLocation?.homeLatitude != null &&
+        homeLocation?.homeLongitude != null &&
+        Number.isFinite(Number(homeLocation.homeLatitude)) &&
+        Number.isFinite(Number(homeLocation.homeLongitude));
+      const escapeHtml = (str) => (str || "").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
+      const userName = gig.user?.name || "Gig worker";
+      const userAvatarUrl = gig.user?.avatarId
+        ? getAvatarUrlById(gig.user.avatarId)
+        : gig.user?.avatarUrl || "/avatars/avatar1.png";
+      const isCandidate = gig.serviceType === "Job Seeker" && gig.resume;
+      let popupContent;
+      if (isCandidate && gig.resume) {
+        const r = gig.resume;
+        const displayName = [r.firstName, r.lastName].filter(Boolean).join(" ") || gig.user?.name || "Candidate";
+        const displayEmail = r.emailOverride != null && r.emailOverride !== "" ? r.emailOverride : (gig.email || "—");
+        const workHtml = (r.workExperiences || []).length
+          ? (r.workExperiences || []).map((w) => `
+            <div class="map-popup-work-item">
+              <strong>${escapeHtml(w.companyName || "Company")}</strong>${w.year ? ` (${escapeHtml(w.year)})` : ""}<br/>
+              ${w.position ? escapeHtml(w.position) : ""}${w.companyUrl ? ` · <a href="${escapeHtml(w.companyUrl)}" target="_blank" rel="noopener">Link</a>` : ""}
+              ${w.duties ? `<br/>${escapeHtml(w.duties)}` : ""}
+            </div>`).join("")
+          : "";
+        const eduHtml = (r.educations || []).length
+          ? (r.educations || []).map((e) => `
+            <div class="map-popup-edu-item">
+              <strong>${escapeHtml(e.universityName || "—")}</strong>${e.yearOfPassing ? ` (${escapeHtml(e.yearOfPassing)})` : ""}<br/>
+              ${e.streamName ? escapeHtml(e.streamName) : ""}${e.marksOrScore ? ` · ${escapeHtml(e.marksOrScore)}` : ""}
+            </div>`).join("")
+          : "";
+        const currentSalaryHtml = r.currentSalaryVisibleToRecruiter && r.currentSalaryPackage
+          ? `<div class="map-popup-meta"><strong>Current salary:</strong> ${escapeHtml(r.currentSalaryPackage)}</div>`
+          : "";
+        popupContent = `
+        <div class="map-popup-content">
+          <div class="map-popup-row">
+            <div class="map-popup-avatar-wrap">
+              <img class="map-popup-avatar" src="${userAvatarUrl}" alt="${escapeHtml(displayName)}" onerror="this.src='/avatars/avatar1.png'" />
+            </div>
+            <div class="map-popup-body">
+              <div class="map-popup-title">${escapeHtml(displayName)}</div>
+              <div class="map-popup-sub">${escapeHtml(displayEmail)}</div>
+              ${r.currentPosition ? `<div class="map-popup-meta"><strong>Position:</strong> ${escapeHtml(r.currentPosition)}</div>` : ""}
+              ${r.yearsExperience ? `<div class="map-popup-meta"><strong>Experience:</strong> ${escapeHtml(r.yearsExperience)} years</div>` : ""}
+            </div>
+          </div>
+          ${workHtml ? `<div class="map-popup-block"><strong class="map-popup-section-title">Work</strong>${workHtml}</div>` : ""}
+          ${eduHtml ? `<div class="map-popup-block"><strong class="map-popup-section-title">Education</strong>${eduHtml}</div>` : ""}
+          ${r.expectedSalaryPackage ? `<div class="map-popup-meta"><strong>Expected salary:</strong> ${escapeHtml(r.expectedSalaryPackage)}</div>` : ""}
+          ${currentSalaryHtml}
+          <div class="map-popup-divider">
+            <strong>Location:</strong> ${escapeHtml(gig.district || "")}${gig.state ? `, ${escapeHtml(gig.state)}` : ""}
+          </div>
+        </div>`;
+      } else {
+        const serviceBadge = gig.serviceType
+          ? `<span class="map-popup-badge">${escapeHtml(gig.serviceType)}</span>`
+          : "";
+        popupContent = `
+        <div class="map-popup-content">
+          <div class="map-popup-row">
+            <div class="map-popup-avatar-wrap">
+              <img class="map-popup-avatar" src="${userAvatarUrl}" alt="${escapeHtml(userName)}" onerror="this.src='/avatars/avatar1.png'" />
+            </div>
+            <div class="map-popup-body">
+              <div class="map-popup-title">${escapeHtml(gig.title || "")}</div>
+              <div class="map-popup-sub">${escapeHtml(userName)}</div>
+              ${serviceBadge}
+            </div>
+          </div>
+          ${gig.description ? `<div class="map-popup-meta map-popup-desc">${escapeHtml(gig.description)}</div>` : ""}
+          <div class="map-popup-meta"><strong>Service:</strong> ${escapeHtml(gig.serviceType || "—")}</div>
+          ${gig.expectedSalary ? `<div class="map-popup-meta"><strong>Expected Salary:</strong> ${escapeHtml(gig.expectedSalary)}</div>` : ""}
+          ${gig.experienceWithGig ? `<div class="map-popup-meta"><strong>Experience:</strong> ${escapeHtml(gig.experienceWithGig)}</div>` : ""}
+          ${gig.customersTillDate != null ? `<div class="map-popup-meta"><strong>Customers Served:</strong> ${gig.customersTillDate}</div>` : ""}
+          <div class="map-popup-divider">
+            <div><strong>Location:</strong> ${escapeHtml(gig.district || "")}${gig.state ? `, ${escapeHtml(gig.state)}` : ""}</div>
+            ${gig.pincode ? `<div class="map-popup-pincode">Pincode: ${escapeHtml(gig.pincode)}</div>` : ""}
+          </div>
+          <div class="map-popup-block">
+            ${
+              hasHome
+                ? `<button type="button" class="map-popup-btn" data-action="see-distance" data-gig-id="${gig.id}">
+              <svg width="16" height="16" viewBox="0 0 32 32" fill="currentColor"><path d="M16 4L4 14v14h8v-8h8v8h8V14L16 4z"/></svg>
+              See how far from your home
+            </button>`
+                : `<button type="button" class="map-popup-btn" data-action="add-home">
+              <svg width="16" height="16" viewBox="0 0 32 32" fill="currentColor"><path d="M17 15V8h-2v7H8v2h7v7h2v-7h7v-2h-7z"/></svg>
+              Add home to see distance
+            </button>`
+            }
+          </div>
+        </div>
+      `;
+      }
+      marker.bindPopup(popupContent, { className: "gig-popup", maxWidth: 320 });
+      marker.on("popupopen", () => {
+        const el = marker.getPopup()?.getElement();
+        if (!el) return;
+        const seeBtn = el.querySelector('[data-action="see-distance"]');
+        if (seeBtn) {
+          seeBtn.onclick = () => {
+            setSelectedGigForDistance(gig);
+            setShowDistanceFromHome(true);
+          };
+        }
+        const addBtn = el.querySelector('[data-action="add-home"]');
+        if (addBtn) {
+          addBtn.onclick = () => {
+            setSelectedGigForDistance(gig);
+            setShowAddHomeModal(true);
+          };
+        }
+      });
+    } else {
+      // No gig at this location: show tooltip only
+      const accuracyText = location.accuracy
+        ? ` (±${Math.round(location.accuracy)}m)`
+        : "";
+      const methodText = location.accuracy && location.accuracy < 100
+        ? " [GPS]"
+        : location.accuracy && location.accuracy < 1000
+          ? " [WiFi]"
+          : "";
+      marker.bindTooltip(`Your current location${accuracyText}${methodText}`, {
+        permanent: false,
+        direction: "top",
+        className: "user-location-tooltip",
+      });
+    }
 
     userLocationMarkerRef.current = marker;
 
@@ -2767,7 +2891,7 @@ const MapComponent = ({ onOpenSettings }) => {
       duration: 1.5,
     });
 
-    console.log('📍 Zoomed to user location:', { lat, lng });
+    console.log("📍 Zoomed to user location:", { lat, lng });
   };
 
   const handleSearch = async (overrideQuery = null) => {

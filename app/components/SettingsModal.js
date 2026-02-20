@@ -28,9 +28,18 @@ const SECTIONS = [
   { id: "other", label: "Other", icon: SettingsAdjust, disabled: true },
 ];
 
-export default function SettingsModal({ isOpen, onClose }) {
+const VALID_SECTIONS = ["general", "resume", "company", "subscription", "integration", "other"];
+
+export default function SettingsModal({ isOpen, onClose, initialSection }) {
   const router = useRouter();
   const [activeSection, setActiveSection] = useState("general");
+
+  // When modal opens with initialSection, switch to that tab
+  useEffect(() => {
+    if (isOpen && initialSection && VALID_SECTIONS.includes(initialSection)) {
+      setActiveSection(initialSection);
+    }
+  }, [isOpen, initialSection]);
   const [user, setUser] = useState(null);
   const [loading, setLoading] = useState(true);
   const [showEditNameModal, setShowEditNameModal] = useState(false);

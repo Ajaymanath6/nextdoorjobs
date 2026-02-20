@@ -1850,7 +1850,7 @@ setCurrentField(GIG_FIELDS.CUSTOMERS_TILL_DATE);
       )}
       
       <div className="relative z-10 flex justify-center px-4 h-[100dvh] w-screen m-0 p-0 pb-[env(safe-area-inset-bottom,0)]">
-        <div className="bg-white/95 backdrop-blur-sm rounded-lg overflow-visible border border-brand-stroke-weak shadow-lg relative w-full max-w-4xl flex flex-col h-full m-0 p-0 min-h-0">
+        <div className="bg-white/95 backdrop-blur-sm rounded-lg overflow-visible border border-brand-stroke-weak shadow-lg relative w-full max-w-[61rem] flex flex-col h-full m-0 p-0 min-h-0">
           {/* Header - overflow-visible and high z so dropdowns overlay chat */}
           <div className="bg-white/95 backdrop-blur-sm px-6 py-4 flex items-center justify-between border-b border-brand-stroke-weak relative z-30 flex-shrink-0 overflow-visible">
             <div className="flex items-center gap-3">
@@ -1925,14 +1925,17 @@ setCurrentField(GIG_FIELDS.CUSTOMERS_TILL_DATE);
                     }
                   }
                 }}
-                className={`p-2 rounded-lg border border-brand-stroke-border transition-colors ${listViewActive ? "bg-brand-bg-fill" : "bg-brand-bg-white hover:bg-brand-bg-fill"}`}
+                className={`flex items-center gap-2 px-2 py-2 rounded-lg border border-brand-stroke-border transition-colors ${listViewActive ? "bg-brand-bg-fill" : "bg-brand-bg-white hover:bg-brand-bg-fill"}`}
                 title={listViewActive ? "Back to chat" : (userData?.accountType === "Individual" ? "Your posted gigs" : "Your job postings")}
               >
                 {listViewActive ? (
-                  <Chat size={20} className="text-brand-text-strong" />
+                  <Chat size={20} className="text-brand-text-strong shrink-0" />
                 ) : (
-                  <List size={20} className="text-brand-text-strong" />
+                  <List size={20} className="text-brand-text-strong shrink-0" />
                 )}
+                <span className="text-sm font-medium text-brand-text-strong whitespace-nowrap">
+                  {listViewActive ? "Back to chat" : (userData?.accountType === "Individual" ? "Your posted gigs" : "Your job postings")}
+                </span>
               </button>
               <div className="relative" ref={languageDropdownRef}>
               <button

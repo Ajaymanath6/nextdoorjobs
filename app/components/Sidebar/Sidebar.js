@@ -5,18 +5,16 @@ import { useRouter } from "next/navigation";
 import Image from "next/image";
 import themeClasses from "../../theme-utility-classes.json";
 import {
-  Home,
   Document,
   Archive,
   OpenPanelLeft,
   SidePanelOpen,
   Add,
-  ThumbsUpDouble,
   Bullhorn,
   EarthFilled,
 } from "@carbon/icons-react";
 
-export default function Sidebar({ activeItem = "jobs-near-you", onToggle, isOpen: externalIsOpen }) {
+export default function Sidebar({ activeItem = "jobs-near-you", onToggle, isOpen: externalIsOpen, onOpenSettingsWithSection }) {
   const router = useRouter();
   const [isOpen, setIsOpen] = useState(externalIsOpen !== undefined ? externalIsOpen : true);
 
@@ -39,11 +37,9 @@ export default function Sidebar({ activeItem = "jobs-near-you", onToggle, isOpen
     }
   };
 
-  // Navigation items
+  // Navigation items (Home and Get Vetted removed)
   const navigationItems = [
-    { id: "home", label: "Home", icon: Home, route: "/" },
-    { id: "get-vetted", label: "Get Vetted", icon: ThumbsUpDouble, route: "/get-vetted" },
-    { id: "manage-resume", label: "Manage Resume", icon: Document, route: "/manage-resume" },
+    { id: "manage-resume", label: "Manage Resume", icon: Document, route: "/manage-resume", openSettingsSection: "resume" },
     { id: "manage-jds", label: "Manage JDs", icon: Archive, route: "/manage-jds" },
     { id: "jobs-near-you", label: "Jobs Near You", icon: EarthFilled, route: "/jobs-near-you" },
     { id: "post-gig", label: "Post a gig", icon: Add, route: "/onboarding" },
@@ -51,13 +47,17 @@ export default function Sidebar({ activeItem = "jobs-near-you", onToggle, isOpen
 
   const isDev = process.env.NODE_ENV !== "production";
 
-  const handleNavigation = (route) => {
-    router.push(route);
+  const handleNavigation = (item) => {
+    if (item.openSettingsSection && typeof onOpenSettingsWithSection === "function") {
+      onOpenSettingsWithSection(item.openSettingsSection);
+      return;
+    }
+    router.push(item.route);
   };
 
   return (
     <aside
-      className={`h-screen flex flex-col ${
+      className={`h-screen flex flex-col bg-white ${
         isOpen ? sidebar["container-expanded"] : sidebar["container-collapsed"]
       }`}
     >
@@ -105,12 +105,12 @@ export default function Sidebar({ activeItem = "jobs-near-you", onToggle, isOpen
           {navigationItems.map((item) => {
             const IconComponent = item.icon;
             const isActive = activeItem === item.id;
-            const isComingSoon = !isDev && item.id !== "jobs-near-you" && item.id !== "post-gig";
-            const isDisabled = isComingSoon || (!isActive && item.id !== "jobs-near-you" && item.id !== "post-gig");
+            const isComingSoon = !isDev && item.id !== "jobs-near-you" && item.id !== "post-gig" && item.id !== "manage-resume";
+            const isDisabled = isComingSoon || (!isActive && item.id !== "jobs-near-you" && item.id !== "post-gig" && item.id !== "manage-resume");
             return (
               <li key={item.id}>
                 <button
-                  onClick={() => !isDisabled && handleNavigation(item.route)}
+                  onClick={() => !isDisabled && handleNavigation(item)}
                   disabled={isDisabled}
                   title={isComingSoon ? "Coming soon" : undefined}
                   className={`${sidebar["nav-button"]} ${
