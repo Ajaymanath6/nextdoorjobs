@@ -3,7 +3,7 @@
 import { useState, useEffect, useRef } from "react";
 import { useRouter } from "next/navigation";
 import { useUser, useClerk } from "@clerk/nextjs";
-import { WatsonHealthRotate_360, List, UserAvatar, User, Settings, Logout, EarthFilled, Chat, ArrowLeft } from "@carbon/icons-react";
+import { WatsonHealthRotate_360, List, UserAvatar, User, Settings, Logout, EarthFilled, Chat, ArrowLeft, UserMultiple } from "@carbon/icons-react";
 import ChatInterface from "../components/Onboarding/ChatInterface";
 import SettingsModal from "../components/SettingsModal";
 import JobListingsModal from "../components/JobListingsModal";
@@ -152,6 +152,10 @@ export default function OnboardingPage() {
   const [showEditJobModal, setShowEditJobModal] = useState(false);
   const [selectedJobForEdit, setSelectedJobForEdit] = useState(null);
   const [jobCount, setJobCount] = useState(0);
+  const [showCandidateListView, setShowCandidateListView] = useState(false);
+  const [candidateListTab, setCandidateListTab] = useState("chats");
+  const [candidateChats, setCandidateChats] = useState([]);
+  const [candidateChatsLoading, setCandidateChatsLoading] = useState(false);
   const onboardingSessionIdRef = useRef(null);
   const conversationOrderRef = useRef(0);
   const lastAIMessageTextRef = useRef("");
@@ -2007,6 +2011,25 @@ export default function OnboardingPage() {
                   </span>
                 )}
               </button>
+              <button
+                type="button"
+                onClick={() => {
+                  setShowCandidateListView(true);
+                  if (candidateListTab === "chats") {
+                    setCandidateChatsLoading(true);
+                    fetch("/api/chat/conversations", { credentials: "same-origin" })
+                      .then((r) => (r.ok ? r.json() : []))
+                      .then((list) => setCandidateChats(Array.isArray(list) ? list : []))
+                      .catch(() => setCandidateChats([]))
+                      .finally(() => setCandidateChatsLoading(false));
+                  }
+                }}
+                className="p-2 rounded-lg hover:bg-gray-100 transition-colors flex items-center gap-1.5"
+                title="Candidate list"
+              >
+                <UserMultiple size={20} style={{ color: "#575757" }} />
+                <span className="text-sm font-medium text-[#575757] hidden sm:inline">Candidate list</span>
+              </button>
               <div className="relative" ref={languageDropdownRef}>
               <button
                 onClick={() => setShowLanguageDropdown(!showLanguageDropdown)}
@@ -2120,8 +2143,87 @@ export default function OnboardingPage() {
             </div>
           </div>
 
-          {/* Content - Always show chat interface; overflow-hidden so only this area clips */}
+          {/* Content - Chat interface or Candidate list view */}
           <div className="flex-1 relative z-10 overflow-hidden rounded-b-lg min-h-0">
+            {showCandidateListView ? (
+              <div className="h-full flex flex-col bg-white">
+                <div className="flex items-center justify-between border-b border-[#E5E5E5] px-4 py-2 shrink-0">
+                  <button
+                    type="button"
+                    onClick={() => setShowCandidateListView(false)}
+                    className="p-2 rounded-lg hover:bg-gray-100 transition-colors flex items-center gap-2 text-brand-text-strong"
+                  >
+                    <ArrowLeft size={18} />
+                    <span className="text-sm font-medium">Back to chat</span>
+                  </button>
+                </div>
+                <div className="flex border-b border-[#E5E5E5] shrink-0">
+                  <button
+                    type="button"
+                    onClick={() => setCandidateListTab("list")}
+                    className={`flex-1 px-4 py-3 text-sm font-medium transition-colors ${
+                      candidateListTab === "list"
+                        ? "border-b-2 border-brand text-brand bg-brand/5"
+                        : "text-brand-text-weak hover:bg-gray-50"
+                    }`}
+                  >
+                    Candidates list
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setCandidateListTab("chats");
+                      setCandidateChatsLoading(true);
+                      fetch("/api/chat/conversations", { credentials: "same-origin" })
+                        .then((r) => (r.ok ? r.json() : []))
+                        .then((list) => setCandidateChats(Array.isArray(list) ? list : []))
+                        .catch(() => setCandidateChats([]))
+                        .finally(() => setCandidateChatsLoading(false));
+                    }}
+                    className={`flex-1 px-4 py-3 text-sm font-medium transition-colors ${
+                      candidateListTab === "chats"
+                        ? "border-b-2 border-brand text-brand bg-brand/5"
+                        : "text-brand-text-weak hover:bg-gray-50"
+                    }`}
+                  >
+                    Candidate chats
+                  </button>
+                </div>
+                <div className="flex-1 overflow-y-auto p-4 min-h-0">
+                  {candidateListTab === "list" && (
+                    <p className="text-sm text-brand-text-weak">Candidates from your map search will appear here. Use the Map view to find candidates.</p>
+                  )}
+                  {candidateListTab === "chats" && (
+                    <>
+                      {candidateChatsLoading ? (
+                        <p className="text-sm text-brand-text-weak">Loading…</p>
+                      ) : candidateChats.length === 0 ? (
+                        <p className="text-sm text-brand-text-weak">No chats yet. Start a conversation from a candidate’s resume popup on the Map.</p>
+                      ) : (
+                        <ul className="space-y-2">
+                          {candidateChats.map((c) => (
+                            <li
+                              key={c.id}
+                              className="flex flex-col gap-0.5 p-3 rounded-lg border border-[#E5E5E5] hover:bg-gray-50"
+                            >
+                              <span className="font-medium text-brand-text-strong">{c.candidateName || "Candidate"}</span>
+                              {c.lastMessagePreview && (
+                                <span className="text-sm text-brand-text-weak truncate">{c.lastMessagePreview}</span>
+                              )}
+                              {c.lastMessageAt && (
+                                <span className="text-xs text-brand-text-weak">
+                                  {new Date(c.lastMessageAt).toLocaleString()}
+                                </span>
+                              )}
+                            </li>
+                          ))}
+                        </ul>
+                      )}
+                    </>
+                  )}
+                </div>
+              </div>
+            ) : (
             <ChatInterface
               messages={chatMessages}
               onSendMessage={handleChatMessage}
@@ -2186,6 +2288,7 @@ export default function OnboardingPage() {
                 }
               }}
             />
+            )}
           </div>
         </div>
       </div>

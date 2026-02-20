@@ -5,6 +5,7 @@ import { createPortal } from "react-dom";
 import dynamic from "next/dynamic";
 import { useRouter } from "next/navigation";
 import { useClerk } from "@clerk/nextjs";
+import { io } from "socket.io-client";
 import themeClasses from "../../theme-utility-classes.json";
 import {
   EarthFilled,
@@ -178,6 +179,17 @@ const MapComponent = ({ onOpenSettings, onViewModeChange }) => {
   const homeSuggestionsRef = useRef(null);
   const [showDistanceFromHome, setShowDistanceFromHome] = useState(false);
   const [selectedGigForDistance, setSelectedGigForDistance] = useState(null);
+  const [chatModalOpen, setChatModalOpen] = useState(false);
+  const [chatCandidateId, setChatCandidateId] = useState(null);
+  const [chatCandidateName, setChatCandidateName] = useState("");
+  const [chatConversationId, setChatConversationId] = useState(null);
+  const [chatModalAnchor, setChatModalAnchor] = useState(null);
+  const [chatMessages, setChatMessages] = useState([]);
+  const [chatInput, setChatInput] = useState("");
+  const [chatLoading, setChatLoading] = useState(false);
+  const [chatSending, setChatSending] = useState(false);
+  const chatMessagesEndRef = useRef(null);
+  const socketRef = useRef(null);
   const homeMarkerRef = useRef(null);
   const homeToGigLineRef = useRef(null);
 
@@ -971,7 +983,7 @@ const MapComponent = ({ onOpenSettings, onViewModeChange }) => {
           </div>
           <div class="map-popup-divider"></div>
           <div class="map-popup-actions">
-            <a href="mailto:${escapeHtml(displayEmail)}" class="map-popup-action-link" title="Email" aria-label="Email">
+            <a href="mailto:${escapeHtml(displayEmail)}" class="map-popup-action-link" title="Email" aria-label="Email" target="_blank" rel="noopener">
               <svg width="20" height="20" viewBox="0 0 32 32" fill="currentColor" xmlns="http://www.w3.org/2000/svg"><path d="M28,6H4A2,2,0,0,0,2,8V24a2,2,0,0,0,2,2H28a2,2,0,0,0,2-2V8A2,2,0,0,0,28,6ZM25.8,8,16,14.78,6.2,8ZM4,24V8.91l11.43,7.91a1,1,0,0,0,1.14,0L28,8.91V24Z"/></svg>
             </a>
             <a href="#" class="map-popup-action-link map-popup-action-chat" title="Chat" aria-label="Chat" data-action="chat" data-gig-id="${gig.id}">
@@ -1036,6 +1048,35 @@ const MapComponent = ({ onOpenSettings, onViewModeChange }) => {
           addBtn.onclick = () => {
             setSelectedGigForDistance(gig);
             setShowAddHomeModal(true);
+          };
+        }
+        const chatLink = el.querySelector(".map-popup-action-chat");
+        if (chatLink) {
+          chatLink.onclick = async (e) => {
+            e.preventDefault();
+            const candidateId = gig.user?.id;
+            if (!candidateId) return;
+            const rect = el.getBoundingClientRect();
+            try {
+              const res = await fetch("/api/chat/conversations", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                credentials: "same-origin",
+                body: JSON.stringify({ candidateId }),
+              });
+              const data = await res.json().catch(() => ({}));
+              if (!res.ok) {
+                alert("Could not start chat");
+                return;
+              }
+              setChatConversationId(data.id);
+              setChatCandidateId(candidateId);
+              setChatCandidateName(gig.user?.name || "Candidate");
+              setChatModalAnchor({ top: rect.top, right: rect.right, height: rect.height });
+              setChatModalOpen(true);
+            } catch (err) {
+              alert("Could not start chat");
+            }
           };
         }
       });
@@ -1881,6 +1922,60 @@ const MapComponent = ({ onOpenSettings, onViewModeChange }) => {
           .catch(() => tryHomeOrModal(avatarUrl));
       });
   };
+
+  // Load chat messages when modal opens
+  useEffect(() => {
+    if (!chatModalOpen || !chatConversationId) {
+      if (!chatModalOpen) setChatMessages([]);
+      return;
+    }
+    setChatLoading(true);
+    fetch(`/api/chat/conversations/${chatConversationId}/messages`, { credentials: "same-origin" })
+      .then((r) => (r.ok ? r.json() : { messages: [] }))
+      .then((data) => {
+        const list = data.messages || [];
+        setChatMessages([...list].reverse());
+        setChatLoading(false);
+      })
+      .catch(() => setChatLoading(false));
+  }, [chatModalOpen, chatConversationId]);
+
+  useEffect(() => {
+    if (chatModalOpen && chatMessages.length) {
+      setTimeout(() => chatMessagesEndRef.current?.scrollIntoView({ behavior: "smooth" }), 50);
+    }
+  }, [chatModalOpen, chatMessages]);
+
+  useEffect(() => {
+    if (!chatModalOpen || !chatConversationId) {
+      if (socketRef.current) {
+        socketRef.current.disconnect();
+        socketRef.current = null;
+      }
+      return;
+    }
+
+    if (!socketRef.current) {
+      socketRef.current = io({ path: "/api/socket" });
+    }
+
+    const socket = socketRef.current;
+
+    socket.emit("join-conversation", chatConversationId);
+
+    const handleNewMessage = (message) => {
+      if (message.senderId !== meUser?.id) {
+        setChatMessages((prev) => [...prev, message]);
+      }
+    };
+
+    socket.on("new-message", handleNewMessage);
+
+    return () => {
+      socket.off("new-message", handleNewMessage);
+      socket.emit("leave-conversation", chatConversationId);
+    };
+  }, [chatModalOpen, chatConversationId, meUser?.id]);
 
   useEffect(() => {
     if (!mapReady || !mapInstanceRef.current || typeof window === "undefined") return;
@@ -2828,7 +2923,7 @@ const MapComponent = ({ onOpenSettings, onViewModeChange }) => {
           </div>
           <div class="map-popup-divider"></div>
           <div class="map-popup-actions">
-            <a href="mailto:${escapeHtml(displayEmail)}" class="map-popup-action-link" title="Email" aria-label="Email">
+            <a href="mailto:${escapeHtml(displayEmail)}" class="map-popup-action-link" title="Email" aria-label="Email" target="_blank" rel="noopener">
               <svg width="20" height="20" viewBox="0 0 32 32" fill="currentColor" xmlns="http://www.w3.org/2000/svg"><path d="M28,6H4A2,2,0,0,0,2,8V24a2,2,0,0,0,2,2H28a2,2,0,0,0,2-2V8A2,2,0,0,0,28,6ZM25.8,8,16,14.78,6.2,8ZM4,24V8.91l11.43,7.91a1,1,0,0,0,1.14,0L28,8.91V24Z"/></svg>
             </a>
             <a href="#" class="map-popup-action-link map-popup-action-chat" title="Chat" aria-label="Chat" data-action="chat" data-gig-id="${gig.id}">
@@ -2895,9 +2990,34 @@ const MapComponent = ({ onOpenSettings, onViewModeChange }) => {
             setShowAddHomeModal(true);
           };
         }
-        const chatLink = el.querySelector('.map-popup-action-chat');
+        const chatLink = el.querySelector(".map-popup-action-chat");
         if (chatLink) {
-          chatLink.onclick = (e) => { e.preventDefault(); /* future: open chat */ };
+          chatLink.onclick = async (e) => {
+            e.preventDefault();
+            const candidateId = gig.user?.id;
+            if (!candidateId) return;
+            const rect = el.getBoundingClientRect();
+            try {
+              const res = await fetch("/api/chat/conversations", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                credentials: "same-origin",
+                body: JSON.stringify({ candidateId }),
+              });
+              const data = await res.json().catch(() => ({}));
+              if (!res.ok) {
+                alert("Could not start chat");
+                return;
+              }
+              setChatConversationId(data.id);
+              setChatCandidateId(candidateId);
+              setChatCandidateName(gig.user?.name || "Candidate");
+              setChatModalAnchor({ top: rect.top, right: rect.right, height: rect.height });
+              setChatModalOpen(true);
+            } catch (err) {
+              alert("Could not start chat");
+            }
+          };
         }
       });
     } else {
@@ -4642,6 +4762,103 @@ const MapComponent = ({ onOpenSettings, onViewModeChange }) => {
           setShowLocateMeCoordModal(false);
         }}
       />
+
+      {/* Chat modal (right of resume popup) */}
+      {chatModalOpen && (
+        <div
+          className="fixed z-[2000] flex flex-col rounded-lg border border-brand-stroke-border bg-white shadow-xl"
+          style={{
+            width: 360,
+            maxHeight: "80vh",
+            left: chatModalAnchor ? chatModalAnchor.right + 8 : "50%",
+            top: chatModalAnchor ? chatModalAnchor.top : "50%",
+            transform: chatModalAnchor ? undefined : "translate(-50%, -50%)",
+          }}
+        >
+          <div className="flex items-center justify-between gap-2 border-b border-brand-stroke-border px-3 py-2 shrink-0">
+            <div className="min-w-0 flex-1">
+              <div className="truncate font-medium text-brand-text-strong">{chatCandidateName || "Chat"}</div>
+              <a
+                href="/onboarding.org?view=candidates"
+                className="text-xs text-brand-text-link hover:underline"
+                target="_blank"
+                rel="noopener noreferrer"
+              >
+                Candidate list
+              </a>
+            </div>
+            <button
+              type="button"
+              onClick={() => {
+                setChatModalOpen(false);
+                setChatConversationId(null);
+                setChatCandidateId(null);
+                setChatCandidateName("");
+                setChatModalAnchor(null);
+                setChatInput("");
+              }}
+              className="shrink-0 p-1 rounded hover:bg-brand-bg-fill"
+              aria-label="Close chat"
+            >
+              <Close size={20} className="text-brand-text-weak" />
+            </button>
+          </div>
+          <div className="flex-1 min-h-[200px] max-h-[50vh] overflow-y-auto p-2 flex flex-col gap-2">
+            {chatLoading ? (
+              <div className="text-sm text-brand-text-weak py-4 text-center">Loading…</div>
+            ) : (
+              chatMessages.map((m) => (
+                <div
+                  key={m.id}
+                  className={`max-w-[85%] rounded-lg px-3 py-2 text-sm ${
+                    m.senderId === meUser?.id
+                      ? "self-end bg-brand-bg-brand text-white"
+                      : "self-start bg-brand-bg-fill text-brand-text-strong"
+                  }`}
+                >
+                  {m.body}
+                </div>
+              ))
+            )}
+            <div ref={chatMessagesEndRef} />
+          </div>
+          <form
+            className="flex gap-2 border-t border-brand-stroke-border p-2 shrink-0"
+            onSubmit={async (e) => {
+              e.preventDefault();
+              const text = chatInput.trim();
+              if (!text || !chatConversationId || chatSending) return;
+              setChatSending(true);
+              try {
+                const res = await fetch(`/api/chat/conversations/${chatConversationId}/messages`, {
+                  method: "POST",
+                  headers: { "Content-Type": "application/json" },
+                  credentials: "same-origin",
+                  body: JSON.stringify({ body: text }),
+                });
+                const data = await res.json().catch(() => ({}));
+                if (res.ok && data.id) {
+                  setChatMessages((prev) => [...prev, { id: data.id, senderId: data.senderId, body: data.body, createdAt: data.createdAt }]);
+                  setChatInput("");
+                }
+              } finally {
+                setChatSending(false);
+              }
+            }}
+          >
+            <input
+              type="text"
+              value={chatInput}
+              onChange={(e) => setChatInput(e.target.value)}
+              placeholder="Type a message…"
+              className="flex-1 min-w-0 rounded border border-brand-stroke-border px-3 py-2 text-sm"
+            />
+            <button type="submit" disabled={chatSending || !chatInput.trim()} className="shrink-0 px-3 py-2 rounded bg-brand-bg-brand text-white text-sm font-medium disabled:opacity-50">
+              Send
+            </button>
+          </form>
+        </div>
+      )}
 
       <CompanyJobsSidebar
         company={selectedCompanyForSidebar}

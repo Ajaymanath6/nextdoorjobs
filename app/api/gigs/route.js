@@ -177,7 +177,6 @@ export async function GET(request) {
           console.log("[GET /api/gigs] Where clause:", JSON.stringify(whereClause, null, 2));
         }
 
-        // Explicit select so we don't require phone_visible_to_recruiters (column may not exist yet)
         const jobSeekers = await prisma.user.findMany({
           where: whereClause,
           select: {
@@ -185,6 +184,7 @@ export async function GET(request) {
             name: true,
             email: true,
             phone: true,
+            phoneVisibleToRecruiters: true,
             avatarId: true,
             avatarUrl: true,
             isJobSeeker: true,
@@ -332,6 +332,7 @@ export async function GET(request) {
               name: true,
               email: true,
               phone: true,
+              phoneVisibleToRecruiters: true,
               avatarId: true,
               avatarUrl: true,
               isJobSeeker: true,
