@@ -963,34 +963,46 @@ const MapComponent = ({ onOpenSettings, onViewModeChange }) => {
           ? `<div class="map-popup-meta"><strong>Current salary:</strong> ${escapeHtml(r.currentSalaryPackage)}</div>`
           : "";
         popupContent = `
-        <div class="map-popup-content">
-          <div class="map-popup-row">
-            <div class="map-popup-avatar-wrap">
-              <img class="map-popup-avatar" src="${userAvatarUrl}" alt="${escapeHtml(displayName)}" onerror="this.src='/avatars/avatar1.png'" />
-            </div>
-            <div class="map-popup-body">
-              <div class="map-popup-title">${escapeHtml(displayName)}</div>
-              <div class="map-popup-sub">${escapeHtml(displayEmail)}</div>
-              ${displayPhone ? `<div class="map-popup-meta"><strong>Phone:</strong> ${escapeHtml(displayPhone)}</div>` : ""}
-              ${r.currentPosition ? `<div class="map-popup-meta"><strong>Position:</strong> ${escapeHtml(r.currentPosition)}</div>` : ""}
-              ${r.yearsExperience ? `<div class="map-popup-meta"><strong>Experience:</strong> ${escapeHtml(r.yearsExperience)} years</div>` : ""}
+        <div class="map-popup-with-twin">
+          <div class="map-popup-resume-panel">
+            <div class="map-popup-content">
+              <div class="map-popup-row">
+                <div class="map-popup-avatar-wrap">
+                  <img class="map-popup-avatar" src="${userAvatarUrl}" alt="${escapeHtml(displayName)}" onerror="this.src='/avatars/avatar1.png'" />
+                </div>
+                <div class="map-popup-body">
+                  <div class="map-popup-title">${escapeHtml(displayName)}</div>
+                  <div class="map-popup-sub">${escapeHtml(displayEmail)}</div>
+                  ${displayPhone ? `<div class="map-popup-meta"><strong>Phone:</strong> ${escapeHtml(displayPhone)}</div>` : ""}
+                  ${r.currentPosition ? `<div class="map-popup-meta"><strong>Position:</strong> ${escapeHtml(r.currentPosition)}</div>` : ""}
+                  ${r.yearsExperience ? `<div class="map-popup-meta"><strong>Experience:</strong> ${escapeHtml(r.yearsExperience)} years</div>` : ""}
+                </div>
+              </div>
+              ${workHtml ? `<div class="map-popup-block"><strong class="map-popup-section-title">Work</strong>${workHtml}</div>` : ""}
+              ${eduHtml ? `<div class="map-popup-block"><strong class="map-popup-section-title">Education</strong>${eduHtml}</div>` : ""}
+              ${r.expectedSalaryPackage ? `<div class="map-popup-meta"><strong>Expected salary:</strong> ${escapeHtml(r.expectedSalaryPackage)}</div>` : ""}
+              ${currentSalaryHtml}
+              <div class="map-popup-divider">
+                <strong>Location:</strong> ${escapeHtml(gig.district || "")}${gig.state ? `, ${escapeHtml(gig.state)}` : ""}
+              </div>
+              <div class="map-popup-divider"></div>
+              <div class="map-popup-actions">
+                <a href="${(displayEmail && displayEmail !== "—") ? `https://mail.google.com/mail/?view=cm&fs=1&to=${encodeURIComponent(displayEmail)}` : `mailto:${escapeHtml(displayEmail || "")}`}" class="map-popup-action-link" title="Email" aria-label="Email" target="_blank" rel="noopener noreferrer">
+                  <svg width="20" height="20" viewBox="0 0 32 32" fill="currentColor" xmlns="http://www.w3.org/2000/svg"><path d="M28,6H4A2,2,0,0,0,2,8V24a2,2,0,0,0,2,2H28a2,2,0,0,0,2-2V8A2,2,0,0,0,28,6ZM25.8,8,16,14.78,6.2,8ZM4,24V8.91l11.43,7.91a1,1,0,0,0,1.14,0L28,8.91V24Z"/></svg>
+                </a>
+                <a href="#" class="map-popup-action-link map-popup-action-chat" title="Chat" aria-label="Chat" data-action="chat" data-gig-id="${gig.id}">
+                  <svg width="20" height="20" viewBox="0 0 32 32" fill="currentColor" xmlns="http://www.w3.org/2000/svg"><path d="M17.74,30,16,29l4-7h6a2,2,0,0,0,2-2V8a2,2,0,0,0-2-2H6A2,2,0,0,0,4,8V20a2,2,0,0,0,2,2h9v2H6a4,4,0,0,1-4-4V8A4,4,0,0,1,6,4H26a4,4,0,0,1,4,4V20a4,4,0,0,1-4,4H21.16Z"/><path d="M8 10H24V12H8zM8 16H18V18H8z"/></svg>
+                </a>
+              </div>
             </div>
           </div>
-          ${workHtml ? `<div class="map-popup-block"><strong class="map-popup-section-title">Work</strong>${workHtml}</div>` : ""}
-          ${eduHtml ? `<div class="map-popup-block"><strong class="map-popup-section-title">Education</strong>${eduHtml}</div>` : ""}
-          ${r.expectedSalaryPackage ? `<div class="map-popup-meta"><strong>Expected salary:</strong> ${escapeHtml(r.expectedSalaryPackage)}</div>` : ""}
-          ${currentSalaryHtml}
-          <div class="map-popup-divider">
-            <strong>Location:</strong> ${escapeHtml(gig.district || "")}${gig.state ? `, ${escapeHtml(gig.state)}` : ""}
-          </div>
-          <div class="map-popup-divider"></div>
-          <div class="map-popup-actions">
-            <a href="${(displayEmail && displayEmail !== "—") ? `https://mail.google.com/mail/?view=cm&fs=1&to=${encodeURIComponent(displayEmail)}` : `mailto:${escapeHtml(displayEmail || "")}`}" class="map-popup-action-link" title="Email" aria-label="Email" target="_blank" rel="noopener noreferrer">
-              <svg width="20" height="20" viewBox="0 0 32 32" fill="currentColor" xmlns="http://www.w3.org/2000/svg"><path d="M28,6H4A2,2,0,0,0,2,8V24a2,2,0,0,0,2,2H28a2,2,0,0,0,2-2V8A2,2,0,0,0,28,6ZM25.8,8,16,14.78,6.2,8ZM4,24V8.91l11.43,7.91a1,1,0,0,0,1.14,0L28,8.91V24Z"/></svg>
-            </a>
-            <a href="#" class="map-popup-action-link map-popup-action-chat" title="Chat" aria-label="Chat" data-action="chat" data-gig-id="${gig.id}">
-              <svg width="20" height="20" viewBox="0 0 32 32" fill="currentColor" xmlns="http://www.w3.org/2000/svg"><path d="M17.74,30,16,29l4-7h6a2,2,0,0,0,2-2V8a2,2,0,0,0-2-2H6A2,2,0,0,0,4,8V20a2,2,0,0,0,2,2h9v2H6a4,4,0,0,1-4-4V8A4,4,0,0,1,6,4H26a4,4,0,0,1,4,4V20a4,4,0,0,1-4,4H21.16Z"/><path d="M8 10H24V12H8zM8 16H18V18H8z"/></svg>
-            </a>
+          <div class="map-popup-twin-panel">
+            <div class="map-popup-twin-inner">
+              <input type="text" class="map-popup-twin-input" placeholder="type here" readonly />
+              <button type="button" class="map-popup-twin-send" aria-label="Send" title="Send">
+                <svg width="20" height="20" viewBox="0 0 32 32" fill="currentColor" xmlns="http://www.w3.org/2000/svg"><path d="M27.45,15.11l-22-10a1,1,0,0,0-1.08.12,1,1,0,0,0-.37,1L6,16,3.94,25.81A1,1,0,0,0,4.94,27a1,1,0,0,0,.66-.25L16,19l8.6,6.16a1,1,0,0,0,1.19.13,1,1,0,0,0,.6-.91V16A1,1,0,0,0,27.45,15.11ZM5.92,24.63l1.36-6.86,4.42,4.42Zm2.48-7.26L21.5,15,9.8,10.63ZM26,22.13,18.24,16,26,9.87Z"/></svg>
+              </button>
+            </div>
           </div>
         </div>`;
       } else {
@@ -1034,7 +1046,7 @@ const MapComponent = ({ onOpenSettings, onViewModeChange }) => {
         </div>
       `;
       }
-      marker.bindPopup(popupContent, { className: "gig-popup", maxWidth: 320 });
+      marker.bindPopup(popupContent, { className: "gig-popup", maxWidth: isCandidate && gig.resume ? 560 : 320 });
       marker.on("popupopen", () => {
         const el = marker.getPopup()?.getElement();
         if (!el) return;
@@ -2967,34 +2979,46 @@ const MapComponent = ({ onOpenSettings, onViewModeChange }) => {
           ? `<div class="map-popup-meta"><strong>Current salary:</strong> ${escapeHtml(r.currentSalaryPackage)}</div>`
           : "";
         popupContent = `
-        <div class="map-popup-content">
-          <div class="map-popup-row">
-            <div class="map-popup-avatar-wrap">
-              <img class="map-popup-avatar" src="${userAvatarUrl}" alt="${escapeHtml(displayName)}" onerror="this.src='/avatars/avatar1.png'" />
-            </div>
-            <div class="map-popup-body">
-              <div class="map-popup-title">${escapeHtml(displayName)}</div>
-              <div class="map-popup-sub">${escapeHtml(displayEmail)}</div>
-              ${displayPhone ? `<div class="map-popup-meta"><strong>Phone:</strong> ${escapeHtml(displayPhone)}</div>` : ""}
-              ${r.currentPosition ? `<div class="map-popup-meta"><strong>Position:</strong> ${escapeHtml(r.currentPosition)}</div>` : ""}
-              ${r.yearsExperience ? `<div class="map-popup-meta"><strong>Experience:</strong> ${escapeHtml(r.yearsExperience)} years</div>` : ""}
+        <div class="map-popup-with-twin">
+          <div class="map-popup-resume-panel">
+            <div class="map-popup-content">
+              <div class="map-popup-row">
+                <div class="map-popup-avatar-wrap">
+                  <img class="map-popup-avatar" src="${userAvatarUrl}" alt="${escapeHtml(displayName)}" onerror="this.src='/avatars/avatar1.png'" />
+                </div>
+                <div class="map-popup-body">
+                  <div class="map-popup-title">${escapeHtml(displayName)}</div>
+                  <div class="map-popup-sub">${escapeHtml(displayEmail)}</div>
+                  ${displayPhone ? `<div class="map-popup-meta"><strong>Phone:</strong> ${escapeHtml(displayPhone)}</div>` : ""}
+                  ${r.currentPosition ? `<div class="map-popup-meta"><strong>Position:</strong> ${escapeHtml(r.currentPosition)}</div>` : ""}
+                  ${r.yearsExperience ? `<div class="map-popup-meta"><strong>Experience:</strong> ${escapeHtml(r.yearsExperience)} years</div>` : ""}
+                </div>
+              </div>
+              ${workHtml ? `<div class="map-popup-block"><strong class="map-popup-section-title">Work</strong>${workHtml}</div>` : ""}
+              ${eduHtml ? `<div class="map-popup-block"><strong class="map-popup-section-title">Education</strong>${eduHtml}</div>` : ""}
+              ${r.expectedSalaryPackage ? `<div class="map-popup-meta"><strong>Expected salary:</strong> ${escapeHtml(r.expectedSalaryPackage)}</div>` : ""}
+              ${currentSalaryHtml}
+              <div class="map-popup-divider">
+                <strong>Location:</strong> ${escapeHtml(gig.district || "")}${gig.state ? `, ${escapeHtml(gig.state)}` : ""}
+              </div>
+              <div class="map-popup-divider"></div>
+              <div class="map-popup-actions">
+                <a href="${(displayEmail && displayEmail !== "—") ? `https://mail.google.com/mail/?view=cm&fs=1&to=${encodeURIComponent(displayEmail)}` : `mailto:${escapeHtml(displayEmail || "")}`}" class="map-popup-action-link" title="Email" aria-label="Email" target="_blank" rel="noopener noreferrer">
+                  <svg width="20" height="20" viewBox="0 0 32 32" fill="currentColor" xmlns="http://www.w3.org/2000/svg"><path d="M28,6H4A2,2,0,0,0,2,8V24a2,2,0,0,0,2,2H28a2,2,0,0,0,2-2V8A2,2,0,0,0,28,6ZM25.8,8,16,14.78,6.2,8ZM4,24V8.91l11.43,7.91a1,1,0,0,0,1.14,0L28,8.91V24Z"/></svg>
+                </a>
+                <a href="#" class="map-popup-action-link map-popup-action-chat" title="Chat" aria-label="Chat" data-action="chat" data-gig-id="${gig.id}">
+                  <svg width="20" height="20" viewBox="0 0 32 32" fill="currentColor" xmlns="http://www.w3.org/2000/svg"><path d="M17.74,30,16,29l4-7h6a2,2,0,0,0,2-2V8a2,2,0,0,0-2-2H6A2,2,0,0,0,4,8V20a2,2,0,0,0,2,2h9v2H6a4,4,0,0,1-4-4V8A4,4,0,0,1,6,4H26a4,4,0,0,1,4,4V20a4,4,0,0,1-4,4H21.16Z"/><path d="M8 10H24V12H8zM8 16H18V18H8z"/></svg>
+                </a>
+              </div>
             </div>
           </div>
-          ${workHtml ? `<div class="map-popup-block"><strong class="map-popup-section-title">Work</strong>${workHtml}</div>` : ""}
-          ${eduHtml ? `<div class="map-popup-block"><strong class="map-popup-section-title">Education</strong>${eduHtml}</div>` : ""}
-          ${r.expectedSalaryPackage ? `<div class="map-popup-meta"><strong>Expected salary:</strong> ${escapeHtml(r.expectedSalaryPackage)}</div>` : ""}
-          ${currentSalaryHtml}
-          <div class="map-popup-divider">
-            <strong>Location:</strong> ${escapeHtml(gig.district || "")}${gig.state ? `, ${escapeHtml(gig.state)}` : ""}
-          </div>
-          <div class="map-popup-divider"></div>
-          <div class="map-popup-actions">
-            <a href="${(displayEmail && displayEmail !== "—") ? `https://mail.google.com/mail/?view=cm&fs=1&to=${encodeURIComponent(displayEmail)}` : `mailto:${escapeHtml(displayEmail || "")}`}" class="map-popup-action-link" title="Email" aria-label="Email" target="_blank" rel="noopener noreferrer">
-              <svg width="20" height="20" viewBox="0 0 32 32" fill="currentColor" xmlns="http://www.w3.org/2000/svg"><path d="M28,6H4A2,2,0,0,0,2,8V24a2,2,0,0,0,2,2H28a2,2,0,0,0,2-2V8A2,2,0,0,0,28,6ZM25.8,8,16,14.78,6.2,8ZM4,24V8.91l11.43,7.91a1,1,0,0,0,1.14,0L28,8.91V24Z"/></svg>
-            </a>
-            <a href="#" class="map-popup-action-link map-popup-action-chat" title="Chat" aria-label="Chat" data-action="chat" data-gig-id="${gig.id}">
-              <svg width="20" height="20" viewBox="0 0 32 32" fill="currentColor" xmlns="http://www.w3.org/2000/svg"><path d="M17.74,30,16,29l4-7h6a2,2,0,0,0,2-2V8a2,2,0,0,0-2-2H6A2,2,0,0,0,4,8V20a2,2,0,0,0,2,2h9v2H6a4,4,0,0,1-4-4V8A4,4,0,0,1,6,4H26a4,4,0,0,1,4,4V20a4,4,0,0,1-4,4H21.16Z"/><path d="M8 10H24V12H8zM8 16H18V18H8z"/></svg>
-            </a>
+          <div class="map-popup-twin-panel">
+            <div class="map-popup-twin-inner">
+              <input type="text" class="map-popup-twin-input" placeholder="type here" readonly />
+              <button type="button" class="map-popup-twin-send" aria-label="Send" title="Send">
+                <svg width="20" height="20" viewBox="0 0 32 32" fill="currentColor" xmlns="http://www.w3.org/2000/svg"><path d="M27.45,15.11l-22-10a1,1,0,0,0-1.08.12,1,1,0,0,0-.37,1L6,16,3.94,25.81A1,1,0,0,0,4.94,27a1,1,0,0,0,.66-.25L16,19l8.6,6.16a1,1,0,0,0,1.19.13,1,1,0,0,0,.6-.91V16A1,1,0,0,0,27.45,15.11ZM5.92,24.63l1.36-6.86,4.42,4.42Zm2.48-7.26L21.5,15,9.8,10.63ZM26,22.13,18.24,16,26,9.87Z"/></svg>
+              </button>
+            </div>
           </div>
         </div>`;
       } else {
@@ -3038,7 +3062,7 @@ const MapComponent = ({ onOpenSettings, onViewModeChange }) => {
         </div>
       `;
       }
-      marker.bindPopup(popupContent, { className: "gig-popup", maxWidth: 320 });
+      marker.bindPopup(popupContent, { className: "gig-popup", maxWidth: isCandidate && gig.resume ? 560 : 320 });
       marker.on("popupopen", () => {
         const el = marker.getPopup()?.getElement();
         if (!el) return;

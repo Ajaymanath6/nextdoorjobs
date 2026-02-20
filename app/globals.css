@@ -269,6 +269,71 @@ body {
   opacity: 0.9;
 }
 
+/* Resume popup with twin panel (message extension) */
+.gig-popup .map-popup-with-twin {
+  display: flex;
+  align-items: stretch;
+  min-width: 0;
+}
+.gig-popup .map-popup-resume-panel {
+  flex: 0 0 auto;
+  min-width: 280px;
+  max-width: 320px;
+  border-right: 1px solid var(--brand-stroke-weak);
+}
+.gig-popup .map-popup-resume-panel .map-popup-content {
+  padding: 12px;
+  min-width: 0;
+}
+.gig-popup .map-popup-twin-panel {
+  flex: 0 0 200px;
+  display: flex;
+  flex-direction: column;
+  background: var(--brand-bg-white);
+  min-height: 80px;
+}
+.gig-popup .map-popup-twin-inner {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 12px;
+  border: 0;
+}
+.gig-popup .map-popup-twin-input {
+  flex: 1;
+  min-width: 0;
+  padding: 8px 10px;
+  font-size: 14px;
+  font-family: var(--font-geist-sans), sans-serif;
+  color: var(--brand-text-strong);
+  background: var(--brand-bg-fill);
+  border: 1px solid var(--brand-stroke-weak);
+  border-radius: 6px;
+  outline: none;
+}
+.gig-popup .map-popup-twin-input::placeholder {
+  color: var(--brand-text-placeholder, #a5a5a5);
+}
+.gig-popup .map-popup-twin-send {
+  flex-shrink: 0;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 36px;
+  height: 36px;
+  padding: 0;
+  border: none;
+  border-radius: 6px;
+  background: var(--brand-bg-fill);
+  color: var(--brand-text-strong);
+  cursor: pointer;
+  transition: background 0.15s ease, color 0.15s ease;
+}
+.gig-popup .map-popup-twin-send:hover {
+  background: var(--brand-color, #7c00ff);
+  color: white;
+}
+
 /* Cluster Tooltip */
 .cluster-tooltip {
   background: var(--brand-bg-white) !important;
