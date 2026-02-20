@@ -58,7 +58,7 @@ const clerkHandler = clerkMiddleware(async (auth, req) => {
       if (!userId) {
         return NextResponse.redirect(new URL('/onboarding', req.url));
       }
-      // Check if user has accountType set - if yes, allow map access; if no, redirect to who-are-you
+      // Signed-in user must have accountType set before accessing map; otherwise redirect to who-are-you (new users or missing type)
       try {
         const clerkUser = await currentUser();
         if (clerkUser) {
@@ -69,23 +69,19 @@ const clerkHandler = clerkMiddleware(async (auth, req) => {
               where: { email: emailNorm },
               select: { accountType: true },
             });
-            // If accountType is set, allow access to map (/)
+            // Only allow map access when user exists in DB and has accountType set
             if (user?.accountType) {
               return NextResponse.next();
             }
-            // If user exists but accountType is null/empty, redirect to who-are-you
-            if (user && (user.accountType === null || user.accountType === '')) {
-              return NextResponse.redirect(new URL('/who-are-you', req.url));
-            }
+            // User not in DB yet, or accountType is null/empty -> who-are-you first
+            return NextResponse.redirect(new URL('/who-are-you', req.url));
           }
         }
       } catch (err) {
         // If DB lookup fails, allow access to map (graceful degradation)
-        // The client-side code will handle redirecting if needed
         console.error("[proxy] Error checking accountType:", err instanceof Error ? err.message : String(err));
         return NextResponse.next();
       }
-      // If we can't determine accountType status, allow access (client will handle redirect if needed)
       return NextResponse.next();
     }
 

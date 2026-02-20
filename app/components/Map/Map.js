@@ -1,6 +1,7 @@
 "use client";
 
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
+import { createPortal } from "react-dom";
 import dynamic from "next/dynamic";
 import { useRouter } from "next/navigation";
 import { useClerk } from "@clerk/nextjs";
@@ -23,6 +24,8 @@ import {
   Chat,
   Home,
   Add,
+  Settings,
+  Logout,
 } from "@carbon/icons-react";
 import { RiArrowDownSLine } from "@remixicon/react";
 import FilterDropdown from "./FilterDropdown";
@@ -56,7 +59,7 @@ function haversineKm(lat1, lon1, lat2, lon2) {
 }
 
 // Dynamic import of Leaflet to avoid SSR issues
-const MapComponent = () => {
+const MapComponent = ({ onOpenSettings }) => {
   const router = useRouter();
   const { signOut } = useClerk();
   const mapRef = useRef(null);
@@ -151,6 +154,10 @@ const MapComponent = () => {
   const [mobileSearchExpanded, setMobileSearchExpanded] = useState(false);
   const [showSearchModeDropdown, setShowSearchModeDropdown] = useState(false);
   const searchModeDropdownRef = useRef(null);
+  const [showProfileDropdown, setShowProfileDropdown] = useState(false);
+  const profileRef = useRef(null);
+  const [profileDropdownRect, setProfileDropdownRect] = useState({ top: 0, right: 0 });
+  const hasInitialZoomToUserRun = useRef(false);
   const [selectedGigType, setSelectedGigType] = useState(null);
   const [showGigFilterDropdown, setShowGigFilterDropdown] = useState(false);
   const gigFilterDropdownRef = useRef(null);
@@ -1865,6 +1872,18 @@ const MapComponent = () => {
     return () => window.removeEventListener("locateMeOnMap", onLocateMe);
   }, [mapReady]);
 
+  // One-time zoom to user location on sign-in when map is ready; if no location, show location modal (signed-in users only)
+  useEffect(() => {
+    if (!mapReady || !mapInstanceRef.current || typeof window === "undefined" || hasInitialZoomToUserRun.current) return;
+    hasInitialZoomToUserRun.current = true;
+    fetch("/api/auth/me", { credentials: "same-origin" })
+      .then((r) => (r.ok ? r.json() : null))
+      .then((data) => {
+        if (data?.success && data?.user) runLocateMeOnMap();
+      })
+      .catch(() => {});
+  }, [mapReady]);
+
   // Check for openAddHomeModal flag from Settings
   useEffect(() => {
     if (typeof window === "undefined" || !isClient) return;
@@ -3239,6 +3258,60 @@ const MapComponent = () => {
     };
   }, [showSearchModeDropdown]);
 
+  // Position profile dropdown and close on outside click
+  useLayoutEffect(() => {
+    if (!showProfileDropdown || !profileRef.current) return;
+    const rect = profileRef.current.getBoundingClientRect();
+    setProfileDropdownRect({
+      top: rect.bottom + 8,
+      right: window.innerWidth - rect.right,
+    });
+    const handleResize = () => {
+      if (profileRef.current) {
+        const r = profileRef.current.getBoundingClientRect();
+        setProfileDropdownRect({
+          top: r.bottom + 8,
+          right: window.innerWidth - r.right,
+        });
+      }
+    };
+    window.addEventListener("resize", handleResize);
+    return () => window.removeEventListener("resize", handleResize);
+  }, [showProfileDropdown]);
+
+  useEffect(() => {
+    const handleClickOutside = (event) => {
+      const portalEl = document.getElementById("map-profile-dropdown-portal");
+      if (
+        profileRef.current &&
+        !profileRef.current.contains(event.target) &&
+        portalEl &&
+        !portalEl.contains(event.target)
+      ) {
+        setShowProfileDropdown(false);
+      }
+    };
+    if (showProfileDropdown) {
+      document.addEventListener("mousedown", handleClickOutside);
+    }
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, [showProfileDropdown]);
+
+  const handleProfileLogout = async () => {
+    setShowProfileDropdown(false);
+    try {
+      if (signOut) await signOut();
+      await fetch("/api/auth/logout", { method: "POST" });
+      router.push("/");
+      window.location.reload();
+    } catch (e) {
+      console.error("Logout error:", e);
+      await fetch("/api/auth/logout", { method: "POST" });
+      router.push("/");
+      window.location.reload();
+    }
+  };
+
   // Close autocomplete and suggestions when clicking outside
   useEffect(() => {
     const handleClickOutside = (event) => {
@@ -4094,31 +4167,6 @@ const MapComponent = () => {
                   </div>
                 </div>
 
-                {/* Profile icon - mobile only: direct logout; hide when search focused or filter modal open */}
-                <div className={`md:hidden shrink-0 ${mobileSearchExpanded || showFilterDropdown ? "hidden" : ""}`}>
-                  <button
-                    type="button"
-                    onClick={async () => {
-                      try {
-                        if (signOut) await signOut();
-                        await fetch("/api/auth/logout", { method: "POST" });
-                        router.push("/");
-                        window.location.reload();
-                      } catch (e) {
-                        console.error("Logout error:", e);
-                        await fetch("/api/auth/logout", { method: "POST" });
-                        router.push("/");
-                        window.location.reload();
-                      }
-                    }}
-                    className="h-[34px] w-[34px] flex items-center justify-center rounded-lg border-0 bg-transparent hover:bg-brand-bg-fill transition-colors shrink-0"
-                    aria-label="Log out"
-                  >
-                    <UserAvatar size={24} className="text-brand-stroke-strong w-6 h-6 shrink-0" />
-                  </button>
-                </div>
-
-
                 {/* View toggle: Globe (map) | Chat (onboarding) - inside search bar, right end, desktop only; rounded-full pill shape */}
                 <div className="hidden md:flex items-center shrink-0 ml-1">
                   <div className="flex bg-white border border-brand-stroke-border overflow-hidden rounded-full shrink-0">
@@ -4161,6 +4209,25 @@ const MapComponent = () => {
                       <ArrowRight size={16} className={`w-4 h-4 shrink-0 ${searchBar["toggle-segment-icon"]}`} />
                     </button>
                   </div>
+                </div>
+
+                {/* Profile button - round white, right end; mobile: hide when search focused or filter open */}
+                <div className={`shrink-0 ${mobileSearchExpanded || showFilterDropdown ? "hidden md:!flex" : ""} md:ml-2`} ref={profileRef}>
+                  <button
+                    type="button"
+                    onClick={() => setShowProfileDropdown((v) => !v)}
+                    className="h-[34px] w-[34px] md:h-10 md:w-10 flex items-center justify-center rounded-full border border-brand-stroke-border bg-brand-bg-white hover:bg-brand-bg-fill transition-colors shrink-0 shadow-sm"
+                    aria-label="Profile menu"
+                    aria-expanded={showProfileDropdown}
+                  >
+                    {meUser?.avatarUrl ? (
+                      <img src={meUser.avatarUrl} alt="" className="h-6 w-6 md:h-8 md:w-8 rounded-full object-cover" />
+                    ) : meUser?.avatarId ? (
+                      <img src={getAvatarUrlById(meUser.avatarId)} alt="" className="h-6 w-6 md:h-8 md:w-8 rounded-full object-cover" />
+                    ) : (
+                      <UserAvatar size={24} className="text-brand-stroke-strong w-6 h-6 shrink-0" />
+                    )}
+                  </button>
                 </div>
               </div>
 
@@ -4323,6 +4390,70 @@ const MapComponent = () => {
           </>
         )}
       </div>
+
+      {typeof document !== "undefined" &&
+        showProfileDropdown &&
+        createPortal(
+          <div
+            id="map-profile-dropdown-portal"
+            role="menu"
+            className="min-w-[16rem] max-w-[24rem] w-max overflow-y-auto rounded-lg border border-brand-stroke-border bg-brand-bg-white shadow-lg z-[100000]"
+            style={{
+              position: "fixed",
+              top: profileDropdownRect.top,
+              right: profileDropdownRect.right,
+              left: "auto",
+              pointerEvents: "auto",
+              maxHeight: "min(70vh, 320px)",
+            }}
+          >
+            <div className="p-2">
+              <div
+                className="flex items-center gap-2 px-4 py-2 text-sm text-brand-text-strong break-all border-b border-brand-stroke-weak mb-1"
+                title={meUser?.email || "Signed in"}
+              >
+                <User size={20} className="shrink-0 text-brand-stroke-strong" />
+                <span>{meUser?.email || "Signed in"}</span>
+              </div>
+              <button
+                type="button"
+                role="menuitem"
+                className="w-full text-left px-4 py-2 text-sm text-brand-text-strong hover:bg-brand-bg-fill rounded transition-colors flex items-center gap-2"
+                onClick={() => {
+                  setShowProfileDropdown(false);
+                  onOpenSettings?.();
+                }}
+              >
+                <Settings size={20} className="text-brand-stroke-strong shrink-0" />
+                <span>Settings</span>
+              </button>
+              <button
+                type="button"
+                role="menuitem"
+                className="w-full text-left px-4 py-2 text-sm text-brand-text-strong hover:bg-brand-bg-fill rounded transition-colors flex items-center gap-2"
+                onClick={() => {
+                  setShowProfileDropdown(false);
+                  if (typeof sessionStorage !== "undefined") sessionStorage.setItem("locateMeOnMap", "1");
+                  window.dispatchEvent(new CustomEvent("locateMeOnMap"));
+                }}
+              >
+                <Location size={20} className="text-brand-stroke-strong shrink-0" />
+                <span>Locate me on map</span>
+              </button>
+              <div className="border-t border-brand-stroke-weak my-1" />
+              <button
+                type="button"
+                role="menuitem"
+                className="w-full text-left px-4 py-2 text-sm text-brand-text-strong hover:bg-brand-bg-fill rounded transition-colors flex items-center gap-2"
+                onClick={handleProfileLogout}
+              >
+                <Logout size={20} className="text-brand-stroke-strong shrink-0" />
+                <span>Logout</span>
+              </button>
+            </div>
+          </div>,
+          document.body
+        )}
 
       <AddHomeModal
         isOpen={showAddHomeModal}
