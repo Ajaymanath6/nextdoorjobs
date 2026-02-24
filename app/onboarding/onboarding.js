@@ -20,6 +20,7 @@ import SalaryInput from "../components/Onboarding/SalaryInput";
 import ExperienceInput from "../components/Onboarding/ExperienceInput";
 import ProfileBubbleBackground from "../components/Onboarding/ProfileBubbleBackground";
 import RecruiterChatPanel from "../components/RecruiterChatPanel";
+import { useUnreadNotificationCount } from "../hooks/useUnreadNotificationCount";
 
 // Field collection states
 const COMPANY_FIELDS = {
@@ -151,7 +152,7 @@ export default function OnboardingPage() {
   const [isMobile, setIsMobile] = useState(false);
   const [isNavigatingToMap, setIsNavigatingToMap] = useState(false);
   const [listViewActive, setListViewActive] = useState(false);
-  const [notificationCount, setNotificationCount] = useState(0);
+  const { count: notificationCount, refresh: refreshUnreadCount } = useUnreadNotificationCount();
   const [showNotificationsPanel, setShowNotificationsPanel] = useState(false);
   const [notifications, setNotifications] = useState([]);
   const [notificationsLoading, setNotificationsLoading] = useState(false);
@@ -197,7 +198,6 @@ export default function OnboardingPage() {
         .then((data) => {
           const list = Array.isArray(data.notifications) ? data.notifications : [];
           setNotifications(list);
-          setNotificationCount(data.unreadCount || 0);
         })
         .catch(() => setNotifications([]))
         .finally(() => setNotificationsLoading(false));
@@ -210,11 +210,10 @@ export default function OnboardingPage() {
         setActiveChatConversationId(id);
         setNotificationsLoading(true);
         fetch("/api/notifications", { credentials: "same-origin" })
-          .then((r) => (r.ok ? r.json() : { notifications: [] }))
+          .then((r) => (r.ok ? r.json() : { notifications: [], unreadCount: 0 }))
           .then((data) => {
             const list = Array.isArray(data.notifications) ? data.notifications : [];
             setNotifications(list);
-            setNotificationCount(data.unreadCount || 0);
             const notif = list.find((n) => n.conversationId === id);
             if (notif) {
               setActiveChatRecruiterName(notif.senderName || "Recruiter");
@@ -226,24 +225,6 @@ export default function OnboardingPage() {
           .finally(() => setNotificationsLoading(false));
       }
     }
-  }, []);
-
-  // Poll notification count
-  useEffect(() => {
-    const fetchCount = async () => {
-      try {
-        const res = await fetch("/api/notifications/unread-count", { credentials: "same-origin" });
-        if (res.ok) {
-          const data = await res.json();
-          setNotificationCount(data.count || 0);
-        }
-      } catch (error) {
-        console.error("Error fetching notification count:", error);
-      }
-    };
-    fetchCount();
-    const interval = setInterval(fetchCount, 30000);
-    return () => clearInterval(interval);
   }, []);
 
   // Guard: Redirect Company users to /onboarding.org
@@ -2027,7 +2008,6 @@ setCurrentField(GIG_FIELDS.CUSTOMERS_TILL_DATE);
                     .then((data) => {
                       const list = Array.isArray(data.notifications) ? data.notifications : [];
                       setNotifications(list);
-                      setNotificationCount(data.unreadCount || 0);
                     })
                     .catch(() => setNotifications([]))
                     .finally(() => setNotificationsLoading(false));
@@ -2183,7 +2163,7 @@ setCurrentField(GIG_FIELDS.CUSTOMERS_TILL_DATE);
                   setActiveChatRecruiterEmail("");
                   setActiveChatRecruiterCompanyName("");
                 }}
-                onNotificationCountChange={(count) => setNotificationCount(count)}
+                onNotificationCountChange={refreshUnreadCount}
               />
             ) : showNotificationsPanel ? (
               <div className="h-full flex flex-col bg-white">
@@ -2221,7 +2201,7 @@ setCurrentField(GIG_FIELDS.CUSTOMERS_TILL_DATE);
                               setNotifications((prev) =>
                                 prev.map((n) => (n.id === notif.id ? { ...n, isRead: true } : n))
                               );
-                              setNotificationCount((prev) => Math.max(0, prev - 1));
+                              refreshUnreadCount();
                               if (notif.conversationId) {
                                 setActiveChatConversationId(notif.conversationId);
                                 setActiveChatRecruiterName(notif.senderName || "Recruiter");

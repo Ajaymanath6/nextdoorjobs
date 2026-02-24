@@ -110,10 +110,7 @@ export default function RecruiterChatPanel({
   // Refresh notification count when closing (in case we read some)
   const handleClose = () => {
     if (typeof onNotificationCountChange === "function") {
-      fetch("/api/notifications/unread-count", { credentials: "same-origin" })
-        .then((r) => (r.ok ? r.json() : { count: 0 }))
-        .then((data) => onNotificationCountChange(data.count || 0))
-        .catch(() => {});
+      onNotificationCountChange();
     }
     onClose();
   };

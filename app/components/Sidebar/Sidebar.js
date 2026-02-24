@@ -16,12 +16,13 @@ import {
   Notification,
 } from "@carbon/icons-react";
 import Tooltip from "../Tooltip";
+import { useUnreadNotificationCount } from "../../hooks/useUnreadNotificationCount";
 
 export default function Sidebar({ activeItem = "jobs-near-you", onToggle, isOpen: externalIsOpen, onOpenSettingsWithSection, viewMode = "person" }) {
   const router = useRouter();
   const [isOpen, setIsOpen] = useState(externalIsOpen !== undefined ? externalIsOpen : true);
-  const [notificationCount, setNotificationCount] = useState(0);
   const [accountType, setAccountType] = useState(null);
+  const { count: notificationCount } = useUnreadNotificationCount();
 
   const sidebar = themeClasses.components.sidebar;
   const brand = themeClasses.brand;
@@ -41,24 +42,6 @@ export default function Sidebar({ activeItem = "jobs-near-you", onToggle, isOpen
         if (data?.success && data?.user?.accountType) setAccountType(data.user.accountType);
       })
       .catch(() => {});
-  }, []);
-
-  // Fetch notification count
-  useEffect(() => {
-    const fetchCount = async () => {
-      try {
-        const res = await fetch('/api/notifications/unread-count', { credentials: 'same-origin' });
-        if (res.ok) {
-          const data = await res.json();
-          setNotificationCount(data.count || 0);
-        }
-      } catch (error) {
-        console.error('Error fetching notification count:', error);
-      }
-    };
-    fetchCount();
-    const interval = setInterval(fetchCount, 30000); // Every 30s
-    return () => clearInterval(interval);
   }, []);
 
   // Handle toggle

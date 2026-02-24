@@ -25,6 +25,7 @@ import TeamSizeSelector from "../components/Onboarding/TeamSizeSelector";
 import PerksSelector from "../components/Onboarding/PerksSelector";
 import HolidaysInput from "../components/Onboarding/HolidaysInput";
 import RecruiterChatPanel from "../components/RecruiterChatPanel";
+import { useUnreadNotificationCount } from "../hooks/useUnreadNotificationCount";
 
 // Field collection states
 const COMPANY_FIELDS = {
@@ -168,7 +169,7 @@ export default function OnboardingPage() {
   const [activeNotificationChatName, setActiveNotificationChatName] = useState("");
   const [activeNotificationChatEmail, setActiveNotificationChatEmail] = useState("");
   const [activeNotificationChatCompanyName, setActiveNotificationChatCompanyName] = useState("");
-  const [notificationCount, setNotificationCount] = useState(0);
+  const { count: notificationCount, refresh: refreshUnreadCount } = useUnreadNotificationCount();
   const [showNotificationsPanel, setShowNotificationsPanel] = useState(false);
   const [notificationTab, setNotificationTab] = useState("recruiter-messages");
   const [notifications, setNotifications] = useState([]);
@@ -187,23 +188,7 @@ export default function OnboardingPage() {
     return raw;
   };
 
-  // Fetch notification count periodically
-  useEffect(() => {
-    const fetchCount = async () => {
-      try {
-        const res = await fetch('/api/notifications/unread-count', { credentials: 'same-origin' });
-        if (res.ok) {
-          const data = await res.json();
-          setNotificationCount(data.count || 0);
-        }
-      } catch (error) {
-        console.error('Error fetching notification count:', error);
-      }
-    };
-    fetchCount();
-    const interval = setInterval(fetchCount, 30000); // Every 30s
-    return () => clearInterval(interval);
-  }, []);
+  // Notification count is managed by useUnreadNotificationCount hook
 
   // Open notifications panel when URL has openNotifications=1 (e.g. from sidebar)
   useEffect(() => {
@@ -217,7 +202,6 @@ export default function OnboardingPage() {
         .then((data) => {
           const list = Array.isArray(data.notifications) ? data.notifications : [];
           setNotifications(list);
-          setNotificationCount(data.unreadCount || 0);
         })
         .catch(() => setNotifications([]))
         .finally(() => setNotificationsLoading(false));
@@ -2086,7 +2070,6 @@ export default function OnboardingPage() {
                     .then((data) => {
                       const list = Array.isArray(data.notifications) ? data.notifications : [];
                       setNotifications(list);
-                      setNotificationCount(data.unreadCount || 0);
                     })
                     .catch(() => setNotifications([]))
                     .finally(() => setNotificationsLoading(false));
@@ -2281,7 +2264,7 @@ export default function OnboardingPage() {
                               setNotifications((prev) =>
                                 prev.map((n) => (n.id === notif.id ? { ...n, isRead: true } : n))
                               );
-                              setNotificationCount((prev) => Math.max(0, prev - 1));
+                              refreshUnreadCount();
                               if (notif.conversationId) {
                                 setActiveNotificationChatConversationId(notif.conversationId);
                                 setActiveNotificationChatName(notif.senderName || "Recruiter");

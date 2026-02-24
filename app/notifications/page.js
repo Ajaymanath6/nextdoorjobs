@@ -3,12 +3,13 @@
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { ArrowLeft } from "@carbon/icons-react";
+import { useUnreadNotificationCount } from "../hooks/useUnreadNotificationCount";
 
 export default function NotificationsPage() {
   const router = useRouter();
   const [notifications, setNotifications] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [notificationCount, setNotificationCount] = useState(0);
+  const { refresh: refreshUnreadCount } = useUnreadNotificationCount();
 
   const sanitizeNotificationMessage = (raw) => {
     if (!raw) return "";
@@ -30,7 +31,6 @@ export default function NotificationsPage() {
       if (res.ok) {
         const data = await res.json();
         setNotifications(Array.isArray(data.notifications) ? data.notifications : []);
-        setNotificationCount(data.unreadCount || 0);
       }
     } catch (error) {
       console.error("Error fetching notifications:", error);
@@ -50,7 +50,7 @@ export default function NotificationsPage() {
       setNotifications((prev) =>
         prev.map((n) => (n.id === notif.id ? { ...n, isRead: true } : n))
       );
-      setNotificationCount((prev) => Math.max(0, prev - 1));
+      await refreshUnreadCount();
 
       // If notification has conversationId, deep-link to onboarding chat
       if (notif.conversationId) {
@@ -73,7 +73,26 @@ export default function NotificationsPage() {
           <ArrowLeft size={18} />
         </button>
         <h1 className="text-xl font-semibold text-brand-text-strong">Notifications</h1>
-        <div className="w-10"></div>
+        <button
+          type="button"
+          onClick={async () => {
+            try {
+              await fetch("/api/notifications", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                credentials: "same-origin",
+                body: JSON.stringify({ markAll: true }),
+              });
+              setNotifications((prev) => prev.map((n) => ({ ...n, isRead: true })));
+              await refreshUnreadCount();
+            } catch (error) {
+              console.error("Error marking all notifications as read:", error);
+            }
+          }}
+          className="text-xs text-brand underline hover:opacity-80"
+        >
+          Mark all as read
+        </button>
       </div>
 
       <div className="flex-1 overflow-y-auto p-4 min-h-0">
