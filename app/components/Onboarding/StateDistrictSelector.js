@@ -19,11 +19,11 @@ export default function StateDistrictSelector({
 
   useEffect(() => {
     if (!showDistrict || !selectedState) {
-      setDistricts([]);
+      queueMicrotask(() => setDistricts([]));
       return;
     }
     let cancelled = false;
-    setDistrictsLoading(true);
+    queueMicrotask(() => setDistrictsLoading(true));
     fetch(`/api/india/districts?state=${encodeURIComponent(selectedState)}`)
       .then((res) => res.json())
       .then((data) => {

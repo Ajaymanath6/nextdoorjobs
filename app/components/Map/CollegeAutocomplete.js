@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useRef, useEffect } from "react";
+import { useState, useRef, useEffect, useCallback } from "react";
 import Fuse from "fuse.js";
 import themeClasses from "../../theme-utility-classes.json";
 
@@ -42,26 +42,35 @@ export default function CollegeAutocomplete({
 
   // Update suggestions when search query changes
   useEffect(() => {
-    if (!searchQuery || searchQuery.trim().length < 2) {
-      setSuggestions([]);
-      setSelectedIndex(-1);
-      return;
-    }
+    queueMicrotask(() => {
+      if (!searchQuery || searchQuery.trim().length < 2) {
+        setSuggestions([]);
+        setSelectedIndex(-1);
+        return;
+      }
 
-    if (fuseRef.current) {
-      const results = fuseRef.current.search(searchQuery);
-      // Get top 8 results
-      const topResults = results.slice(0, 8).map((result) => result.item);
-      setSuggestions(topResults);
-      setSelectedIndex(-1);
-      itemRefs.current = [];
-    }
+      if (fuseRef.current) {
+        const results = fuseRef.current.search(searchQuery);
+        // Get top 8 results
+        const topResults = results.slice(0, 8).map((result) => result.item);
+        setSuggestions(topResults);
+        setSelectedIndex(-1);
+        itemRefs.current = [];
+      }
+    });
   }, [searchQuery]);
+
+  const handleSelect = useCallback((college) => {
+    if (onSelect) {
+      onSelect(college);
+    }
+    onClose();
+  }, [onSelect, onClose]);
 
   // Handle keyboard navigation
   useEffect(() => {
     if (!isOpen || suggestions.length === 0) {
-      setSelectedIndex(-1);
+      queueMicrotask(() => setSelectedIndex(-1));
       return;
     }
 
@@ -111,14 +120,7 @@ export default function CollegeAutocomplete({
     return () => {
       document.removeEventListener("keydown", handleKeyDown, true);
     };
-  }, [isOpen, suggestions, selectedIndex, onSelect, onClose]);
-
-  const handleSelect = (college) => {
-    if (onSelect) {
-      onSelect(college);
-    }
-    onClose();
-  };
+  }, [isOpen, suggestions, selectedIndex, handleSelect, onClose]);
 
   if (!isOpen) return null;
 

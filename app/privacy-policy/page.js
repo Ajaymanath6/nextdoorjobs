@@ -9,11 +9,11 @@ const brand = themeClasses.brand;
 export default function PrivacyPolicyPage() {
   return (
     <div
-      className="min-h-screen bg-brand-bg-fill"
+      className="h-screen min-h-screen flex flex-col overflow-hidden bg-brand-bg-fill"
       style={{ fontFamily: "Open Sans, sans-serif" }}
     >
-      {/* Header */}
-      <div className="bg-brand-bg-white border-b border-brand-stroke-border">
+      {/* Header - fixed at top */}
+      <div className="shrink-0 bg-brand-bg-white border-b border-brand-stroke-border">
         <div className="max-w-4xl mx-auto px-4 py-4 md:py-6">
           <Link
             href="/"
@@ -31,9 +31,10 @@ export default function PrivacyPolicyPage() {
         </div>
       </div>
 
-      {/* Main Content - scrollable with bottom spacing */}
-      <div className="max-w-4xl mx-auto px-4 py-8 md:py-12 overflow-y-auto flex-1">
-        <div className="bg-brand-bg-white rounded-lg border border-brand-stroke-border shadow-lg p-6 md:p-10 mb-20">
+      {/* Main Content - scrollable area (body has overflow hidden in layout) */}
+      <div className="flex-1 min-h-0 overflow-y-auto">
+        <div className="max-w-4xl mx-auto px-4 py-8 md:py-12">
+          <div className="bg-brand-bg-white rounded-lg border border-brand-stroke-border shadow-lg p-6 md:p-10 mb-20">
           
           {/* Scope */}
           <section className="mb-8">
@@ -41,7 +42,7 @@ export default function PrivacyPolicyPage() {
               Scope
             </h2>
             <p className={`text-base leading-relaxed ${brand.text.strong} mb-4`}>
-              Your privacy is important to NextDoorJobs ("we", "us", "our") and we go to great lengths to protect it. This Online Privacy Policy ("Privacy Policy") applies to the online collection of information via websites and mobile applications operated by NextDoorJobs, including mapmyGig.
+              Your privacy is important to NextDoorJobs (&quot;we&quot;, &quot;us&quot;, &quot;our&quot;) and we go to great lengths to protect it. This Online Privacy Policy (&quot;Privacy Policy&quot;) applies to the online collection of information via websites and mobile applications operated by NextDoorJobs, including mapmyGig.
             </p>
             <p className={`text-base leading-relaxed ${brand.text.strong} mb-4`}>
               By using our websites, applications, or services (including payment features), you agree to be bound by this Privacy Policy and you consent to our collection, use, processing, and sharing of your information as described herein. If you do not agree, please do not use our services.
@@ -94,7 +95,7 @@ export default function PrivacyPolicyPage() {
                   Payment Processing
                 </h4>
                 <p className={`text-base leading-relaxed ${brand.text.strong} mb-2`}>
-                  We use Razorpay Software Private Limited ("Razorpay") as our payment processor to bill you for subscription plans and other paid goods and services. When you choose to make a payment, the following information may be shared with Razorpay as necessary to complete the transaction: your name, email address, mobile number, billing address, and payment method details (such as credit card, debit card, UPI, or bank account information). We do not store your full card or financial details on our servers. By using our payment features, you explicitly consent to the sharing of this information with Razorpay and, where required by law, with financial institutions, the Reserve Bank of India (RBI), or other regulatory agencies. We comply with applicable data protection and KYC (Know Your Customer) regulations. Razorpay handles your payment data in accordance with their privacy policy; we encourage you to read it at{" "}
+                  We use Razorpay Software Private Limited (&quot;Razorpay&quot;) as our payment processor to bill you for subscription plans and other paid goods and services. When you choose to make a payment, the following information may be shared with Razorpay as necessary to complete the transaction: your name, email address, mobile number, billing address, and payment method details (such as credit card, debit card, UPI, or bank account information). We do not store your full card or financial details on our servers. By using our payment features, you explicitly consent to the sharing of this information with Razorpay and, where required by law, with financial institutions, the Reserve Bank of India (RBI), or other regulatory agencies. We comply with applicable data protection and KYC (Know Your Customer) regulations. Razorpay handles your payment data in accordance with their privacy policy; we encourage you to read it at{" "}
                   <a href="https://razorpay.com/privacy/" target="_blank" rel="noopener noreferrer" className="text-brand underline">https://razorpay.com/privacy/</a>.
                 </p>
               </div>
@@ -104,7 +105,7 @@ export default function PrivacyPolicyPage() {
                   How may your information be corrected, amended or deleted, or your preferences updated?
                 </h3>
                 <p className={`text-base leading-relaxed ${brand.text.strong}`}>
-                  You may cancel your registration or update your preferences at any time. If you do not want to receive information about our services and products, please update your account preferences (where available), check the appropriate box when registering and/or utilize the "unsubscribe" mechanism within the communications that you receive from us.
+                  You may cancel your registration or update your preferences at any time. If you do not want to receive information about our services and products, please update your account preferences (where available), check the appropriate box when registering and/or utilize the &quot;unsubscribe&quot; mechanism within the communications that you receive from us.
                 </p>
               </div>
             </div>
@@ -167,14 +168,14 @@ export default function PrivacyPolicyPage() {
                 <li>Certain searches/queries that you conducted via our sites</li>
               </ul>
               <p className={`text-base leading-relaxed ${brand.text.strong}`}>
-                The information we collect in web server logs helps us administer our websites, analyze their usage, protect the sites and their content from inappropriate use, and improve the user's experience.
+                The information we collect in web server logs helps us administer our websites, analyze their usage, protect the sites and their content from inappropriate use, and improve the user&apos;s experience.
               </p>
 
               <h4 className={`text-lg font-semibold ${brand.text.strong} mb-2 mt-4`}>
                 Cookies
               </h4>
               <p className={`text-base leading-relaxed ${brand.text.strong} mb-3`}>
-                In order to offer and provide a customized and personal service, we may use cookies to store and help track information about you. Cookies are simply small pieces of data that are sent to your browser from a web server and stored on your computer's hard drive. We use cookies to help remind us who you are and to help you navigate our sites during your visits. Cookies allow us to save passwords and preferences for you so you will not have to reenter them each time you visit.
+                In order to offer and provide a customized and personal service, we may use cookies to store and help track information about you. Cookies are simply small pieces of data that are sent to your browser from a web server and stored on your computer&apos;s hard drive. We use cookies to help remind us who you are and to help you navigate our sites during your visits. Cookies allow us to save passwords and preferences for you so you will not have to reenter them each time you visit.
               </p>
               <p className={`text-base leading-relaxed ${brand.text.strong} mb-3`}>
                 The use of cookies is relatively standard. Most browsers are initially set up to accept cookies. However, if you prefer, you can set your browser to either notify you when you receive a cookie or to refuse to accept cookies. You should understand that some features of our sites may not function properly if you do not accept cookies.
@@ -184,7 +185,7 @@ export default function PrivacyPolicyPage() {
                 Third Party Services
               </h4>
               <p className={`text-base leading-relaxed ${brand.text.strong} mb-3`}>
-                We may use services hosted by third parties such as Google Analytics, Clerk (for authentication), and mapping services to assist in providing our services and products and to help us understand our customers' use of our services and products. These services may collect information sent by your browser as part of a web page request, including your IP address or cookies. If these third party services collect information, they do so anonymously and in the aggregate to provide information helpful to us such as website trends, without identifying individual visitors. Please see "Cookies" in the section above for information on how you can control the use of cookies on your computer.
+                We may use services hosted by third parties such as Google Analytics, Clerk (for authentication), and mapping services to assist in providing our services and products and to help us understand our customers&apos; use of our services and products. These services may collect information sent by your browser as part of a web page request, including your IP address or cookies. If these third party services collect information, they do so anonymously and in the aggregate to provide information helpful to us such as website trends, without identifying individual visitors. Please see &quot;Cookies&quot; in the section above for information on how you can control the use of cookies on your computer.
               </p>
             </div>
 
@@ -229,7 +230,7 @@ export default function PrivacyPolicyPage() {
                 Payment Processing
               </h4>
               <p className={`text-base leading-relaxed ${brand.text.strong} mb-3`}>
-                We use Razorpay Software Private Limited ("Razorpay") as our payment processor to bill you for subscription plans and other paid goods and services. When you choose to make a payment through our platform, the following information may be shared with Razorpay as necessary to complete the transaction: your name, email address, mobile number, billing address, and payment method details (such as credit card, debit card, UPI, or bank account information). We do not store your full card or financial details on our servers.
+                We use Razorpay Software Private Limited (&quot;Razorpay&quot;) as our payment processor to bill you for subscription plans and other paid goods and services. When you choose to make a payment through our platform, the following information may be shared with Razorpay as necessary to complete the transaction: your name, email address, mobile number, billing address, and payment method details (such as credit card, debit card, UPI, or bank account information). We do not store your full card or financial details on our servers.
               </p>
               <p className={`text-base leading-relaxed ${brand.text.strong} mb-3`}>
                 By using our payment features, you explicitly consent to the sharing of this information with Razorpay. We may also share information with financial institutions, the Reserve Bank of India (RBI), or other regulatory agencies as required by law. We comply with applicable data protection and KYC (Know Your Customer) regulations as may be required.
@@ -246,7 +247,7 @@ export default function PrivacyPolicyPage() {
                 How may your information be corrected, amended or deleted, or your preferences updated?
               </h3>
               <p className={`text-base leading-relaxed ${brand.text.strong}`}>
-                You may cancel your registration or update your preferences at any time. If you do not want to receive information about our services and products, please update your account preferences (where available), check the appropriate box when registering and/or utilize the "unsubscribe" mechanism within the communications that you receive from us.
+                You may cancel your registration or update your preferences at any time. If you do not want to receive information about our services and products, please update your account preferences (where available), check the appropriate box when registering and/or utilize the &quot;unsubscribe&quot; mechanism within the communications that you receive from us.
               </p>
             </div>
           </section>
@@ -290,10 +291,11 @@ export default function PrivacyPolicyPage() {
               Privacy Policy Changes
             </h2>
             <p className={`text-base leading-relaxed ${brand.text.strong}`}>
-              This Privacy Policy may be revised without notice. If our information practices change in a significant way, we will post the changes here and update the "Last updated" date at the top of this page. We encourage you to review this Privacy Policy periodically to stay informed about how we are protecting your information.
+              This Privacy Policy may be revised without notice. If our information practices change in a significant way, we will post the changes here and update the &quot;Last updated&quot; date at the top of this page. We encourage you to review this Privacy Policy periodically to stay informed about how we are protecting your information.
             </p>
           </section>
 
+          </div>
         </div>
       </div>
     </div>

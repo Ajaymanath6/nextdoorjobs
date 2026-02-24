@@ -29,7 +29,7 @@ export default function Sidebar({ activeItem = "jobs-near-you", onToggle, isOpen
   // Sync with external control
   useEffect(() => {
     if (externalIsOpen !== undefined) {
-      setIsOpen(externalIsOpen);
+      queueMicrotask(() => setIsOpen(externalIsOpen));
     }
   }, [externalIsOpen]);
 
@@ -211,7 +211,7 @@ export default function Sidebar({ activeItem = "jobs-near-you", onToggle, isOpen
             <div className={sidebar["nav-icon-container"]}>
               <Bullhorn size={24} style={{ color: "rgba(87, 87, 87, 1)" }} />
             </div>
-            {isOpen && <span className={`${sidebar["nav-text"]} min-w-0 truncate`}>What's New</span>}
+            {isOpen && <span className={`${sidebar["nav-text"]} min-w-0 truncate`}>What&apos;s New</span>}
           </button>
         </Tooltip>
       </div>

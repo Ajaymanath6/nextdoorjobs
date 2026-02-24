@@ -26,36 +26,38 @@ export default function JobTitleAutocomplete({
 
   // Update suggestions when search query changes
   useEffect(() => {
-    if (!searchQuery || searchQuery.trim().length < 2) {
-      setSuggestions([]);
-      setSelectedIndex(-1);
-      return;
-    }
+    queueMicrotask(() => {
+      if (!searchQuery || searchQuery.trim().length < 2) {
+        setSuggestions([]);
+        setSelectedIndex(-1);
+        return;
+      }
 
-    if (jobTitles.length > 0) {
-      // Simple filter - no need for Fuse.js
-      const normalizedQuery = searchQuery.toLowerCase().trim();
-      const filtered = jobTitles.filter(job => 
-        job.title.toLowerCase().includes(normalizedQuery) ||
-        job.category.toLowerCase().includes(normalizedQuery)
-      );
-      
-      // Get top 8 results
-      const topResults = filtered.slice(0, 8);
-      console.log("💼 Job autocomplete suggestions:", { query: searchQuery, count: topResults.length, suggestions: topResults });
-      setSuggestions(topResults);
-      setSelectedIndex(-1);
-      itemRefs.current = [];
-    } else {
-      console.log("⚠️ Job autocomplete: No job titles available", { jobTitlesCount: jobTitles.length });
-      setSuggestions([]);
-    }
+      if (jobTitles.length > 0) {
+        // Simple filter - no need for Fuse.js
+        const normalizedQuery = searchQuery.toLowerCase().trim();
+        const filtered = jobTitles.filter(job =>
+          job.title.toLowerCase().includes(normalizedQuery) ||
+          job.category.toLowerCase().includes(normalizedQuery)
+        );
+
+        // Get top 8 results
+        const topResults = filtered.slice(0, 8);
+        console.log("💼 Job autocomplete suggestions:", { query: searchQuery, count: topResults.length, suggestions: topResults });
+        setSuggestions(topResults);
+        setSelectedIndex(-1);
+        itemRefs.current = [];
+      } else {
+        console.log("⚠️ Job autocomplete: No job titles available", { jobTitlesCount: jobTitles.length });
+        setSuggestions([]);
+      }
+    });
   }, [searchQuery, jobTitles]);
 
   // Handle keyboard navigation
   useEffect(() => {
     if (!isOpen || suggestions.length === 0) {
-      setSelectedIndex(-1);
+      queueMicrotask(() => setSelectedIndex(-1));
       return;
     }
 

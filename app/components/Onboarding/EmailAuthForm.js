@@ -132,10 +132,12 @@ export default function EmailAuthForm({ onSubmit, isLoading = false }) {
           </button>
         </div>
 
-        {/* Privacy Policy Link */}
+        {/* Privacy Policy Link - goes to full updated policy page */}
         <div className="mt-4 text-center">
           <Link
             href="/privacy-policy"
+            target="_blank"
+            rel="noopener noreferrer"
             className="text-xs text-gray-600 hover:text-gray-800 hover:underline transition-colors"
             style={{ fontFamily: "Open Sans, sans-serif" }}
           >

@@ -69,7 +69,7 @@ export default function JobListingsModal({ isOpen, onClose, jobs = [], onEdit, o
                 No job postings yet.
               </p>
               <p className="text-xs text-brand-text-weak">
-                Click "Post your job" to create your first job posting.
+                Click &quot;Post your job&quot; to create your first job posting.
               </p>
             </div>
           ) : (

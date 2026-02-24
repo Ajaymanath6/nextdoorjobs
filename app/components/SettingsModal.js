@@ -81,6 +81,7 @@ export default function SettingsModal({ isOpen, onClose, initialSection }) {
   }, [isOpen, initialSection]);
   const [user, setUser] = useState(null);
   const [loading, setLoading] = useState(true);
+  const [loadError, setLoadError] = useState(null);
   const [showEditNameModal, setShowEditNameModal] = useState(false);
   const [showAvatarModal, setShowAvatarModal] = useState(false);
   const [avatarSaving, setAvatarSaving] = useState(false);
@@ -126,7 +127,12 @@ export default function SettingsModal({ isOpen, onClose, initialSection }) {
   useEffect(() => {
     if (!isOpen) return;
     setLoading(true);
-    fetch("/api/auth/me", { credentials: "same-origin" })
+    setLoadError(null);
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => {
+      controller.abort();
+    }, 12000); // 12s timeout so modal doesn't hang in dev
+    fetch("/api/auth/me", { credentials: "same-origin", signal: controller.signal })
       .then((res) => (res.ok ? res.json() : null))
       .then((data) => {
         if (data?.success && data.user) {
@@ -146,8 +152,22 @@ export default function SettingsModal({ isOpen, onClose, initialSection }) {
           setUser(null);
         }
       })
-      .catch(() => setUser(null))
-      .finally(() => setLoading(false));
+      .catch((err) => {
+        setUser(null);
+        if (err.name === "AbortError") {
+          setLoadError("Request timed out. Check your connection and try again.");
+        } else {
+          setLoadError("Could not load profile.");
+        }
+      })
+      .finally(() => {
+        clearTimeout(timeoutId);
+        setLoading(false);
+      });
+    return () => {
+      clearTimeout(timeoutId);
+      controller.abort();
+    };
   }, [isOpen, router, onClose]);
 
   const fetchCompanies = async () => {
@@ -747,7 +767,35 @@ export default function SettingsModal({ isOpen, onClose, initialSection }) {
             {/* Main content - no left border */}
             <div className="flex-1 min-h-0 overflow-y-auto px-4 pt-6 pb-6 settings-modal-content">
               {loading ? (
-                <p className="text-brand-text-weak">Loading…</p>
+                <div className="space-y-2">
+                  <p className="text-brand-text-weak">Loading…</p>
+                  <p className="text-xs text-brand-text-weak">If this takes too long, check the terminal for API errors.</p>
+                </div>
+              ) : loadError ? (
+                <div className="space-y-3">
+                  <p className="text-brand-text-strong">{loadError}</p>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setLoadError(null);
+                      setLoading(true);
+                      fetch("/api/auth/me", { credentials: "same-origin" })
+                        .then((res) => (res.ok ? res.json() : null))
+                        .then((data) => {
+                          if (data?.success && data.user) {
+                            setUser(data.user);
+                            setLoadError(null);
+                            if (data.user.accountType === "Company") fetchCompanies();
+                          } else setUser(null);
+                        })
+                        .catch(() => setLoadError("Could not load profile."))
+                        .finally(() => setLoading(false));
+                    }}
+                    className="text-sm font-medium text-brand underline"
+                  >
+                    Retry
+                  </button>
+                </div>
               ) : activeSection === "general" ? (
                 <div className="space-y-4">
                   <div className="flex items-center gap-2">

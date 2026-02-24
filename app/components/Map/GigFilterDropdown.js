@@ -28,7 +28,7 @@ export default function GigFilterDropdown({
   // Reset search when dropdown opens
   useEffect(() => {
     if (isOpen) {
-      setSearchQuery("");
+      queueMicrotask(() => setSearchQuery(""));
     }
   }, [isOpen]);
 

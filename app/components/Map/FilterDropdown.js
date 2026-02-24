@@ -38,14 +38,16 @@ export default function FilterDropdown({
 
   // Initialize with selected option
   useEffect(() => {
-    if (selectedOption && selectedOption.state) {
-      setSelectedState(selectedOption.state);
-    } else {
-      setSelectedState(null);
-    }
-    if (isOpen) {
-      setSearchQuery("");
-    }
+    queueMicrotask(() => {
+      if (selectedOption && selectedOption.state) {
+        setSelectedState(selectedOption.state);
+      } else {
+        setSelectedState(null);
+      }
+      if (isOpen) {
+        setSearchQuery("");
+      }
+    });
   }, [selectedOption, isOpen]);
 
   // Auto-focus search input

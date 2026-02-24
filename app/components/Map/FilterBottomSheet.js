@@ -84,18 +84,20 @@ export default function FilterBottomSheet({
 
   useEffect(() => {
     if (selectedOption?.state) {
-      setSelectedLocality(null);
+      queueMicrotask(() => setSelectedLocality(null));
     }
     if (isOpen) {
-      setLocationSearchQuery("");
-      setRoleSearchQuery("");
-      setCompanySearchQuery("");
-      setExperienceSearchQuery("");
-      setSkillsSearchQuery("");
-      setSkillsSearchFocused(false);
-      setShowLocationAutocomplete(false);
-      setShowRoleAutocomplete(false);
-      setShowCompanyList(false);
+      queueMicrotask(() => {
+        setLocationSearchQuery("");
+        setRoleSearchQuery("");
+        setCompanySearchQuery("");
+        setExperienceSearchQuery("");
+        setSkillsSearchQuery("");
+        setSkillsSearchFocused(false);
+        setShowLocationAutocomplete(false);
+        setShowRoleAutocomplete(false);
+        setShowCompanyList(false);
+      });
     }
   }, [selectedOption, isOpen]);
 

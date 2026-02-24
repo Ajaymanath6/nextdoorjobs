@@ -100,7 +100,7 @@ export default function ServiceTypeSelector({ onSelect, onSkip }) {
 
       {filteredTypes.length === 0 && (
         <p className="text-xs text-brand-text-weak text-center" style={{ fontFamily: "Open Sans, sans-serif" }}>
-          No categories found. Try a different search or click "Other" to enter custom.
+          No categories found. Try a different search or click &quot;Other&quot; to enter custom.
         </p>
       )}
 
