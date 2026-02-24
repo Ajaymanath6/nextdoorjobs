@@ -18,10 +18,8 @@ import {
   User,
   UserAvatar,
   ArrowLeft,
-  ArrowRight,
   ChevronDown,
   Close,
-  Chat,
   Home,
   Add,
   Settings,
@@ -3155,9 +3153,8 @@ const MapComponent = ({ onOpenSettings, onViewModeChange }) => {
         ? getAvatarUrlById(gig.user.avatarId)
         : gig.user?.avatarUrl || "/avatars/avatar1.png";
       const isCandidate = gig.serviceType === "Job Seeker" && gig.resume;
-      const isOwnGig = meUser?.id != null && gig.user?.id === meUser.id;
-      // Show toggle for own gigs if Individual account (resume will be fetched if needed)
-      const showToggle = isOwnGig && userAccountType === "Individual";
+      // Locate-me orange marker popup is only used for Individual (gig workers); always show Gig Details / Resume toggle
+      const showToggle = true;
       
       // Helper function to generate resume HTML
       const generateResumeHtml = (r, displayEmail, displayPhone, disableChat = false) => {
@@ -4970,49 +4967,6 @@ const MapComponent = ({ onOpenSettings, onViewModeChange }) => {
                   </div>
                 </div>
 
-                {/* View toggle: Globe (map) | Chat (onboarding) - inside search bar, right end, desktop only; rounded-full pill shape */}
-                <div className="hidden md:flex items-center shrink-0 ml-1">
-                  <div className="flex bg-white border border-brand-stroke-border overflow-hidden rounded-full shrink-0">
-                    <button
-                      type="button"
-                      aria-label="Map view"
-                      className={`flex items-center gap-1.5 px-3 py-2 border-0 ${searchBar["toggle-segment"]} ${searchBar["toggle-segment-active"]} !rounded-l-full !rounded-r-none`}
-                    >
-                      <EarthFilled size={20} className={`w-5 h-5 shrink-0 ${searchBar["toggle-segment-icon-active"]} text-brand`} />
-                      <span className={`text-sm font-medium ${searchBar["toggle-segment-icon-active"]}`}>Map</span>
-                    </button>
-                    <button
-                      type="button"
-                      onClick={async () => {
-                        setIsSwitchingToChat(true);
-                        try {
-                          // Fetch user account type
-                          const res = await fetch("/api/auth/me", { credentials: "same-origin" });
-                          const data = await res.json();
-                          const accountType = data?.user?.accountType;
-                          
-                          // Small delay for UX
-                          await new Promise(resolve => setTimeout(resolve, 500));
-                          
-                          if (accountType === "Company") {
-                            router.push("/onboarding.org");
-                          } else {
-                            router.push("/onboarding");
-                          }
-                        } catch (error) {
-                          console.error("Error switching to chat:", error);
-                          router.push("/onboarding");
-                        }
-                      }}
-                      aria-label="Chat / onboarding"
-                      className={`flex items-center gap-1.5 px-3 py-2 border-0 ${searchBar["toggle-segment"]} !rounded-r-full !rounded-l-none`}
-                    >
-                      <Chat size={20} className={`w-5 h-5 shrink-0 ${searchBar["toggle-segment-icon"]}`} />
-                      <span className={`text-sm font-medium ${searchBar["toggle-segment-icon"]}`}>Chat</span>
-                      <ArrowRight size={16} className={`w-4 h-4 shrink-0 ${searchBar["toggle-segment-icon"]}`} />
-                    </button>
-                  </div>
-                </div>
               </div>
 
               {/* Mobile: bottom sheet */}
