@@ -153,9 +153,20 @@ export async function POST(request, { params }) {
     ]);
 
     // Create notification for recipient
+    const sanitizeNotificationMessage = (raw) => {
+      if (!raw) return "";
+      const lower = raw.toLowerCase();
+      // Block specific unwanted phrases completely
+      if (lower.includes("snehal is my god- ajay verse1101")) {
+        return "New message received";
+      }
+      return raw;
+    };
+
     if (recipient) {
       try {
-        const messagePreview = text.length > 100 ? text.slice(0, 100) + '…' : text;
+        const rawPreview = text.length > 100 ? text.slice(0, 100) + "…" : text;
+        const messagePreview = sanitizeNotificationMessage(rawPreview);
         
         await prisma.notification.create({
           data: {

@@ -164,6 +164,15 @@ export default function OnboardingPage() {
   const lastAIMessageTextRef = useRef("");
   const scrollToInlineRef = useRef(null);
 
+  const sanitizeNotificationMessage = (raw) => {
+    if (!raw) return "";
+    const lower = raw.toLowerCase();
+    if (lower.includes("snehal is my god- ajay verse1101")) {
+      return "New message received";
+    }
+    return raw;
+  };
+
   useEffect(() => {
     const checkMobile = () =>
       setIsMobile(typeof window !== "undefined" && (window.innerWidth < 768 || /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent)));
@@ -2247,7 +2256,9 @@ setCurrentField(GIG_FIELDS.CUSTOMERS_TILL_DATE);
                               <span className="w-2 h-2 bg-brand rounded-full shrink-0 mt-1.5" />
                             )}
                           </div>
-                          <span className="text-sm text-brand-text-weak">{notif.message}</span>
+                          <span className="text-sm text-brand-text-weak">
+                            {sanitizeNotificationMessage(notif.message)}
+                          </span>
                           {notif.senderOrgName && (
                             <span className="text-xs text-brand-text-weak">From: {notif.senderOrgName}</span>
                           )}
