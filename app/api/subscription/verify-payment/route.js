@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import crypto from "crypto";
-import { authService } from "../../../../../lib/services/auth.service";
+import { authService } from "../../../../lib/services/auth.service";
 
 /**
  * Verify Razorpay payment signature and optionally record the subscription.

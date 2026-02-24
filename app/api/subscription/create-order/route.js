@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import Razorpay from "razorpay";
-import { authService } from "../../../../../lib/services/auth.service";
+import { authService } from "../../../../lib/services/auth.service";
 
 // Plan IDs and amounts in paise (₹1 = 100 paise). Must match frontend SUBSCRIPTION_PLANS.
 const PLAN_AMOUNTS = {
