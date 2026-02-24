@@ -2319,23 +2319,97 @@ export default function OnboardingPage() {
                   {jobsPostedLoading ? (
                     <p className="text-sm text-brand-text-weak">Loading…</p>
                   ) : jobsPosted.length === 0 ? (
-                    <p className="text-sm text-brand-text-weak">No jobs posted yet. Create your first job posting to attract candidates.</p>
+                    <p className="text-sm text-brand-text-weak">
+                      No jobs posted yet. Create your first job posting to attract candidates.
+                    </p>
                   ) : (
                     <ul className="space-y-2">
                       {jobsPosted.map((job) => (
                         <li
                           key={job.id}
-                          className="flex flex-col gap-0.5 p-3 rounded-lg border border-[#E5E5E5] hover:bg-gray-50"
+                          className="flex flex-col gap-2 p-3 rounded-lg border border-[#E5E5E5] hover:bg-gray-50"
                         >
-                          <span className="font-medium text-brand-text-strong">{job.title || "Job Title"}</span>
-                          {(job.description || job.role) && (
-                            <span className="text-sm text-brand-text-weak truncate">{job.description || job.role}</span>
-                          )}
-                          {(job.createdAt || job.created_at) && (
-                            <span className="text-xs text-brand-text-weak">
-                              Posted: {new Date(job.createdAt || job.created_at).toLocaleDateString()}
-                            </span>
-                          )}
+                          <div className="flex items-start justify-between gap-3">
+                            <div className="flex flex-col gap-0.5 min-w-0">
+                              <span className="font-medium text-brand-text-strong truncate">
+                                {job.title || "Job Title"}
+                              </span>
+                              {(job.description || job.role) && (
+                                <span className="text-sm text-brand-text-weak truncate max-w-xl">
+                                  {job.description || job.role}
+                                </span>
+                              )}
+                              {(job.createdAt || job.created_at) && (
+                                <span className="text-xs text-brand-text-weak">
+                                  Posted: {new Date(job.createdAt || job.created_at).toLocaleDateString()}
+                                </span>
+                              )}
+                            </div>
+                            <div className="flex items-center gap-2 shrink-0">
+                              <button
+                                type="button"
+                                onClick={() => {
+                                  setSelectedJobForEdit(job);
+                                  setShowEditJobModal(true);
+                                }}
+                                className="px-3 py-1.5 rounded-md border border-brand-stroke-border text-xs font-medium text-brand-text-strong hover:bg-brand-bg-fill transition-colors"
+                              >
+                                Edit
+                              </button>
+                              <button
+                                type="button"
+                                onClick={async () => {
+                                  try {
+                                    const res = await fetch(`/api/jobs/${job.id}`, {
+                                      method: "DELETE",
+                                      credentials: "same-origin",
+                                    });
+                                    if (res.ok) {
+                                      setJobsPosted((prev) => prev.filter((j) => j.id !== job.id));
+                                      setJobCount((prev) => Math.max(0, prev - 1));
+                                    } else {
+                                      console.error("Failed to delete job", await res.text());
+                                    }
+                                  } catch (e) {
+                                    console.error("Error deleting job:", e);
+                                  }
+                                }}
+                                className="px-3 py-1.5 rounded-md border border-red-200 text-xs font-medium text-red-600 hover:bg-red-50 transition-colors"
+                              >
+                                Delete
+                              </button>
+                              <button
+                                type="button"
+                                onClick={async () => {
+                                  try {
+                                    const res = await fetch(`/api/jobs/${job.id}`, {
+                                      method: "PATCH",
+                                      headers: { "Content-Type": "application/json" },
+                                      credentials: "same-origin",
+                                      body: JSON.stringify({
+                                        expiresAt: new Date(Date.now() + 14 * 24 * 60 * 60 * 1000).toISOString(),
+                                      }),
+                                    });
+                                    if (res.ok) {
+                                      const data = await res.json().catch(() => ({}));
+                                      if (data.success && data.job) {
+                                        setJobsPosted((prev) =>
+                                          prev.map((j) => (j.id === job.id ? data.job : j))
+                                        );
+                                      }
+                                    } else {
+                                      console.error("Failed to extend job", await res.text());
+                                    }
+                                  } catch (e) {
+                                    console.error("Error extending job:", e);
+                                  }
+                                }}
+                                className="px-3 py-1.5 rounded-md border border-brand-stroke-border text-xs font-medium text-brand hover:bg-brand/5 transition-colors"
+                              >
+                                Extend 2 weeks
+                              </button>
+                            </div>
+                          </div>
                         </li>
                       ))}
                     </ul>
