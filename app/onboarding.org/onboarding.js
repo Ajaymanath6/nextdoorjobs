@@ -36,6 +36,7 @@ const COMPANY_FIELDS = {
   DISTRICT: "company_district",
   WEBSITE: "company_website",
   FUNDING: "company_funding",
+  DESCRIPTION: "company_description",
   LOCATION: "company_location",
   PINCODE: "company_pincode",
 };
@@ -793,6 +794,16 @@ export default function OnboardingPage() {
             // This case is handled by FundingSeriesBadges callback
             break;
 
+          case COMPANY_FIELDS.DESCRIPTION:
+            if (value.toLowerCase() !== "skip" && value) {
+              setCompanyData((prev) => ({ ...prev, description: value }));
+            }
+            setCollectingCompany(false);
+            setCurrentField(JOB_FIELDS.TITLE);
+            await addAIMessage("Excellent! Company information collected.");
+            await addAIMessage("Now let's add the job position details. What's the job title?");
+            break;
+
           case COMPANY_FIELDS.LOCATION:
             // This case is handled by GetCoordinatesButton callback only
             break;
@@ -1180,17 +1191,12 @@ export default function OnboardingPage() {
   const handleFundingSelected = async (series) => {
     await saveConversation(COMPANY_FIELDS.FUNDING, lastAIMessageTextRef.current, series);
     setIsLoading(true);
-    
-    // Location and other company details were already collected, move to job details
-    setCollectingCompany(false);
-    setCurrentField(JOB_FIELDS.TITLE);
-    
     if (series.toLowerCase() !== "skip") {
-      await addAIMessage(`Funding series: ${series}. Excellent! Company information collected.`);
+      await addAIMessage(`Funding series: ${series}. What's a short company description for job seekers? (Type "skip" to skip.)`);
     } else {
-      await addAIMessage(`No problem! Company information collected.`);
+      await addAIMessage(`No problem! What's a short company description for job seekers? (Type "skip" to skip.)`);
     }
-    await addAIMessage("Now let's add the job position details. What's the job title?");
+    setCurrentField(COMPANY_FIELDS.DESCRIPTION);
     setIsLoading(false);
   };
 
@@ -1483,6 +1489,9 @@ export default function OnboardingPage() {
       if (collectingCompany && companyData && companyData.name) {
         const companyFormData = new FormData();
         companyFormData.append("name", companyData.name || "");
+        if (companyData.description) {
+          companyFormData.append("description", companyData.description);
+        }
         if (companyData.logo) {
           companyFormData.append("logo", companyData.logo);
         }
@@ -1736,6 +1745,9 @@ export default function OnboardingPage() {
       for (let attempt = 0; attempt <= 1; attempt++) {
         const companyFormData = new FormData();
         companyFormData.append("name", name);
+        if (companyData.description) {
+          companyFormData.append("description", companyData.description);
+        }
         if (includeLogo && companyData.logo) {
           companyFormData.append("logo", companyData.logo);
         } else if (companyData.logoUrl) {

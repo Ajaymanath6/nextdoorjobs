@@ -1945,10 +1945,11 @@ const MapComponent = ({ onOpenSettings, onViewModeChange }) => {
     });
   };
 
-  // Job posting pindrop: round, primary border, shadow; optional logoUrl (else gemni.png). Optional companyName + jobCount show two badges: company name (top), openings count (bottom).
+  // Job posting pindrop: round, primary border, shadow; optional logoUrl (else gemni.png). Optional companyName + jobCount show two badges: company name (top, white bg), openings count (bottom, primary).
   const PRIMARY_BORDER = "#F84416";
   const DEFAULT_LOGO = "/gemni.png";
-  const badgeStyle = `white-space:nowrap;background:${PRIMARY_BORDER};color:#fff;font-size:10px;font-weight:600;padding:2px 6px;border-radius:10px;box-shadow:0 1px 4px rgba(0,0,0,0.2);font-family:'Open Sans',sans-serif;max-width:90px;overflow:hidden;text-overflow:ellipsis;`;
+  const badgeStyleFirst = `white-space:nowrap;background:#FFFFFF;color:#1A1A1A;font-size:10px;font-weight:600;padding:2px 6px;border-radius:10px;box-shadow:0 1px 4px rgba(0,0,0,0.2);font-family:'Open Sans',sans-serif;max-width:90px;overflow:hidden;text-overflow:ellipsis;border:1px solid #E5E5E5;`;
+  const badgeStyleSecond = `white-space:nowrap;background:${PRIMARY_BORDER};color:#fff;font-size:10px;font-weight:600;padding:2px 6px;border-radius:10px;box-shadow:0 1px 4px rgba(0,0,0,0.2);font-family:'Open Sans',sans-serif;max-width:90px;overflow:hidden;text-overflow:ellipsis;`;
   const createGeminiJobIcon = (L, size = 50, logoUrl = null, jobCount = 0, companyName = null) => {
     const imgSrc = logoUrl || DEFAULT_LOGO;
     const safeSrc = imgSrc.replace(/"/g, "&quot;");
@@ -1963,11 +1964,11 @@ const MapComponent = ({ onOpenSettings, onViewModeChange }) => {
     let badgeHtml = "";
     let top = size;
     if (hasNameBadge) {
-      badgeHtml += `<div class="company-marker-badge" style="position:absolute;left:50%;top:${top}px;transform:translateX(-50%);${badgeStyle}">${safeName}</div>`;
+      badgeHtml += `<div class="company-marker-badge" style="position:absolute;left:50%;top:${top}px;transform:translateX(-50%);${badgeStyleFirst}">${safeName}</div>`;
       top += badgeHeight;
     }
     if (hasCountBadge) {
-      badgeHtml += `<div class="company-marker-badge" style="position:absolute;left:50%;top:${top}px;transform:translateX(-50%);${badgeStyle}">${countLabel}</div>`;
+      badgeHtml += `<div class="company-marker-badge" style="position:absolute;left:50%;top:${top}px;transform:translateX(-50%);${badgeStyleSecond}">${countLabel}</div>`;
     }
     const html = `<div class="company-marker" style="position:relative;width:${size}px;height:${totalH}px;cursor:pointer;"><div style="position:relative;width:${size}px;height:${size}px;background-color:#FFFFFF;border-radius:50%;display:flex;align-items:center;justify-content:center;transition:transform 0.2s ease;box-shadow:0 2px 8px rgba(0,0,0,0.15),0 1px 3px rgba(0,0,0,0.1);border:2px solid ${PRIMARY_BORDER};overflow:hidden;"><img src="${safeSrc}" alt="Job" style="width:100%;height:100%;object-fit:cover;" onerror="this.onerror=null;this.src='${DEFAULT_LOGO}';" /></div>${badgeHtml}</div>`;
     return L.divIcon({
@@ -1991,11 +1992,11 @@ const MapComponent = ({ onOpenSettings, onViewModeChange }) => {
     let badgeHtml = "";
     let top = size;
     if (hasNameBadge) {
-      badgeHtml += `<div style="position:absolute;left:50%;top:${top}px;transform:translateX(-50%);${badgeStyle}">${safeName}</div>`;
+      badgeHtml += `<div style="position:absolute;left:50%;top:${top}px;transform:translateX(-50%);${badgeStyleFirst}">${safeName}</div>`;
       top += badgeHeight;
     }
     if (hasCountBadge) {
-      badgeHtml += `<div style="position:absolute;left:50%;top:${top}px;transform:translateX(-50%);${badgeStyle}">${countLabel}</div>`;
+      badgeHtml += `<div style="position:absolute;left:50%;top:${top}px;transform:translateX(-50%);${badgeStyleSecond}">${countLabel}</div>`;
     }
     const html = `
       <div style="position:relative;width:${size}px;height:${totalH}px;">

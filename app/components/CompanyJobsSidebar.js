@@ -16,6 +16,8 @@ export default function CompanyJobsSidebar({ company, jobs, isOpen, onClose }) {
   const logoUrl = company.logoPath || company.logoUrl || null;
   const positionsCount = jobs.length;
   const positionsLabel = positionsCount === 1 ? "1 position" : `${positionsCount} positions`;
+  const aboutText = company.description ?? ABOUT_COMPANY_TEXT;
+  const showAbout = aboutText.trim().length > 0;
 
   return (
     <div 
@@ -71,13 +73,15 @@ export default function CompanyJobsSidebar({ company, jobs, isOpen, onClose }) {
         </div>
       </div>
 
-      {/* About the company */}
-      <div className="shrink-0 px-6 py-3 border-b border-brand-stroke-weak">
-        <p className="text-xs font-medium text-brand-text-weak mb-1.5">About the company</p>
-        <p className="text-[12px] leading-relaxed text-brand-text-weak whitespace-pre-line">
-          {ABOUT_COMPANY_TEXT}
-        </p>
-      </div>
+      {/* About the company - max 4 lines; hide if no description */}
+      {showAbout && (
+        <div className="shrink-0 px-6 py-3 border-b border-brand-stroke-weak">
+          <p className="text-xs font-medium text-brand-text-weak mb-1.5">About the company</p>
+          <p className="text-[12px] leading-relaxed text-brand-text-weak whitespace-pre-line line-clamp-4 overflow-hidden">
+            {aboutText}
+          </p>
+        </div>
+      )}
 
       {/* Scrollable job cards - minimal scrollbar */}
       <div className="flex-1 min-h-0 overflow-y-auto company-jobs-sidebar-scroll px-6 py-4">

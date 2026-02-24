@@ -30,6 +30,7 @@ const COMPANY_FIELDS = {
   DISTRICT: "company_district",
   WEBSITE: "company_website",
   FUNDING: "company_funding",
+  DESCRIPTION: "company_description",
   LOCATION: "company_location",
   PINCODE: "company_pincode",
 };
@@ -848,6 +849,16 @@ setCurrentField(GIG_FIELDS.CUSTOMERS_TILL_DATE);
         return;
       }
 
+      // Company flow: free-text company description
+      if (collectingCompany && currentField === COMPANY_FIELDS.DESCRIPTION) {
+        const value = extractValue(message);
+        if (value.toLowerCase() !== "skip" && value) {
+          setCompanyData((prev) => ({ ...prev, description: value }));
+        }
+        await handleDescriptionSubmitted();
+        return;
+      }
+
       setIsLoading(false);
     }, 500);
   };
@@ -1003,12 +1014,19 @@ setCurrentField(GIG_FIELDS.CUSTOMERS_TILL_DATE);
     await saveConversation(COMPANY_FIELDS.FUNDING, lastAIMessageTextRef.current, series);
     setIsLoading(true);
     if (series.toLowerCase() !== "skip") {
-      await addAIMessage(`Funding series: ${series}. Do you have latitude and longitude coordinates?`);
+      await addAIMessage(`Funding series: ${series}. What's a short company description for job seekers? (Type "skip" to skip.)`);
     } else {
-      await addAIMessage(`No problem! Do you have latitude and longitude coordinates?`);
+      await addAIMessage(`No problem! What's a short company description for job seekers? (Type "skip" to skip.)`);
     }
+    setCurrentField(COMPANY_FIELDS.DESCRIPTION);
+    setIsLoading(false);
+  };
+
+  // Handle company description submitted (from chat text); then ask for coordinates
+  const handleDescriptionSubmitted = async () => {
+    setIsLoading(true);
+    await addAIMessage("Do you have latitude and longitude coordinates?");
     setCurrentField(COMPANY_FIELDS.LOCATION);
-    // If we already have coordinates (e.g. from company URL fetch), skip GetCoordinatesButton
     if (companyData?.latitude != null && companyData?.longitude != null) {
       await handleCoordinatesReceived(companyData.latitude, companyData.longitude);
       return;
@@ -1032,6 +1050,7 @@ setCurrentField(GIG_FIELDS.CUSTOMERS_TILL_DATE);
       />
     );
     setIsLoading(false);
+    setTimeout(() => scrollToInlineRef.current?.(), 150);
   };
 
   // Handle pincode selected from dropdown (or skip)
@@ -1446,6 +1465,9 @@ setCurrentField(GIG_FIELDS.CUSTOMERS_TILL_DATE);
       if (collectingCompany && companyData && companyData.name) {
         const companyFormData = new FormData();
         companyFormData.append("name", companyData.name || "");
+        if (companyData.description) {
+          companyFormData.append("description", companyData.description);
+        }
         if (companyData.logo) {
           companyFormData.append("logo", companyData.logo);
         }

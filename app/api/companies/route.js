@@ -33,6 +33,7 @@ export async function GET(request) {
       select: {
         id: true,
         name: true,
+        description: true,
         logoPath: true,
         latitude: true,
         longitude: true,
@@ -55,6 +56,7 @@ export async function GET(request) {
       id: company.id,
       name: company.name,
       company_name: company.name,
+      description: company.description ?? undefined,
       logoPath: company.logoPath,
       logoUrl: company.logoPath,
       lat: parseFloat(company.latitude),

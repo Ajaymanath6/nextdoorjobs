@@ -9,6 +9,7 @@ import { getCurrentUser } from "../../../../lib/getCurrentUser";
  * Create a new company with logo upload
  * Body: FormData with:
  *   - name: string
+ *   - description: string (optional)
  *   - logo: File (optional)
  *   - websiteUrl: string (optional)
  *   - fundingSeries: string (optional)
@@ -25,6 +26,7 @@ export async function POST(request) {
 
     // Extract form fields
     const name = formData.get("name");
+    const description = formData.get("description");
     const websiteUrl = formData.get("websiteUrl");
     const fundingSeries = formData.get("fundingSeries");
     const latitude = formData.get("latitude");
@@ -102,9 +104,12 @@ export async function POST(request) {
     let company;
     
     if (existing) {
-      // Update logo if new one provided
-      if (logoPath) {
-        company = await companyService.updateCompany(existing.id, { logoPath });
+      // Update logo and/or description if provided
+      const updateData = {};
+      if (logoPath) updateData.logoPath = logoPath;
+      if (description !== null && description !== undefined) updateData.description = String(description).trim() || null;
+      if (Object.keys(updateData).length > 0) {
+        company = await companyService.updateCompany(existing.id, updateData);
       } else {
         company = existing;
       }
@@ -113,6 +118,7 @@ export async function POST(request) {
       try {
         company = await companyService.createCompany(userIdNum, {
           name: nameStr,
+          description: description != null ? String(description) : null,
           logoPath,
           websiteUrl,
           fundingSeries,
@@ -135,6 +141,7 @@ export async function POST(request) {
       company: {
         id: company.id,
         name: company.name,
+        description: company.description ?? undefined,
         logoPath: company.logoPath,
         websiteUrl: company.websiteUrl,
         fundingSeries: company.fundingSeries,

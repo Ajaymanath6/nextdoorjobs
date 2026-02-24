@@ -54,20 +54,20 @@ export default function JobDetailCard({ job, company, onApply }) {
 
       <div className="border-t border-brand-stroke-weak shrink-0" />
 
-      {/* Job Description - compact, line-clamp */}
-      <div className="space-y-0.5 min-h-0 overflow-hidden">
-        <div className="flex items-start gap-1.5">
+      {/* Job Description - compact, line-clamp; See more/See less always visible when truncated */}
+      <div className="space-y-0.5 min-h-0 flex flex-col">
+        <div className="flex items-start gap-1.5 min-w-0">
           <Document size={14} className="text-brand-stroke-strong shrink-0 mt-0.5" />
-          <div className="flex-1 min-w-0">
+          <div className="flex-1 min-w-0 overflow-hidden">
             <p className={`text-xs text-brand-text-strong ${showFullDescription ? "whitespace-pre-wrap" : "line-clamp-2"}`}>
               {description}
             </p>
             {needsTruncation && (
               <button
                 onClick={() => setShowFullDescription(!showFullDescription)}
-                className="text-xs text-brand underline mt-0.5"
+                className="text-xs text-brand underline mt-0.5 shrink-0"
               >
-                {showFullDescription ? "See less" : "more"}
+                {showFullDescription ? "See less" : "See more"}
               </button>
             )}
           </div>
