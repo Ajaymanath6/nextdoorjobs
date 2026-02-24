@@ -65,11 +65,13 @@ const SUBSCRIPTION_PLANS = [
   },
 ];
 
-const SUBSCRIPTION_CHECKOUT_URL = process.env.NEXT_PUBLIC_SUBSCRIPTION_CHECKOUT_URL || "";
+const RAZORPAY_KEY_ID = process.env.NEXT_PUBLIC_RAZORPAY_KEY_ID || "";
 
 export default function SettingsModal({ isOpen, onClose, initialSection }) {
   const router = useRouter();
   const [activeSection, setActiveSection] = useState("general");
+  const [subscriptionPaying, setSubscriptionPaying] = useState(false);
+  const razorpayScriptLoadedRef = useRef(false);
 
   // When modal opens with initialSection, switch to that tab
   useEffect(() => {
@@ -300,6 +302,102 @@ export default function SettingsModal({ isOpen, onClose, initialSection }) {
   const clearResumeMessages = () => {
     if (resumeError) setResumeError(null);
     if (resumeSuccess) setResumeSuccess(false);
+  };
+
+  const loadRazorpayScript = () => {
+    if (typeof window === "undefined") return Promise.reject(new Error("No window"));
+    if (window.Razorpay) return Promise.resolve();
+    if (razorpayScriptLoadedRef.current) return Promise.resolve();
+    return new Promise((resolve, reject) => {
+      const script = document.createElement("script");
+      script.src = "https://checkout.razorpay.com/v1/checkout.js";
+      script.async = true;
+      script.onload = () => {
+        razorpayScriptLoadedRef.current = true;
+        resolve();
+      };
+      script.onerror = () => reject(new Error("Failed to load Razorpay"));
+      document.head.appendChild(script);
+    });
+  };
+
+  const handleSubscriptionCheckout = async () => {
+    const planId = selectedPlanId;
+    const plan = SUBSCRIPTION_PLANS.find((p) => p.id === planId);
+    if (!planId || !plan) return;
+    if (!RAZORPAY_KEY_ID) {
+      alert("Razorpay is not configured. Set NEXT_PUBLIC_RAZORPAY_KEY_ID and RAZORPAY_KEY_SECRET in your environment.");
+      return;
+    }
+    setSubscriptionPaying(true);
+    try {
+      const orderRes = await fetch("/api/subscription/create-order", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        credentials: "same-origin",
+        body: JSON.stringify({ planId }),
+      });
+      const orderData = await orderRes.json().catch(() => ({}));
+      if (!orderRes.ok) {
+        alert(orderData.error || "Could not create order. Try again.");
+        return;
+      }
+      const { orderId, amount, currency, keyId } = orderData;
+      await loadRazorpayScript();
+      const options = {
+        key: keyId,
+        amount: String(amount),
+        currency: currency || "INR",
+        name: "MapMyGig",
+        description: `${plan.name} – ${plan.priceLabel || "/ year"}`,
+        order_id: orderId,
+        handler: async (response) => {
+          try {
+            const verifyRes = await fetch("/api/subscription/verify-payment", {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              credentials: "same-origin",
+              body: JSON.stringify({
+                orderId: response.razorpay_order_id,
+                paymentId: response.razorpay_payment_id,
+                razorpaySignature: response.razorpay_signature,
+              }),
+            });
+            const verifyData = await verifyRes.json().catch(() => ({}));
+            if (verifyRes.ok && verifyData.success) {
+              alert(`Payment successful! You're now on ${plan.name}.`);
+              setShowUpgradeModal(false);
+              setSelectedPlanId(null);
+            } else {
+              alert(verifyData.error || "Payment verification failed. Contact support if you were charged.");
+            }
+          } catch (e) {
+            console.error(e);
+            alert("Verification failed. Contact support if you were charged.");
+          } finally {
+            setSubscriptionPaying(false);
+          }
+        },
+        prefill: {
+          name: user?.name || "",
+          email: user?.email || "",
+        },
+        theme: { color: "#F84416" },
+        modal: {
+          ondismiss: () => setSubscriptionPaying(false),
+        },
+      };
+      const rzp = new window.Razorpay(options);
+      rzp.on("payment.failed", () => {
+        setSubscriptionPaying(false);
+        alert("Payment failed or was cancelled.");
+      });
+      rzp.open();
+    } catch (err) {
+      console.error(err);
+      alert(err.message || "Something went wrong. Try again.");
+      setSubscriptionPaying(false);
+    }
   };
 
   // Input validation helpers
@@ -1610,21 +1708,11 @@ export default function SettingsModal({ isOpen, onClose, initialSection }) {
               <div className="pt-2">
                 <button
                   type="button"
-                  onClick={() => {
-                    const plan = SUBSCRIPTION_PLANS.find((p) => p.id === selectedPlanId);
-                    if (SUBSCRIPTION_CHECKOUT_URL) {
-                      const url = `${SUBSCRIPTION_CHECKOUT_URL}${SUBSCRIPTION_CHECKOUT_URL.includes("?") ? "&" : "?"}plan=${selectedPlanId}`;
-                      window.location.href = url;
-                    } else {
-                      alert(`Checkout for ${plan?.name ?? selectedPlanId} will open here. Set NEXT_PUBLIC_SUBSCRIPTION_CHECKOUT_URL for Razorpay.`);
-                    }
-                  }}
-                  className="w-full flex items-center justify-center gap-2 px-4 py-3 rounded-md bg-brand text-brand-bg-white hover:opacity-90 font-medium text-sm"
+                  onClick={handleSubscriptionCheckout}
+                  disabled={subscriptionPaying}
+                  className="w-full flex items-center justify-center gap-2 px-4 py-3 rounded-md bg-brand text-brand-bg-white hover:opacity-90 font-medium text-sm disabled:opacity-70 disabled:cursor-not-allowed"
                 >
-                  {(() => {
-                    const plan = SUBSCRIPTION_PLANS.find((p) => p.id === selectedPlanId);
-                    return plan ? `Continue with ${plan.name}` : "Continue";
-                  })()}
+                  {subscriptionPaying ? "Opening…" : (SUBSCRIPTION_PLANS.find((p) => p.id === selectedPlanId) ? `Continue with ${SUBSCRIPTION_PLANS.find((p) => p.id === selectedPlanId).name}` : "Continue")}
                   <ArrowRight size={20} className="shrink-0" />
                 </button>
               </div>
