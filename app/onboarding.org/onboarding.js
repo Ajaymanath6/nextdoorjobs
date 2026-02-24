@@ -2255,7 +2255,7 @@ export default function OnboardingPage() {
                           className="flex flex-col gap-1 p-3 border-b border-[#E5E5E5] hover:bg-gray-50 cursor-pointer last:border-b-0"
                           onClick={async () => {
                             try {
-                              await fetch('/api/notifications/mark-read', {
+                              await fetch('/api/notifications', {
                                 method: 'POST',
                                 headers: { 'Content-Type': 'application/json' },
                                 credentials: 'same-origin',
