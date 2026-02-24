@@ -128,6 +128,13 @@ export default function SettingsModal({ isOpen, onClose, initialSection }) {
       .then((res) => (res.ok ? res.json() : null))
       .then((data) => {
         if (data?.success && data.user) {
+          const accountType = data.user.accountType;
+          const hasAccountType = accountType === "Individual" || accountType === "Company";
+          if (!hasAccountType) {
+            router.replace("/who-are-you");
+            onClose();
+            return;
+          }
           setUser(data.user);
           // Fetch companies if user is a Company account
           if (data.user.accountType === "Company") {
@@ -139,7 +146,7 @@ export default function SettingsModal({ isOpen, onClose, initialSection }) {
       })
       .catch(() => setUser(null))
       .finally(() => setLoading(false));
-  }, [isOpen]);
+  }, [isOpen, router, onClose]);
 
   const fetchCompanies = async () => {
     setCompanyLoading(true);

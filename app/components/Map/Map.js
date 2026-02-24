@@ -1222,7 +1222,7 @@ const MapComponent = ({ onOpenSettings, onViewModeChange }) => {
             return false;
           };
         } else if (chatLink) {
-          chatLink.onclick = async (e) => {
+          const openChatFn = async (e) => {
             e.preventDefault();
             const candidateId = gig.user?.id;
             if (!candidateId) return;
@@ -1273,7 +1273,7 @@ const MapComponent = ({ onOpenSettings, onViewModeChange }) => {
               setTimeout(() => {
                 const popupEl = marker.getPopup()?.getElement();
                 if (!popupEl) return;
-                const wrapper = popupEl.closest?.('.leaflet-popup-content-wrapper') || popupEl.parentElement;
+                const wrapper = popupEl.querySelector?.('.leaflet-popup-content-wrapper') || popupEl.closest?.('.leaflet-popup-content-wrapper') || popupEl.parentElement;
                 if (wrapper) wrapper.classList.add('gig-popup-with-twin');
                 const chatIconLink = popupEl.querySelector('.map-popup-action-chat');
                 if (chatIconLink) chatIconLink.classList.add('active');
@@ -1298,7 +1298,7 @@ const MapComponent = ({ onOpenSettings, onViewModeChange }) => {
                     setTimeout(() => {
                       const popupEl2 = marker.getPopup()?.getElement();
                       if (popupEl2) {
-                        const wrap = popupEl2.closest?.('.leaflet-popup-content-wrapper') || popupEl2.parentElement;
+                        const wrap = popupEl2.querySelector?.('.leaflet-popup-content-wrapper') || popupEl2.closest?.('.leaflet-popup-content-wrapper') || popupEl2.parentElement;
                         if (wrap) wrap.classList.remove('gig-popup-with-twin');
                         const chatLink2 = popupEl2.querySelector('.map-popup-action-chat');
                         if (chatLink2) chatLink2.classList.remove('active');
@@ -1306,6 +1306,7 @@ const MapComponent = ({ onOpenSettings, onViewModeChange }) => {
                         if (seeBtn2) seeBtn2.onclick = () => { setSelectedGigForDistance(gig); setShowDistanceFromHome(true); };
                         const addBtn2 = popupEl2.querySelector('[data-action="add-home"]');
                         if (addBtn2) addBtn2.onclick = () => { setSelectedGigForDistance(gig); setShowAddHomeModal(true); };
+                        if (chatLink2 && marker._openChatHandler) chatLink2.onclick = marker._openChatHandler;
                       }
                     }, 0);
                   }
@@ -1336,6 +1337,8 @@ const MapComponent = ({ onOpenSettings, onViewModeChange }) => {
               alert("Could not start chat");
             }
           };
+          chatLink.onclick = openChatFn;
+          marker._openChatHandler = openChatFn;
         }
       });
       marker.on("popupclose", () => {
@@ -3465,7 +3468,7 @@ const MapComponent = ({ onOpenSettings, onViewModeChange }) => {
             return false;
           };
         } else if (chatLink) {
-          chatLink.onclick = async (e) => {
+          const openChatFn = async (e) => {
             e.preventDefault();
             const candidateId = gig.user?.id;
             if (!candidateId) return;
@@ -3516,7 +3519,7 @@ const MapComponent = ({ onOpenSettings, onViewModeChange }) => {
               setTimeout(() => {
                 const popupEl = marker.getPopup()?.getElement();
                 if (!popupEl) return;
-                const wrapper = popupEl.closest?.('.leaflet-popup-content-wrapper') || popupEl.parentElement;
+                const wrapper = popupEl.querySelector?.('.leaflet-popup-content-wrapper') || popupEl.closest?.('.leaflet-popup-content-wrapper') || popupEl.parentElement;
                 if (wrapper) wrapper.classList.add('gig-popup-with-twin');
                 const chatIconLink = popupEl.querySelector('.map-popup-action-chat');
                 if (chatIconLink) chatIconLink.classList.add('active');
@@ -3541,7 +3544,7 @@ const MapComponent = ({ onOpenSettings, onViewModeChange }) => {
                     setTimeout(() => {
                       const popupEl2 = marker.getPopup()?.getElement();
                       if (popupEl2) {
-                        const wrap = popupEl2.closest?.('.leaflet-popup-content-wrapper') || popupEl2.parentElement;
+                        const wrap = popupEl2.querySelector?.('.leaflet-popup-content-wrapper') || popupEl2.closest?.('.leaflet-popup-content-wrapper') || popupEl2.parentElement;
                         if (wrap) wrap.classList.remove('gig-popup-with-twin');
                         const chatLink2 = popupEl2.querySelector('.map-popup-action-chat');
                         if (chatLink2) chatLink2.classList.remove('active');
@@ -3549,6 +3552,7 @@ const MapComponent = ({ onOpenSettings, onViewModeChange }) => {
                         if (seeBtn2) seeBtn2.onclick = () => { setSelectedGigForDistance(gig); setShowDistanceFromHome(true); };
                         const addBtn2 = popupEl2.querySelector('[data-action="add-home"]');
                         if (addBtn2) addBtn2.onclick = () => { setSelectedGigForDistance(gig); setShowAddHomeModal(true); };
+                        if (chatLink2 && marker._openChatHandler) chatLink2.onclick = marker._openChatHandler;
                       }
                     }, 0);
                   }
@@ -3579,6 +3583,8 @@ const MapComponent = ({ onOpenSettings, onViewModeChange }) => {
               alert("Could not start chat");
             }
           };
+          chatLink.onclick = openChatFn;
+          marker._openChatHandler = openChatFn;
         }
       });
       marker.on("popupclose", () => {
