@@ -120,15 +120,16 @@ export default function OnboardingPage() {
   const handleProfileLogout = async () => {
     setShowUserDropdown(false);
     try {
-      if (signOut) await signOut();
       await fetch("/api/auth/logout", { method: "POST" });
-      router.push("/");
-      window.location.reload();
+      if (signOut) {
+        await signOut({ redirectUrl: "/" });
+      } else {
+        window.location.href = "/";
+      }
     } catch (e) {
       console.error("Logout error:", e);
-      await fetch("/api/auth/logout", { method: "POST" });
-      router.push("/");
-      window.location.reload();
+      await fetch("/api/auth/logout", { method: "POST" }).catch(() => {});
+      window.location.href = "/";
     }
   };
 
@@ -166,6 +167,7 @@ export default function OnboardingPage() {
   const [activeNotificationChatConversationId, setActiveNotificationChatConversationId] = useState(null);
   const [activeNotificationChatName, setActiveNotificationChatName] = useState("");
   const [activeNotificationChatEmail, setActiveNotificationChatEmail] = useState("");
+  const [activeNotificationChatCompanyName, setActiveNotificationChatCompanyName] = useState("");
   const [notificationCount, setNotificationCount] = useState(0);
   const [showNotificationsPanel, setShowNotificationsPanel] = useState(false);
   const [notificationTab, setNotificationTab] = useState("recruiter-messages");
@@ -2020,6 +2022,8 @@ export default function OnboardingPage() {
                     return;
                   }
                   setShowJobPostingsPanel(true);
+                  setShowCandidateListView(false);
+                  setShowNotificationsPanel(false);
                   setJobsPostedLoading(true);
                   try {
                     const res = await fetch("/api/onboarding/my-jobs", { credentials: "same-origin" });
@@ -2034,11 +2038,11 @@ export default function OnboardingPage() {
                     setJobsPostedLoading(false);
                   }
                 }}
-                className="p-2 rounded-lg hover:bg-gray-100 transition-colors flex items-center gap-1.5 relative"
+                className={`p-2 rounded-lg transition-colors flex items-center gap-1.5 relative ${showJobPostingsPanel ? "bg-brand/10 text-brand" : "hover:bg-gray-100"}`}
                 title="Job posting"
               >
-                <List size={20} style={{ color: "#575757" }} />
-                <span className="text-sm font-medium text-[#575757] hidden sm:inline">Job posting</span>
+                <List size={20} style={{ color: showJobPostingsPanel ? "var(--brand)" : "#575757" }} />
+                <span className={`text-sm font-medium hidden sm:inline ${showJobPostingsPanel ? "text-brand" : "text-[#575757]"}`}>Job posting</span>
                 {jobCount > 0 && (
                   <span 
                     className="absolute -top-1 -right-1 bg-brand text-white text-xs font-bold rounded-full min-w-[18px] h-[18px] flex items-center justify-center px-1"
@@ -2063,11 +2067,11 @@ export default function OnboardingPage() {
                       .finally(() => setCandidateChatsLoading(false));
                   }
                 }}
-                className="p-2 rounded-lg hover:bg-gray-100 transition-colors flex items-center gap-1.5"
+                className={`p-2 rounded-lg transition-colors flex items-center gap-1.5 ${showCandidateListView ? "bg-brand/10 text-brand" : "hover:bg-gray-100"}`}
                 title="Candidate list"
               >
-                <UserMultiple size={20} style={{ color: "#575757" }} />
-                <span className="text-sm font-medium text-[#575757] hidden sm:inline">Candidate list</span>
+                <UserMultiple size={20} style={{ color: showCandidateListView ? "var(--brand)" : "#575757" }} />
+                <span className={`text-sm font-medium hidden sm:inline ${showCandidateListView ? "text-brand" : "text-[#575757]"}`}>Candidate list</span>
               </button>
               <button
                 type="button"
@@ -2225,10 +2229,12 @@ export default function OnboardingPage() {
                   conversationId={activeNotificationChatConversationId}
                   otherPartyName={activeNotificationChatName}
                   otherPartyEmail={activeNotificationChatEmail}
+                  otherPartyCompanyName={activeNotificationChatCompanyName}
                   onClose={() => {
                     setActiveNotificationChatConversationId(null);
                     setActiveNotificationChatName("");
                     setActiveNotificationChatEmail("");
+                    setActiveNotificationChatCompanyName("");
                   }}
                 />
               ) : (
@@ -2283,8 +2289,9 @@ export default function OnboardingPage() {
                               setNotificationCount((prev) => Math.max(0, prev - 1));
                               if (notif.conversationId) {
                                 setActiveNotificationChatConversationId(notif.conversationId);
-                                setActiveNotificationChatName(notif.senderName || notif.senderOrgName || 'Candidate');
-                                setActiveNotificationChatEmail(notif.senderEmail || '');
+                                setActiveNotificationChatName(notif.senderName || "Recruiter");
+                                setActiveNotificationChatEmail(notif.senderEmail || "");
+                                setActiveNotificationChatCompanyName(notif.senderOrgName || "");
                               }
                             } catch (error) {
                               console.error('Error marking notification as read:', error);

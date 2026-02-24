@@ -7,6 +7,7 @@ export default function RecruiterChatPanel({
   conversationId,
   otherPartyName,
   otherPartyEmail,
+  otherPartyCompanyName,
   onClose,
   onNotificationCountChange,
 }) {
@@ -150,6 +151,11 @@ export default function RecruiterChatPanel({
             <span className="text-xs text-brand-text-weak truncate">{otherPartyEmail}</span>
           )}
         </div>
+        {otherPartyCompanyName && (
+          <div className="shrink-0 text-right ml-2">
+            <span className="text-xs font-medium text-brand-text-strong">{otherPartyCompanyName}</span>
+          </div>
+        )}
       </div>
 
       <div className="flex-1 overflow-y-auto p-4 min-h-0 flex flex-col gap-2">

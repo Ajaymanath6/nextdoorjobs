@@ -4159,15 +4159,16 @@ const MapComponent = ({ onOpenSettings, onViewModeChange }) => {
   const handleProfileLogout = async () => {
     setShowProfileDropdown(false);
     try {
-      if (signOut) await signOut();
       await fetch("/api/auth/logout", { method: "POST" });
-      router.push("/");
-      window.location.reload();
+      if (signOut) {
+        await signOut({ redirectUrl: "/" });
+      } else {
+        window.location.href = "/";
+      }
     } catch (e) {
       console.error("Logout error:", e);
-      await fetch("/api/auth/logout", { method: "POST" });
-      router.push("/");
-      window.location.reload();
+      await fetch("/api/auth/logout", { method: "POST" }).catch(() => {});
+      window.location.href = "/";
     }
   };
 

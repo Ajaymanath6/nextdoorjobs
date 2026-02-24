@@ -121,15 +121,16 @@ export default function OnboardingPage() {
   const handleProfileLogout = async () => {
     setShowUserDropdown(false);
     try {
-      if (signOut) await signOut();
       await fetch("/api/auth/logout", { method: "POST" });
-      router.push("/");
-      window.location.reload();
+      if (signOut) {
+        await signOut({ redirectUrl: "/" });
+      } else {
+        window.location.href = "/";
+      }
     } catch (e) {
       console.error("Logout error:", e);
-      await fetch("/api/auth/logout", { method: "POST" });
-      router.push("/");
-      window.location.reload();
+      await fetch("/api/auth/logout", { method: "POST" }).catch(() => {});
+      window.location.href = "/";
     }
   };
 
@@ -157,6 +158,7 @@ export default function OnboardingPage() {
   const [activeChatConversationId, setActiveChatConversationId] = useState(null);
   const [activeChatRecruiterName, setActiveChatRecruiterName] = useState("");
   const [activeChatRecruiterEmail, setActiveChatRecruiterEmail] = useState("");
+  const [activeChatRecruiterCompanyName, setActiveChatRecruiterCompanyName] = useState("");
   const onboardingSessionIdRef = useRef(null);
   const conversationOrderRef = useRef(0);
   const lastAIMessageTextRef = useRef("");
@@ -214,8 +216,9 @@ export default function OnboardingPage() {
             setNotificationCount(data.unreadCount || 0);
             const notif = list.find((n) => n.conversationId === id);
             if (notif) {
-              setActiveChatRecruiterName(notif.senderName || notif.senderOrgName || "Recruiter");
+              setActiveChatRecruiterName(notif.senderName || "Recruiter");
               setActiveChatRecruiterEmail(notif.senderEmail || "");
+              setActiveChatRecruiterCompanyName(notif.senderOrgName || "");
             }
           })
           .catch(() => setNotifications([]))
@@ -2178,10 +2181,12 @@ setCurrentField(GIG_FIELDS.CUSTOMERS_TILL_DATE);
                 conversationId={activeChatConversationId}
                 otherPartyName={activeChatRecruiterName}
                 otherPartyEmail={activeChatRecruiterEmail}
+                otherPartyCompanyName={activeChatRecruiterCompanyName}
                 onClose={() => {
                   setActiveChatConversationId(null);
                   setActiveChatRecruiterName("");
                   setActiveChatRecruiterEmail("");
+                  setActiveChatRecruiterCompanyName("");
                 }}
                 onNotificationCountChange={(count) => setNotificationCount(count)}
               />
@@ -2224,8 +2229,9 @@ setCurrentField(GIG_FIELDS.CUSTOMERS_TILL_DATE);
                               setNotificationCount((prev) => Math.max(0, prev - 1));
                               if (notif.conversationId) {
                                 setActiveChatConversationId(notif.conversationId);
-                                setActiveChatRecruiterName(notif.senderName || notif.senderOrgName || "Recruiter");
+                                setActiveChatRecruiterName(notif.senderName || "Recruiter");
                                 setActiveChatRecruiterEmail(notif.senderEmail || "");
+                                setActiveChatRecruiterCompanyName(notif.senderOrgName || "");
                               }
                             } catch (error) {
                               console.error("Error marking notification as read:", error);
