@@ -4161,14 +4161,14 @@ const MapComponent = ({ onOpenSettings, onViewModeChange }) => {
     try {
       await fetch("/api/auth/logout", { method: "POST" });
       if (signOut) {
-        await signOut({ redirectUrl: "/" });
+        await signOut({ redirectUrl: "/onboarding" });
       } else {
-        window.location.href = "/";
+        window.location.href = "/onboarding";
       }
     } catch (e) {
       console.error("Logout error:", e);
       await fetch("/api/auth/logout", { method: "POST" }).catch(() => {});
-      window.location.href = "/";
+      window.location.href = "/onboarding";
     }
   };
 
