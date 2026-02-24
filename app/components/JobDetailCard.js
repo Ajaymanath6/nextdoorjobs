@@ -3,7 +3,7 @@
 import { useState } from "react";
 import { Document } from "@carbon/icons-react";
 
-function truncateText(text, maxWords = 30) {
+function truncateText(text, maxWords = 15) {
   if (!text) return "";
   const words = text.split(" ");
   if (words.length <= maxWords) return text;
@@ -24,14 +24,14 @@ function getTimeAgo(dateString) {
 export default function JobDetailCard({ job, company }) {
   const [showFullDescription, setShowFullDescription] = useState(false);
 
-  const description = showFullDescription 
-    ? job.jobDescription 
-    : truncateText(job.jobDescription, 30);
+  const description = showFullDescription
+    ? job.jobDescription
+    : truncateText(job.jobDescription, 15);
 
-  const needsTruncation = job.jobDescription && job.jobDescription.split(" ").length > 30;
+  const needsTruncation = job.jobDescription && job.jobDescription.split(" ").length > 15;
 
   return (
-    <div className="border border-brand-stroke-weak rounded-lg p-4 bg-brand-bg-white space-y-3">
+    <div className="border border-brand-stroke-weak rounded-lg p-3 bg-brand-bg-white space-y-2">
       {/* Header: Icon + Title + Seniority + Time */}
       <div className="flex items-start gap-3">
         <div className="w-10 h-10 rounded-full bg-brand-bg-fill flex items-center justify-center shrink-0">
@@ -56,19 +56,19 @@ export default function JobDetailCard({ job, company }) {
       <div className="border-t border-brand-stroke-weak" />
 
       {/* Job Description */}
-      <div className="space-y-2">
+      <div className="space-y-1">
         <div className="flex items-start gap-2">
           <Document size={16} className="text-brand-stroke-strong shrink-0 mt-0.5" />
           <div className="flex-1 min-w-0">
-            <p className="text-sm text-brand-text-strong whitespace-pre-wrap">
+            <p className={`text-sm text-brand-text-strong ${showFullDescription ? "whitespace-pre-wrap" : "line-clamp-3"}`}>
               {description}
             </p>
-            {!showFullDescription && needsTruncation && (
+            {needsTruncation && (
               <button
-                onClick={() => setShowFullDescription(true)}
+                onClick={() => setShowFullDescription(!showFullDescription)}
                 className="text-sm text-brand underline mt-1"
               >
-                more
+                {showFullDescription ? "See less" : "more"}
               </button>
             )}
           </div>
