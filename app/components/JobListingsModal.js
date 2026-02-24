@@ -30,7 +30,7 @@ function getExpiryDate(createdAt, extensionCount) {
   return `in ${daysLeft} days`;
 }
 
-export default function JobListingsModal({ isOpen, onClose, jobs = [], onEdit, onDelete, onExtend, isLoading = false }) {
+export default function JobListingsModal({ isOpen, onClose, jobs = [], onEdit, onDelete, onExtend, isLoading = false, deletingJobId = null }) {
   if (!isOpen) return null;
 
   return (
@@ -118,11 +118,16 @@ export default function JobListingsModal({ isOpen, onClose, jobs = [], onEdit, o
                     {onDelete && (
                       <button
                         onClick={() => onDelete(job)}
-                        className="p-2 hover:bg-red-50 rounded-lg transition-colors"
+                        disabled={deletingJobId === job.id}
+                        className="p-2 hover:bg-red-50 rounded-lg transition-colors disabled:opacity-50 relative"
                         title="Delete job"
                         aria-label="Delete job"
                       >
-                        <TrashCan size={20} className="text-red-600" />
+                        {deletingJobId === job.id ? (
+                          <div className="w-5 h-5 border-2 border-red-600 border-t-transparent rounded-full animate-spin" />
+                        ) : (
+                          <TrashCan size={20} className="text-red-600" />
+                        )}
                       </button>
                     )}
                   </div>

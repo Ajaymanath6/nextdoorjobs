@@ -25,6 +25,7 @@ import TeamSizeSelector from "../components/Onboarding/TeamSizeSelector";
 import PerksSelector from "../components/Onboarding/PerksSelector";
 import HolidaysInput from "../components/Onboarding/HolidaysInput";
 import RecruiterChatPanel from "../components/RecruiterChatPanel";
+import ConfirmDeleteModal from "../components/ConfirmDeleteModal";
 import { useUnreadNotificationCount } from "../hooks/useUnreadNotificationCount";
 
 // Field collection states
@@ -154,6 +155,9 @@ export default function OnboardingPage() {
   const [isLoadingJobs, setIsLoadingJobs] = useState(false);
   const [showEditJobModal, setShowEditJobModal] = useState(false);
   const [selectedJobForEdit, setSelectedJobForEdit] = useState(null);
+  const [jobToDelete, setJobToDelete] = useState(null);
+  const [deleteJobConfirmOpen, setDeleteJobConfirmOpen] = useState(false);
+  const [deletingJobId, setDeletingJobId] = useState(null);
   const [jobCount, setJobCount] = useState(0);
   const [showCandidateListView, setShowCandidateListView] = useState(false);
   const [candidateListTab, setCandidateListTab] = useState("chats");
@@ -481,21 +485,42 @@ export default function OnboardingPage() {
     }
   };
 
-  // Handle job delete
-  const handleDeleteJob = async (job) => {
-    if (!confirm(`Are you sure you want to delete "${job.title}"?`)) return;
-    
+  // Handle job delete: open confirmation modal (actual delete in modal onConfirm)
+  const handleDeleteJob = (job) => {
+    setJobToDelete(job);
+    setDeleteJobConfirmOpen(true);
+  };
+
+  const handleConfirmDeleteJob = async () => {
+    if (!jobToDelete) return;
+    setDeletingJobId(jobToDelete.id);
+    setDeleteJobConfirmOpen(false);
+
     try {
-      const res = await fetch(`/api/jobs/${job.id}`, {
+      const res = await fetch(`/api/jobs/${jobToDelete.id}`, {
         method: "DELETE",
         credentials: "same-origin",
       });
-      if (res.ok) {
-        // Refresh job listings
-        handleShowJobListings();
+      const data = await res.json().catch(() => ({ success: false }));
+
+      if (res.ok && data.success !== false) {
+        setCompanyJobs((prev) => prev.filter((j) => j.id !== jobToDelete.id));
+        setJobsPosted((prev) => prev.filter((j) => j.id !== jobToDelete.id));
+        setJobCount((prev) => Math.max(0, prev - 1));
+        await handleShowJobListings();
+      } else {
+        const errorMsg = data.error || "Failed to delete job";
+        console.error("Delete job failed:", errorMsg);
+        await handleShowJobListings();
+        alert(`Failed to delete job: ${errorMsg}`);
       }
-    } catch (error) {
-      console.error("Error deleting job:", error);
+    } catch (err) {
+      console.error("Error deleting job:", err);
+      await handleShowJobListings();
+      alert("Failed to delete job. Please try again.");
+    } finally {
+      setDeletingJobId(null);
+      setJobToDelete(null);
     }
   };
 
@@ -2587,6 +2612,20 @@ export default function OnboardingPage() {
         onDelete={handleDeleteJob}
         onExtend={handleExtendJob}
         isLoading={isLoadingJobs}
+        deletingJobId={deletingJobId}
+      />
+
+      <ConfirmDeleteModal
+        isOpen={deleteJobConfirmOpen}
+        onClose={() => {
+          setDeleteJobConfirmOpen(false);
+          setJobToDelete(null);
+        }}
+        onConfirm={handleConfirmDeleteJob}
+        title="Delete this job posting?"
+        message={jobToDelete ? `This will remove "${jobToDelete.title}" from the map and listings. This cannot be undone.` : "This cannot be undone."}
+        confirmText="Delete"
+        cancelText="Cancel"
       />
 
       <EditJobModal

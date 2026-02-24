@@ -2016,15 +2016,16 @@ const MapComponent = ({ onOpenSettings, onViewModeChange }) => {
           setSearchMode("person");
         }
         setMeUser(user);
-      })
-      .catch(() => {});
-
-    // Fetch total companies count
-    fetch("/api/companies")
-      .then((res) => res.ok ? res.json() : null)
-      .then((data) => {
-        if (data?.companies && Array.isArray(data.companies)) {
-          setTotalCompaniesCount(data.companies.length);
+        // Only fetch total companies count for non-Company accounts (Company account count is set in company-mode effect)
+        if (user?.accountType !== "Company") {
+          fetch("/api/companies")
+            .then((res) => res.ok ? res.json() : null)
+            .then((data) => {
+              if (data?.companies && Array.isArray(data.companies)) {
+                setTotalCompaniesCount(data.companies.length);
+              }
+            })
+            .catch(() => {});
         }
       })
       .catch(() => {});
@@ -2355,31 +2356,31 @@ const MapComponent = ({ onOpenSettings, onViewModeChange }) => {
           if (res.ok) {
             const data = await res.json();
             const ownCompanies = Array.isArray(data?.companies) ? data.companies : [];
-            companies =
-              ownCompanies
-                .filter((c) => c.latitude != null && c.longitude != null)
-                .map((c) => ({
-                  id: c.id,
-                  name: c.name,
-                  company_name: c.name,
-                  logoPath: c.logoPath,
-                  logoUrl: c.logoPath,
-                  lat: Number(c.latitude),
-                  lon: Number(c.longitude),
-                  latitude: Number(c.latitude),
-                  longitude: Number(c.longitude),
-                  state: c.state,
-                  district: c.district,
-                  // Fallback: jobCount will be 0 unless API includes counts
-                  jobCount:
-                    typeof c.jobCount === "number"
-                      ? c.jobCount
-                      : Array.isArray(c.jobPositions)
-                        ? c.jobPositions.length
-                        : 0,
-                }));
+            const withCoords = ownCompanies
+              .filter((c) => c.latitude != null && c.longitude != null)
+              .map((c) => ({
+                id: c.id,
+                name: c.name,
+                company_name: c.name,
+                logoPath: c.logoPath,
+                logoUrl: c.logoPath,
+                lat: Number(c.latitude),
+                lon: Number(c.longitude),
+                latitude: Number(c.latitude),
+                longitude: Number(c.longitude),
+                state: c.state,
+                district: c.district,
+                jobCount:
+                  typeof c.jobCount === "number"
+                    ? c.jobCount
+                    : Array.isArray(c.jobPositions)
+                      ? c.jobPositions.length
+                      : 0,
+              }));
+            // Company account: only one avatar on map; side panel shows all jobs for that company
+            companies = withCoords.length > 0 ? [withCoords[0]] : [];
             setTotalCompaniesCount(companies.length);
-            console.log("[Map] Fetched companies for current Company account:", companies.length);
+            console.log("[Map] Company account: showing single avatar for map");
           } else {
             console.error("[Map] Failed to fetch current user's companies:", res.status);
             setTotalCompaniesCount(0);
