@@ -2347,20 +2347,58 @@ const MapComponent = ({ onOpenSettings, onViewModeChange }) => {
 
       // Fetch companies from API to display on map
       let companies = [];
-      
+
       try {
-        const res = await fetch('/api/companies');
-        if (res.ok) {
-          const data = await res.json();
-          companies = data.companies || [];
-          setTotalCompaniesCount(companies.length);
-          console.log('✅ Fetched companies for map:', companies.length);
+        if (userAccountType === "Company") {
+          // Company accounts: only show this user's own company/companies
+          const res = await fetch("/api/onboarding/company", { credentials: "same-origin" });
+          if (res.ok) {
+            const data = await res.json();
+            const ownCompanies = Array.isArray(data?.companies) ? data.companies : [];
+            companies =
+              ownCompanies
+                .filter((c) => c.latitude != null && c.longitude != null)
+                .map((c) => ({
+                  id: c.id,
+                  name: c.name,
+                  company_name: c.name,
+                  logoPath: c.logoPath,
+                  logoUrl: c.logoPath,
+                  lat: Number(c.latitude),
+                  lon: Number(c.longitude),
+                  latitude: Number(c.latitude),
+                  longitude: Number(c.longitude),
+                  state: c.state,
+                  district: c.district,
+                  // Fallback: jobCount will be 0 unless API includes counts
+                  jobCount:
+                    typeof c.jobCount === "number"
+                      ? c.jobCount
+                      : Array.isArray(c.jobPositions)
+                        ? c.jobPositions.length
+                        : 0,
+                }));
+            setTotalCompaniesCount(companies.length);
+            console.log("[Map] Fetched companies for current Company account:", companies.length);
+          } else {
+            console.error("[Map] Failed to fetch current user's companies:", res.status);
+            setTotalCompaniesCount(0);
+          }
         } else {
-          console.error('Failed to fetch companies:', res.status);
-          setTotalCompaniesCount(0);
+          // Individual/Gig worker accounts: show all companies with active jobs
+          const res = await fetch("/api/companies");
+          if (res.ok) {
+            const data = await res.json();
+            companies = data.companies || [];
+            setTotalCompaniesCount(companies.length);
+            console.log("✅ Fetched companies for map:", companies.length);
+          } else {
+            console.error("Failed to fetch companies:", res.status);
+            setTotalCompaniesCount(0);
+          }
         }
       } catch (error) {
-        console.error('Error fetching companies:', error);
+        console.error("Error fetching companies:", error);
         setTotalCompaniesCount(0);
       }
 
@@ -2606,7 +2644,7 @@ const MapComponent = ({ onOpenSettings, onViewModeChange }) => {
     };
 
     addMarkersToMap();
-  }, [mapInstanceRef.current, locationsData, searchMode]);
+  }, [mapInstanceRef.current, locationsData, searchMode, userAccountType]);
 
   // Zoom to job coordinates when arriving from "See your posting on the map"
   useEffect(() => {
@@ -4672,7 +4710,9 @@ const MapComponent = ({ onOpenSettings, onViewModeChange }) => {
                         size={20}
                         className={`w-5 h-5 shrink-0 ${searchMode === "person" ? searchBar["toggle-segment-icon-active"] + " text-brand" : searchBar["toggle-segment-icon"]}`}
                       />
-                      <span className={`text-sm font-medium ${searchMode === "person" ? searchBar["toggle-segment-icon-active"] + " text-brand" : searchBar["toggle-segment-icon"]}`}>Gigs</span>
+                      <span className={`text-sm font-medium ${searchMode === "person" ? searchBar["toggle-segment-icon-active"] + " text-brand" : searchBar["toggle-segment-icon"]}`}>
+                        {userAccountType === "Company" ? "Candidates" : "Gigs"}
+                      </span>
                     </button>
                     <button
                       type="button"
@@ -4800,7 +4840,13 @@ const MapComponent = ({ onOpenSettings, onViewModeChange }) => {
                     fontFamily: "Open Sans",
                     boxShadow: "0 1px 6px rgba(32,33,36,0.08)",
                   }}
-                  placeholder={searchMode === "company" ? "Jobs near you" : "Gigs near you"}
+                  placeholder={
+                    searchMode === "company"
+                      ? "Jobs near you"
+                      : userAccountType === "Company"
+                        ? "Candidates near you"
+                        : "Gigs near you"
+                  }
                 />
                 
                 {/* Right side: mobile = cross when typing; desktop = clear (when typing) + filter */}

@@ -64,12 +64,20 @@ export default function Sidebar({ activeItem = "jobs-near-you", onToggle, isOpen
   const postLabel = accountType === "Company" ? "Post a job" : "Post a gig";
   const postRoute = accountType === "Company" ? "/onboarding.org" : "/onboarding";
   const notificationsRoute = accountType === "Company" ? "/onboarding.org?openNotifications=1" : "/onboarding?openNotifications=1";
+  const manageItem =
+    accountType === "Company"
+      ? { id: "manage-jds", label: "Manage JD", icon: Archive, route: "/manage-jds" }
+      : { id: "manage-resume", label: "Manage Resume", icon: Document, route: "/manage-resume", openSettingsSection: "resume" };
+
   const navigationItems = [
     { id: "jobs-near-you", label: jobsNearYouLabel, icon: EarthFilled, route: "/jobs-near-you" },
     { id: "notifications", label: "Notifications", icon: Notification, route: notificationsRoute, badge: true },
     { id: "post-gig", label: postLabel, icon: Add, route: postRoute },
-    { id: "manage-resume", label: "Manage Resume", icon: Document, route: "/manage-resume", openSettingsSection: "resume" },
-    { id: "manage-jds", label: "Manage JDs", icon: Archive, route: "/manage-jds" },
+    manageItem,
+    // Only show the dedicated Manage JDs item for non-company accounts (as today)
+    ...(accountType === "Company"
+      ? []
+      : [{ id: "manage-jds", label: "Manage JDs", icon: Archive, route: "/manage-jds" }]),
     { id: "settings", label: "Settings", icon: Settings, route: "/", openSettingsSection: "general" },
   ];
 
@@ -133,8 +141,11 @@ export default function Sidebar({ activeItem = "jobs-near-you", onToggle, isOpen
           {navigationItems.map((item) => {
             const IconComponent = item.icon;
             const isActive = activeItem === item.id;
-            const isComingSoon = !isDev && item.id !== "jobs-near-you" && item.id !== "notifications" && item.id !== "post-gig" && item.id !== "manage-resume" && item.id !== "settings";
-            const isDisabled = isComingSoon || (!isActive && item.id !== "jobs-near-you" && item.id !== "notifications" && item.id !== "post-gig" && item.id !== "manage-resume" && item.id !== "settings");
+            const enabledIdsProdForCompany = ["jobs-near-you", "notifications", "post-gig", "manage-jds", "settings"];
+            const enabledIdsProdForIndividual = ["jobs-near-you", "notifications", "post-gig", "manage-resume", "settings"];
+            const enabledIds = accountType === "Company" ? enabledIdsProdForCompany : enabledIdsProdForIndividual;
+            const isComingSoon = !isDev && !enabledIds.includes(item.id);
+            const isDisabled = isComingSoon || (!isActive && !isDev && !enabledIds.includes(item.id));
             const tooltipContent = !isOpen ? (isComingSoon ? "Coming soon" : item.label) : "";
             return (
               <li key={item.id} className="w-full">
