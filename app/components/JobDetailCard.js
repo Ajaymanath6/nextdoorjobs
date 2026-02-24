@@ -21,52 +21,51 @@ function getTimeAgo(dateString) {
   return `${diffDays} days ago`;
 }
 
-export default function JobDetailCard({ job, company }) {
+export default function JobDetailCard({ job, company, onApply }) {
   const [showFullDescription, setShowFullDescription] = useState(false);
 
   const description = showFullDescription
     ? job.jobDescription
-    : truncateText(job.jobDescription, 15);
+    : truncateText(job.jobDescription, 12);
 
-  const needsTruncation = job.jobDescription && job.jobDescription.split(" ").length > 15;
+  const needsTruncation = job.jobDescription && job.jobDescription.split(" ").length > 12;
 
   return (
-    <div className="border border-brand-stroke-weak rounded-lg p-3 bg-brand-bg-white space-y-2">
-      {/* Header: Icon + Title + Seniority + Time */}
-      <div className="flex items-start gap-3">
-        <div className="w-10 h-10 rounded-full bg-brand-bg-fill flex items-center justify-center shrink-0">
-          <Document size={20} className="text-brand-stroke-strong" />
+    <div className="border border-brand-stroke-weak rounded-lg p-2.5 bg-brand-bg-white space-y-1.5 max-h-[50vh] flex flex-col">
+      {/* Header: Icon + Title + Seniority + Time - compact */}
+      <div className="flex items-start gap-2 shrink-0">
+        <div className="w-8 h-8 rounded-full bg-brand-bg-fill flex items-center justify-center shrink-0">
+          <Document size={16} className="text-brand-stroke-strong" />
         </div>
         <div className="flex-1 min-w-0">
-          <h3 className="text-base font-semibold text-brand-text-strong truncate">
+          <h3 className="text-sm font-semibold text-brand-text-strong truncate">
             {job.title}
           </h3>
           {job.seniorityLevel && (
-            <p className="text-sm text-brand-text-weak">
+            <p className="text-xs text-brand-text-weak">
               {job.seniorityLevel}
             </p>
           )}
         </div>
-        <span className="text-xs text-brand-text-weak shrink-0">
+        <span className="text-[10px] text-brand-text-weak shrink-0">
           {getTimeAgo(job.createdAt)}
         </span>
       </div>
 
-      {/* Divider */}
-      <div className="border-t border-brand-stroke-weak" />
+      <div className="border-t border-brand-stroke-weak shrink-0" />
 
-      {/* Job Description */}
-      <div className="space-y-1">
-        <div className="flex items-start gap-2">
-          <Document size={16} className="text-brand-stroke-strong shrink-0 mt-0.5" />
+      {/* Job Description - compact, line-clamp */}
+      <div className="space-y-0.5 min-h-0 overflow-hidden">
+        <div className="flex items-start gap-1.5">
+          <Document size={14} className="text-brand-stroke-strong shrink-0 mt-0.5" />
           <div className="flex-1 min-w-0">
-            <p className={`text-sm text-brand-text-strong ${showFullDescription ? "whitespace-pre-wrap" : "line-clamp-3"}`}>
+            <p className={`text-xs text-brand-text-strong ${showFullDescription ? "whitespace-pre-wrap" : "line-clamp-2"}`}>
               {description}
             </p>
             {needsTruncation && (
               <button
                 onClick={() => setShowFullDescription(!showFullDescription)}
-                className="text-sm text-brand underline mt-1"
+                className="text-xs text-brand underline mt-0.5"
               >
                 {showFullDescription ? "See less" : "more"}
               </button>
@@ -75,8 +74,8 @@ export default function JobDetailCard({ job, company }) {
         </div>
       </div>
 
-      {/* Job Details Grid */}
-      <div className="space-y-2 text-sm">
+      {/* Job Details Grid - compact */}
+      <div className="space-y-1 text-xs shrink-0">
         {job.remoteType && (
           <div className="flex justify-between">
             <span className="text-brand-text-weak">Work Type</span>
@@ -115,6 +114,18 @@ export default function JobDetailCard({ job, company }) {
             </span>
           </div>
         )}
+      </div>
+
+      {/* Apply button: no border, light primary background */}
+      <div className="pt-1.5 shrink-0">
+        <button
+          type="button"
+          onClick={() => onApply?.(job)}
+          className="w-full py-2 rounded-md text-sm font-medium text-brand border-0 transition-opacity hover:opacity-90"
+          style={{ background: "var(--brand-primary-light)" }}
+        >
+          Apply
+        </button>
       </div>
     </div>
   );
