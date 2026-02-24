@@ -41,7 +41,7 @@ export default function NotificationsPage() {
 
   const handleNotificationClick = async (notif) => {
     try {
-      await fetch("/api/notifications/mark-read", {
+      await fetch("/api/notifications", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         credentials: "same-origin",
