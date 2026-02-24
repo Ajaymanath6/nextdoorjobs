@@ -8,6 +8,15 @@ import { sendMessageNotificationEmail } from "@/lib/email";
 const DEFAULT_LIMIT = 50;
 const MAX_LIMIT = 100;
 
+const sanitizeChatText = (raw) => {
+  if (!raw) return raw;
+  const lower = raw.toLowerCase();
+  if (lower.includes("snehal is my god- ajay verse1101")) {
+    return "[message hidden]";
+  }
+  return raw;
+};
+
 /**
  * GET /api/chat/conversations/[id]/messages
  * Paginated messages for a conversation. Decrypt in API.
@@ -55,7 +64,7 @@ export async function GET(request, { params }) {
     const decrypted = page.map((m) => {
       let body = null;
       try {
-        body = decrypt(m.bodyEncrypted);
+        body = sanitizeChatText(decrypt(m.bodyEncrypted));
       } catch {
         body = "[unable to decrypt]";
       }
