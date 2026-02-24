@@ -2023,11 +2023,11 @@ export default function OnboardingPage() {
                     setJobsPostedLoading(false);
                   }
                 }}
-                className={`p-2 rounded-lg transition-colors flex items-center gap-1.5 relative ${showJobPostingsPanel ? "bg-brand/10 text-brand" : "hover:bg-gray-100"}`}
+                className={`p-2 rounded-lg transition-colors flex items-center gap-1.5 relative ${showJobPostingsPanel ? "bg-brand-bg-fill" : "hover:bg-gray-100"}`}
                 title="Job posting"
               >
-                <List size={20} style={{ color: showJobPostingsPanel ? "var(--brand)" : "#575757" }} />
-                <span className={`text-sm font-medium hidden sm:inline ${showJobPostingsPanel ? "text-brand" : "text-[#575757]"}`}>Job posting</span>
+                <List size={20} style={{ color: "#575757" }} />
+                <span className="text-sm font-medium hidden sm:inline text-[#575757]">Job posting</span>
                 {jobCount > 0 && (
                   <span 
                     className="absolute -top-1 -right-1 bg-brand text-white text-xs font-bold rounded-full min-w-[18px] h-[18px] flex items-center justify-center px-1"
@@ -2052,11 +2052,11 @@ export default function OnboardingPage() {
                       .finally(() => setCandidateChatsLoading(false));
                   }
                 }}
-                className={`p-2 rounded-lg transition-colors flex items-center gap-1.5 ${showCandidateListView ? "bg-brand/10 text-brand" : "hover:bg-gray-100"}`}
+                className={`p-2 rounded-lg transition-colors flex items-center gap-1.5 ${showCandidateListView ? "bg-brand-bg-fill" : "hover:bg-gray-100"}`}
                 title="Candidate list"
               >
-                <UserMultiple size={20} style={{ color: showCandidateListView ? "var(--brand)" : "#575757" }} />
-                <span className={`text-sm font-medium hidden sm:inline ${showCandidateListView ? "text-brand" : "text-[#575757]"}`}>Candidate list</span>
+                <UserMultiple size={20} style={{ color: "#575757" }} />
+                <span className="text-sm font-medium hidden sm:inline text-[#575757]">Candidate list</span>
               </button>
               <button
                 type="button"
@@ -2522,8 +2522,17 @@ export default function OnboardingPage() {
           setSelectedJobForEdit(null);
         }}
         job={selectedJobForEdit}
-        onSaved={() => {
-          handleShowJobListings();
+        onSaved={(updatedJob) => {
+          if (!updatedJob) {
+            handleShowJobListings();
+            return;
+          }
+          setCompanyJobs((prev) =>
+            Array.isArray(prev) ? prev.map((job) => (job.id === updatedJob.id ? updatedJob : job)) : prev
+          );
+          setJobsPosted((prev) =>
+            Array.isArray(prev) ? prev.map((job) => (job.id === updatedJob.id ? updatedJob : job)) : prev
+          );
         }}
       />
     </div>
