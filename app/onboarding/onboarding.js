@@ -193,19 +193,11 @@ export default function OnboardingPage() {
       setShowNotificationsPanel(true);
       setNotificationsLoading(true);
       fetch("/api/notifications", { credentials: "same-origin" })
-        .then((r) => (r.ok ? r.json() : { notifications: [] }))
+        .then((r) => (r.ok ? r.json() : { notifications: [], unreadCount: 0 }))
         .then((data) => {
           const list = Array.isArray(data.notifications) ? data.notifications : [];
           setNotifications(list);
-          setNotificationCount(0);
-          fetch("/api/notifications/mark-read", {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            credentials: "same-origin",
-            body: JSON.stringify({ markAll: true }),
-          }).then(() => {
-            setNotifications((prev) => prev.map((n) => ({ ...n, isRead: true })));
-          }).catch(() => {});
+          setNotificationCount(data.unreadCount || 0);
         })
         .catch(() => setNotifications([]))
         .finally(() => setNotificationsLoading(false));
@@ -2013,7 +2005,7 @@ setCurrentField(GIG_FIELDS.CUSTOMERS_TILL_DATE);
                     }
                   }
                 }}
-                className={`flex items-center gap-2 px-2 py-2 rounded-lg border border-brand-stroke-border transition-colors ${listViewActive ? "bg-brand-bg-fill" : "bg-brand-bg-white hover:bg-brand-bg-fill"}`}
+                className={`flex items-center gap-2 px-2 py-2 rounded-lg transition-colors ${listViewActive ? "bg-brand-bg-fill" : "bg-brand-bg-white hover:bg-brand-bg-fill"}`}
                 title={listViewActive ? "Back to chat" : (userData?.accountType === "Individual" ? "Your posted gigs" : "Your job postings")}
               >
                 {listViewActive ? (
@@ -2031,19 +2023,11 @@ setCurrentField(GIG_FIELDS.CUSTOMERS_TILL_DATE);
                   setShowNotificationsPanel(true);
                   setNotificationsLoading(true);
                   fetch("/api/notifications", { credentials: "same-origin" })
-                    .then((r) => (r.ok ? r.json() : { notifications: [] }))
+                    .then((r) => (r.ok ? r.json() : { notifications: [], unreadCount: 0 }))
                     .then((data) => {
                       const list = Array.isArray(data.notifications) ? data.notifications : [];
                       setNotifications(list);
-                      setNotificationCount(0);
-                      fetch("/api/notifications/mark-read", {
-                        method: "POST",
-                        headers: { "Content-Type": "application/json" },
-                        credentials: "same-origin",
-                        body: JSON.stringify({ markAll: true }),
-                      }).then(() => {
-                        setNotifications((prev) => prev.map((n) => ({ ...n, isRead: true })));
-                      }).catch(() => {});
+                      setNotificationCount(data.unreadCount || 0);
                     })
                     .catch(() => setNotifications([]))
                     .finally(() => setNotificationsLoading(false));

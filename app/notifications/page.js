@@ -30,14 +30,7 @@ export default function NotificationsPage() {
       if (res.ok) {
         const data = await res.json();
         setNotifications(Array.isArray(data.notifications) ? data.notifications : []);
-        setNotificationCount(0);
-        // Mark all as read when opening the notifications page
-        await fetch("/api/notifications", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          credentials: "same-origin",
-          body: JSON.stringify({ markAll: true }),
-        }).catch(() => {});
+        setNotificationCount(data.unreadCount || 0);
       }
     } catch (error) {
       console.error("Error fetching notifications:", error);

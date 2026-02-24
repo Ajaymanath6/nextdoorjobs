@@ -213,19 +213,11 @@ export default function OnboardingPage() {
       setShowNotificationsPanel(true);
       setNotificationsLoading(true);
       fetch("/api/notifications", { credentials: "same-origin" })
-        .then((r) => (r.ok ? r.json() : { notifications: [] }))
+        .then((r) => (r.ok ? r.json() : { notifications: [], unreadCount: 0 }))
         .then((data) => {
           const list = Array.isArray(data.notifications) ? data.notifications : [];
           setNotifications(list);
-          setNotificationCount(0);
-          fetch("/api/notifications/mark-read", {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            credentials: "same-origin",
-            body: JSON.stringify({ markAll: true }),
-          }).then(() => {
-            setNotifications((prev) => prev.map((n) => ({ ...n, isRead: true })));
-          }).catch(() => {});
+          setNotificationCount(data.unreadCount || 0);
         })
         .catch(() => setNotifications([]))
         .finally(() => setNotificationsLoading(false));
@@ -2090,19 +2082,11 @@ export default function OnboardingPage() {
                   setShowJobPostingsPanel(false);
                   setNotificationsLoading(true);
                   fetch("/api/notifications", { credentials: "same-origin" })
-                    .then((r) => (r.ok ? r.json() : { notifications: [] }))
+                    .then((r) => (r.ok ? r.json() : { notifications: [], unreadCount: 0 }))
                     .then((data) => {
                       const list = Array.isArray(data.notifications) ? data.notifications : [];
                       setNotifications(list);
-                      setNotificationCount(0);
-                      fetch("/api/notifications/mark-read", {
-                        method: "POST",
-                        headers: { "Content-Type": "application/json" },
-                        credentials: "same-origin",
-                        body: JSON.stringify({ markAll: true }),
-                      }).then(() => {
-                        setNotifications((prev) => prev.map((n) => ({ ...n, isRead: true })));
-                      }).catch(() => {});
+                      setNotificationCount(data.unreadCount || 0);
                     })
                     .catch(() => setNotifications([]))
                     .finally(() => setNotificationsLoading(false));
