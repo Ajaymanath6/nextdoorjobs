@@ -343,7 +343,7 @@ export default function ChatInterface({ messages = [], onSendMessage, isLoading 
                                   <button
                                     type="button"
                                     onClick={() => handleViewGigOnMap(gig)}
-                                    className="flex items-center gap-1.5 px-3 py-1.5 bg-brand text-white hover:bg-brand-hover rounded-md text-xs font-medium transition-colors"
+                                    className="flex items-center gap-1.5 px-3 py-1.5 bg-brand text-white hover:bg-brand-hover rounded-md text-xs font-medium transition-colors cursor-pointer"
                                     style={{ fontFamily: "Open Sans, sans-serif" }}
                                   >
                                     <Location size={14} />

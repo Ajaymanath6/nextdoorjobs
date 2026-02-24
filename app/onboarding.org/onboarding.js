@@ -2107,7 +2107,9 @@ export default function OnboardingPage() {
                     .catch(() => setNotifications([]))
                     .finally(() => setNotificationsLoading(false));
                 }}
-                className="p-2 rounded-lg hover:bg-gray-100 transition-colors relative"
+                className={`p-2 rounded-lg transition-colors relative ${
+                  showNotificationsPanel ? "bg-brand-bg-fill" : "hover:bg-gray-100"
+                }`}
                 title="Notifications"
               >
                 <Notification size={20} style={{ color: "#575757" }} />

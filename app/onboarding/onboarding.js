@@ -2048,7 +2048,9 @@ setCurrentField(GIG_FIELDS.CUSTOMERS_TILL_DATE);
                     .catch(() => setNotifications([]))
                     .finally(() => setNotificationsLoading(false));
                 }}
-                className="p-2 rounded-lg hover:bg-brand-bg-fill transition-colors relative"
+                className={`p-2 rounded-lg transition-colors relative ${
+                  showNotificationsPanel ? "bg-brand-bg-fill" : "hover:bg-brand-bg-fill"
+                }`}
                 title="Notifications"
               >
                 <Notification size={20} className="text-brand-text-weak" />
