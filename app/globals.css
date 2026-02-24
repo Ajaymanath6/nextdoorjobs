@@ -280,6 +280,15 @@ body {
   color: var(--brand-text-weak);
   opacity: 0.4;
 }
+.gig-popup .map-popup-content .map-popup-actions .map-popup-action-link.map-popup-action-email-disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+  pointer-events: none;
+}
+.gig-popup .map-popup-content .map-popup-actions .map-popup-action-link.map-popup-action-email-disabled:hover {
+  color: var(--brand-text-weak);
+  opacity: 0.4;
+}
 
 /* Toggle button styles */
 .gig-popup .map-popup-toggle-wrapper {

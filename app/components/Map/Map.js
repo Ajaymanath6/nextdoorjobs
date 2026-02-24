@@ -995,11 +995,16 @@ const MapComponent = ({ onOpenSettings, onViewModeChange }) => {
           </div>`;
       };
       
-      // Helper function to generate gig details HTML
-      const generateGigDetailsHtml = () => {
+      // Helper function to generate gig details HTML (disableChat = true for own gig)
+      const generateGigDetailsHtml = (disableChat = false) => {
         const serviceBadge = gig.serviceType
           ? `<span class="map-popup-badge">${escapeHtml(gig.serviceType)}</span>`
           : "";
+        const gigOwnerEmail = gig.user?.email || gig.email || "";
+        const hasEmail = gigOwnerEmail && gigOwnerEmail !== "—";
+        const emailHref = hasEmail ? `https://mail.google.com/mail/?view=cm&fs=1&to=${encodeURIComponent(gigOwnerEmail)}` : "#";
+        const emailDisabledClass = hasEmail ? "" : " map-popup-action-email-disabled";
+        const chatDisabledClass = disableChat ? " map-popup-action-chat-disabled" : "";
         return `
         <div class="map-popup-content">
           <div class="map-popup-row">
@@ -1034,6 +1039,15 @@ const MapComponent = ({ onOpenSettings, onViewModeChange }) => {
             </button>`
             }
           </div>
+          <div class="map-popup-divider"></div>
+          <div class="map-popup-actions">
+            <a href="${emailHref}" class="map-popup-action-link${emailDisabledClass}" title="Email" aria-label="Email" target="_blank" rel="noopener noreferrer">
+              <svg width="20" height="20" viewBox="0 0 32 32" fill="currentColor" xmlns="http://www.w3.org/2000/svg"><path d="M28,6H4A2,2,0,0,0,2,8V24a2,2,0,0,0,2,2H28a2,2,0,0,0,2-2V8A2,2,0,0,0,28,6ZM25.8,8,16,14.78,6.2,8ZM4,24V8.91l11.43,7.91a1,1,0,0,0,1.14,0L28,8.91V24Z"/></svg>
+            </a>
+            <a href="#" class="map-popup-action-link map-popup-action-chat${chatDisabledClass}" title="Chat" aria-label="Chat" data-action="chat" data-gig-id="${gig.id}">
+              <svg width="20" height="20" viewBox="0 0 32 32" fill="currentColor" xmlns="http://www.w3.org/2000/svg"><path d="M17.74,30,16,29l4-7h6a2,2,0,0,0,2-2V8a2,2,0,0,0-2-2H6A2,2,0,0,0,4,8V20a2,2,0,0,0,2,2h9v2H6a4,4,0,0,1-4-4V8A4,4,0,0,1,6,4H26a4,4,0,0,1,4,4V20a4,4,0,0,1-4,4H21.16Z"/><path d="M8 10H24V12H8zM8 16H18V18H8z"/></svg>
+            </a>
+          </div>
         </div>
       `;
       }
@@ -1042,7 +1056,7 @@ const MapComponent = ({ onOpenSettings, onViewModeChange }) => {
       
       // For own gigs with resume, always show toggle (check this FIRST before candidate check)
       if (showToggle) {
-        marker._gigDetailsHtml = generateGigDetailsHtml();
+        marker._gigDetailsHtml = generateGigDetailsHtml(true);
         marker._showResumeView = false; // Start with gig details view
         marker._gigData = gig; // Store gig data for later use
         marker._generateResumeHtmlFn = generateResumeHtml; // Store function reference
@@ -1082,7 +1096,7 @@ const MapComponent = ({ onOpenSettings, onViewModeChange }) => {
         popupContent = resumePanelHtml;
       } else {
         // Regular gig details view
-        const gigDetailsHtml = generateGigDetailsHtml();
+        const gigDetailsHtml = generateGigDetailsHtml(false);
         marker._gigDetailsHtml = gigDetailsHtml;
         popupContent = gigDetailsHtml;
       }
@@ -1253,7 +1267,8 @@ const MapComponent = ({ onOpenSettings, onViewModeChange }) => {
                     <button type="button" class="map-popup-twin-send-inside" aria-label="Send">${sendSvg}</button>
                   </div>
                 </div>`;
-              const fullContent = '<div class="map-popup-with-twin">' + (marker._resumePanelHtml || '') + twinHtml + '</div>';
+              const leftPanelHtml = marker._resumePanelHtml || marker._gigDetailsHtml || '';
+              const fullContent = '<div class="map-popup-with-twin">' + leftPanelHtml + twinHtml + '</div>';
               marker.getPopup().setContent(fullContent);
               setTimeout(() => {
                 const popupEl = marker.getPopup()?.getElement();
@@ -1273,8 +1288,9 @@ const MapComponent = ({ onOpenSettings, onViewModeChange }) => {
                   setChatCandidateName("");
                   setChatCandidateEmail("");
                   setChatInput("");
-                  if (marker._resumePanelHtml) {
-                    marker.getPopup().setContent(marker._resumePanelHtml);
+                  const restoreContent = marker._resumePanelHtml || marker._gigDetailsHtml;
+                  if (restoreContent) {
+                    marker.getPopup().setContent(restoreContent);
                     setTimeout(() => {
                       const popupEl2 = marker.getPopup()?.getElement();
                       if (popupEl2) {
@@ -3212,11 +3228,16 @@ const MapComponent = ({ onOpenSettings, onViewModeChange }) => {
           </div>`;
       };
       
-      // Helper function to generate gig details HTML
-      const generateGigDetailsHtml = () => {
+      // Helper function to generate gig details HTML (disableChat = true for own gig)
+      const generateGigDetailsHtml = (disableChat = false) => {
         const serviceBadge = gig.serviceType
           ? `<span class="map-popup-badge">${escapeHtml(gig.serviceType)}</span>`
           : "";
+        const gigOwnerEmail = gig.user?.email || gig.email || "";
+        const hasEmail = gigOwnerEmail && gigOwnerEmail !== "—";
+        const emailHref = hasEmail ? `https://mail.google.com/mail/?view=cm&fs=1&to=${encodeURIComponent(gigOwnerEmail)}` : "#";
+        const emailDisabledClass = hasEmail ? "" : " map-popup-action-email-disabled";
+        const chatDisabledClass = disableChat ? " map-popup-action-chat-disabled" : "";
         return `
         <div class="map-popup-content">
           <div class="map-popup-row">
@@ -3251,6 +3272,15 @@ const MapComponent = ({ onOpenSettings, onViewModeChange }) => {
             </button>`
             }
           </div>
+          <div class="map-popup-divider"></div>
+          <div class="map-popup-actions">
+            <a href="${emailHref}" class="map-popup-action-link${emailDisabledClass}" title="Email" aria-label="Email" target="_blank" rel="noopener noreferrer">
+              <svg width="20" height="20" viewBox="0 0 32 32" fill="currentColor" xmlns="http://www.w3.org/2000/svg"><path d="M28,6H4A2,2,0,0,0,2,8V24a2,2,0,0,0,2,2H28a2,2,0,0,0,2-2V8A2,2,0,0,0,28,6ZM25.8,8,16,14.78,6.2,8ZM4,24V8.91l11.43,7.91a1,1,0,0,0,1.14,0L28,8.91V24Z"/></svg>
+            </a>
+            <a href="#" class="map-popup-action-link map-popup-action-chat${chatDisabledClass}" title="Chat" aria-label="Chat" data-action="chat" data-gig-id="${gig.id}">
+              <svg width="20" height="20" viewBox="0 0 32 32" fill="currentColor" xmlns="http://www.w3.org/2000/svg"><path d="M17.74,30,16,29l4-7h6a2,2,0,0,0,2-2V8a2,2,0,0,0-2-2H6A2,2,0,0,0,4,8V20a2,2,0,0,0,2,2h9v2H6a4,4,0,0,1-4-4V8A4,4,0,0,1,6,4H26a4,4,0,0,1,4,4V20a4,4,0,0,1-4,4H21.16Z"/><path d="M8 10H24V12H8zM8 16H18V18H8z"/></svg>
+            </a>
+          </div>
         </div>
       `;
       }
@@ -3259,7 +3289,7 @@ const MapComponent = ({ onOpenSettings, onViewModeChange }) => {
       
       // For own gigs with resume, always show toggle (check this FIRST before candidate check)
       if (showToggle) {
-        marker._gigDetailsHtml = generateGigDetailsHtml();
+        marker._gigDetailsHtml = generateGigDetailsHtml(true);
         marker._showResumeView = false; // Start with gig details view
         marker._gigData = gig; // Store gig data for later use
         marker._generateResumeHtmlFn = generateResumeHtml; // Store function reference
@@ -3299,7 +3329,7 @@ const MapComponent = ({ onOpenSettings, onViewModeChange }) => {
         popupContent = resumePanelHtml;
       } else {
         // Regular gig details view
-        const gigDetailsHtml = generateGigDetailsHtml();
+        const gigDetailsHtml = generateGigDetailsHtml(false);
         marker._gigDetailsHtml = gigDetailsHtml;
         popupContent = gigDetailsHtml;
       }
@@ -3470,7 +3500,8 @@ const MapComponent = ({ onOpenSettings, onViewModeChange }) => {
                     <button type="button" class="map-popup-twin-send-inside" aria-label="Send">${sendSvg}</button>
                   </div>
                 </div>`;
-              const fullContent = '<div class="map-popup-with-twin">' + (marker._resumePanelHtml || '') + twinHtml + '</div>';
+              const leftPanelHtml = marker._resumePanelHtml || marker._gigDetailsHtml || '';
+              const fullContent = '<div class="map-popup-with-twin">' + leftPanelHtml + twinHtml + '</div>';
               marker.getPopup().setContent(fullContent);
               setTimeout(() => {
                 const popupEl = marker.getPopup()?.getElement();
@@ -3490,8 +3521,9 @@ const MapComponent = ({ onOpenSettings, onViewModeChange }) => {
                   setChatCandidateName("");
                   setChatCandidateEmail("");
                   setChatInput("");
-                  if (marker._resumePanelHtml) {
-                    marker.getPopup().setContent(marker._resumePanelHtml);
+                  const restoreContent = marker._resumePanelHtml || marker._gigDetailsHtml;
+                  if (restoreContent) {
+                    marker.getPopup().setContent(restoreContent);
                     setTimeout(() => {
                       const popupEl2 = marker.getPopup()?.getElement();
                       if (popupEl2) {
@@ -4606,24 +4638,26 @@ const MapComponent = ({ onOpenSettings, onViewModeChange }) => {
                     <button
                       type="button"
                       onClick={() => setSearchMode("person")}
-                      className={`p-2 border-0 ${searchBar["toggle-segment"]} ${searchMode === "person" ? searchBar["toggle-segment-active"] : ""} !rounded-l-md !rounded-r-none`}
+                      className={`flex items-center gap-1.5 px-3 py-2 border-0 ${searchBar["toggle-segment"]} ${searchMode === "person" ? searchBar["toggle-segment-active"] : ""} !rounded-l-md !rounded-r-none`}
                       title={userAccountType === "Company" ? "Candidates" : "Gig work"}
                     >
                       <User
                         size={20}
                         className={`w-5 h-5 shrink-0 ${searchMode === "person" ? searchBar["toggle-segment-icon-active"] + " text-brand" : searchBar["toggle-segment-icon"]}`}
                       />
+                      <span className={`text-sm font-medium ${searchMode === "person" ? searchBar["toggle-segment-icon-active"] + " text-brand" : searchBar["toggle-segment-icon"]}`}>Gigs</span>
                     </button>
                     <button
                       type="button"
                       onClick={() => setSearchMode("company")}
-                      className={`p-2 border-0 ${searchBar["toggle-segment"]} ${searchMode === "company" ? searchBar["toggle-segment-active"] : ""} !rounded-r-md !rounded-l-none`}
+                      className={`flex items-center gap-1.5 px-3 py-2 border-0 ${searchBar["toggle-segment"]} ${searchMode === "company" ? searchBar["toggle-segment-active"] : ""} !rounded-r-md !rounded-l-none`}
                       title="All companies"
                     >
                       <Enterprise
                         size={20}
                         className={`w-5 h-5 shrink-0 ${searchMode === "company" ? searchBar["toggle-segment-icon-active"] + " text-brand" : searchBar["toggle-segment-icon"]}`}
                       />
+                      <span className={`text-sm font-medium ${searchMode === "company" ? searchBar["toggle-segment-icon-active"] + " text-brand" : searchBar["toggle-segment-icon"]}`}>Companies</span>
                     </button>
                   </div>
                   {/* Filter dropdown - only show in person mode for all account types */}

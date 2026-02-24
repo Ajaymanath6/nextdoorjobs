@@ -171,8 +171,12 @@ export async function POST(request, { params }) {
           },
         });
 
-        // Send email notification
-        const conversationLink = `${process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'}/notifications`;
+        // Send email notification - use production domain when available (not localhost)
+        const appUrl =
+          process.env.NEXT_PUBLIC_APP_URL ||
+          (process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : null) ||
+          "http://localhost:3000";
+        const conversationLink = `${appUrl.replace(/\/$/, "")}/notifications`;
         await sendMessageNotificationEmail({
           recipientEmail: recipient.email,
           recipientName: recipient.name,
