@@ -355,17 +355,24 @@ body {
 }
 
 /* Resume popup with twin panel (message extension) */
+/* Wider popup when twin chat is open so both panels fit inside */
+.leaflet-popup-content-wrapper.gig-popup-with-twin {
+  max-width: 620px !important;
+}
 .gig-popup .map-popup-with-twin {
   display: flex;
   align-items: stretch;
   min-width: 0;
   width: 100%;
+  max-width: 100%;
 }
 .gig-popup .map-popup-resume-panel {
   flex: 0 0 auto;
   width: 320px;
   min-width: 280px;
+  max-width: 50%;
   border-right: 1px solid var(--brand-stroke-weak);
+  overflow: auto;
 }
 .gig-popup .map-popup-resume-panel .map-popup-content {
   padding: 12px;
@@ -374,11 +381,13 @@ body {
 .gig-popup .map-popup-twin-panel {
   flex: 0 0 280px;
   width: 280px;
+  min-width: 0;
   display: flex;
   flex-direction: column;
   background: var(--brand-bg-white);
   min-height: 200px;
   max-height: 70vh;
+  overflow: hidden;
 }
 .gig-popup .map-popup-twin-header {
   display: flex;
