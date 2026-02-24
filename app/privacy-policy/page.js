@@ -31,9 +31,9 @@ export default function PrivacyPolicyPage() {
         </div>
       </div>
 
-      {/* Main Content */}
-      <div className="max-w-4xl mx-auto px-4 py-8 md:py-12">
-        <div className="bg-brand-bg-white rounded-lg border border-brand-stroke-border shadow-lg p-6 md:p-10">
+      {/* Main Content - scrollable with bottom spacing */}
+      <div className="max-w-4xl mx-auto px-4 py-8 md:py-12 overflow-y-auto flex-1">
+        <div className="bg-brand-bg-white rounded-lg border border-brand-stroke-border shadow-lg p-6 md:p-10 mb-20">
           
           {/* Scope */}
           <section className="mb-8">
@@ -42,6 +42,9 @@ export default function PrivacyPolicyPage() {
             </h2>
             <p className={`text-base leading-relaxed ${brand.text.strong} mb-4`}>
               Your privacy is important to NextDoorJobs ("we", "us", "our") and we go to great lengths to protect it. This Online Privacy Policy ("Privacy Policy") applies to the online collection of information via websites and mobile applications operated by NextDoorJobs, including mapmyGig.
+            </p>
+            <p className={`text-base leading-relaxed ${brand.text.strong} mb-4`}>
+              By using our websites, applications, or services (including payment features), you agree to be bound by this Privacy Policy and you consent to our collection, use, processing, and sharing of your information as described herein. If you do not agree, please do not use our services.
             </p>
             <p className={`text-base leading-relaxed ${brand.text.strong}`}>
               Our websites may contain links to sites maintained by others. This Privacy Policy does not reflect the privacy practices of those sites.
@@ -86,6 +89,13 @@ export default function PrivacyPolicyPage() {
                 </h3>
                 <p className={`text-base leading-relaxed ${brand.text.strong}`}>
                   We do not sell, rent, or lease mailing lists or other customer data to others, and we do not make customer data available to any unaffiliated parties, except our approved agents and contractors, or as otherwise described in this Privacy Policy. We may rely on some of our affiliates for support of the services and products we offer; our affiliates are all required to preserve the confidentiality of any customer data they may have access to. We do not disclose any customer data about your usage of our websites or mobile applications to unaffiliated third parties, except as necessary to service the account, to enforce the terms of use, to meet our obligations to content and technology providers, or as required by law.
+                </p>
+                <h4 className={`text-base font-semibold ${brand.text.strong} mt-4 mb-2`}>
+                  Payment Processing
+                </h4>
+                <p className={`text-base leading-relaxed ${brand.text.strong} mb-2`}>
+                  We use Razorpay Software Private Limited ("Razorpay") as our payment processor to bill you for subscription plans and other paid goods and services. When you choose to make a payment, the following information may be shared with Razorpay as necessary to complete the transaction: your name, email address, mobile number, billing address, and payment method details (such as credit card, debit card, UPI, or bank account information). We do not store your full card or financial details on our servers. By using our payment features, you explicitly consent to the sharing of this information with Razorpay and, where required by law, with financial institutions, the Reserve Bank of India (RBI), or other regulatory agencies. We comply with applicable data protection and KYC (Know Your Customer) regulations. Razorpay handles your payment data in accordance with their privacy policy; we encourage you to read it at{" "}
+                  <a href="https://razorpay.com/privacy/" target="_blank" rel="noopener noreferrer" className="text-brand underline">https://razorpay.com/privacy/</a>.
                 </p>
               </div>
 
@@ -212,8 +222,21 @@ export default function PrivacyPolicyPage() {
               <p className={`text-base leading-relaxed ${brand.text.strong} mb-3`}>
                 We may use statistics regarding usage for product development purposes, but we only use those statistics in the aggregate and they do not include any personally identifiable information about individual users.
               </p>
-              <p className={`text-base leading-relaxed ${brand.text.strong}`}>
+              <p className={`text-base leading-relaxed ${brand.text.strong} mb-3`}>
                 Your access to some of our services and products may be password protected. We recommend that you refrain from disclosing your usernames and passwords to anyone. We also recommend that you sign out of your account or service at the end of each session. You may also wish to close your browser window when you have finished your work, especially if you share a computer with someone else or if you are using a computer in a public place like a library or Internet cafe.
+              </p>
+              <h4 className={`text-lg font-semibold ${brand.text.strong} mb-2 mt-4`}>
+                Payment Processing
+              </h4>
+              <p className={`text-base leading-relaxed ${brand.text.strong} mb-3`}>
+                We use Razorpay Software Private Limited ("Razorpay") as our payment processor to bill you for subscription plans and other paid goods and services. When you choose to make a payment through our platform, the following information may be shared with Razorpay as necessary to complete the transaction: your name, email address, mobile number, billing address, and payment method details (such as credit card, debit card, UPI, or bank account information). We do not store your full card or financial details on our servers.
+              </p>
+              <p className={`text-base leading-relaxed ${brand.text.strong} mb-3`}>
+                By using our payment features, you explicitly consent to the sharing of this information with Razorpay. We may also share information with financial institutions, the Reserve Bank of India (RBI), or other regulatory agencies as required by law. We comply with applicable data protection and KYC (Know Your Customer) regulations as may be required.
+              </p>
+              <p className={`text-base leading-relaxed ${brand.text.strong}`}>
+                Your payment data is handled by Razorpay in accordance with their privacy policy. We encourage you to review Razorpay&apos;s privacy policy at{" "}
+                <a href="https://razorpay.com/privacy/" target="_blank" rel="noopener noreferrer" className="text-brand underline">https://razorpay.com/privacy/</a> to understand how they collect, use, and protect your information.
               </p>
             </div>
 
@@ -238,6 +261,26 @@ export default function PrivacyPolicyPage() {
             </p>
             <p className={`text-base leading-relaxed ${brand.text.strong}`}>
               You can reach us through the contact information provided in your account settings or by using the support features available on our platform.
+            </p>
+          </section>
+
+          {/* Complaints and Grievance Redressal */}
+          <section className="mb-8">
+            <h2 className={`text-2xl font-semibold ${brand.text.strong} mb-4`}>
+              Complaints and Grievance Redressal
+            </h2>
+            <p className={`text-base leading-relaxed ${brand.text.strong} mb-3`}>
+              If you have any complaints or concerns regarding your personal information, the content of this Privacy Policy, or any dispute relating to your use of our services, please contact us in writing or through the support features on our platform. We will record the information you provide so that we can respond effectively and resolve your concern.
+            </p>
+          </section>
+
+          {/* Applicable Law */}
+          <section className="mb-8">
+            <h2 className={`text-2xl font-semibold ${brand.text.strong} mb-4`}>
+              Applicable Law
+            </h2>
+            <p className={`text-base leading-relaxed ${brand.text.strong}`}>
+              Your use of this website and our services will be governed by and construed in accordance with the laws of India. Any legal action or proceedings arising out of your use may be brought in the competent courts or tribunals in India having jurisdiction, and you irrevocably submit to the jurisdiction of such courts or tribunals.
             </p>
           </section>
 
