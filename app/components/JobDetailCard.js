@@ -31,7 +31,7 @@ export default function JobDetailCard({ job, company, onApply }) {
   const needsTruncation = job.jobDescription && job.jobDescription.split(" ").length > 12;
 
   return (
-    <div className="border border-brand-stroke-weak rounded-lg p-2.5 bg-brand-bg-white space-y-1.5 max-h-[50vh] flex flex-col">
+    <div className="border border-brand-stroke-weak rounded-lg p-2.5 bg-brand-bg-white space-y-1.5 flex flex-col">
       {/* Header: Icon + Title + Seniority + Time - compact */}
       <div className="flex items-start gap-2 shrink-0">
         <div className="w-8 h-8 rounded-full bg-brand-bg-fill flex items-center justify-center shrink-0">
@@ -54,12 +54,12 @@ export default function JobDetailCard({ job, company, onApply }) {
 
       <div className="border-t border-brand-stroke-weak shrink-0" />
 
-      {/* Job Description - compact, line-clamp; See more/See less always visible when truncated */}
-      <div className="space-y-0.5 min-h-0 flex flex-col">
+      {/* Job Description: collapsed = 2-line clamp, no overflow; expanded = full content, card grows */}
+      <div className={`space-y-0.5 flex flex-col ${showFullDescription ? "" : "min-h-0"}`}>
         <div className="flex items-start gap-1.5 min-w-0">
           <Document size={14} className="text-brand-stroke-strong shrink-0 mt-0.5" />
-          <div className="flex-1 min-w-0 overflow-hidden">
-            <p className={`text-xs text-brand-text-strong ${showFullDescription ? "whitespace-pre-wrap" : "line-clamp-2"}`}>
+          <div className={`flex-1 min-w-0 ${showFullDescription ? "" : "overflow-hidden"}`}>
+            <p className={`text-xs text-brand-text-strong ${showFullDescription ? "whitespace-pre-wrap" : "line-clamp-2 overflow-hidden"}`}>
               {description}
             </p>
             {needsTruncation && (

@@ -77,7 +77,7 @@ export default function CompanyJobsSidebar({ company, jobs, isOpen, onClose }) {
       {showAbout && (
         <div className="shrink-0 px-6 py-3 border-b border-brand-stroke-weak">
           <p className="text-xs font-medium text-brand-text-weak mb-1.5">About the company</p>
-          <p className="text-[12px] leading-relaxed text-brand-text-weak whitespace-pre-line line-clamp-4 overflow-hidden">
+          <p className="text-[12px] leading-relaxed text-brand-text-weak whitespace-pre-line line-clamp-4 overflow-hidden break-words">
             {aboutText}
           </p>
         </div>
