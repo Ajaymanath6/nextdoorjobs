@@ -18,6 +18,7 @@ export default function EditJobModal({ isOpen, onClose, job, onSaved, jobApiPref
   const [perks, setPerks] = useState([]);
   const [holidays, setHolidays] = useState("");
   const [companyWebsiteUrl, setCompanyWebsiteUrl] = useState("");
+  const [companyLogoFile, setCompanyLogoFile] = useState(null);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState(null);
 
@@ -38,6 +39,7 @@ export default function EditJobModal({ isOpen, onClose, job, onSaved, jobApiPref
       setPerks(job.perks || []);
       setHolidays(job.holidays || "");
       setCompanyWebsiteUrl(job.company?.websiteUrl || "");
+      setCompanyLogoFile(null);
       setError(null);
     }
   }, [job, isOpen]);
@@ -74,30 +76,35 @@ export default function EditJobModal({ isOpen, onClose, job, onSaved, jobApiPref
       if (res.ok) {
         const data = await res.json();
         const updatedJob = data.job;
-        if (job.company?.id && (companyWebsiteUrl || "").trim() !== (job.company?.websiteUrl || "").trim()) {
-          const formData = new FormData();
-          formData.append("websiteUrl", (companyWebsiteUrl || "").trim());
-          const companyRes = await fetch(`/api/onboarding/company/${job.company.id}`, {
-            method: "PATCH",
-            body: formData,
-            credentials: "same-origin",
-          });
-          if (companyRes.ok && (companyWebsiteUrl || "").trim()) {
-            try {
-              const logoRes = await fetch(`/api/onboarding/fetch-logo?url=${encodeURIComponent((companyWebsiteUrl || "").trim())}`);
-              if (logoRes.ok) {
-                const logoData = await logoRes.json();
-                if (logoData.success && logoData.logoUrl) {
-                  const logoForm = new FormData();
-                  logoForm.append("logoPath", logoData.logoUrl);
-                  await fetch(`/api/onboarding/company/${job.company.id}`, {
-                    method: "PATCH",
-                    body: logoForm,
-                    credentials: "same-origin",
-                  });
+        if (job.company?.id) {
+          const websiteChanged = (companyWebsiteUrl || "").trim() !== (job.company?.websiteUrl || "").trim();
+          const hasLogoFile = companyLogoFile && companyLogoFile instanceof File && companyLogoFile.size > 0;
+          if (websiteChanged || hasLogoFile) {
+            const formData = new FormData();
+            if (websiteChanged) formData.append("websiteUrl", (companyWebsiteUrl || "").trim());
+            if (hasLogoFile) formData.append("logo", companyLogoFile);
+            const companyRes = await fetch(`/api/onboarding/company/${job.company.id}`, {
+              method: "PATCH",
+              body: formData,
+              credentials: "same-origin",
+            });
+            if (companyRes.ok && !hasLogoFile && websiteChanged && (companyWebsiteUrl || "").trim()) {
+              try {
+                const logoRes = await fetch(`/api/onboarding/fetch-logo?url=${encodeURIComponent((companyWebsiteUrl || "").trim())}`);
+                if (logoRes.ok) {
+                  const logoData = await logoRes.json();
+                  if (logoData.success && logoData.logoUrl) {
+                    const logoForm = new FormData();
+                    logoForm.append("logoPath", logoData.logoUrl);
+                    await fetch(`/api/onboarding/company/${job.company.id}`, {
+                      method: "PATCH",
+                      body: logoForm,
+                      credentials: "same-origin",
+                    });
+                  }
                 }
-              }
-            } catch (_) {}
+              } catch (_) {}
+            }
           }
         }
         if (onSaved) onSaved(updatedJob);
@@ -161,6 +168,20 @@ export default function EditJobModal({ isOpen, onClose, job, onSaved, jobApiPref
                   className={inputClasses}
                   placeholder="https://example.com"
                 />
+              </div>
+              <div>
+                <label className={`block text-sm font-medium ${brand.text.strong} mb-2`}>Company logo (optional)</label>
+                <input
+                  type="file"
+                  accept="image/*"
+                  onChange={(e) => setCompanyLogoFile(e.target.files?.[0] ?? null)}
+                  className={inputClasses}
+                />
+                {companyLogoFile && (
+                  <p className={`text-xs ${brand.text.weak} mt-1`}>
+                    {companyLogoFile.name} — will replace favicon/logo when you save
+                  </p>
+                )}
               </div>
             </div>
           )}

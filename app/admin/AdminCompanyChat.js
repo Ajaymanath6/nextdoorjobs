@@ -258,10 +258,13 @@ export default function AdminCompanyChat() {
     let logoFetched = false;
 
     if (!isSkip) {
+      const normalizedUrl = /^https?:\/\//i.test(value) ? value : `https://${value}`;
+      setCompanyData((prev) => ({ ...prev, websiteUrl: normalizedUrl }));
+
       setIsLoading(true);
       try {
         const logoRes = await fetch(
-          `/api/onboarding/fetch-logo?url=${encodeURIComponent(value)}`
+          `/api/onboarding/fetch-logo?url=${encodeURIComponent(normalizedUrl)}`
         );
         if (logoRes.ok) {
           const logoData = await logoRes.json();
@@ -269,6 +272,7 @@ export default function AdminCompanyChat() {
             logoFetched = true;
             setCompanyData((prev) => ({
               ...prev,
+              websiteUrl: normalizedUrl,
               logoPath: logoData.logoUrl,
               logoUrl: logoData.logoUrl,
             }));
@@ -280,7 +284,7 @@ export default function AdminCompanyChat() {
 
       try {
         const locRes = await fetch(
-          `/api/onboarding/company-from-url?url=${encodeURIComponent(value)}`
+          `/api/onboarding/company-from-url?url=${encodeURIComponent(normalizedUrl)}`
         );
         if (locRes.ok) {
           const data = await locRes.json();

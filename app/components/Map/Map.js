@@ -97,7 +97,6 @@ const MapComponent = ({ onOpenSettings, onViewModeChange, effectiveUser = null, 
   const companyMarkersRef = useRef([]);
   const straightLinesRef = useRef([]);
   const clusterGroupRef = useRef(null);
-  const zoomToJobMarkerRef = useRef(null);
   const filterDropdownRef = useRef(null);
   const filterButtonRef = useRef(null);
   const [locationsData, setLocationsData] = useState(null);
@@ -401,10 +400,6 @@ const MapComponent = ({ onOpenSettings, onViewModeChange, effectiveUser = null, 
         // Remove company markers
         if (clusterGroupRef.current) {
           mapInstanceRef.current.removeLayer(clusterGroupRef.current);
-        }
-        if (zoomToJobMarkerRef.current) {
-          mapInstanceRef.current.removeLayer(zoomToJobMarkerRef.current);
-          zoomToJobMarkerRef.current = null;
         }
         // Remove lines
         straightLinesRef.current.forEach((line) => {
@@ -2134,7 +2129,7 @@ const MapComponent = ({ onOpenSettings, onViewModeChange, effectiveUser = null, 
           mapInstanceRef.current = map;
           setMapReady(true);
 
-          // zoomToJobCoords is handled in the addMarkersToMap effect so the "my job" marker can be added there
+          // zoomToJobCoords is handled in a separate effect; it flies to the job coords (single company favicon pin, no extra marker)
         }).catch((error) => {
           console.error("Error loading markercluster:", error);
         });
@@ -2722,27 +2717,7 @@ const MapComponent = ({ onOpenSettings, onViewModeChange, effectiveUser = null, 
         if (typeof lat === "number" && typeof lng === "number") {
           sessionStorage.removeItem("zoomToJobCoords");
           localStorage.removeItem("zoomToJobCoords");
-          const L = window.L;
-          if (L) {
-            if (zoomToJobMarkerRef.current) {
-              mapInstanceRef.current.removeLayer(zoomToJobMarkerRef.current);
-              zoomToJobMarkerRef.current = null;
-            }
-            const jobIcon = createGeminiJobIcon(L, 50, logoUrl);
-            const myJobMarker = L.marker([lat, lng], {
-              icon: jobIcon,
-              zIndexOffset: 3000,
-              opacity: 1,
-            });
-            const popupContent = `
-              <div style="font-family: 'Open Sans', sans-serif; padding: 4px;">
-                <div style="font-weight: 600; font-size: 14px; color: #0A0A0A;">${companyName}</div>
-              </div>
-            `;
-            myJobMarker.bindPopup(popupContent, { className: "company-popup" });
-            myJobMarker.addTo(mapInstanceRef.current);
-            zoomToJobMarkerRef.current = myJobMarker;
-          }
+          // Single pin: do not add a separate "my job" marker; fly to coords so the existing company favicon pin is the only one.
           setTimeout(() => {
             if (mapInstanceRef.current) {
               mapInstanceRef.current.flyTo([lat, lng], 15);
@@ -3250,13 +3225,13 @@ const MapComponent = ({ onOpenSettings, onViewModeChange, effectiveUser = null, 
     // Build marker content: image (avatar/logo) when provided, else pin emoji; escape URL for HTML
     const safeImageUrl = imageUrl && typeof imageUrl === "string" ? imageUrl.replace(/"/g, "&quot;") : "";
     const innerContent = safeImageUrl
-      ? `<img src="${safeImageUrl}" alt="" class="user-location-marker-inner" onerror="this.onerror=null;this.src='/avatars/avatar1.png';">`
+      ? `<div style="width:44px;height:44px;border-radius:50%;overflow:hidden;display:flex;align-items:center;justify-content:center;"><img src="${safeImageUrl}" alt="" class="user-location-marker-inner" onerror="this.onerror=null;this.src='/avatars/avatar1.png';"></div>`
       : "📍";
 
     const themeGlow = "rgba(248, 68, 22, 0.5)";
     const themeBorder = "#F84416";
     const userLocationIcon = L.divIcon({
-      html: `<div class="user-location-marker-glow" style="background-color:${themeBorder};border-radius:50%;width:44px;height:44px;display:flex;align-items:center;justify-content:center;font-size:22px;border:3px solid #FFFFFF;box-shadow:0 0 0 4px ${themeGlow}, 0 0 20px ${themeGlow}, 0 2px 12px rgba(0,0,0,0.25);opacity:0.95;">${innerContent}</div>`,
+      html: `<div class="user-location-marker-glow" style="background-color:${themeBorder};border-radius:50%;width:44px;height:44px;display:flex;align-items:center;justify-content:center;font-size:22px;border:3px solid #FFFFFF;box-shadow:0 0 0 4px ${themeGlow}, 0 0 20px ${themeGlow}, 0 2px 12px rgba(0,0,0,0.25);opacity:0.95;overflow:hidden;">${innerContent}</div>`,
       className: "user-location-marker",
       iconSize: [44, 44],
       iconAnchor: [22, 22],
