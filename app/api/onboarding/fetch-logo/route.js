@@ -38,14 +38,6 @@ export async function GET(request) {
     const domain = websiteUrl.origin;
     const hostname = websiteUrl.hostname;
 
-    // Try multiple logo sources
-    const logoSources = [
-      `${domain}/favicon.ico`,
-      `${domain}/logo.png`,
-      `${domain}/apple-touch-icon.png`,
-      `${domain}/favicon.png`,
-    ];
-
     const fetchOpts = {
       headers: {
         "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
@@ -54,12 +46,39 @@ export async function GET(request) {
       signal: AbortSignal.timeout(5000),
     };
 
-    let logoUrl = null;
-
     function isImageResponse(response) {
       const ct = response.headers.get("content-type");
       return ct && ct.split(";")[0].trim().toLowerCase().startsWith("image/");
     }
+
+    let logoUrl = null;
+
+    // 1) Try get-website-favicon first (favicon discovery library)
+    try {
+      const getFavicon = (await import("get-website-favicon")).default;
+      const faviconResult = await getFavicon(domain);
+      const firstIcon = faviconResult?.icons?.[0]?.src;
+      if (firstIcon && typeof firstIcon === "string") {
+        const resolved = firstIcon.startsWith("http") ? firstIcon : new URL(firstIcon, domain).href;
+        let verify = await fetch(resolved, { ...fetchOpts, method: "HEAD" });
+        if (!verify.ok && verify.status === 405) {
+          verify = await fetch(resolved, { ...fetchOpts, method: "GET" });
+        }
+        if (verify.ok && isImageResponse(verify)) {
+          return NextResponse.json({ success: true, logoUrl: resolved });
+        }
+      }
+    } catch (_) {
+      // Library failed or returned nothing; continue with fallbacks
+    }
+
+    // 2) Try multiple logo sources (direct paths)
+    const logoSources = [
+      `${domain}/favicon.ico`,
+      `${domain}/logo.png`,
+      `${domain}/apple-touch-icon.png`,
+      `${domain}/favicon.png`,
+    ];
 
     // Try direct logo URLs: HEAD first, then GET if needed (some servers reject HEAD)
     for (const source of logoSources) {
