@@ -59,8 +59,10 @@ export default function AdminCompanyChat() {
   const [lastJobCoords, setLastJobCoords] = useState(null);
   const scrollToInlineRef = useRef(null);
   const [isMobile, setIsMobile] = useState(false);
+  const [recentJobsActive, setRecentJobsActive] = useState(false);
 
   const handleShowRecentJobs = async () => {
+    setRecentJobsActive(true);
     setIsLoading(true);
     try {
       const res = await fetch("/api/admin/jobs", {
@@ -90,6 +92,7 @@ export default function AdminCompanyChat() {
             "Couldn't load recent posted jobs right now. Please try again in a moment.",
         },
       ]);
+      setRecentJobsActive(false);
     } finally {
       setIsLoading(false);
     }
@@ -959,9 +962,11 @@ export default function AdminCompanyChat() {
         <button
           type="button"
           onClick={handleShowRecentJobs}
-          className="flex items-center gap-2 px-3 py-2 rounded-md border border-brand-stroke-weak text-brand-text-strong text-sm font-medium hover:bg-brand-bg-fill transition-colors"
+          className={`flex items-center gap-2 px-3 py-2 rounded-md border border-brand-stroke-weak text-brand-text-strong text-sm font-medium transition-colors ${
+            recentJobsActive ? "bg-brand-bg-fill" : "hover:bg-brand-bg-fill"
+          }`}
         >
-          Recent posted jobs
+          Job listings
         </button>
         <button
           type="button"

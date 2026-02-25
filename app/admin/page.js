@@ -114,8 +114,8 @@ export default function AdminDashboardPage() {
         }}
       />
 
-      <div className="relative z-10 flex justify-center px-4 h-[100dvh] w-screen pb-[env(safe-area-inset-bottom,0)]">
-        <div className="bg-white/95 backdrop-blur-sm rounded-lg overflow-hidden border border-brand-stroke-weak shadow-lg relative w-full max-w-[61rem] flex flex-col h-full m-0 p-0 min-h-0">
+      <div className="relative z-10 flex justify-center px-[46px] h-[100dvh] w-screen pb-[env(safe-area-inset-bottom,0)]">
+        <div className="bg-white/95 backdrop-blur-sm rounded-lg overflow-hidden border border-brand-stroke-weak shadow-lg relative w-full flex flex-col h-full m-0 p-0 min-h-0">
           <div className="shrink-0 max-w-2xl mx-auto w-full p-6 space-y-6">
             <div className="flex flex-wrap items-center justify-between gap-4">
               <h1 className="text-2xl font-semibold text-brand-text-strong">Admin</h1>
@@ -172,12 +172,12 @@ export default function AdminDashboardPage() {
 
           <div className="flex-1 min-h-0 overflow-y-auto flex flex-col">
             {viewSection === "gig" && (
-              <div className="flex-1 min-h-0 flex flex-col max-w-2xl mx-auto w-full p-6">
+              <div className="flex-1 min-h-0 flex flex-col w-full p-6">
                 <AdminGigChat />
               </div>
             )}
             {viewSection === "company" && (
-              <div className="flex-1 min-h-0 flex flex-col max-w-2xl mx-auto w-full p-6">
+              <div className="flex-1 min-h-0 flex flex-col w-full p-6">
                 <AdminCompanyChat />
               </div>
             )}
