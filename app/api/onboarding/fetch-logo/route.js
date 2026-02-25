@@ -47,7 +47,10 @@ export async function GET(request) {
     ];
 
     const fetchOpts = {
-      headers: { "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36" },
+      headers: {
+        "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
+        Accept: "image/*,*/*",
+      },
       signal: AbortSignal.timeout(5000),
     };
 
@@ -133,9 +136,7 @@ export async function GET(request) {
     try {
       const googleFavicon = `https://www.google.com/s2/favicons?domain=${encodeURIComponent(hostname)}&sz=128`;
       const gfRes = await fetch(googleFavicon, { ...fetchOpts, method: "GET" });
-      if (gfRes.ok && isImageResponse(gfRes)) {
-        return NextResponse.json({ success: true, logoUrl: googleFavicon });
-      }
+      if (gfRes.ok) return NextResponse.json({ success: true, logoUrl: googleFavicon });
     } catch (_) {}
 
     return NextResponse.json({

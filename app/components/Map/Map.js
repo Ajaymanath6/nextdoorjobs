@@ -2039,10 +2039,15 @@ const MapComponent = ({ onOpenSettings, onViewModeChange, effectiveUser = null, 
     });
     if (effectiveUser.accountType !== "Company") {
       fetch("/api/companies")
-        .then((res) => res.ok ? res.json() : null)
+        .then((res) => (res.ok ? res.json() : null))
         .then((data) => {
           if (data?.companies && Array.isArray(data.companies)) {
-            setTotalCompaniesCount(data.companies.length);
+            const visibleCompanies = data.companies.filter((company) => {
+              const name = company.name || company.company_name || "";
+              // Keep this in sync with the map marker filter (e.g. hide Test234)
+              return name !== "Test234";
+            });
+            setTotalCompaniesCount(visibleCompanies.length);
           }
         })
         .catch(() => {});
@@ -2065,10 +2070,14 @@ const MapComponent = ({ onOpenSettings, onViewModeChange, effectiveUser = null, 
         // Only fetch total companies count for non-Company accounts (Company account count is set in company-mode effect)
         if (user?.accountType !== "Company") {
           fetch("/api/companies")
-            .then((res) => res.ok ? res.json() : null)
+            .then((res) => (res.ok ? res.json() : null))
             .then((data) => {
               if (data?.companies && Array.isArray(data.companies)) {
-                setTotalCompaniesCount(data.companies.length);
+                const visibleCompanies = data.companies.filter((company) => {
+                  const name = company.name || company.company_name || "";
+                  return name !== "Test234";
+                });
+                setTotalCompaniesCount(visibleCompanies.length);
               }
             })
             .catch(() => {});
@@ -2563,7 +2572,7 @@ const MapComponent = ({ onOpenSettings, onViewModeChange, effectiveUser = null, 
         });
         clusterGroupRef.current = clusterGroup;
 
-        // Create company markers
+        // Create company markers (single pin per company; image from stored logoPath/logoUrl only, fallback to org icon)
         companies.forEach((company, index) => {
           const companyLogoUrl = company.logoPath || company.logoUrl || null;
           const positionsOpen = company.jobCount ?? 0;

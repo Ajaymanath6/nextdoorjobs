@@ -79,12 +79,14 @@ export default function EditJobModal({ isOpen, onClose, job, onSaved, jobApiPref
         const data = await res.json();
         let updatedJob = data.job;
         if (job.company?.id) {
-          const websiteChanged = (companyWebsiteUrl || "").trim() !== (job.company?.websiteUrl || "").trim();
+          const rawWebsite = (companyWebsiteUrl || "").trim();
+          const normalizedWebsite = rawWebsite && !/^https?:\/\//i.test(rawWebsite) ? `https://${rawWebsite}` : rawWebsite;
+          const websiteChanged = normalizedWebsite !== (job.company?.websiteUrl || "").trim();
           const descriptionChanged = (companyDescription ?? "") !== (job.company?.description ?? "");
           const hasLogoFile = companyLogoFile && companyLogoFile instanceof File && companyLogoFile.size > 0;
           if (websiteChanged || hasLogoFile || descriptionChanged) {
             const formData = new FormData();
-            if (websiteChanged) formData.append("websiteUrl", (companyWebsiteUrl || "").trim());
+            if (websiteChanged) formData.append("websiteUrl", normalizedWebsite);
             if (descriptionChanged) formData.append("description", (companyDescription || "").trim());
             if (hasLogoFile) formData.append("logo", companyLogoFile);
             const companyRes = await fetch(`/api/onboarding/company/${job.company.id}`, {
@@ -97,9 +99,9 @@ export default function EditJobModal({ isOpen, onClose, job, onSaved, jobApiPref
               const companyData = await companyRes.json().catch(() => ({}));
               if (companyData.company) patchedCompany = { ...patchedCompany, ...companyData.company };
             }
-            if (!hasLogoFile && websiteChanged && (companyWebsiteUrl || "").trim()) {
+            if (!hasLogoFile && websiteChanged && normalizedWebsite) {
               try {
-                const logoRes = await fetch(`/api/onboarding/fetch-logo?url=${encodeURIComponent((companyWebsiteUrl || "").trim())}`);
+                const logoRes = await fetch(`/api/onboarding/fetch-logo?url=${encodeURIComponent(normalizedWebsite)}`);
                 if (logoRes.ok) {
                   const logoData = await logoRes.json();
                   if (logoData.success && logoData.logoUrl) {
@@ -119,7 +121,7 @@ export default function EditJobModal({ isOpen, onClose, job, onSaved, jobApiPref
               } catch (_) {}
             }
             if (patchedCompany) {
-              if ((companyWebsiteUrl || "").trim()) patchedCompany.websiteUrl = (companyWebsiteUrl || "").trim();
+              if (normalizedWebsite) patchedCompany.websiteUrl = normalizedWebsite;
               if ((companyDescription ?? "").trim()) patchedCompany.description = (companyDescription || "").trim();
               updatedJob = { ...updatedJob, company: patchedCompany };
             }
