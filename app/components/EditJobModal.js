@@ -18,6 +18,7 @@ export default function EditJobModal({ isOpen, onClose, job, onSaved, jobApiPref
   const [perks, setPerks] = useState([]);
   const [holidays, setHolidays] = useState("");
   const [companyWebsiteUrl, setCompanyWebsiteUrl] = useState("");
+  const [companyDescription, setCompanyDescription] = useState("");
   const [companyLogoFile, setCompanyLogoFile] = useState(null);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState(null);
@@ -39,6 +40,7 @@ export default function EditJobModal({ isOpen, onClose, job, onSaved, jobApiPref
       setPerks(job.perks || []);
       setHolidays(job.holidays || "");
       setCompanyWebsiteUrl(job.company?.websiteUrl || "");
+      setCompanyDescription(job.company?.description ?? "");
       setCompanyLogoFile(null);
       setError(null);
     }
@@ -78,10 +80,12 @@ export default function EditJobModal({ isOpen, onClose, job, onSaved, jobApiPref
         const updatedJob = data.job;
         if (job.company?.id) {
           const websiteChanged = (companyWebsiteUrl || "").trim() !== (job.company?.websiteUrl || "").trim();
+          const descriptionChanged = (companyDescription ?? "") !== (job.company?.description ?? "");
           const hasLogoFile = companyLogoFile && companyLogoFile instanceof File && companyLogoFile.size > 0;
-          if (websiteChanged || hasLogoFile) {
+          if (websiteChanged || hasLogoFile || descriptionChanged) {
             const formData = new FormData();
             if (websiteChanged) formData.append("websiteUrl", (companyWebsiteUrl || "").trim());
+            if (descriptionChanged) formData.append("description", (companyDescription || "").trim());
             if (hasLogoFile) formData.append("logo", companyLogoFile);
             const companyRes = await fetch(`/api/onboarding/company/${job.company.id}`, {
               method: "PATCH",
@@ -167,6 +171,16 @@ export default function EditJobModal({ isOpen, onClose, job, onSaved, jobApiPref
                   onChange={(e) => setCompanyWebsiteUrl(e.target.value)}
                   className={inputClasses}
                   placeholder="https://example.com"
+                />
+              </div>
+              <div>
+                <label className={`block text-sm font-medium ${brand.text.strong} mb-2`}>What does the company do?</label>
+                <textarea
+                  value={companyDescription}
+                  onChange={(e) => setCompanyDescription(e.target.value)}
+                  className={inputClasses}
+                  placeholder="Short company description"
+                  rows={3}
                 />
               </div>
               <div>

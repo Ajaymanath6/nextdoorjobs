@@ -61,6 +61,14 @@ export default function AdminCompanyChat() {
   const [isMobile, setIsMobile] = useState(false);
   const [recentJobsActive, setRecentJobsActive] = useState(false);
   const [adminJobsCache, setAdminJobsCache] = useState([]);
+  const jobDataRef = useRef({});
+  const createdCompanyRef = useRef(null);
+  useEffect(() => {
+    jobDataRef.current = jobData;
+  }, [jobData]);
+  useEffect(() => {
+    createdCompanyRef.current = createdCompany;
+  }, [createdCompany]);
 
   const handleShowRecentJobs = async () => {
     setRecentJobsActive(true);
@@ -422,11 +430,12 @@ export default function AdminCompanyChat() {
   };
 
   const handleJobSubmit = async () => {
-    const j = jobData;
+    const j = jobDataRef.current;
+    const company = createdCompanyRef.current;
     const title = (j.title || "").trim();
     const jobDescription = (j.jobDescription || "").trim();
     const category = j.category || "EngineeringSoftwareQA";
-    if (!title || !jobDescription || !createdCompany?.id) {
+    if (!title || !jobDescription || !company?.id) {
       setChatMessages((prev) => [
         ...prev,
         {
@@ -457,7 +466,7 @@ export default function AdminCompanyChat() {
           title,
           category,
           jobDescription,
-          companyId: createdCompany.id,
+          companyId: company.id,
           yearsRequired: Number.isNaN(yearsRequired) ? 0 : yearsRequired,
           salaryMin: Number.isNaN(salaryMin) ? null : salaryMin,
           salaryMax: Number.isNaN(salaryMax) ? null : salaryMax,
@@ -468,10 +477,10 @@ export default function AdminCompanyChat() {
       const result = await res.json().catch(() => ({}));
 
       if (res.ok && result.success && result.jobPosition) {
-        const companyLat = createdCompany.latitude;
-        const companyLon = createdCompany.longitude;
+        const companyLat = company.latitude;
+        const companyLon = company.longitude;
         const logoUrl =
-          createdCompany.logoPath ||
+          company.logoPath ||
           companyData?.logoPath ||
           companyData?.logoUrl ||
           null;
@@ -484,7 +493,7 @@ export default function AdminCompanyChat() {
           const payload = {
             lat: companyLat,
             lng: companyLon,
-            companyName: createdCompany.name || "Your posting",
+            companyName: company.name || "Your posting",
             logoUrl: logoUrl || null,
           };
           setLastJobCoords({ lat: companyLat, lng: companyLon, logoUrl: logoUrl || null });
@@ -592,7 +601,17 @@ export default function AdminCompanyChat() {
           case COMPANY_FIELDS.NAME:
             setCompanyData((prev) => ({ ...prev, name: value }));
             await addAIMessage(
-              `Got it! Company: "${value}". Add company location (coordinates), or skip to enter pincode only.`
+              `Got it! Company: "${value}". What does your company do? (short description or type skip)`
+            );
+            setCurrentField(COMPANY_FIELDS.DESCRIPTION);
+            break;
+
+          case COMPANY_FIELDS.DESCRIPTION:
+            if (value.toLowerCase() !== "skip" && value) {
+              setCompanyData((prev) => ({ ...prev, description: value }));
+            }
+            await addAIMessage(
+              "Add company location (coordinates), or skip to enter pincode only."
             );
             setCurrentField(COMPANY_FIELDS.LOCATION);
             setInlineComponent(
@@ -606,36 +625,6 @@ export default function AdminCompanyChat() {
                   setInlineComponent(null);
                   handleLocationSkipped();
                 }}
-              />
-            );
-            scrollToInline();
-            break;
-
-          case COMPANY_FIELDS.DESCRIPTION:
-            if (value.toLowerCase() !== "skip" && value) {
-              setCompanyData((prev) => ({ ...prev, description: value }));
-            }
-            await addAIMessage(
-              "Company website URL? (or type skip if not available)"
-            );
-            setCurrentField(COMPANY_FIELDS.WEBSITE);
-            setInlineComponent(
-              <UrlInput
-                onUrlSubmit={(url) => {
-                  if (url.toLowerCase() !== "skip") {
-                    setCompanyData((prev) => ({
-                      ...prev,
-                      websiteUrl: url,
-                    }));
-                  }
-                  setInlineComponent(null);
-                  handleWebsiteSubmitted(url);
-                }}
-                onSkip={() => {
-                  setInlineComponent(null);
-                  handleWebsiteSubmitted("skip");
-                }}
-                placeholder="Enter website URL..."
               />
             );
             scrollToInline();

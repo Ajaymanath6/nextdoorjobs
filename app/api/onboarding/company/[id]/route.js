@@ -145,6 +145,9 @@ export async function PATCH(request, { params }) {
     const pincode = formData.get("pincode");
     if (pincode) updateData.pincode = pincode.toString();
 
+    const description = formData.get("description");
+    if (description !== null && description !== undefined) updateData.description = description.toString().trim() || null;
+
     // Handle logo upload if provided (file)
     const logoFile = formData.get("logo");
     if (logoFile && logoFile instanceof File && logoFile.size > 0) {
