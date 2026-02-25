@@ -12,6 +12,7 @@ export default function ConfirmDeleteModal({
   message = "This will remove the gig from all instances, database, and the map. This cannot be undone.",
   confirmText = "Delete",
   cancelText = "Cancel",
+  isDeleting = false,
 }) {
   const brand = themeClasses.brand;
 
@@ -44,7 +45,8 @@ export default function ConfirmDeleteModal({
           <button
             type="button"
             onClick={onClose}
-            className={`px-4 py-2 rounded-lg border border-brand-stroke-border ${brand.text.strong} hover:bg-brand-bg-fill transition-colors text-sm font-medium`}
+            disabled={isDeleting}
+            className={`px-4 py-2 rounded-lg border border-brand-stroke-border ${brand.text.strong} hover:bg-brand-bg-fill transition-colors text-sm font-medium disabled:opacity-50 disabled:cursor-not-allowed`}
           >
             {cancelText}
           </button>
@@ -53,9 +55,17 @@ export default function ConfirmDeleteModal({
             onClick={async () => {
               await onConfirm();
             }}
-            className="px-4 py-2 rounded-lg bg-red-600 text-white hover:bg-red-700 transition-colors text-sm font-medium"
+            disabled={isDeleting}
+            className="px-4 py-2 rounded-lg bg-red-600 text-white hover:bg-red-700 transition-colors text-sm font-medium disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
           >
-            {confirmText}
+            {isDeleting ? (
+              <>
+                <span className="inline-block w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                Deleting…
+              </>
+            ) : (
+              confirmText
+            )}
           </button>
         </div>
       </div>

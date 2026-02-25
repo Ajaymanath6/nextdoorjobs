@@ -31,6 +31,7 @@ export default function ChatInterface({
   onJobEdited,
   onShowJobListings,
   jobApiPrefix = "/api/jobs",
+  openMapInNewTab = false,
 }) {
   const router = useRouter();
   const messagesEndRef = useRef(null);
@@ -54,6 +55,34 @@ export default function ChatInterface({
   const [jobEditModalOpen, setJobEditModalOpen] = useState(false);
   const [jobToEdit, setJobToEdit] = useState(null);
   const [extendingJobId, setExtendingJobId] = useState(null);
+
+  const handleJobSeeOnMap = async (job) => {
+    const company = job.company;
+    const lat = company?.latitude != null ? Number(company.latitude) : null;
+    const lng = company?.longitude != null ? Number(company.longitude) : null;
+    if (lat == null || lng == null) return;
+    const payload = {
+      lat,
+      lng,
+      companyName: company?.name || job.title || "Job posting",
+      logoUrl: company?.logoPath || null,
+    };
+    if (typeof sessionStorage !== "undefined") sessionStorage.setItem("zoomToJobCoords", JSON.stringify(payload));
+    if (typeof localStorage !== "undefined") localStorage.setItem("zoomToJobCoords", JSON.stringify(payload));
+    if (openMapInNewTab) {
+      try {
+        await fetch("/api/admin/set-view-as", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          credentials: "include",
+          body: JSON.stringify({ role: "individual" }),
+        });
+      } catch (_) {}
+      window.open("/", "_blank");
+    } else {
+      router.push("/");
+    }
+  };
 
   const handleViewGigOnMap = (gig) => {
     if (gig.latitude != null && gig.longitude != null) {
@@ -269,6 +298,17 @@ export default function ChatInterface({
                             </p>
                           </div>
                           <div className="shrink-0 flex items-center gap-1.5">
+                            {job.company?.latitude != null && job.company?.longitude != null ? (
+                              <button
+                                type="button"
+                                onClick={() => handleJobSeeOnMap(job)}
+                                className="p-1.5 rounded-md text-brand-text-weak hover:bg-brand-bg-fill hover:text-brand-stroke-strong transition-colors"
+                                title="See on map"
+                                aria-label="See on map"
+                              >
+                                <Location size={18} />
+                              </button>
+                            ) : null}
                             {onJobEdited ? (
                               <button
                                 type="button"
@@ -934,6 +974,7 @@ export default function ChatInterface({
           setJobToEdit(null);
         }}
         job={jobToEdit}
+        jobApiPrefix={jobApiPrefix}
         onSaved={(updatedJob) => {
           setJobEditModalOpen(false);
           setJobToEdit(null);

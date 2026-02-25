@@ -5,7 +5,7 @@ import Modal from "./Modal";
 import { Close } from "@carbon/icons-react";
 import themeClasses from "../theme-utility-classes.json";
 
-export default function EditJobModal({ isOpen, onClose, job, onSaved }) {
+export default function EditJobModal({ isOpen, onClose, job, onSaved, jobApiPrefix = "/api/jobs" }) {
   const [title, setTitle] = useState("");
   const [jobDescription, setJobDescription] = useState("");
   const [remoteType, setRemoteType] = useState("");
@@ -17,6 +17,7 @@ export default function EditJobModal({ isOpen, onClose, job, onSaved }) {
   const [teamSize, setTeamSize] = useState("");
   const [perks, setPerks] = useState([]);
   const [holidays, setHolidays] = useState("");
+  const [companyWebsiteUrl, setCompanyWebsiteUrl] = useState("");
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState(null);
 
@@ -36,6 +37,7 @@ export default function EditJobModal({ isOpen, onClose, job, onSaved }) {
       setTeamSize(job.teamSize || "");
       setPerks(job.perks || []);
       setHolidays(job.holidays || "");
+      setCompanyWebsiteUrl(job.company?.websiteUrl || "");
       setError(null);
     }
   }, [job, isOpen]);
@@ -50,7 +52,7 @@ export default function EditJobModal({ isOpen, onClose, job, onSaved }) {
     setError(null);
 
     try {
-      const res = await fetch(`/api/jobs/${job.id}`, {
+      const res = await fetch(`${jobApiPrefix}/${job.id}`, {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
@@ -71,7 +73,34 @@ export default function EditJobModal({ isOpen, onClose, job, onSaved }) {
 
       if (res.ok) {
         const data = await res.json();
-        if (onSaved) onSaved(data.job);
+        const updatedJob = data.job;
+        if (job.company?.id && (companyWebsiteUrl || "").trim() !== (job.company?.websiteUrl || "").trim()) {
+          const formData = new FormData();
+          formData.append("websiteUrl", (companyWebsiteUrl || "").trim());
+          const companyRes = await fetch(`/api/onboarding/company/${job.company.id}`, {
+            method: "PATCH",
+            body: formData,
+            credentials: "same-origin",
+          });
+          if (companyRes.ok && (companyWebsiteUrl || "").trim()) {
+            try {
+              const logoRes = await fetch(`/api/onboarding/fetch-logo?url=${encodeURIComponent((companyWebsiteUrl || "").trim())}`);
+              if (logoRes.ok) {
+                const logoData = await logoRes.json();
+                if (logoData.success && logoData.logoUrl) {
+                  const logoForm = new FormData();
+                  logoForm.append("logoPath", logoData.logoUrl);
+                  await fetch(`/api/onboarding/company/${job.company.id}`, {
+                    method: "PATCH",
+                    body: logoForm,
+                    credentials: "same-origin",
+                  });
+                }
+              }
+            } catch (_) {}
+          }
+        }
+        if (onSaved) onSaved(updatedJob);
         onClose();
       } else {
         const errData = await res.json().catch(() => ({}));
@@ -112,6 +141,27 @@ export default function EditJobModal({ isOpen, onClose, job, onSaved }) {
           {error && (
             <div className="p-3 bg-red-50 border border-red-200 rounded-lg text-sm text-red-600">
               {error}
+            </div>
+          )}
+
+          {/* Company (when job has company) */}
+          {job?.company && (
+            <div className="rounded-lg border border-brand-stroke-weak bg-brand-bg-fill/50 p-4 space-y-3">
+              <p className={`text-sm font-medium ${brand.text.strong}`}>Company</p>
+              <div>
+                <label className={`block text-xs font-medium ${brand.text.weak} mb-1`}>Company name</label>
+                <p className={`text-sm ${brand.text.strong}`}>{job.company.name || "—"}</p>
+              </div>
+              <div>
+                <label className={`block text-sm font-medium ${brand.text.strong} mb-2`}>Company website</label>
+                <input
+                  type="url"
+                  value={companyWebsiteUrl}
+                  onChange={(e) => setCompanyWebsiteUrl(e.target.value)}
+                  className={inputClasses}
+                  placeholder="https://example.com"
+                />
+              </div>
             </div>
           )}
 

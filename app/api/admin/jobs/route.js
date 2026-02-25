@@ -65,6 +65,10 @@ export async function GET() {
           select: {
             id: true,
             name: true,
+            websiteUrl: true,
+            latitude: true,
+            longitude: true,
+            logoPath: true,
           },
         },
       },
@@ -84,6 +88,16 @@ export async function GET() {
       isActive: job.isActive,
       createdAt: job.createdAt,
       companyName: job.company?.name ?? undefined,
+      company: job.company
+        ? {
+            id: job.company.id,
+            name: job.company.name,
+            websiteUrl: job.company.websiteUrl ?? undefined,
+            latitude: job.company.latitude ?? undefined,
+            longitude: job.company.longitude ?? undefined,
+            logoPath: job.company.logoPath ?? undefined,
+          }
+        : undefined,
     }));
 
     return NextResponse.json({ success: true, jobs: formatted });

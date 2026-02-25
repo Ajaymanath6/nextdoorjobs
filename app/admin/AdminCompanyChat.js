@@ -1049,6 +1049,7 @@ export default function AdminCompanyChat() {
           onJobDeleted={handleAdminJobDeleted}
           onJobEdited={handleAdminJobEdited}
           jobApiPrefix="/api/admin/jobs"
+          openMapInNewTab={true}
         />
       </div>
     </div>

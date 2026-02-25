@@ -145,7 +145,7 @@ export async function PATCH(request, { params }) {
     const pincode = formData.get("pincode");
     if (pincode) updateData.pincode = pincode.toString();
 
-    // Handle logo upload if provided
+    // Handle logo upload if provided (file)
     const logoFile = formData.get("logo");
     if (logoFile && logoFile instanceof File && logoFile.size > 0) {
       const uploadResult = await handleFileUpload(formData, "logo");
@@ -156,6 +156,11 @@ export async function PATCH(request, { params }) {
         );
       }
       updateData.logoPath = uploadResult.path;
+    }
+    // Allow setting logoPath to a URL string (e.g. from fetch-logo)
+    const logoPathUrl = formData.get("logoPath");
+    if (logoPathUrl != null && typeof logoPathUrl === "string" && logoPathUrl.trim()) {
+      updateData.logoPath = logoPathUrl.trim();
     }
 
     // Update company

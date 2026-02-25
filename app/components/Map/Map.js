@@ -2709,7 +2709,10 @@ const MapComponent = ({ onOpenSettings, onViewModeChange, effectiveUser = null, 
   useEffect(() => {
     if (!mapInstanceRef.current) return;
     try {
-      const raw = typeof window !== "undefined" ? sessionStorage.getItem("zoomToJobCoords") : null;
+      const raw =
+        typeof window !== "undefined"
+          ? sessionStorage.getItem("zoomToJobCoords") || localStorage.getItem("zoomToJobCoords")
+          : null;
       if (raw && mapInstanceRef.current) {
         const payload = JSON.parse(raw);
         const lat = payload.lat;
@@ -2718,6 +2721,7 @@ const MapComponent = ({ onOpenSettings, onViewModeChange, effectiveUser = null, 
         const logoUrl = payload.logoUrl || null;
         if (typeof lat === "number" && typeof lng === "number") {
           sessionStorage.removeItem("zoomToJobCoords");
+          localStorage.removeItem("zoomToJobCoords");
           const L = window.L;
           if (L) {
             if (zoomToJobMarkerRef.current) {
