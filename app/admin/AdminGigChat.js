@@ -23,7 +23,8 @@ const GIG_FIELDS = {
   PINCODE: "gig_pincode",
 };
 
-const INITIAL_AI_MESSAGE = "Let's post a gig for a worker. What's the gig title? (e.g. Singing, Custom purses, Teaching)";
+const INITIAL_AI_MESSAGE =
+  "Let's post a gig for a worker. First, share the gig location so candidates see it on the map.";
 
 function extractValue(message) {
   const trimmed = (message || "").trim();
@@ -37,7 +38,7 @@ export default function AdminGigChat() {
   const [isTyping, setIsTyping] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [gigData, setGigData] = useState({});
-  const [currentField, setCurrentField] = useState(GIG_FIELDS.TITLE);
+  const [currentField, setCurrentField] = useState(GIG_FIELDS.LOCATION);
   const [lastGigCoords, setLastGigCoords] = useState(null);
   const scrollToInlineRef = useRef(null);
   const [isMobile, setIsMobile] = useState(false);
@@ -369,21 +370,36 @@ export default function AdminGigChat() {
     }
   };
 
-  const handleViewOnMap = () => {
+  const handleViewOnMap = async () => {
     if (lastGigCoords && typeof sessionStorage !== "undefined") {
-      sessionStorage.setItem("zoomToGigCoords", JSON.stringify({
-        ...lastGigCoords,
-        view: "gig_workers",
-      }));
+      sessionStorage.setItem(
+        "zoomToGigCoords",
+        JSON.stringify({
+          ...lastGigCoords,
+          view: "gig_workers",
+        })
+      );
     }
-    window.location.href = "/";
+    try {
+      await fetch("/api/admin/set-view-as", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        credentials: "include",
+        body: JSON.stringify({ viewAs: "user" }),
+      });
+    } catch (err) {
+      console.error("Failed to set admin view-as before opening map:", err);
+    }
+    if (typeof window !== "undefined") {
+      window.open("/", "_blank");
+    }
   };
 
   const handleStartNext = () => {
     setChatMessages([{ type: "ai", text: INITIAL_AI_MESSAGE }]);
     setInlineComponent(null);
     setGigData({});
-    setCurrentField(GIG_FIELDS.TITLE);
+    setCurrentField(GIG_FIELDS.LOCATION);
     setLastGigCoords(null);
   };
 
@@ -394,7 +410,7 @@ export default function AdminGigChat() {
     setIsTyping(false);
     setIsLoading(false);
     setGigData({});
-    setCurrentField(GIG_FIELDS.TITLE);
+    setCurrentField(GIG_FIELDS.LOCATION);
     setLastGigCoords(null);
   };
 
@@ -405,6 +421,28 @@ export default function AdminGigChat() {
 
     setTimeout(async () => {
       switch (currentField) {
+        case GIG_FIELDS.LOCATION:
+          await addAIMessage(
+            "Where is the gig located? You can get coordinates, or skip and choose state/district."
+          );
+          setInlineComponent(
+            <GetCoordinatesButton
+              isMobile={isMobile}
+              onCoordinatesReceived={(lat, lon) => {
+                setGigData((prev) => ({ ...prev, latitude: lat, longitude: lon }));
+                setInlineComponent(null);
+                handleGigCoordinatesReceived(lat, lon);
+              }}
+              onSkip={() => {
+                setInlineComponent(null);
+                handleGigLocationSkipped();
+              }}
+            />
+          );
+          setCurrentField(GIG_FIELDS.STATE);
+          scrollToInline();
+          break;
+
         case GIG_FIELDS.TITLE:
           setGigData((prev) => ({ ...prev, title: value }));
           await addAIMessage(

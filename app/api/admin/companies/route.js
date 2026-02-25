@@ -65,6 +65,8 @@ export async function POST(request) {
       state,
       district,
       pincode,
+      logoPath,
+      logoUrl,
     } = body;
 
     if (!name || !state || !district) {
@@ -77,7 +79,7 @@ export async function POST(request) {
     const company = await companyService.createCompany(userId, {
       name: String(name).trim(),
       description: description != null ? String(description).trim() : null,
-      logoPath: null,
+      logoPath: logoPath || logoUrl || null,
       websiteUrl: websiteUrl != null ? String(websiteUrl).trim() : null,
       fundingSeries: fundingSeries || null,
       latitude: latitude != null ? parseFloat(latitude) : null,
@@ -93,6 +95,7 @@ export async function POST(request) {
         id: company.id,
         name: company.name,
         description: company.description,
+        logoPath: company.logoPath,
         state: company.state,
         district: company.district,
       },

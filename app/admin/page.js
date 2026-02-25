@@ -147,16 +147,24 @@ export default function AdminDashboardPage() {
                 <button
                   type="button"
                   onClick={() => setViewSection("gig")}
-                  className="rounded-md bg-brand-bg-white border-[1.5px] border-brand-stroke-weak text-brand-text-strong px-4 py-2 text-sm font-medium hover:bg-brand-bg-fill"
+                  className={
+                    viewSection === "gig"
+                      ? "rounded-md bg-brand-bg-fill border-[1.5px] border-brand-stroke-weak text-brand-text-strong px-4 py-2 text-sm font-medium"
+                      : "rounded-md bg-brand-bg-white border-[1.5px] border-brand-stroke-weak text-brand-text-strong px-4 py-2 text-sm font-medium hover:bg-brand-bg-fill"
+                  }
                 >
-                  Gig Admin
+                  View as Gig worker
                 </button>
                 <button
                   type="button"
                   onClick={() => setViewSection("company")}
-                  className="rounded-md bg-brand-bg-white border-[1.5px] border-brand-stroke-weak text-brand-text-strong px-4 py-2 text-sm font-medium hover:bg-brand-bg-fill"
+                  className={
+                    viewSection === "company"
+                      ? "rounded-md bg-brand-bg-fill border-[1.5px] border-brand-stroke-weak text-brand-text-strong px-4 py-2 text-sm font-medium"
+                      : "rounded-md bg-brand-bg-white border-[1.5px] border-brand-stroke-weak text-brand-text-strong px-4 py-2 text-sm font-medium hover:bg-brand-bg-fill"
+                  }
                 >
-                  company Admin
+                  View as Company
                 </button>
               </div>
             </section>

@@ -9,6 +9,8 @@ import FundingSeriesBadges from "../components/Onboarding/FundingSeriesBadges";
 import PincodeDropdown from "../components/Onboarding/PincodeDropdown";
 import ExperienceRangeSelect from "../components/Onboarding/ExperienceRangeSelect";
 import SalaryRangeBadges from "../components/Onboarding/SalaryRangeBadges";
+import RemoteTypeSelector from "../components/Onboarding/RemoteTypeSelector";
+import SeniorityLevelSelector from "../components/Onboarding/SeniorityLevelSelector";
 import { JOB_CATEGORIES } from "../../lib/constants/jobCategories";
 import { WatsonHealthRotate_360 } from "@carbon/icons-react";
 
@@ -57,6 +59,41 @@ export default function AdminCompanyChat() {
   const [lastJobCoords, setLastJobCoords] = useState(null);
   const scrollToInlineRef = useRef(null);
   const [isMobile, setIsMobile] = useState(false);
+
+  const handleShowRecentJobs = async () => {
+    setIsLoading(true);
+    try {
+      const res = await fetch("/api/admin/jobs", {
+        method: "GET",
+        credentials: "include",
+      });
+      const data = await res.json().catch(() => ({}));
+      const jobs = Array.isArray(data.jobs) ? data.jobs : [];
+
+      setChatMessages((prev) => [
+        ...prev,
+        {
+          type: "ai",
+          text: jobs.length
+            ? "Here are your recent posted jobs:"
+            : "You don't have any recent posted jobs yet.",
+        },
+        ...(jobs.length ? [{ type: "jobList", jobs }] : []),
+      ]);
+    } catch (err) {
+      console.error("Failed to load recent admin jobs:", err);
+      setChatMessages((prev) => [
+        ...prev,
+        {
+          type: "ai",
+          text:
+            "Couldn't load recent posted jobs right now. Please try again in a moment.",
+        },
+      ]);
+    } finally {
+      setIsLoading(false);
+    }
+  };
 
   useEffect(() => {
     const check = () =>
@@ -155,6 +192,94 @@ export default function AdminCompanyChat() {
     setCurrentField(COMPANY_FIELDS.PINCODE);
   };
 
+  const handleWebsiteSubmitted = async (url) => {
+    const value = (url || "").trim();
+    const isSkip = !value || value.toLowerCase() === "skip";
+    let logoFetched = false;
+
+    if (!isSkip) {
+      setIsLoading(true);
+      try {
+        const logoRes = await fetch(
+          `/api/onboarding/fetch-logo?url=${encodeURIComponent(value)}`
+        );
+        if (logoRes.ok) {
+          const logoData = await logoRes.json();
+          if (logoData.success && logoData.logoUrl) {
+            logoFetched = true;
+            setCompanyData((prev) => ({
+              ...prev,
+              logoPath: logoData.logoUrl,
+              logoUrl: logoData.logoUrl,
+            }));
+          }
+        }
+      } catch (e) {
+        // Ignore logo fetch errors and continue
+      }
+
+      try {
+        const locRes = await fetch(
+          `/api/onboarding/company-from-url?url=${encodeURIComponent(value)}`
+        );
+        if (locRes.ok) {
+          const data = await locRes.json();
+          const hasAll =
+            data.state &&
+            data.district &&
+            typeof data.latitude === "number" &&
+            typeof data.longitude === "number";
+          if (hasAll) {
+            setCompanyData((prev) => ({
+              ...prev,
+              state: data.state,
+              district: data.district,
+              latitude: String(data.latitude),
+              longitude: String(data.longitude),
+              ...(data.pincode && { pincode: data.pincode }),
+            }));
+          }
+        }
+      } catch (e) {
+        // Ignore failures, we still proceed
+      }
+
+      await addAIMessage(
+        logoFetched
+          ? `Website noted: ${value}. We found your company logo!`
+          : `Website noted: ${value}.`
+      );
+    } else {
+      await addAIMessage("Website skipped.");
+    }
+
+    await addAIMessage("What's the funding series? (or skip)");
+    setCurrentField(COMPANY_FIELDS.FUNDING);
+    setInlineComponent(
+      <FundingSeriesBadges
+        onSelect={(series) => {
+          setCompanyData((prev) => ({
+            ...prev,
+            fundingSeries: series,
+          }));
+          setInlineComponent(null);
+          addAIMessage("Short company description? (Type or skip)").then(() => {
+            setCurrentField(COMPANY_FIELDS.DESCRIPTION);
+          });
+        }}
+        onSkip={() => {
+          setInlineComponent(null);
+          addAIMessage("Short company description? (Type or skip)").then(() => {
+            setCurrentField(COMPANY_FIELDS.DESCRIPTION);
+          });
+        }}
+        selectedValue={companyData?.fundingSeries}
+      />
+    );
+    scrollToInline();
+    setIsLoading(false);
+  };
+
   const handleCompanySubmit = async (overrides = {}) => {
     const c = { ...companyData, ...overrides };
     const name = (c.name || "").trim();
@@ -183,6 +308,7 @@ export default function AdminCompanyChat() {
           description: c.description?.trim() || null,
           websiteUrl: c.websiteUrl?.trim() || null,
           fundingSeries: c.fundingSeries || null,
+          logoPath: c.logoPath || c.logoUrl || null,
           latitude:
             c.latitude != null && Number.isFinite(Number(c.latitude))
               ? Number(c.latitude)
@@ -326,7 +452,7 @@ export default function AdminCompanyChat() {
     }
   };
 
-  const handleViewOnMap = () => {
+  const handleViewOnMap = async () => {
     if (lastJobCoords && typeof sessionStorage !== "undefined") {
       sessionStorage.setItem(
         "zoomToJobCoords",
@@ -336,7 +462,19 @@ export default function AdminCompanyChat() {
         })
       );
     }
-    window.location.href = "/";
+    try {
+      await fetch("/api/admin/set-view-as", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        credentials: "include",
+        body: JSON.stringify({ viewAs: "user" }),
+      });
+    } catch (err) {
+      console.error("Failed to set admin view-as before opening map:", err);
+    }
+    if (typeof window !== "undefined") {
+      window.open("/", "_blank");
+    }
   };
 
   const handleStartNext = () => {
@@ -374,140 +512,8 @@ export default function AdminCompanyChat() {
         switch (currentField) {
           case COMPANY_FIELDS.NAME:
             setCompanyData((prev) => ({ ...prev, name: value }));
-            await addAIMessage(`Got it! Company: "${value}". Which state?`);
-            setCurrentField(COMPANY_FIELDS.STATE);
-            setInlineComponent(
-              <StateDistrictSelector
-                onStateSelect={(state) => {
-                  setCompanyData((prev) => ({ ...prev, state }));
-                  setInlineComponent(null);
-                  (async () => {
-                    await addAIMessage(`State: ${state}. Which district?`);
-                    setCurrentField(COMPANY_FIELDS.DISTRICT);
-                    setInlineComponent(
-                      <StateDistrictSelector
-                        onDistrictSelect={(district) => {
-                          setCompanyData((prev) => ({ ...prev, district }));
-                          setInlineComponent(null);
-                          (async () => {
-                            await addAIMessage(
-                              `District: ${district}. Company website URL? (or skip)`
-                            );
-                            setCurrentField(COMPANY_FIELDS.WEBSITE);
-                            setInlineComponent(
-                              <UrlInput
-                                onUrlSubmit={(url) => {
-                                  if (url.toLowerCase() !== "skip") {
-                                    setCompanyData((prev) => ({
-                                      ...prev,
-                                      websiteUrl: url,
-                                    }));
-                                  }
-                                  setInlineComponent(null);
-                                  addAIMessage("What's the funding series? (or skip)").then(
-                                    () => {
-                                      setCurrentField(COMPANY_FIELDS.FUNDING);
-                                      setInlineComponent(
-                                        <FundingSeriesBadges
-                                          onSelect={(series) => {
-                                            setCompanyData((prev) => ({
-                                              ...prev,
-                                              fundingSeries: series,
-                                            }));
-                                            setInlineComponent(null);
-                                            addAIMessage(
-                                              "Short company description? (Type or skip)"
-                                            ).then(() => {
-                                              setCurrentField(
-                                                COMPANY_FIELDS.DESCRIPTION
-                                              );
-                                            });
-                                          }}
-                                          onSkip={() => {
-                                            setInlineComponent(null);
-                                            addAIMessage(
-                                              "Short company description? (Type or skip)"
-                                            ).then(() => {
-                                              setCurrentField(
-                                                COMPANY_FIELDS.DESCRIPTION
-                                              );
-                                            });
-                                          }}
-                                          selectedValue={
-                                            companyData?.fundingSeries
-                                          }
-                                        />
-                                      );
-                                      scrollToInline();
-                                    }
-                                  );
-                                }}
-                                onSkip={() => {
-                                  setInlineComponent(null);
-                                  addAIMessage("What's the funding series? (or skip)").then(
-                                    () => {
-                                      setCurrentField(COMPANY_FIELDS.FUNDING);
-                                      setInlineComponent(
-                                        <FundingSeriesBadges
-                                          onSelect={(series) => {
-                                            setCompanyData((prev) => ({
-                                              ...prev,
-                                              fundingSeries: series,
-                                            }));
-                                            setInlineComponent(null);
-                                            addAIMessage(
-                                              "Short company description? (Type or skip)"
-                                            ).then(() => {
-                                              setCurrentField(
-                                                COMPANY_FIELDS.DESCRIPTION
-                                              );
-                                            });
-                                          }}
-                                          onSkip={() => {
-                                            setInlineComponent(null);
-                                            addAIMessage(
-                                              "Short company description? (Type or skip)"
-                                            ).then(() => {
-                                              setCurrentField(
-                                                COMPANY_FIELDS.DESCRIPTION
-                                              );
-                                            });
-                                          }}
-                                          selectedValue={
-                                            companyData?.fundingSeries
-                                          }
-                                        />
-                                      );
-                                      scrollToInline();
-                                    }
-                                  );
-                                }}
-                                placeholder="Enter website URL..."
-                              />
-                            );
-                            scrollToInline();
-                          })();
-                        }}
-                        selectedDistrict={companyData?.district}
-                        selectedState={state}
-                        showDistrict={true}
-                      />
-                    );
-                    scrollToInline();
-                  })();
-                }}
-                selectedState={companyData?.state}
-              />
-            );
-            scrollToInline();
-            break;
-
-          case COMPANY_FIELDS.DESCRIPTION:
-            if (value.toLowerCase() !== "skip" && value) {
-              setCompanyData((prev) => ({ ...prev, description: value }));
-            }
             await addAIMessage(
-              "Add company location (coordinates), or skip to enter pincode only."
+              `Got it! Company: "${value}". Add company location (coordinates), or skip to enter pincode only.`
             );
             setCurrentField(COMPANY_FIELDS.LOCATION);
             setInlineComponent(
@@ -521,6 +527,36 @@ export default function AdminCompanyChat() {
                   setInlineComponent(null);
                   handleLocationSkipped();
                 }}
+              />
+            );
+            scrollToInline();
+            break;
+
+          case COMPANY_FIELDS.DESCRIPTION:
+            if (value.toLowerCase() !== "skip" && value) {
+              setCompanyData((prev) => ({ ...prev, description: value }));
+            }
+            await addAIMessage(
+              "Company website URL? (or type skip if not available)"
+            );
+            setCurrentField(COMPANY_FIELDS.WEBSITE);
+            setInlineComponent(
+              <UrlInput
+                onUrlSubmit={(url) => {
+                  if (url.toLowerCase() !== "skip") {
+                    setCompanyData((prev) => ({
+                      ...prev,
+                      websiteUrl: url,
+                    }));
+                  }
+                  setInlineComponent(null);
+                  handleWebsiteSubmitted(url);
+                }}
+                onSkip={() => {
+                  setInlineComponent(null);
+                  handleWebsiteSubmitted("skip");
+                }}
+                placeholder="Enter website URL..."
               />
             );
             scrollToInline();
@@ -591,21 +627,279 @@ export default function AdminCompanyChat() {
                                           }));
                                           setInlineComponent(null);
                                           addAIMessage(
-                                            "Remote type? (e.g. Remote, Hybrid, On-site — or skip)"
+                                            "Remote type? (Remote, Hybrid, On-site — or skip)"
                                           ).then(() => {
                                             setCurrentField(
                                               JOB_FIELDS.REMOTE_TYPE
                                             );
+                                            setInlineComponent(
+                                              <RemoteTypeSelector
+                                                selectedValue={
+                                                  jobData?.remoteType || null
+                                                }
+                                                onSelect={(type) => {
+                                                  setJobData((prev) => ({
+                                                    ...prev,
+                                                    remoteType: type,
+                                                  }));
+                                                  setChatMessages((prev) => [
+                                                    ...prev,
+                                                    {
+                                                      type: "user",
+                                                      text: type,
+                                                    },
+                                                  ]);
+                                                  setInlineComponent(null);
+                                                  addAIMessage(
+                                                    "Seniority level? (Entry, Mid, Senior — or skip)"
+                                                  ).then(() => {
+                                                    setCurrentField(
+                                                      JOB_FIELDS.SENIORITY
+                                                    );
+                                                    setInlineComponent(
+                                                      <SeniorityLevelSelector
+                                                        selectedValue={
+                                                          jobData?.seniorityLevel ||
+                                                          null
+                                                        }
+                                                        onSelect={(level) => {
+                                                          setJobData(
+                                                            (prev) => ({
+                                                              ...prev,
+                                                              seniorityLevel:
+                                                                level,
+                                                            })
+                                                          );
+                                                          setChatMessages(
+                                                            (prev) => [
+                                                              ...prev,
+                                                              {
+                                                                type: "user",
+                                                                text: level,
+                                                              },
+                                                            ]
+                                                          );
+                                                          setInlineComponent(
+                                                            null
+                                                          );
+                                                          addAIMessage(
+                                                            "Submitting job posting..."
+                                                          ).then(() => {
+                                                            handleJobSubmit();
+                                                          });
+                                                        }}
+                                                        onSkip={() => {
+                                                          setInlineComponent(
+                                                            null
+                                                          );
+                                                          addAIMessage(
+                                                            "Submitting job posting..."
+                                                          ).then(() => {
+                                                            handleJobSubmit();
+                                                          });
+                                                        }}
+                                                      />
+                                                    );
+                                                    scrollToInline();
+                                                  });
+                                                }}
+                                                onSkip={() => {
+                                                  setInlineComponent(null);
+                                                  addAIMessage(
+                                                    "Seniority level? (Entry, Mid, Senior — or skip)"
+                                                  ).then(() => {
+                                                    setCurrentField(
+                                                      JOB_FIELDS.SENIORITY
+                                                    );
+                                                    setInlineComponent(
+                                                      <SeniorityLevelSelector
+                                                        selectedValue={
+                                                          jobData?.seniorityLevel ||
+                                                          null
+                                                        }
+                                                        onSelect={(level) => {
+                                                          setJobData(
+                                                            (prev) => ({
+                                                              ...prev,
+                                                              seniorityLevel:
+                                                                level,
+                                                            })
+                                                          );
+                                                          setChatMessages(
+                                                            (prev) => [
+                                                              ...prev,
+                                                              {
+                                                                type: "user",
+                                                                text: level,
+                                                              },
+                                                            ]
+                                                          );
+                                                          setInlineComponent(
+                                                            null
+                                                          );
+                                                          addAIMessage(
+                                                            "Submitting job posting..."
+                                                          ).then(() => {
+                                                            handleJobSubmit();
+                                                          });
+                                                        }}
+                                                        onSkip={() => {
+                                                          setInlineComponent(
+                                                            null
+                                                          );
+                                                          addAIMessage(
+                                                            "Submitting job posting..."
+                                                          ).then(() => {
+                                                            handleJobSubmit();
+                                                          });
+                                                        }}
+                                                      />
+                                                    );
+                                                    scrollToInline();
+                                                  });
+                                                }}
+                                              />
+                                            );
+                                            scrollToInline();
                                           });
                                         }}
                                         onSkip={() => {
                                           setInlineComponent(null);
                                           addAIMessage(
-                                            "Remote type? (e.g. Remote, Hybrid, On-site — or skip)"
+                                            "Remote type? (Remote, Hybrid, On-site — or skip)"
                                           ).then(() => {
                                             setCurrentField(
                                               JOB_FIELDS.REMOTE_TYPE
                                             );
+                                            setInlineComponent(
+                                              <RemoteTypeSelector
+                                                selectedValue={
+                                                  jobData?.remoteType || null
+                                                }
+                                                onSelect={(type) => {
+                                                  setJobData((prev) => ({
+                                                    ...prev,
+                                                    remoteType: type,
+                                                  }));
+                                                  setChatMessages((prev) => [
+                                                    ...prev,
+                                                    {
+                                                      type: "user",
+                                                      text: type,
+                                                    },
+                                                  ]);
+                                                  setInlineComponent(null);
+                                                  addAIMessage(
+                                                    "Seniority level? (Entry, Mid, Senior — or skip)"
+                                                  ).then(() => {
+                                                    setCurrentField(
+                                                      JOB_FIELDS.SENIORITY
+                                                    );
+                                                    setInlineComponent(
+                                                      <SeniorityLevelSelector
+                                                        selectedValue={
+                                                          jobData?.seniorityLevel ||
+                                                          null
+                                                        }
+                                                        onSelect={(level) => {
+                                                          setJobData(
+                                                            (prev) => ({
+                                                              ...prev,
+                                                              seniorityLevel:
+                                                                level,
+                                                            })
+                                                          );
+                                                          setChatMessages(
+                                                            (prev) => [
+                                                              ...prev,
+                                                              {
+                                                                type: "user",
+                                                                text: level,
+                                                              },
+                                                            ]
+                                                          );
+                                                          setInlineComponent(
+                                                            null
+                                                          );
+                                                          addAIMessage(
+                                                            "Submitting job posting..."
+                                                          ).then(() => {
+                                                            handleJobSubmit();
+                                                          });
+                                                        }}
+                                                        onSkip={() => {
+                                                          setInlineComponent(
+                                                            null
+                                                          );
+                                                          addAIMessage(
+                                                            "Submitting job posting..."
+                                                          ).then(() => {
+                                                            handleJobSubmit();
+                                                          });
+                                                        }}
+                                                      />
+                                                    );
+                                                    scrollToInline();
+                                                  });
+                                                }}
+                                                onSkip={() => {
+                                                  setInlineComponent(null);
+                                                  addAIMessage(
+                                                    "Seniority level? (Entry, Mid, Senior — or skip)"
+                                                  ).then(() => {
+                                                    setCurrentField(
+                                                      JOB_FIELDS.SENIORITY
+                                                    );
+                                                    setInlineComponent(
+                                                      <SeniorityLevelSelector
+                                                        selectedValue={
+                                                          jobData?.seniorityLevel ||
+                                                          null
+                                                        }
+                                                        onSelect={(level) => {
+                                                          setJobData(
+                                                            (prev) => ({
+                                                              ...prev,
+                                                              seniorityLevel:
+                                                                level,
+                                                            })
+                                                          );
+                                                          setChatMessages(
+                                                            (prev) => [
+                                                              ...prev,
+                                                              {
+                                                                type: "user",
+                                                                text: level,
+                                                              },
+                                                            ]
+                                                          );
+                                                          setInlineComponent(
+                                                            null
+                                                          );
+                                                          addAIMessage(
+                                                            "Submitting job posting..."
+                                                          ).then(() => {
+                                                            handleJobSubmit();
+                                                          });
+                                                        }}
+                                                        onSkip={() => {
+                                                          setInlineComponent(
+                                                            null
+                                                          );
+                                                          addAIMessage(
+                                                            "Submitting job posting..."
+                                                          ).then(() => {
+                                                            handleJobSubmit();
+                                                          });
+                                                        }}
+                                                      />
+                                                    );
+                                                    scrollToInline();
+                                                  });
+                                                }}
+                                              />
+                                            );
+                                            scrollToInline();
                                           });
                                         }}
                                         selectedMin={jobData?.salaryMin}
@@ -661,7 +955,14 @@ export default function AdminCompanyChat() {
 
   return (
     <div className="flex flex-col h-full min-h-0">
-      <div className="shrink-0 flex justify-end mb-2">
+      <div className="shrink-0 flex justify-end gap-2 mb-2">
+        <button
+          type="button"
+          onClick={handleShowRecentJobs}
+          className="flex items-center gap-2 px-3 py-2 rounded-md border border-brand-stroke-weak text-brand-text-strong text-sm font-medium hover:bg-brand-bg-fill transition-colors"
+        >
+          Recent posted jobs
+        </button>
         <button
           type="button"
           onClick={handleResetChat}

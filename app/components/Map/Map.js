@@ -1401,8 +1401,8 @@ const MapComponent = ({ onOpenSettings, onViewModeChange, effectiveUser = null, 
       
       const displayItems = isCompanyAccount ? positions.slice(0, 5) : serviceTypes.slice(0, 5);
       const allItems = isCompanyAccount ? positions : serviceTypes;
-      const countText = isCompanyAccount 
-        ? `${gigCount} ${gigCount === 1 ? 'fulltime candidate' : 'fulltime candidates'} found`
+      const countText = isCompanyAccount
+        ? `${gigCount} ${gigCount === 1 ? 'candidate' : 'candidates'} found`
         : `${gigCount} ${gigCount === 1 ? 'gig worker' : 'gig workers'} available`;
 
       const tooltipContent = `
@@ -2459,6 +2459,12 @@ const MapComponent = ({ onOpenSettings, onViewModeChange, effectiveUser = null, 
         clusterGroupRef.current = null;
       }
       companyMarkersRef.current = [];
+
+      // Filter out known test companies so they never appear on the map
+      companies = (companies || []).filter((company) => {
+        const name = company.name || company.company_name || "";
+        return name !== "Test234";
+      });
 
       if (companies && companies.length > 0) {
         // Create marker cluster group for companies with glassmorphism style

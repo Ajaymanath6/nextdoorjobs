@@ -57,12 +57,12 @@ export default function Sidebar({ activeItem = "jobs-near-you", onToggle, isOpen
   };
 
   // Navigation items: 1 Gigs/Candidates/Companies near you, 2 Notifications, 3 Post a gig/job, 4 Manage Resume, 5 Manage JDs, 6 Settings
-  // Company: "Candidates near you". Individual: "Gigs near you" (person view) or "Companies near you" (company view)
+  // Company: "Candidates near you". Individual: "Jobs near you" when viewing company mode, otherwise "Gigs near you"
   const jobsNearYouLabel =
     accountType === "Company"
       ? "Candidates near you"
       : viewMode === "company"
-        ? "Companies near you"
+        ? "Jobs near you"
         : "Gigs near you";
   const postLabel = accountType === "Company" ? "Post a job" : "Post a gig";
   const postRoute = accountType === "Company" ? "/onboarding.org" : "/onboarding";
