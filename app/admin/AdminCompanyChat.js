@@ -1,0 +1,692 @@
+"use client";
+
+import { useState, useRef, useEffect } from "react";
+import ChatInterface from "../components/Onboarding/ChatInterface";
+import StateDistrictSelector from "../components/Onboarding/StateDistrictSelector";
+import GetCoordinatesButton from "../components/Onboarding/GetCoordinatesButton";
+import UrlInput from "../components/Onboarding/UrlInput";
+import FundingSeriesBadges from "../components/Onboarding/FundingSeriesBadges";
+import PincodeDropdown from "../components/Onboarding/PincodeDropdown";
+import ExperienceRangeSelect from "../components/Onboarding/ExperienceRangeSelect";
+import SalaryRangeBadges from "../components/Onboarding/SalaryRangeBadges";
+import { JOB_CATEGORIES } from "../../lib/constants/jobCategories";
+import { WatsonHealthRotate_360 } from "@carbon/icons-react";
+
+const COMPANY_FIELDS = {
+  NAME: "company_name",
+  STATE: "company_state",
+  DISTRICT: "company_district",
+  WEBSITE: "company_website",
+  FUNDING: "company_funding",
+  DESCRIPTION: "company_description",
+  LOCATION: "company_location",
+  PINCODE: "company_pincode",
+};
+
+const JOB_FIELDS = {
+  TITLE: "job_title",
+  DESCRIPTION: "job_description",
+  CATEGORY: "job_category",
+  YEARS: "job_years",
+  SALARY: "job_salary",
+  REMOTE_TYPE: "job_remote_type",
+  SENIORITY: "job_seniority",
+};
+
+const INITIAL_AI_MESSAGE =
+  "Let's add a company and post a job. What's the company name?";
+
+function extractValue(message) {
+  const trimmed = (message || "").trim();
+  return trimmed.replace(/^["']|["']$/g, "");
+}
+
+export default function AdminCompanyChat() {
+  const [chatMessages, setChatMessages] = useState([
+    { type: "ai", text: INITIAL_AI_MESSAGE },
+  ]);
+  const [inlineComponent, setInlineComponent] = useState(null);
+  const [typingText, setTypingText] = useState("");
+  const [isTyping, setIsTyping] = useState(false);
+  const [isLoading, setIsLoading] = useState(false);
+  const [companyData, setCompanyData] = useState({});
+  const [jobData, setJobData] = useState({});
+  const [currentField, setCurrentField] = useState(COMPANY_FIELDS.NAME);
+  const [collectingCompany, setCollectingCompany] = useState(true);
+  const [createdCompany, setCreatedCompany] = useState(null);
+  const [lastJobCoords, setLastJobCoords] = useState(null);
+  const scrollToInlineRef = useRef(null);
+  const [isMobile, setIsMobile] = useState(false);
+
+  useEffect(() => {
+    const check = () =>
+      setIsMobile(
+        typeof window !== "undefined" &&
+          (window.innerWidth < 768 ||
+            /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(
+              navigator.userAgent
+            ))
+      );
+    check();
+    window.addEventListener("resize", check);
+    return () => window.removeEventListener("resize", check);
+  }, []);
+
+  const addAIMessage = async (text) => {
+    setIsTyping(true);
+    setTypingText("");
+    for (let i = 0; i < text.length; i++) {
+      setTypingText(text.slice(0, i + 1));
+      await new Promise((r) => setTimeout(r, 10));
+    }
+    setIsTyping(false);
+    setChatMessages((prev) => [...prev, { type: "ai", text }]);
+    setTypingText("");
+  };
+
+  const scrollToInline = () => {
+    setTimeout(() => scrollToInlineRef.current?.(), 150);
+  };
+
+  const handleLocationReceived = async (lat, lon) => {
+    const latitude = typeof lat === "number" ? lat : parseFloat(lat);
+    const longitude = typeof lon === "number" ? lon : parseFloat(lon);
+    let state = companyData?.state ?? null;
+    let district = companyData?.district ?? null;
+    try {
+      const res = await fetch(
+        `/api/geocode/reverse?lat=${latitude}&lon=${longitude}`
+      );
+      if (res.ok) {
+        const data = await res.json();
+        state = data.state ?? state;
+        district = data.district ?? district;
+      }
+    } catch (_) {}
+    setCompanyData((prev) => ({
+      ...prev,
+      latitude,
+      longitude,
+      ...(state && { state }),
+      ...(district && { district }),
+    }));
+    await addAIMessage(
+      `Location saved: ${latitude.toFixed(4)}, ${longitude.toFixed(4)}${district && state ? ` • ${district}, ${state}` : ""}.`
+    );
+
+    let pincodes = [];
+    if (district && state) {
+      try {
+        const pinRes = await fetch(
+          `/api/pincodes/by-district?district=${encodeURIComponent(district)}&state=${encodeURIComponent(state)}`
+        );
+        if (pinRes.ok) {
+          const { pincodes: list } = await pinRes.json();
+          pincodes = Array.isArray(list) ? list.slice(0, 8) : [];
+        }
+      } catch (_) {}
+    }
+    if (pincodes.length > 0) {
+      await addAIMessage("What's the pincode? (Choose one or skip)");
+      setCurrentField(COMPANY_FIELDS.PINCODE);
+      setInlineComponent(
+        <PincodeDropdown
+          pincodes={pincodes}
+          onSelect={(pincode) => {
+            setCompanyData((prev) => ({ ...prev, pincode }));
+            setInlineComponent(null);
+            handleCompanySubmit({ pincode });
+          }}
+          onSkip={() => {
+            setInlineComponent(null);
+            handleCompanySubmit({});
+          }}
+        />
+      );
+      scrollToInline();
+    } else {
+      await addAIMessage('What\'s the pincode? (Type pincode or "skip")');
+      setCurrentField(COMPANY_FIELDS.PINCODE);
+    }
+  };
+
+  const handleLocationSkipped = async () => {
+    await addAIMessage('What\'s the pincode? (Type pincode or "skip")');
+    setCurrentField(COMPANY_FIELDS.PINCODE);
+  };
+
+  const handleCompanySubmit = async (overrides = {}) => {
+    const c = { ...companyData, ...overrides };
+    const name = (c.name || "").trim();
+    const state = (c.state || "").trim();
+    const district = (c.district || "").trim();
+    if (!name || !state || !district) {
+      setChatMessages((prev) => [
+        ...prev,
+        {
+          type: "ai",
+          text: "Company name, state, and district are required. Please try again.",
+        },
+      ]);
+      return;
+    }
+    setIsLoading(true);
+    try {
+      const res = await fetch("/api/admin/companies", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        credentials: "include",
+        body: JSON.stringify({
+          name,
+          state,
+          district,
+          description: c.description?.trim() || null,
+          websiteUrl: c.websiteUrl?.trim() || null,
+          fundingSeries: c.fundingSeries || null,
+          latitude:
+            c.latitude != null && Number.isFinite(Number(c.latitude))
+              ? Number(c.latitude)
+              : null,
+          longitude:
+            c.longitude != null && Number.isFinite(Number(c.longitude))
+              ? Number(c.longitude)
+              : null,
+          pincode: c.pincode?.trim() || null,
+        }),
+      });
+      const result = await res.json().catch(() => ({}));
+
+      if (res.ok && result.success && result.company) {
+        setCreatedCompany({
+          ...result.company,
+          latitude: c.latitude != null ? Number(c.latitude) : null,
+          longitude: c.longitude != null ? Number(c.longitude) : null,
+        });
+        setCollectingCompany(false);
+        setCompanyData({});
+        setCurrentField(JOB_FIELDS.TITLE);
+        await addAIMessage(
+          `Company "${result.company.name}" created. Now let's add the job. What's the job title?`
+        );
+      } else {
+        setChatMessages((prev) => [
+          ...prev,
+          {
+            type: "ai",
+            text: `Couldn't create company. ${result.error || "Please try again."}`,
+          },
+        ]);
+      }
+    } catch (err) {
+      console.error("Company submit error:", err);
+      setChatMessages((prev) => [
+        ...prev,
+        {
+          type: "ai",
+          text: `Something went wrong. ${err?.message || "Please try again."}`,
+        },
+      ]);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const handleJobSubmit = async () => {
+    const j = jobData;
+    const title = (j.title || "").trim();
+    const jobDescription = (j.jobDescription || "").trim();
+    const category = j.category || "EngineeringSoftwareQA";
+    if (!title || !jobDescription || !createdCompany?.id) {
+      setChatMessages((prev) => [
+        ...prev,
+        {
+          type: "ai",
+          text: "Job title and description are required. Please try again.",
+        },
+      ]);
+      return;
+    }
+    setIsLoading(true);
+    try {
+      const yearsRequired =
+        j.yearsRequired != null ? parseFloat(j.yearsRequired) : 0;
+      const salaryMin =
+        j.salaryMin != null && j.salaryMin !== ""
+          ? parseInt(String(j.salaryMin), 10)
+          : null;
+      const salaryMax =
+        j.salaryMax != null && j.salaryMax !== ""
+          ? parseInt(String(j.salaryMax), 10)
+          : null;
+
+      const res = await fetch("/api/admin/jobs", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        credentials: "include",
+        body: JSON.stringify({
+          title,
+          category,
+          jobDescription,
+          companyId: createdCompany.id,
+          yearsRequired: Number.isNaN(yearsRequired) ? 0 : yearsRequired,
+          salaryMin: Number.isNaN(salaryMin) ? null : salaryMin,
+          salaryMax: Number.isNaN(salaryMax) ? null : salaryMax,
+          remoteType: j.remoteType?.trim() || null,
+          seniorityLevel: j.seniorityLevel?.trim() || null,
+        }),
+      });
+      const result = await res.json().catch(() => ({}));
+
+      if (res.ok && result.success && result.jobPosition) {
+        const companyLat = createdCompany.latitude;
+        const companyLon = createdCompany.longitude;
+        if (
+          companyLat != null &&
+          companyLon != null &&
+          typeof sessionStorage !== "undefined"
+        ) {
+          setLastJobCoords({ lat: companyLat, lng: companyLon });
+          sessionStorage.setItem(
+            "zoomToJobCoords",
+            JSON.stringify({
+              lat: companyLat,
+              lng: companyLon,
+              companyName: createdCompany.name || "Your posting",
+            })
+          );
+        }
+        setChatMessages((prev) => [
+          ...prev,
+          {
+            type: "ai",
+            text: "🎉 Job posting created successfully!",
+            isFinalMessage: true,
+          },
+        ]);
+      } else {
+        setChatMessages((prev) => [
+          ...prev,
+          {
+            type: "ai",
+            text: `Couldn't create job. ${result.error || "Please try again."}`,
+          },
+        ]);
+      }
+    } catch (err) {
+      console.error("Job submit error:", err);
+      setChatMessages((prev) => [
+        ...prev,
+        {
+          type: "ai",
+          text: `Something went wrong. ${err?.message || "Please try again."}`,
+        },
+      ]);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const handleViewOnMap = () => {
+    if (lastJobCoords && typeof sessionStorage !== "undefined") {
+      sessionStorage.setItem(
+        "zoomToJobCoords",
+        JSON.stringify({
+          ...lastJobCoords,
+          companyName: createdCompany?.name || "Your posting",
+        })
+      );
+    }
+    window.location.href = "/";
+  };
+
+  const handleStartNext = () => {
+    setChatMessages([{ type: "ai", text: INITIAL_AI_MESSAGE }]);
+    setInlineComponent(null);
+    setCompanyData({});
+    setJobData({});
+    setCurrentField(COMPANY_FIELDS.NAME);
+    setCollectingCompany(true);
+    setCreatedCompany(null);
+    setLastJobCoords(null);
+  };
+
+  const handleResetChat = () => {
+    setChatMessages([{ type: "ai", text: INITIAL_AI_MESSAGE }]);
+    setInlineComponent(null);
+    setTypingText("");
+    setIsTyping(false);
+    setIsLoading(false);
+    setCompanyData({});
+    setJobData({});
+    setCurrentField(COMPANY_FIELDS.NAME);
+    setCollectingCompany(true);
+    setCreatedCompany(null);
+    setLastJobCoords(null);
+  };
+
+  const handleChatMessage = async (message) => {
+    const value = extractValue(message);
+    setChatMessages((prev) => [...prev, { type: "user", text: message }]);
+    setIsLoading(true);
+
+    setTimeout(async () => {
+      if (collectingCompany) {
+        switch (currentField) {
+          case COMPANY_FIELDS.NAME:
+            setCompanyData((prev) => ({ ...prev, name: value }));
+            await addAIMessage(`Got it! Company: "${value}". Which state?`);
+            setCurrentField(COMPANY_FIELDS.STATE);
+            setInlineComponent(
+              <StateDistrictSelector
+                onStateSelect={(state) => {
+                  setCompanyData((prev) => ({ ...prev, state }));
+                  setInlineComponent(null);
+                  (async () => {
+                    await addAIMessage(`State: ${state}. Which district?`);
+                    setCurrentField(COMPANY_FIELDS.DISTRICT);
+                    setInlineComponent(
+                      <StateDistrictSelector
+                        onDistrictSelect={(district) => {
+                          setCompanyData((prev) => ({ ...prev, district }));
+                          setInlineComponent(null);
+                          (async () => {
+                            await addAIMessage(
+                              `District: ${district}. Company website URL? (or skip)`
+                            );
+                            setCurrentField(COMPANY_FIELDS.WEBSITE);
+                            setInlineComponent(
+                              <UrlInput
+                                onUrlSubmit={(url) => {
+                                  if (url.toLowerCase() !== "skip") {
+                                    setCompanyData((prev) => ({
+                                      ...prev,
+                                      websiteUrl: url,
+                                    }));
+                                  }
+                                  setInlineComponent(null);
+                                  addAIMessage("What's the funding series? (or skip)").then(
+                                    () => {
+                                      setCurrentField(COMPANY_FIELDS.FUNDING);
+                                      setInlineComponent(
+                                        <FundingSeriesBadges
+                                          onSelect={(series) => {
+                                            setCompanyData((prev) => ({
+                                              ...prev,
+                                              fundingSeries: series,
+                                            }));
+                                            setInlineComponent(null);
+                                            addAIMessage(
+                                              "Short company description? (Type or skip)"
+                                            ).then(() => {
+                                              setCurrentField(
+                                                COMPANY_FIELDS.DESCRIPTION
+                                              );
+                                            });
+                                          }}
+                                          onSkip={() => {
+                                            setInlineComponent(null);
+                                            addAIMessage(
+                                              "Short company description? (Type or skip)"
+                                            ).then(() => {
+                                              setCurrentField(
+                                                COMPANY_FIELDS.DESCRIPTION
+                                              );
+                                            });
+                                          }}
+                                          selectedValue={
+                                            companyData?.fundingSeries
+                                          }
+                                        />
+                                      );
+                                      scrollToInline();
+                                    }
+                                  );
+                                }}
+                                onSkip={() => {
+                                  setInlineComponent(null);
+                                  addAIMessage("What's the funding series? (or skip)").then(
+                                    () => {
+                                      setCurrentField(COMPANY_FIELDS.FUNDING);
+                                      setInlineComponent(
+                                        <FundingSeriesBadges
+                                          onSelect={(series) => {
+                                            setCompanyData((prev) => ({
+                                              ...prev,
+                                              fundingSeries: series,
+                                            }));
+                                            setInlineComponent(null);
+                                            addAIMessage(
+                                              "Short company description? (Type or skip)"
+                                            ).then(() => {
+                                              setCurrentField(
+                                                COMPANY_FIELDS.DESCRIPTION
+                                              );
+                                            });
+                                          }}
+                                          onSkip={() => {
+                                            setInlineComponent(null);
+                                            addAIMessage(
+                                              "Short company description? (Type or skip)"
+                                            ).then(() => {
+                                              setCurrentField(
+                                                COMPANY_FIELDS.DESCRIPTION
+                                              );
+                                            });
+                                          }}
+                                          selectedValue={
+                                            companyData?.fundingSeries
+                                          }
+                                        />
+                                      );
+                                      scrollToInline();
+                                    }
+                                  );
+                                }}
+                                placeholder="Enter website URL..."
+                              />
+                            );
+                            scrollToInline();
+                          })();
+                        }}
+                        selectedDistrict={companyData?.district}
+                        selectedState={state}
+                        showDistrict={true}
+                      />
+                    );
+                    scrollToInline();
+                  })();
+                }}
+                selectedState={companyData?.state}
+              />
+            );
+            scrollToInline();
+            break;
+
+          case COMPANY_FIELDS.DESCRIPTION:
+            if (value.toLowerCase() !== "skip" && value) {
+              setCompanyData((prev) => ({ ...prev, description: value }));
+            }
+            await addAIMessage(
+              "Add company location (coordinates), or skip to enter pincode only."
+            );
+            setCurrentField(COMPANY_FIELDS.LOCATION);
+            setInlineComponent(
+              <GetCoordinatesButton
+                isMobile={isMobile}
+                onCoordinatesReceived={(lat, lon) => {
+                  setInlineComponent(null);
+                  handleLocationReceived(lat, lon);
+                }}
+                onSkip={() => {
+                  setInlineComponent(null);
+                  handleLocationSkipped();
+                }}
+              />
+            );
+            scrollToInline();
+            break;
+
+          case COMPANY_FIELDS.PINCODE:
+            if (value.toLowerCase() !== "skip" && value) {
+              setCompanyData((prev) => ({ ...prev, pincode: value }));
+            }
+            await handleCompanySubmit();
+            break;
+
+          default:
+            break;
+        }
+      } else {
+        switch (currentField) {
+          case JOB_FIELDS.TITLE:
+            setJobData((prev) => ({ ...prev, title: value }));
+            await addAIMessage(
+              `Job title: ${value}. Please provide a detailed job description.`
+            );
+            setCurrentField(JOB_FIELDS.DESCRIPTION);
+            break;
+
+          case JOB_FIELDS.DESCRIPTION:
+            setJobData((prev) => ({ ...prev, jobDescription: value }));
+            await addAIMessage("Select job category:");
+            setCurrentField(JOB_FIELDS.CATEGORY);
+            setInlineComponent(
+              <div className="w-full flex flex-wrap gap-2 p-4 border border-brand-stroke-weak rounded-lg bg-white/95">
+                {JOB_CATEGORIES.map((cat) => (
+                  <button
+                    key={cat.value}
+                    type="button"
+                    onClick={() => {
+                      setJobData((prev) => ({ ...prev, category: cat.value }));
+                      setChatMessages((prev) => [
+                        ...prev,
+                        { type: "user", text: cat.label },
+                      ]);
+                      setInlineComponent(null);
+                      addAIMessage(`Category: ${cat.label}. How many years of experience required?`).then(
+                        () => {
+                          setCurrentField(JOB_FIELDS.YEARS);
+                          setInlineComponent(
+                            <ExperienceRangeSelect
+                              onSelect={(years) => {
+                                setJobData((prev) => ({
+                                  ...prev,
+                                  yearsRequired: years,
+                                }));
+                                setChatMessages((prev) => [
+                                  ...prev,
+                                  { type: "user", text: `${years} years` },
+                                ]);
+                                setInlineComponent(null);
+                                addAIMessage("What's the salary range?").then(
+                                  () => {
+                                    setCurrentField(JOB_FIELDS.SALARY);
+                                    setInlineComponent(
+                                      <SalaryRangeBadges
+                                        onSelect={(min, max) => {
+                                          setJobData((prev) => ({
+                                            ...prev,
+                                            salaryMin: min,
+                                            salaryMax: max,
+                                          }));
+                                          setInlineComponent(null);
+                                          addAIMessage(
+                                            "Remote type? (e.g. Remote, Hybrid, On-site — or skip)"
+                                          ).then(() => {
+                                            setCurrentField(
+                                              JOB_FIELDS.REMOTE_TYPE
+                                            );
+                                          });
+                                        }}
+                                        onSkip={() => {
+                                          setInlineComponent(null);
+                                          addAIMessage(
+                                            "Remote type? (e.g. Remote, Hybrid, On-site — or skip)"
+                                          ).then(() => {
+                                            setCurrentField(
+                                              JOB_FIELDS.REMOTE_TYPE
+                                            );
+                                          });
+                                        }}
+                                        selectedMin={jobData?.salaryMin}
+                                        selectedMax={jobData?.salaryMax}
+                                      />
+                                    );
+                                    scrollToInline();
+                                  }
+                                );
+                              }}
+                              selectedValue={jobData?.yearsRequired}
+                            />
+                          );
+                          scrollToInline();
+                        }
+                      );
+                    }}
+                    className="px-4 py-2 rounded-lg border border-brand-stroke-weak text-brand-text-strong hover:bg-brand-bg-fill text-sm"
+                  >
+                    {cat.label}
+                  </button>
+                ))}
+              </div>
+            );
+            scrollToInline();
+            break;
+
+          case JOB_FIELDS.REMOTE_TYPE:
+            if (value.toLowerCase() !== "skip" && value) {
+              setJobData((prev) => ({ ...prev, remoteType: value }));
+            }
+            await addAIMessage(
+              "Seniority level? (e.g. Entry, Mid, Senior — or skip)"
+            );
+            setCurrentField(JOB_FIELDS.SENIORITY);
+            break;
+
+          case JOB_FIELDS.SENIORITY:
+            if (value.toLowerCase() !== "skip" && value) {
+              setJobData((prev) => ({ ...prev, seniorityLevel: value }));
+            }
+            await addAIMessage("Submitting job posting...");
+            await handleJobSubmit();
+            break;
+
+          default:
+            break;
+        }
+      }
+      setIsLoading(false);
+    }, 500);
+  };
+
+  return (
+    <div className="flex flex-col h-full min-h-0">
+      <div className="shrink-0 flex justify-end mb-2">
+        <button
+          type="button"
+          onClick={handleResetChat}
+          className="flex items-center gap-2 px-3 py-2 rounded-md border border-brand-stroke-weak text-brand-text-strong text-sm font-medium hover:bg-brand-bg-fill transition-colors"
+          title="Reset chat"
+        >
+          <WatsonHealthRotate_360 size={18} />
+          Reset chat
+        </button>
+      </div>
+      <div className="flex-1 min-h-0 rounded-lg border border-brand-stroke-weak bg-brand-bg-white overflow-hidden">
+        <ChatInterface
+          messages={chatMessages}
+          onSendMessage={handleChatMessage}
+          isLoading={isLoading}
+          inlineComponent={inlineComponent}
+          typingText={typingText || null}
+          onScrollRequest={(fn) => {
+            scrollToInlineRef.current = fn;
+          }}
+          onViewOnMap={lastJobCoords ? handleViewOnMap : undefined}
+          onStartNext={handleStartNext}
+          showFindOrPostButtons={false}
+        />
+      </div>
+    </div>
+  );
+}

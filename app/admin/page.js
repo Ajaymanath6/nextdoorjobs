@@ -4,6 +4,8 @@ import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { JOB_CATEGORIES } from "../../lib/constants/jobCategories";
 import { INDIAN_STATES } from "../../lib/constants/indianStates";
+import AdminGigChat from "./AdminGigChat";
+import AdminCompanyChat from "./AdminCompanyChat";
 
 export default function AdminDashboardPage() {
   const router = useRouter();
@@ -76,6 +78,13 @@ export default function AdminDashboardPage() {
             )}
             <button
               type="button"
+              onClick={handleViewAsUser}
+              className="rounded-md bg-brand text-brand-bg-white px-4 py-2 text-sm font-medium hover:bg-brand-hover"
+            >
+              View as User
+            </button>
+            <button
+              type="button"
               onClick={handleLogout}
               className="rounded-md bg-brand-bg-white border-[1.5px] border-brand-stroke-weak text-brand-text-strong px-3 py-2 text-sm font-medium hover:bg-brand-bg-fill"
             >
@@ -86,15 +95,8 @@ export default function AdminDashboardPage() {
 
         <section className="rounded-md border border-brand-stroke-weak bg-brand-bg-white p-6 shadow">
           <h2 className="text-lg font-medium text-brand-text-strong mb-2">View as</h2>
-          <p className="text-sm text-brand-text-weak mb-4">Open the app as a user, or use the forms below to post as a gig worker or company.</p>
+          <p className="text-sm text-brand-text-weak mb-4">Use the chat flows below to post as a gig worker or as a company.</p>
           <div className="flex flex-wrap items-center gap-3">
-            <button
-              type="button"
-              onClick={handleViewAsUser}
-              className="rounded-md bg-brand text-brand-bg-white px-4 py-2 text-sm font-medium hover:bg-brand-hover"
-            >
-              View as User
-            </button>
             <button
               type="button"
               onClick={() => setViewSection("gig")}
@@ -112,22 +114,24 @@ export default function AdminDashboardPage() {
           </div>
         </section>
       </div>
-      <div className="flex-1 min-h-0 overflow-y-auto">
-        <div className="max-w-2xl mx-auto p-6 pt-0 space-y-8 pb-12">
-          {viewSection === "all" && (
-            <>
-              <AddCompanyForm onSuccess={refreshCompanies} />
-              <PostJobForm companies={companies} />
-              <OnboardGigForm />
-            </>
-          )}
-          {viewSection === "gig" && (
-            <OnboardGigForm />
-          )}
-          {viewSection === "company" && (
+      <div className="flex-1 min-h-0 overflow-y-auto flex flex-col">
+        {viewSection === "all" && (
+          <div className="max-w-2xl mx-auto w-full p-6 pt-0 space-y-8 pb-12">
+            <AddCompanyForm onSuccess={refreshCompanies} />
             <PostJobForm companies={companies} />
-          )}
-        </div>
+            <OnboardGigForm />
+          </div>
+        )}
+        {viewSection === "gig" && (
+          <div className="flex-1 min-h-0 flex flex-col max-w-2xl mx-auto w-full p-6">
+            <AdminGigChat />
+          </div>
+        )}
+        {viewSection === "company" && (
+          <div className="flex-1 min-h-0 flex flex-col max-w-2xl mx-auto w-full p-6">
+            <AdminCompanyChat />
+          </div>
+        )}
       </div>
     </div>
   );
