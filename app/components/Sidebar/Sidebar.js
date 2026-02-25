@@ -18,14 +18,16 @@ import {
 import Tooltip from "../Tooltip";
 import { useUnreadNotificationCount } from "../../hooks/useUnreadNotificationCount";
 
-export default function Sidebar({ activeItem = "jobs-near-you", onToggle, isOpen: externalIsOpen, onOpenSettingsWithSection, viewMode = "person" }) {
+export default function Sidebar({ activeItem = "jobs-near-you", onToggle, isOpen: externalIsOpen, onOpenSettingsWithSection, viewMode = "person", effectiveUser = null, effectiveUserLoading = true }) {
   const router = useRouter();
   const [isOpen, setIsOpen] = useState(externalIsOpen !== undefined ? externalIsOpen : true);
-  const [accountType, setAccountType] = useState(null);
+  const [accountTypeFromAuth, setAccountTypeFromAuth] = useState(null);
   const { count: notificationCount } = useUnreadNotificationCount();
 
   const sidebar = themeClasses.components.sidebar;
   const brand = themeClasses.brand;
+
+  const accountType = effectiveUser?.accountType ?? accountTypeFromAuth;
 
   // Sync with external control
   useEffect(() => {
@@ -34,15 +36,16 @@ export default function Sidebar({ activeItem = "jobs-near-you", onToggle, isOpen
     }
   }, [externalIsOpen]);
 
-  // Fetch user account type for Post a gig vs Post a job
+  // Fetch user account type only when not using effectiveUser (e.g. admin view-as)
   useEffect(() => {
+    if (effectiveUser != null) return;
     fetch("/api/auth/me", { credentials: "same-origin" })
       .then((r) => (r.ok ? r.json() : null))
       .then((data) => {
-        if (data?.success && data?.user?.accountType) setAccountType(data.user.accountType);
+        if (data?.success && data?.user?.accountType) setAccountTypeFromAuth(data.user.accountType);
       })
       .catch(() => {});
-  }, []);
+  }, [effectiveUser]);
 
   // Handle toggle
   const handleToggle = () => {

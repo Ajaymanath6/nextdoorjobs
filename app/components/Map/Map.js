@@ -57,7 +57,7 @@ function haversineKm(lat1, lon1, lat2, lon2) {
 }
 
 // Dynamic import of Leaflet to avoid SSR issues
-const MapComponent = ({ onOpenSettings, onViewModeChange }) => {
+const MapComponent = ({ onOpenSettings, onViewModeChange, effectiveUser = null, effectiveUserLoading = true }) => {
   const router = useRouter();
   const { signOut } = useClerk();
   const mapRef = useRef(null);
@@ -2027,9 +2027,36 @@ const MapComponent = ({ onOpenSettings, onViewModeChange }) => {
     });
   };
 
+  // When parent provides effectiveUser (e.g. admin view-as), sync to local state
+  useEffect(() => {
+    if (effectiveUser == null) return;
+    if (effectiveUser.accountType) {
+      setUserAccountType(effectiveUser.accountType);
+      setSearchMode("person");
+    }
+    setMeUser({
+      id: effectiveUser.id,
+      accountType: effectiveUser.accountType,
+      email: effectiveUser.email,
+      name: effectiveUser.name,
+      avatarUrl: effectiveUser.avatarUrl ?? null,
+      companyId: effectiveUser.companyId,
+    });
+    if (effectiveUser.accountType !== "Company") {
+      fetch("/api/companies")
+        .then((res) => res.ok ? res.json() : null)
+        .then((data) => {
+          if (data?.companies && Array.isArray(data.companies)) {
+            setTotalCompaniesCount(data.companies.length);
+          }
+        })
+        .catch(() => {});
+    }
+  }, [effectiveUser]);
+
   useEffect(() => {
     setIsClient(true);
-    
+    if (effectiveUser != null) return;
     // Fetch user account type and set initial search mode; store user for locate-me avatar/logo
     fetch("/api/auth/me", { credentials: "same-origin" })
       .then((res) => res.ok ? res.json() : null)
@@ -2053,7 +2080,7 @@ const MapComponent = ({ onOpenSettings, onViewModeChange }) => {
         }
       })
       .catch(() => {});
-  }, []);
+  }, [effectiveUser]);
 
   useEffect(() => {
     // Only run on client side
