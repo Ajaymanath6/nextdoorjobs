@@ -21,6 +21,7 @@ import EditCompanyLocationModal from "./EditCompanyLocationModal";
 import AddHomeModal from "./Map/AddHomeModal";
 import themeClasses from "../theme-utility-classes.json";
 import { AVATARS } from "../../lib/avatars";
+import FundingSeriesBadges from "./Onboarding/FundingSeriesBadges";
 
 const SECTIONS = [
   { id: "general", label: "General", icon: Settings },
@@ -124,6 +125,15 @@ export default function SettingsModal({ isOpen, onClose, initialSection }) {
     currentSalaryVisibleToRecruiter: false,
   });
 
+  // Company edit state (Company account settings)
+  const [editingCompanyName, setEditingCompanyName] = useState(false);
+  const [companyNameInput, setCompanyNameInput] = useState("");
+  const [editingCompanyWebsite, setEditingCompanyWebsite] = useState(false);
+  const [companyWebsiteInput, setCompanyWebsiteInput] = useState("");
+  const [editingCompanyFunding, setEditingCompanyFunding] = useState(false);
+  const [companyEditSaving, setCompanyEditSaving] = useState(false);
+  const [companyEditError, setCompanyEditError] = useState(null);
+
   useEffect(() => {
     if (!isOpen) return;
     setLoading(true);
@@ -202,6 +212,44 @@ export default function SettingsModal({ isOpen, onClose, initialSection }) {
         if (data?.success && data.user) setUser(data.user);
       })
       .catch(() => {});
+  };
+
+  const patchCompany = async (fields) => {
+    if (!selectedCompany) return null;
+    try {
+      setCompanyEditSaving(true);
+      setCompanyEditError(null);
+      const formData = new FormData();
+      Object.entries(fields || {}).forEach(([key, value]) => {
+        if (value !== undefined && value !== null) {
+          formData.append(key, value);
+        }
+      });
+      if ([...formData.keys()].length === 0) {
+        setCompanyEditSaving(false);
+        return selectedCompany;
+      }
+      const res = await fetch(`/api/onboarding/company/${selectedCompany.id}`, {
+        method: "PATCH",
+        body: formData,
+        credentials: "same-origin",
+      });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok || !data.success || !data.company) {
+        throw new Error(data.error || "Failed to update company");
+      }
+      setCompanies((prev) =>
+        prev.map((c) => (c.id === data.company.id ? data.company : c))
+      );
+      setSelectedCompany(data.company);
+      return data.company;
+    } catch (err) {
+      console.error("Company update failed:", err);
+      setCompanyEditError(err?.message || "Failed to update company");
+      return null;
+    } finally {
+      setCompanyEditSaving(false);
+    }
   };
 
   // Fetch first gig for location display when General section is open and user is Individual with no home
@@ -1089,35 +1137,12 @@ export default function SettingsModal({ isOpen, onClose, initialSection }) {
                     <p className="text-brand-text-weak">No company information found. Complete onboarding to add your company.</p>
                   ) : (
                     <>
-                      {/* Company selector if multiple companies */}
-                      {companies.length > 1 && (
-                        <div className="flex items-center justify-between gap-4 py-2">
-                          <span className="text-sm text-brand-text-strong">
-                            Select Company
-                          </span>
-                          <select
-                            value={selectedCompany?.id || ""}
-                            onChange={(e) => {
-                              const company = companies.find(c => c.id === parseInt(e.target.value));
-                              setSelectedCompany(company);
-                            }}
-                            className="rounded-lg border border-brand-stroke-border px-3 py-2 text-sm text-brand-text-strong focus:outline-none focus:ring-2 focus:ring-brand focus:border-brand"
-                          >
-                            {companies.map((company) => (
-                              <option key={company.id} value={company.id}>
-                                {company.name}
-                              </option>
-                            ))}
-                          </select>
-                        </div>
-                      )}
-
                       {selectedCompany && (
                         <>
                           {/* Company logo */}
                           <div className="flex items-center justify-between gap-4 py-2">
-<span className="text-sm text-brand-text-strong">
-                            Company logo
+                            <span className="text-sm text-brand-text-strong">
+                              Company logo
                             </span>
                             <div className="flex items-center gap-3">
                               <div className="h-12 w-12 rounded-full overflow-hidden bg-brand-bg-fill flex items-center justify-center border border-brand-stroke-border shrink-0">
@@ -1147,14 +1172,73 @@ export default function SettingsModal({ isOpen, onClose, initialSection }) {
                           </div>
                           <div className="border-t border-brand-stroke-weak" />
 
-                          {/* Company name */}
+                          {/* Company name (editable) */}
                           <div className="flex items-center justify-between gap-4 py-2">
                             <span className="text-sm text-brand-text-strong">
                               Company name
                             </span>
-                            <span className="text-sm text-brand-text-strong">
-                              {selectedCompany.name}
-                            </span>
+                            <div className="flex items-center gap-2 max-w-[260px] justify-end">
+                              {editingCompanyName ? (
+                                <>
+                                  <input
+                                    type="text"
+                                    value={companyNameInput}
+                                    onChange={(e) => setCompanyNameInput(e.target.value)}
+                                    className="w-full rounded-md border border-brand-stroke-border px-2 py-1 text-sm text-brand-text-strong focus:outline-none focus:ring-2 focus:ring-brand"
+                                    placeholder="Company name"
+                                    disabled={companyEditSaving}
+                                  />
+                                  <button
+                                    type="button"
+                                    onClick={async () => {
+                                      const next = companyNameInput.trim();
+                                      if (!next) {
+                                        setEditingCompanyName(false);
+                                        setCompanyNameInput("");
+                                        return;
+                                      }
+                                      const updated = await patchCompany({ name: next });
+                                      if (updated) {
+                                        setEditingCompanyName(false);
+                                      }
+                                    }}
+                                    disabled={companyEditSaving}
+                                    className="text-xs font-medium text-brand px-2 py-1 rounded-md border border-brand-stroke-border hover:bg-brand-bg-fill disabled:opacity-50"
+                                  >
+                                    Save
+                                  </button>
+                                  <button
+                                    type="button"
+                                    onClick={() => {
+                                      setEditingCompanyName(false);
+                                      setCompanyNameInput("");
+                                      setCompanyEditError(null);
+                                    }}
+                                    disabled={companyEditSaving}
+                                    className="text-xs font-medium text-brand-text-weak px-2 py-1 rounded-md border border-brand-stroke-border hover:bg-brand-bg-fill disabled:opacity-50"
+                                  >
+                                    Cancel
+                                  </button>
+                                </>
+                              ) : (
+                                <>
+                                  <span className="text-sm text-brand-text-strong truncate max-w-[180px]">
+                                    {selectedCompany.name}
+                                  </span>
+                                  <button
+                                    type="button"
+                                    onClick={() => {
+                                      setCompanyEditError(null);
+                                      setEditingCompanyName(true);
+                                      setCompanyNameInput(selectedCompany.name || "");
+                                    }}
+                                    className="text-xs font-medium text-brand underline underline-offset-2 hover:opacity-80"
+                                  >
+                                    Edit
+                                  </button>
+                                </>
+                              )}
+                            </div>
                           </div>
                           <div className="border-t border-brand-stroke-weak" />
 
@@ -1188,39 +1272,132 @@ export default function SettingsModal({ isOpen, onClose, initialSection }) {
                           </div>
                           <div className="border-t border-brand-stroke-weak" />
 
-                          {/* Website URL */}
-                          {selectedCompany.websiteUrl && (
-                            <>
-                              <div className="flex items-center justify-between gap-4 py-2">
-                                <span className="text-sm text-brand-text-strong">
-                                  Website
-                                </span>
-                                <a
-                                  href={selectedCompany.websiteUrl}
-                                  target="_blank"
-                                  rel="noopener noreferrer"
-                                  className="text-sm text-brand underline hover:opacity-80"
-                                >
-                                  {selectedCompany.websiteUrl}
-                                </a>
-                              </div>
-                              <div className="border-t border-brand-stroke-weak" />
-                            </>
-                          )}
+                          {/* Website URL (editable) */}
+                          <div className="flex items-center justify-between gap-4 py-2">
+                            <span className="text-sm text-brand-text-strong">
+                              Website
+                            </span>
+                            <div className="flex items-center gap-2 max-w-[260px] justify-end">
+                              {editingCompanyWebsite ? (
+                                <>
+                                  <input
+                                    type="url"
+                                    value={companyWebsiteInput}
+                                    onChange={(e) => setCompanyWebsiteInput(e.target.value)}
+                                    placeholder="https://example.com"
+                                    className="w-full rounded-md border border-brand-stroke-border px-2 py-1 text-sm text-brand-text-strong focus:outline-none focus:ring-2 focus:ring-brand"
+                                    disabled={companyEditSaving}
+                                  />
+                                  <button
+                                    type="button"
+                                    onClick={async () => {
+                                      const next = companyWebsiteInput.trim();
+                                      if (!next) {
+                                        // No-op if cleared, keep existing for now
+                                        setEditingCompanyWebsite(false);
+                                        setCompanyWebsiteInput("");
+                                        return;
+                                      }
+                                      const updated = await patchCompany({ websiteUrl: next });
+                                      if (updated) {
+                                        setEditingCompanyWebsite(false);
+                                      }
+                                    }}
+                                    disabled={companyEditSaving}
+                                    className="text-xs font-medium text-brand px-2 py-1 rounded-md border border-brand-stroke-border hover:bg-brand-bg-fill disabled:opacity-50"
+                                  >
+                                    Save
+                                  </button>
+                                  <button
+                                    type="button"
+                                    onClick={() => {
+                                      setEditingCompanyWebsite(false);
+                                      setCompanyWebsiteInput("");
+                                      setCompanyEditError(null);
+                                    }}
+                                    disabled={companyEditSaving}
+                                    className="text-xs font-medium text-brand-text-weak px-2 py-1 rounded-md border border-brand-stroke-border hover:bg-brand-bg-fill disabled:opacity-50"
+                                  >
+                                    Cancel
+                                  </button>
+                                </>
+                              ) : (
+                                <>
+                                  {selectedCompany.websiteUrl ? (
+                                    <a
+                                      href={selectedCompany.websiteUrl}
+                                      target="_blank"
+                                      rel="noopener noreferrer"
+                                      className="text-sm text-brand underline hover:opacity-80 truncate max-w-[180px]"
+                                    >
+                                      {selectedCompany.websiteUrl}
+                                    </a>
+                                  ) : (
+                                    <span className="text-sm text-brand-text-weak">
+                                      Not set
+                                    </span>
+                                  )}
+                                  <button
+                                    type="button"
+                                    onClick={() => {
+                                      setCompanyEditError(null);
+                                      setEditingCompanyWebsite(true);
+                                      setCompanyWebsiteInput(selectedCompany.websiteUrl || "");
+                                    }}
+                                    className="text-xs font-medium text-brand underline underline-offset-2 hover:opacity-80"
+                                  >
+                                    Edit
+                                  </button>
+                                </>
+                              )}
+                            </div>
+                          </div>
+                          <div className="border-t border-brand-stroke-weak" />
 
-                          {/* Funding series */}
-                          {selectedCompany.fundingSeries && (
-                            <>
-                              <div className="flex items-center justify-between gap-4 py-2">
-                                <span className="text-sm text-brand-text-strong">
-                                  Funding
-                                </span>
-                                <span className="text-sm text-brand-text-strong">
-                                  {selectedCompany.fundingSeries}
-                                </span>
-                              </div>
-                              <div className="border-t border-brand-stroke-weak" />
-                            </>
+                          {/* Funding series (editable) */}
+                          <div className="py-2">
+                            <div className="flex items-center justify-between gap-4 mb-2">
+                              <span className="text-sm text-brand-text-strong">
+                                Funding
+                              </span>
+                              {!editingCompanyFunding && (
+                                <button
+                                  type="button"
+                                  onClick={() => {
+                                    setCompanyEditError(null);
+                                    setEditingCompanyFunding(true);
+                                  }}
+                                  className="text-xs font-medium text-brand underline underline-offset-2 hover:opacity-80"
+                                >
+                                  {selectedCompany.fundingSeries ? "Change" : "Add"}
+                                </button>
+                              )}
+                            </div>
+                            {editingCompanyFunding ? (
+                              <FundingSeriesBadges
+                                selectedValue={selectedCompany.fundingSeries || null}
+                                onSelect={async (series) => {
+                                  const updated = await patchCompany({ fundingSeries: series });
+                                  if (updated) {
+                                    setEditingCompanyFunding(false);
+                                  }
+                                }}
+                                onSkip={() => {
+                                  setEditingCompanyFunding(false);
+                                }}
+                              />
+                            ) : (
+                              <span className="text-sm text-brand-text-strong">
+                                {selectedCompany.fundingSeries || "Not set"}
+                              </span>
+                            )}
+                          </div>
+                          <div className="border-t border-brand-stroke-weak" />
+
+                          {companyEditError && (
+                            <div className="mt-2 rounded-md bg-red-50 px-3 py-2 text-sm text-red-600">
+                              {companyEditError}
+                            </div>
                           )}
                         </>
                       )}

@@ -63,61 +63,118 @@ export default function AdminDashboardPage() {
       .then((d) => d.companies && setCompanies(d.companies));
 
   return (
-    <div className="flex-1 min-h-0 flex flex-col overflow-hidden">
-      <div className="shrink-0 max-w-2xl mx-auto w-full p-6 space-y-6">
-        <div className="flex flex-wrap items-center justify-between gap-4">
-          <h1 className="text-2xl font-semibold text-brand-text-strong">Admin</h1>
-          <div className="flex items-center gap-2">
-            <button
-              type="button"
-              onClick={handleViewAsUser}
-              className="flex items-center gap-2 rounded-md bg-brand text-brand-bg-white px-4 py-2 text-sm font-medium hover:bg-brand-hover"
-            >
-              <View size={16} />
-              View as User
-            </button>
-            <button
-              type="button"
-              onClick={handleLogout}
-              className="rounded-md bg-brand-bg-white border-[1.5px] border-brand-stroke-weak text-brand-text-strong px-3 py-2 text-sm font-medium hover:bg-brand-bg-fill"
-            >
-              Log out
-            </button>
+    <div
+      className="fixed inset-0 overflow-hidden"
+      style={{
+        top: 0,
+        left: 0,
+        right: 0,
+        bottom: 0,
+        height: "100dvh",
+        width: "100vw",
+        margin: 0,
+        padding: 0,
+      }}
+    >
+      {/* Blurred background image layer */}
+      <div
+        className="fixed z-0"
+        style={{
+          backgroundImage: "url(/back.png)",
+          backgroundSize: "cover",
+          backgroundPosition: "center",
+          backgroundRepeat: "no-repeat",
+          filter: "blur(8px)",
+          transform: "scale(1.1)",
+          top: 0,
+          left: 0,
+          right: 0,
+          bottom: 0,
+          height: "100dvh",
+          width: "100vw",
+          margin: 0,
+          padding: 0,
+        }}
+      />
+
+      {/* Overlay for better readability */}
+      <div
+        className="fixed z-0"
+        style={{
+          top: 0,
+          left: 0,
+          right: 0,
+          bottom: 0,
+          height: "100dvh",
+          width: "100vw",
+          margin: 0,
+          padding: 0,
+          backgroundColor: "rgba(255, 255, 255, 0.3)",
+          backdropFilter: "blur(1px)",
+        }}
+      />
+
+      <div className="relative z-10 flex justify-center px-4 h-[100dvh] w-screen pb-[env(safe-area-inset-bottom,0)]">
+        <div className="bg-white/95 backdrop-blur-sm rounded-lg overflow-hidden border border-brand-stroke-weak shadow-lg relative w-full max-w-[61rem] flex flex-col h-full m-0 p-0 min-h-0">
+          <div className="shrink-0 max-w-2xl mx-auto w-full p-6 space-y-6">
+            <div className="flex flex-wrap items-center justify-between gap-4">
+              <h1 className="text-2xl font-semibold text-brand-text-strong">Admin</h1>
+              <div className="flex items-center gap-2">
+                <button
+                  type="button"
+                  onClick={handleViewAsUser}
+                  className="flex items-center gap-2 rounded-md bg-brand text-brand-bg-white px-4 py-2 text-sm font-medium hover:bg-brand-hover"
+                >
+                  <View size={16} />
+                  View as User
+                </button>
+                <button
+                  type="button"
+                  onClick={handleLogout}
+                  className="rounded-md bg-brand-bg-white border-[1.5px] border-brand-stroke-weak text-brand-text-strong px-3 py-2 text-sm font-medium hover:bg-brand-bg-fill"
+                >
+                  Log out
+                </button>
+              </div>
+            </div>
+
+            <section className="rounded-md border border-brand-stroke-weak bg-brand-bg-white p-6 shadow">
+              <h2 className="text-lg font-medium text-brand-text-strong mb-2">View as</h2>
+              <p className="text-sm text-brand-text-weak mb-4">
+                Use the chat flows below to post as a gig worker or as a company.
+              </p>
+              <div className="flex flex-wrap items-center gap-3">
+                <button
+                  type="button"
+                  onClick={() => setViewSection("gig")}
+                  className="rounded-md bg-brand-bg-white border-[1.5px] border-brand-stroke-weak text-brand-text-strong px-4 py-2 text-sm font-medium hover:bg-brand-bg-fill"
+                >
+                  View as Gig worker
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setViewSection("company")}
+                  className="rounded-md bg-brand-bg-white border-[1.5px] border-brand-stroke-weak text-brand-text-strong px-4 py-2 text-sm font-medium hover:bg-brand-bg-fill"
+                >
+                  View as Company
+                </button>
+              </div>
+            </section>
+          </div>
+
+          <div className="flex-1 min-h-0 overflow-y-auto flex flex-col">
+            {viewSection === "gig" && (
+              <div className="flex-1 min-h-0 flex flex-col max-w-2xl mx-auto w-full p-6">
+                <AdminGigChat />
+              </div>
+            )}
+            {viewSection === "company" && (
+              <div className="flex-1 min-h-0 flex flex-col max-w-2xl mx-auto w-full p-6">
+                <AdminCompanyChat />
+              </div>
+            )}
           </div>
         </div>
-
-        <section className="rounded-md border border-brand-stroke-weak bg-brand-bg-white p-6 shadow">
-          <h2 className="text-lg font-medium text-brand-text-strong mb-2">View as</h2>
-          <p className="text-sm text-brand-text-weak mb-4">Use the chat flows below to post as a gig worker or as a company.</p>
-          <div className="flex flex-wrap items-center gap-3">
-            <button
-              type="button"
-              onClick={() => setViewSection("gig")}
-              className="rounded-md bg-brand-bg-white border-[1.5px] border-brand-stroke-weak text-brand-text-strong px-4 py-2 text-sm font-medium hover:bg-brand-bg-fill"
-            >
-              View as Gig worker
-            </button>
-            <button
-              type="button"
-              onClick={() => setViewSection("company")}
-              className="rounded-md bg-brand-bg-white border-[1.5px] border-brand-stroke-weak text-brand-text-strong px-4 py-2 text-sm font-medium hover:bg-brand-bg-fill"
-            >
-              View as Company
-            </button>
-          </div>
-        </section>
-      </div>
-      <div className="flex-1 min-h-0 overflow-y-auto flex flex-col">
-        {viewSection === "gig" && (
-          <div className="flex-1 min-h-0 flex flex-col max-w-2xl mx-auto w-full p-6">
-            <AdminGigChat />
-          </div>
-        )}
-        {viewSection === "company" && (
-          <div className="flex-1 min-h-0 flex flex-col max-w-2xl mx-auto w-full p-6">
-            <AdminCompanyChat />
-          </div>
-        )}
       </div>
     </div>
   );
