@@ -3,6 +3,7 @@
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { JOB_CATEGORIES } from "../../lib/constants/jobCategories";
+import { INDIAN_STATES } from "../../lib/constants/indianStates";
 
 export default function AdminDashboardPage() {
   const router = useRouter();
@@ -59,8 +60,8 @@ export default function AdminDashboardPage() {
       .then((d) => d.companies && setCompanies(d.companies));
 
   return (
-    <div className="min-h-screen bg-brand-bg-fill overflow-y-auto">
-      <div className="max-w-2xl mx-auto p-6 space-y-8 pb-12">
+    <div className="flex-1 min-h-0 flex flex-col overflow-hidden">
+      <div className="shrink-0 max-w-2xl mx-auto w-full p-6 space-y-6">
         <div className="flex flex-wrap items-center justify-between gap-4">
           <h1 className="text-2xl font-semibold text-brand-text-strong">Admin</h1>
           <div className="flex items-center gap-2">
@@ -110,20 +111,23 @@ export default function AdminDashboardPage() {
             </button>
           </div>
         </section>
-
-        {viewSection === "all" && (
-          <>
-            <AddCompanyForm onSuccess={refreshCompanies} />
-            <PostJobForm companies={companies} />
+      </div>
+      <div className="flex-1 min-h-0 overflow-y-auto">
+        <div className="max-w-2xl mx-auto p-6 pt-0 space-y-8 pb-12">
+          {viewSection === "all" && (
+            <>
+              <AddCompanyForm onSuccess={refreshCompanies} />
+              <PostJobForm companies={companies} />
+              <OnboardGigForm />
+            </>
+          )}
+          {viewSection === "gig" && (
             <OnboardGigForm />
-          </>
-        )}
-        {viewSection === "gig" && (
-          <OnboardGigForm />
-        )}
-        {viewSection === "company" && (
-          <PostJobForm companies={companies} />
-        )}
+          )}
+          {viewSection === "company" && (
+            <PostJobForm companies={companies} />
+          )}
+        </div>
       </div>
     </div>
   );
@@ -132,6 +136,7 @@ export default function AdminDashboardPage() {
 function AddCompanyForm({ onSuccess }) {
   const [status, setStatus] = useState({ type: null, text: "" });
   const [loading, setLoading] = useState(false);
+  const [districts, setDistricts] = useState([]);
   const [form, setForm] = useState({
     name: "",
     state: "",
@@ -143,6 +148,39 @@ function AddCompanyForm({ onSuccess }) {
     longitude: "",
     pincode: "",
   });
+
+  useEffect(() => {
+    if (!form.state?.trim()) {
+      setDistricts([]);
+      return;
+    }
+    let cancelled = false;
+    fetch(`/api/india/districts?state=${encodeURIComponent(form.state)}`)
+      .then((r) => r.json())
+      .then((d) => {
+        if (!cancelled && Array.isArray(d.districts)) setDistricts(d.districts);
+      })
+      .catch(() => { if (!cancelled) setDistricts([]); });
+    return () => { cancelled = true; };
+  }, [form.state]);
+
+  const handleMapUrlOrAddress = async (value) => {
+    const v = (value || "").trim();
+    if (!v) return;
+    const latLonMatch = v.match(/(-?\d+\.?\d*)\s*,\s*(-?\d+\.?\d*)/);
+    if (latLonMatch) {
+      setForm((f) => ({ ...f, latitude: latLonMatch[1], longitude: latLonMatch[2] }));
+      return;
+    }
+    try {
+      const res = await fetch(`/api/geocode/forward?q=${encodeURIComponent(v)}`);
+      if (!res.ok) return;
+      const data = await res.json();
+      if (data?.lat != null && data?.lon != null) {
+        setForm((f) => ({ ...f, latitude: String(data.lat), longitude: String(data.lon) }));
+      }
+    } catch (_) {}
+  };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -175,17 +213,43 @@ function AddCompanyForm({ onSuccess }) {
   };
 
   const inputClass = "w-full rounded-md border border-brand-stroke-strong focus:border-brand-text-strong focus:outline-none focus:ring-0 text-brand-text-strong placeholder:text-brand-text-placeholder px-3 py-2";
+  const [mapUrlInput, setMapUrlInput] = useState("");
   return (
     <section className="rounded-md border border-brand-stroke-weak bg-brand-bg-white p-6 shadow">
       <h2 className="text-lg font-medium text-brand-text-strong mb-4">Add company</h2>
       <form onSubmit={handleSubmit} className="space-y-3">
         <input type="text" placeholder="Name *" value={form.name} onChange={(e) => setForm((f) => ({ ...f, name: e.target.value }))} className={inputClass} required />
-        <input type="text" placeholder="State *" value={form.state} onChange={(e) => setForm((f) => ({ ...f, state: e.target.value }))} className={inputClass} required />
-        <input type="text" placeholder="District *" value={form.district} onChange={(e) => setForm((f) => ({ ...f, district: e.target.value }))} className={inputClass} required />
+        <div>
+          <label className="block text-sm font-medium text-brand-text-strong mb-1">State *</label>
+          <select value={form.state} onChange={(e) => setForm((f) => ({ ...f, state: e.target.value, district: "" }))} className={inputClass} required>
+            <option value="">Select state</option>
+            {INDIAN_STATES.map((s) => (
+              <option key={s} value={s}>{s}</option>
+            ))}
+          </select>
+        </div>
+        <div>
+          <label className="block text-sm font-medium text-brand-text-strong mb-1">District *</label>
+          <select value={form.district} onChange={(e) => setForm((f) => ({ ...f, district: e.target.value }))} className={inputClass} required disabled={!form.state}>
+            <option value="">Select district</option>
+            {districts.map((d) => (
+              <option key={d} value={d}>{d}</option>
+            ))}
+          </select>
+        </div>
         <textarea placeholder="Description" value={form.description} onChange={(e) => setForm((f) => ({ ...f, description: e.target.value }))} className={inputClass} rows={2} />
         <input type="text" placeholder="Website URL" value={form.websiteUrl} onChange={(e) => setForm((f) => ({ ...f, websiteUrl: e.target.value }))} className={inputClass} />
-        <input type="text" placeholder="Latitude" value={form.latitude} onChange={(e) => setForm((f) => ({ ...f, latitude: e.target.value }))} className={inputClass} />
-        <input type="text" placeholder="Longitude" value={form.longitude} onChange={(e) => setForm((f) => ({ ...f, longitude: e.target.value }))} className={inputClass} />
+        <div>
+          <label className="block text-sm font-medium text-brand-text-strong mb-1">Latitude / Longitude (or paste map URL / address)</label>
+          <div className="flex gap-2">
+            <input type="text" placeholder="e.g. map URL or address" value={mapUrlInput} onChange={(e) => setMapUrlInput(e.target.value)} className={inputClass + " flex-1"} />
+            <button type="button" onClick={() => handleMapUrlOrAddress(mapUrlInput)} className="rounded-md bg-brand-bg-white border-[1.5px] border-brand-stroke-weak text-brand-text-strong px-3 py-2 text-sm font-medium hover:bg-brand-bg-fill shrink-0">Fill</button>
+          </div>
+        </div>
+        <div className="grid grid-cols-2 gap-2">
+          <input type="text" placeholder="Latitude" value={form.latitude} onChange={(e) => setForm((f) => ({ ...f, latitude: e.target.value }))} className={inputClass} />
+          <input type="text" placeholder="Longitude" value={form.longitude} onChange={(e) => setForm((f) => ({ ...f, longitude: e.target.value }))} className={inputClass} />
+        </div>
         <input type="text" placeholder="Pincode" value={form.pincode} onChange={(e) => setForm((f) => ({ ...f, pincode: e.target.value }))} className={inputClass} />
         {status.text && <p className={status.type === "error" ? "text-red-600 text-sm" : "text-green-600 text-sm"}>{status.text}</p>}
         <button type="submit" disabled={loading} className="rounded-md bg-brand text-brand-bg-white px-4 py-2 text-sm font-medium hover:bg-brand-hover disabled:opacity-50">Create company</button>
@@ -273,6 +337,7 @@ function PostJobForm({ companies }) {
 function OnboardGigForm() {
   const [status, setStatus] = useState({ type: null, text: "" });
   const [loading, setLoading] = useState(false);
+  const [districts, setDistricts] = useState([]);
   const [form, setForm] = useState({
     title: "",
     serviceType: "",
@@ -288,6 +353,39 @@ function OnboardGigForm() {
     longitude: "",
     email: "",
   });
+
+  useEffect(() => {
+    if (!form.state?.trim()) {
+      setDistricts([]);
+      return;
+    }
+    let cancelled = false;
+    fetch(`/api/india/districts?state=${encodeURIComponent(form.state)}`)
+      .then((r) => r.json())
+      .then((d) => {
+        if (!cancelled && Array.isArray(d.districts)) setDistricts(d.districts);
+      })
+      .catch(() => { if (!cancelled) setDistricts([]); });
+    return () => { cancelled = true; };
+  }, [form.state]);
+
+  const handleMapUrlOrAddress = async (value) => {
+    const v = (value || "").trim();
+    if (!v) return;
+    const latLonMatch = v.match(/(-?\d+\.?\d*)\s*,\s*(-?\d+\.?\d*)/);
+    if (latLonMatch) {
+      setForm((f) => ({ ...f, latitude: latLonMatch[1], longitude: latLonMatch[2] }));
+      return;
+    }
+    try {
+      const res = await fetch(`/api/geocode/forward?q=${encodeURIComponent(v)}`);
+      if (!res.ok) return;
+      const data = await res.json();
+      if (data?.lat != null && data?.lon != null) {
+        setForm((f) => ({ ...f, latitude: String(data.lat), longitude: String(data.lon) }));
+      }
+    } catch (_) {}
+  };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -321,22 +419,48 @@ function OnboardGigForm() {
   };
 
   const inputClass = "w-full rounded-md border border-brand-stroke-strong focus:border-brand-text-strong focus:outline-none focus:ring-0 text-brand-text-strong placeholder:text-brand-text-placeholder px-3 py-2";
+  const [mapUrlInput, setMapUrlInput] = useState("");
   return (
     <section className="rounded-md border border-brand-stroke-weak bg-brand-bg-white p-6 shadow">
       <h2 className="text-lg font-medium text-brand-text-strong mb-4">Onboard gig worker</h2>
       <form onSubmit={handleSubmit} className="space-y-3">
         <input type="text" placeholder="Gig title *" value={form.title} onChange={(e) => setForm((f) => ({ ...f, title: e.target.value }))} className={inputClass} required />
         <input type="text" placeholder="Service type *" value={form.serviceType} onChange={(e) => setForm((f) => ({ ...f, serviceType: e.target.value }))} className={inputClass} required />
-        <input type="text" placeholder="State *" value={form.state} onChange={(e) => setForm((f) => ({ ...f, state: e.target.value }))} className={inputClass} required />
-        <input type="text" placeholder="District *" value={form.district} onChange={(e) => setForm((f) => ({ ...f, district: e.target.value }))} className={inputClass} required />
+        <div>
+          <label className="block text-sm font-medium text-brand-text-strong mb-1">State *</label>
+          <select value={form.state} onChange={(e) => setForm((f) => ({ ...f, state: e.target.value, district: "" }))} className={inputClass} required>
+            <option value="">Select state</option>
+            {INDIAN_STATES.map((s) => (
+              <option key={s} value={s}>{s}</option>
+            ))}
+          </select>
+        </div>
+        <div>
+          <label className="block text-sm font-medium text-brand-text-strong mb-1">District *</label>
+          <select value={form.district} onChange={(e) => setForm((f) => ({ ...f, district: e.target.value }))} className={inputClass} required disabled={!form.state}>
+            <option value="">Select district</option>
+            {districts.map((d) => (
+              <option key={d} value={d}>{d}</option>
+            ))}
+          </select>
+        </div>
         <input type="email" placeholder="Gig worker email (optional)" value={form.email} onChange={(e) => setForm((f) => ({ ...f, email: e.target.value }))} className={inputClass} />
         <textarea placeholder="Description" value={form.description} onChange={(e) => setForm((f) => ({ ...f, description: e.target.value }))} className={inputClass} rows={2} />
         <input type="text" placeholder="Expected salary" value={form.expectedSalary} onChange={(e) => setForm((f) => ({ ...f, expectedSalary: e.target.value }))} className={inputClass} />
         <input type="text" placeholder="Experience" value={form.experienceWithGig} onChange={(e) => setForm((f) => ({ ...f, experienceWithGig: e.target.value }))} className={inputClass} />
         <input type="text" placeholder="Pincode" value={form.pincode} onChange={(e) => setForm((f) => ({ ...f, pincode: e.target.value }))} className={inputClass} />
         <input type="text" placeholder="Locality" value={form.locality} onChange={(e) => setForm((f) => ({ ...f, locality: e.target.value }))} className={inputClass} />
-        <input type="number" step="any" placeholder="Latitude" value={form.latitude} onChange={(e) => setForm((f) => ({ ...f, latitude: e.target.value }))} className={inputClass} />
-        <input type="number" step="any" placeholder="Longitude" value={form.longitude} onChange={(e) => setForm((f) => ({ ...f, longitude: e.target.value }))} className={inputClass} />
+        <div>
+          <label className="block text-sm font-medium text-brand-text-strong mb-1">Latitude / Longitude (or paste map URL / address)</label>
+          <div className="flex gap-2">
+            <input type="text" placeholder="e.g. map URL or address" value={mapUrlInput} onChange={(e) => setMapUrlInput(e.target.value)} className={inputClass + " flex-1"} />
+            <button type="button" onClick={() => handleMapUrlOrAddress(mapUrlInput)} className="rounded-md bg-brand-bg-white border-[1.5px] border-brand-stroke-weak text-brand-text-strong px-3 py-2 text-sm font-medium hover:bg-brand-bg-fill shrink-0">Fill</button>
+          </div>
+        </div>
+        <div className="grid grid-cols-2 gap-2">
+          <input type="text" placeholder="Latitude" value={form.latitude} onChange={(e) => setForm((f) => ({ ...f, latitude: e.target.value }))} className={inputClass} />
+          <input type="text" placeholder="Longitude" value={form.longitude} onChange={(e) => setForm((f) => ({ ...f, longitude: e.target.value }))} className={inputClass} />
+        </div>
         {status.text && <p className={status.type === "error" ? "text-red-600 text-sm" : "text-green-600 text-sm"}>{status.text}</p>}
         <button type="submit" disabled={loading} className="rounded-md bg-brand text-brand-bg-white px-4 py-2 text-sm font-medium hover:bg-brand-hover disabled:opacity-50">Create gig</button>
       </form>
