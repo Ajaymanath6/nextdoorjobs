@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
+import { View } from "@carbon/icons-react";
 import { JOB_CATEGORIES } from "../../lib/constants/jobCategories";
 import { INDIAN_STATES } from "../../lib/constants/indianStates";
 import AdminGigChat from "./AdminGigChat";
@@ -36,7 +37,7 @@ export default function AdminDashboardPage() {
     router.refresh();
   };
 
-  const [viewSection, setViewSection] = useState("all"); // "all" | "gig" | "company"
+  const [viewSection, setViewSection] = useState("gig"); // "gig" | "company"
 
   const handleViewAsUser = async () => {
     const res = await fetch("/api/admin/set-view-as", {
@@ -67,20 +68,12 @@ export default function AdminDashboardPage() {
         <div className="flex flex-wrap items-center justify-between gap-4">
           <h1 className="text-2xl font-semibold text-brand-text-strong">Admin</h1>
           <div className="flex items-center gap-2">
-            {viewSection !== "all" && (
-              <button
-                type="button"
-                onClick={() => setViewSection("all")}
-                className="rounded-md bg-brand-bg-white border-[1.5px] border-brand-stroke-weak text-brand-text-strong px-3 py-2 text-sm font-medium hover:bg-brand-bg-fill"
-              >
-                Back to admin
-              </button>
-            )}
             <button
               type="button"
               onClick={handleViewAsUser}
-              className="rounded-md bg-brand text-brand-bg-white px-4 py-2 text-sm font-medium hover:bg-brand-hover"
+              className="flex items-center gap-2 rounded-md bg-brand text-brand-bg-white px-4 py-2 text-sm font-medium hover:bg-brand-hover"
             >
+              <View size={16} />
               View as User
             </button>
             <button
@@ -115,13 +108,6 @@ export default function AdminDashboardPage() {
         </section>
       </div>
       <div className="flex-1 min-h-0 overflow-y-auto flex flex-col">
-        {viewSection === "all" && (
-          <div className="max-w-2xl mx-auto w-full p-6 pt-0 space-y-8 pb-12">
-            <AddCompanyForm onSuccess={refreshCompanies} />
-            <PostJobForm companies={companies} />
-            <OnboardGigForm />
-          </div>
-        )}
         {viewSection === "gig" && (
           <div className="flex-1 min-h-0 flex flex-col max-w-2xl mx-auto w-full p-6">
             <AdminGigChat />
