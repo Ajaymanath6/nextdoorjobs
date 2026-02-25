@@ -253,6 +253,14 @@ export default function ChatInterface({
                             >
                               {job.title}
                             </p>
+                            { (job.companyName || job.company?.name) && (
+                              <p
+                                className="text-xs text-brand-text-strong truncate mt-0.5"
+                                style={{ fontFamily: "Open Sans, sans-serif" }}
+                              >
+                                {job.companyName || job.company?.name}
+                              </p>
+                            )}
                             <p
                               className="text-xs text-brand-text-weak mt-0.5 break-words"
                               style={{ fontFamily: "Open Sans, sans-serif" }}
