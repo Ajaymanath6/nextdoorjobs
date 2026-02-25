@@ -49,6 +49,7 @@ export async function GET() {
     const jobs = await prisma.jobPosition.findMany({
       where: {
         companyId: { in: companyIds },
+        isActive: true,
       },
       select: {
         id: true,

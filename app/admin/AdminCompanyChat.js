@@ -71,7 +71,9 @@ export default function AdminCompanyChat() {
         credentials: "include",
       });
       const data = await res.json().catch(() => ({}));
-      const jobs = Array.isArray(data.jobs) ? data.jobs : [];
+      const jobsRaw = Array.isArray(data.jobs) ? data.jobs : [];
+      // Extra safety: filter out any inactive jobs if they slip through
+      const jobs = jobsRaw.filter((job) => job && job.isActive !== false);
 
       setAdminJobsCache(jobs);
       setChatMessages((prev) => {
@@ -464,20 +466,30 @@ export default function AdminCompanyChat() {
       if (res.ok && result.success && result.jobPosition) {
         const companyLat = createdCompany.latitude;
         const companyLon = createdCompany.longitude;
+        const logoUrl =
+          createdCompany.logoPath ||
+          companyData?.logoPath ||
+          companyData?.logoUrl ||
+          null;
         if (
           companyLat != null &&
           companyLon != null &&
-          typeof sessionStorage !== "undefined"
+          (typeof sessionStorage !== "undefined" ||
+            typeof localStorage !== "undefined")
         ) {
-          setLastJobCoords({ lat: companyLat, lng: companyLon });
-          sessionStorage.setItem(
-            "zoomToJobCoords",
-            JSON.stringify({
-              lat: companyLat,
-              lng: companyLon,
-              companyName: createdCompany.name || "Your posting",
-            })
-          );
+          const payload = {
+            lat: companyLat,
+            lng: companyLon,
+            companyName: createdCompany.name || "Your posting",
+            logoUrl: logoUrl || null,
+          };
+          setLastJobCoords({ lat: companyLat, lng: companyLon, logoUrl: logoUrl || null });
+          if (typeof sessionStorage !== "undefined") {
+            sessionStorage.setItem("zoomToJobCoords", JSON.stringify(payload));
+          }
+          if (typeof localStorage !== "undefined") {
+            localStorage.setItem("zoomToJobCoords", JSON.stringify(payload));
+          }
         }
         setChatMessages((prev) => [
           ...prev,
@@ -511,21 +523,26 @@ export default function AdminCompanyChat() {
   };
 
   const handleViewOnMap = async () => {
-    if (lastJobCoords && typeof sessionStorage !== "undefined") {
-      sessionStorage.setItem(
-        "zoomToJobCoords",
-        JSON.stringify({
-          ...lastJobCoords,
-          companyName: createdCompany?.name || "Your posting",
-        })
-      );
+    if (lastJobCoords && (typeof sessionStorage !== "undefined" || typeof localStorage !== "undefined")) {
+      const payload = {
+        lat: lastJobCoords.lat,
+        lng: lastJobCoords.lng,
+        companyName: createdCompany?.name || "Your posting",
+        logoUrl: lastJobCoords.logoUrl || createdCompany?.logoPath || null,
+      };
+      if (typeof sessionStorage !== "undefined") {
+        sessionStorage.setItem("zoomToJobCoords", JSON.stringify(payload));
+      }
+      if (typeof localStorage !== "undefined") {
+        localStorage.setItem("zoomToJobCoords", JSON.stringify(payload));
+      }
     }
     try {
       await fetch("/api/admin/set-view-as", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         credentials: "include",
-        body: JSON.stringify({ viewAs: "user" }),
+        body: JSON.stringify({ role: "individual" }),
       });
     } catch (err) {
       console.error("Failed to set admin view-as before opening map:", err);
