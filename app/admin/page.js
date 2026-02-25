@@ -116,7 +116,7 @@ export default function AdminDashboardPage() {
 
       <div className="relative z-10 flex justify-center px-[46px] h-[100dvh] w-screen pb-[env(safe-area-inset-bottom,0)]">
         <div className="bg-white/95 backdrop-blur-sm rounded-lg overflow-hidden border border-brand-stroke-weak shadow-lg relative w-full flex flex-col h-full m-0 p-0 min-h-0">
-          <div className="shrink-0 max-w-2xl mx-auto w-full p-6 space-y-6">
+          <div className="shrink-0 w-full p-6 space-y-6">
             <div className="flex flex-wrap items-center justify-between gap-4">
               <h1 className="text-2xl font-semibold text-brand-text-strong">Admin</h1>
               <div className="flex items-center gap-2">

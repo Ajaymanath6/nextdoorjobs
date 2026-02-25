@@ -10,7 +10,28 @@ import ConfirmDeleteModal from "../ConfirmDeleteModal";
 import EditGigModal from "./EditGigModal";
 import EditJobModal from "../EditJobModal";
 
-export default function ChatInterface({ messages = [], onSendMessage, isLoading = false, inlineComponent = null, typingText = null, onScrollRequest, onSave, onViewOnMap, onStartNext, showFindOrPostButtons = false, accountType, onFindJob, onPostGig, onFindCandidates, onGigDeleted, onGigEdited, onJobDeleted, onJobEdited, onShowJobListings }) {
+export default function ChatInterface({
+  messages = [],
+  onSendMessage,
+  isLoading = false,
+  inlineComponent = null,
+  typingText = null,
+  onScrollRequest,
+  onSave,
+  onViewOnMap,
+  onStartNext,
+  showFindOrPostButtons = false,
+  accountType,
+  onFindJob,
+  onPostGig,
+  onFindCandidates,
+  onGigDeleted,
+  onGigEdited,
+  onJobDeleted,
+  onJobEdited,
+  onShowJobListings,
+  jobApiPrefix = "/api/jobs",
+}) {
   const router = useRouter();
   const messagesEndRef = useRef(null);
   const inputRef = useRef(null);
@@ -54,7 +75,7 @@ export default function ChatInterface({ messages = [], onSendMessage, isLoading 
   const handleDeleteJob = async (jobId) => {
     setDeletingJobId(jobId);
     try {
-      const res = await fetch(`/api/jobs/${jobId}`, {
+      const res = await fetch(`${jobApiPrefix}/${jobId}`, {
         method: "DELETE",
         credentials: "same-origin",
       });
@@ -75,7 +96,7 @@ export default function ChatInterface({ messages = [], onSendMessage, isLoading 
   const handleExtendJob = async (jobId) => {
     setExtendingJobId(jobId);
     try {
-      const res = await fetch(`/api/jobs/${jobId}/extend`, {
+      const res = await fetch(`${jobApiPrefix}/${jobId}/extend`, {
         method: "POST",
         credentials: "same-origin",
       });
@@ -193,7 +214,10 @@ export default function ChatInterface({ messages = [], onSendMessage, isLoading 
       </div>
 
       {/* Messages Container - scrollable, leaves room for input */}
-      <div ref={messagesContainerRef} className="flex-1 min-h-0 overflow-y-auto px-4 pt-4 space-y-4 chat-scrollable bg-white">
+      <div
+        ref={messagesContainerRef}
+        className="flex-1 min-h-0 overflow-y-auto overflow-x-hidden px-4 pt-4 space-y-4 chat-scrollable bg-white"
+      >
 
         {messages.map((message, index) => (
           <div key={index} className="w-full">
@@ -208,7 +232,7 @@ export default function ChatInterface({ messages = [], onSendMessage, isLoading 
                     className="w-7 h-7"
                   />
                 </div>
-                <div className="flex flex-col gap-2 w-full">
+                <div className="flex flex-col gap-2 max-w-[80%] w-full">
                 <div className="w-full rounded-lg border border-brand-stroke-weak bg-brand-bg-white px-4 py-3">
                   <p className="text-sm font-medium text-brand-text-strong mb-3" style={{ fontFamily: "Open Sans, sans-serif" }}>
                     Your job postings
@@ -223,8 +247,18 @@ export default function ChatInterface({ messages = [], onSendMessage, isLoading 
                           className="flex items-center gap-2 py-2 border-b border-brand-stroke-weak last:border-b-0 last:pb-0 first:pt-0"
                         >
                           <div className="flex-1 min-w-0">
-                            <p className="text-sm font-medium text-brand-text-strong truncate" style={{ fontFamily: "Open Sans, sans-serif" }}>{job.title}</p>
-                            <p className="text-xs text-brand-text-weak truncate mt-0.5" style={{ fontFamily: "Open Sans, sans-serif" }}>{job.jobDescription}</p>
+                            <p
+                              className="text-sm font-medium text-brand-text-strong truncate"
+                              style={{ fontFamily: "Open Sans, sans-serif" }}
+                            >
+                              {job.title}
+                            </p>
+                            <p
+                              className="text-xs text-brand-text-weak mt-0.5 break-words"
+                              style={{ fontFamily: "Open Sans, sans-serif" }}
+                            >
+                              {job.jobDescription}
+                            </p>
                           </div>
                           <div className="shrink-0 flex items-center gap-1.5">
                             {onJobEdited ? (

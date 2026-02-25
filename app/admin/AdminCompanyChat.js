@@ -60,6 +60,7 @@ export default function AdminCompanyChat() {
   const scrollToInlineRef = useRef(null);
   const [isMobile, setIsMobile] = useState(false);
   const [recentJobsActive, setRecentJobsActive] = useState(false);
+  const [adminJobsCache, setAdminJobsCache] = useState([]);
 
   const handleShowRecentJobs = async () => {
     setRecentJobsActive(true);
@@ -72,6 +73,7 @@ export default function AdminCompanyChat() {
       const data = await res.json().catch(() => ({}));
       const jobs = Array.isArray(data.jobs) ? data.jobs : [];
 
+      setAdminJobsCache(jobs);
       setChatMessages((prev) => [
         ...prev,
         {
@@ -96,6 +98,47 @@ export default function AdminCompanyChat() {
     } finally {
       setIsLoading(false);
     }
+  };
+
+  const handleAdminJobDeleted = (jobId) => {
+    setAdminJobsCache((prev) => prev.filter((job) => job.id !== jobId));
+    setChatMessages((prev) => {
+      const next = [...prev];
+      for (let i = next.length - 1; i >= 0; i--) {
+        const msg = next[i];
+        if (msg.type === "jobList") {
+          next[i] = {
+            ...msg,
+            jobs: (msg.jobs || []).filter((job) => job.id !== jobId),
+          };
+          break;
+        }
+      }
+      return next;
+    });
+  };
+
+  const handleAdminJobEdited = (updatedJob) => {
+    if (!updatedJob || !updatedJob.id) return;
+    setAdminJobsCache((prev) =>
+      prev.map((job) => (job.id === updatedJob.id ? { ...job, ...updatedJob } : job))
+    );
+    setChatMessages((prev) => {
+      const next = [...prev];
+      for (let i = next.length - 1; i >= 0; i--) {
+        const msg = next[i];
+        if (msg.type === "jobList") {
+          next[i] = {
+            ...msg,
+            jobs: (msg.jobs || []).map((job) =>
+              job.id === updatedJob.id ? { ...job, ...updatedJob } : job
+            ),
+          };
+          break;
+        }
+      }
+      return next;
+    });
   };
 
   useEffect(() => {
@@ -991,6 +1034,9 @@ export default function AdminCompanyChat() {
           onViewOnMap={lastJobCoords ? handleViewOnMap : undefined}
           onStartNext={handleStartNext}
           showFindOrPostButtons={false}
+          onJobDeleted={handleAdminJobDeleted}
+          onJobEdited={handleAdminJobEdited}
+          jobApiPrefix="/api/admin/jobs"
         />
       </div>
     </div>
