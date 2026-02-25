@@ -129,9 +129,13 @@ export async function PATCH(request, { params }) {
     if (body.expiresAt !== undefined) {
       updateData.expiresAt = body.expiresAt ? new Date(body.expiresAt) : null;
     }
-    const updated = await prisma.jobPosition.update({
+    await prisma.jobPosition.update({
       where: { id: jobId },
       data: updateData,
+    });
+    const updated = await prisma.jobPosition.findUnique({
+      where: { id: jobId },
+      include: { company: true },
     });
     return NextResponse.json({ success: true, job: updated });
   } catch (error) {

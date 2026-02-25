@@ -77,7 +77,7 @@ export default function EditJobModal({ isOpen, onClose, job, onSaved, jobApiPref
 
       if (res.ok) {
         const data = await res.json();
-        const updatedJob = data.job;
+        let updatedJob = data.job;
         if (job.company?.id) {
           const websiteChanged = (companyWebsiteUrl || "").trim() !== (job.company?.websiteUrl || "").trim();
           const descriptionChanged = (companyDescription ?? "") !== (job.company?.description ?? "");
@@ -92,7 +92,12 @@ export default function EditJobModal({ isOpen, onClose, job, onSaved, jobApiPref
               body: formData,
               credentials: "same-origin",
             });
-            if (companyRes.ok && !hasLogoFile && websiteChanged && (companyWebsiteUrl || "").trim()) {
+            let patchedCompany = (updatedJob.company || job.company) ? { ...(updatedJob.company || job.company) } : null;
+            if (companyRes.ok) {
+              const companyData = await companyRes.json().catch(() => ({}));
+              if (companyData.company) patchedCompany = { ...patchedCompany, ...companyData.company };
+            }
+            if (!hasLogoFile && websiteChanged && (companyWebsiteUrl || "").trim()) {
               try {
                 const logoRes = await fetch(`/api/onboarding/fetch-logo?url=${encodeURIComponent((companyWebsiteUrl || "").trim())}`);
                 if (logoRes.ok) {
@@ -100,14 +105,23 @@ export default function EditJobModal({ isOpen, onClose, job, onSaved, jobApiPref
                   if (logoData.success && logoData.logoUrl) {
                     const logoForm = new FormData();
                     logoForm.append("logoPath", logoData.logoUrl);
-                    await fetch(`/api/onboarding/company/${job.company.id}`, {
+                    const logoPatchRes = await fetch(`/api/onboarding/company/${job.company.id}`, {
                       method: "PATCH",
                       body: logoForm,
                       credentials: "same-origin",
                     });
+                    if (logoPatchRes.ok && patchedCompany) {
+                      const logoPatchData = await logoPatchRes.json().catch(() => ({}));
+                      if (logoPatchData.company?.logoPath) patchedCompany.logoPath = logoPatchData.company.logoPath;
+                    }
                   }
                 }
               } catch (_) {}
+            }
+            if (patchedCompany) {
+              if ((companyWebsiteUrl || "").trim()) patchedCompany.websiteUrl = (companyWebsiteUrl || "").trim();
+              if ((companyDescription ?? "").trim()) patchedCompany.description = (companyDescription || "").trim();
+              updatedJob = { ...updatedJob, company: patchedCompany };
             }
           }
         }

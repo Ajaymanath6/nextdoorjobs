@@ -66,6 +66,7 @@ export async function GET() {
           select: {
             id: true,
             name: true,
+            description: true,
             websiteUrl: true,
             latitude: true,
             longitude: true,
@@ -93,6 +94,7 @@ export async function GET() {
         ? {
             id: job.company.id,
             name: job.company.name,
+            description: job.company.description ?? undefined,
             websiteUrl: job.company.websiteUrl ?? undefined,
             latitude: job.company.latitude ?? undefined,
             longitude: job.company.longitude ?? undefined,
