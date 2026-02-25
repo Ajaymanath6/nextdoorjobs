@@ -74,16 +74,28 @@ export default function AdminCompanyChat() {
       const jobs = Array.isArray(data.jobs) ? data.jobs : [];
 
       setAdminJobsCache(jobs);
-      setChatMessages((prev) => [
-        ...prev,
-        {
-          type: "ai",
-          text: jobs.length
-            ? "Here are your recent posted jobs:"
-            : "You don't have any recent posted jobs yet.",
-        },
-        ...(jobs.length ? [{ type: "jobList", jobs }] : []),
-      ]);
+      setChatMessages((prev) => {
+        const next = [...prev];
+        const lastIdx = next.length - 1;
+        const isRecentJobsAi = (msg) =>
+          msg?.type === "ai" && (msg?.text?.includes("recent posted jobs") || msg?.text?.includes("don't have any recent"));
+        if (lastIdx >= 0 && next[lastIdx].type === "jobList") {
+          next.pop();
+          if (lastIdx - 1 >= 0 && isRecentJobsAi(next[lastIdx - 1])) next.pop();
+        } else if (lastIdx >= 0 && isRecentJobsAi(next[lastIdx])) {
+          next.pop();
+        }
+        return [
+          ...next,
+          {
+            type: "ai",
+            text: jobs.length
+              ? "Here are your recent posted jobs:"
+              : "You don't have any recent posted jobs yet.",
+          },
+          ...(jobs.length ? [{ type: "jobList", jobs }] : []),
+        ];
+      });
     } catch (err) {
       console.error("Failed to load recent admin jobs:", err);
       setChatMessages((prev) => [

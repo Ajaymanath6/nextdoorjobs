@@ -46,7 +46,7 @@ export default function AdminDashboardPage() {
       credentials: "include",
       body: JSON.stringify({ role: "individual" }),
     });
-    if (res.ok) window.location.href = "/";
+    if (res.ok) window.open("/", "_blank");
   };
 
   if (loading) {

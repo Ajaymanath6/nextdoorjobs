@@ -232,8 +232,8 @@ export default function ChatInterface({
                     className="w-7 h-7"
                   />
                 </div>
-                <div className="flex flex-col gap-2 max-w-[80%] w-full">
-                <div className="w-full rounded-lg border border-brand-stroke-weak bg-brand-bg-white px-4 py-3">
+                <div className="flex flex-col gap-2 w-full max-w-full min-w-0">
+                <div className="w-full min-w-0 rounded-lg border border-brand-stroke-weak bg-brand-bg-white px-4 py-3">
                   <p className="text-sm font-medium text-brand-text-strong mb-3" style={{ fontFamily: "Open Sans, sans-serif" }}>
                     Your job postings
                   </p>
