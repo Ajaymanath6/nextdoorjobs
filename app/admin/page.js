@@ -33,12 +33,14 @@ export default function AdminDashboardPage() {
     router.refresh();
   };
 
-  const handleViewAs = async (role, companyId = null) => {
+  const [viewSection, setViewSection] = useState("all"); // "all" | "gig" | "company"
+
+  const handleViewAsUser = async () => {
     const res = await fetch("/api/admin/set-view-as", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       credentials: "include",
-      body: JSON.stringify(role === "company" ? { role: "company", companyId: companyId ?? undefined } : { role: "individual" }),
+      body: JSON.stringify({ role: "individual" }),
     });
     if (res.ok) window.location.href = "/";
   };
@@ -51,60 +53,77 @@ export default function AdminDashboardPage() {
     );
   }
 
+  const refreshCompanies = () =>
+    fetch("/api/admin/companies", { credentials: "include" })
+      .then((r) => r.json())
+      .then((d) => d.companies && setCompanies(d.companies));
+
   return (
-    <div className="min-h-screen bg-brand-bg-fill p-6">
-      <div className="max-w-2xl mx-auto space-y-8">
+    <div className="min-h-screen bg-brand-bg-fill overflow-y-auto">
+      <div className="max-w-2xl mx-auto p-6 space-y-8 pb-12">
         <div className="flex flex-wrap items-center justify-between gap-4">
           <h1 className="text-2xl font-semibold text-brand-text-strong">Admin</h1>
-          <button
-            type="button"
-            onClick={handleLogout}
-            className="rounded-md bg-brand-bg-white border-[1.5px] border-brand-stroke-weak text-brand-text-strong px-3 py-2 text-sm font-medium hover:bg-brand-bg-fill"
-          >
-            Log out
-          </button>
+          <div className="flex items-center gap-2">
+            {viewSection !== "all" && (
+              <button
+                type="button"
+                onClick={() => setViewSection("all")}
+                className="rounded-md bg-brand-bg-white border-[1.5px] border-brand-stroke-weak text-brand-text-strong px-3 py-2 text-sm font-medium hover:bg-brand-bg-fill"
+              >
+                Back to admin
+              </button>
+            )}
+            <button
+              type="button"
+              onClick={handleLogout}
+              className="rounded-md bg-brand-bg-white border-[1.5px] border-brand-stroke-weak text-brand-text-strong px-3 py-2 text-sm font-medium hover:bg-brand-bg-fill"
+            >
+              Log out
+            </button>
+          </div>
         </div>
 
         <section className="rounded-md border border-brand-stroke-weak bg-brand-bg-white p-6 shadow">
-          <h2 className="text-lg font-medium text-brand-text-strong mb-2">View as user</h2>
-          <p className="text-sm text-brand-text-weak mb-4">See the app as a gig worker or company would.</p>
+          <h2 className="text-lg font-medium text-brand-text-strong mb-2">View as</h2>
+          <p className="text-sm text-brand-text-weak mb-4">Open the app as a user, or use the forms below to post as a gig worker or company.</p>
           <div className="flex flex-wrap items-center gap-3">
             <button
               type="button"
-              onClick={() => handleViewAs("individual")}
+              onClick={handleViewAsUser}
               className="rounded-md bg-brand text-brand-bg-white px-4 py-2 text-sm font-medium hover:bg-brand-hover"
+            >
+              View as User
+            </button>
+            <button
+              type="button"
+              onClick={() => setViewSection("gig")}
+              className="rounded-md bg-brand-bg-white border-[1.5px] border-brand-stroke-weak text-brand-text-strong px-4 py-2 text-sm font-medium hover:bg-brand-bg-fill"
             >
               View as Gig worker
             </button>
-            <div className="flex items-center gap-2">
-              <select
-                id="admin-view-as-company"
-                className="rounded-md border border-brand-stroke-strong focus:border-brand-text-strong focus:outline-none focus:ring-0 text-brand-text-strong px-3 py-2 text-sm min-w-[160px]"
-                defaultValue=""
-              >
-                <option value="">Select company</option>
-                {companies.map((c) => (
-                  <option key={c.id} value={c.id}>{c.name}</option>
-                ))}
-              </select>
-              <button
-                type="button"
-                onClick={() => {
-                  const sel = document.getElementById("admin-view-as-company");
-                  const companyId = sel?.value ? parseInt(sel.value, 10) : null;
-                  handleViewAs("company", companyId);
-                }}
-                className="rounded-md bg-brand-bg-white border-[1.5px] border-brand-stroke-weak text-brand-text-strong px-4 py-2 text-sm font-medium hover:bg-brand-bg-fill"
-              >
-                View as Company
-              </button>
-            </div>
+            <button
+              type="button"
+              onClick={() => setViewSection("company")}
+              className="rounded-md bg-brand-bg-white border-[1.5px] border-brand-stroke-weak text-brand-text-strong px-4 py-2 text-sm font-medium hover:bg-brand-bg-fill"
+            >
+              View as Company
+            </button>
           </div>
         </section>
 
-        <AddCompanyForm onSuccess={() => fetch("/api/admin/companies", { credentials: "include" }).then((r) => r.json()).then((d) => d.companies && setCompanies(d.companies))} />
-        <PostJobForm companies={companies} />
-        <OnboardGigForm />
+        {viewSection === "all" && (
+          <>
+            <AddCompanyForm onSuccess={refreshCompanies} />
+            <PostJobForm companies={companies} />
+            <OnboardGigForm />
+          </>
+        )}
+        {viewSection === "gig" && (
+          <OnboardGigForm />
+        )}
+        {viewSection === "company" && (
+          <PostJobForm companies={companies} />
+        )}
       </div>
     </div>
   );

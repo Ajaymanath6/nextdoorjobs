@@ -62,6 +62,11 @@ const clerkHandler = clerkMiddleware(async (auth, req) => {
     // When app loads at root: unauthenticated users see onboarding; signed-in users check accountType
     if (path === '/') {
       if (!userId) {
+        // Admin "View as" flow: no Clerk session but has admin view-as cookie -> allow through to map
+        const adminViewAs = req.cookies.get('admin_view_as')?.value;
+        if (adminViewAs === 'individual' || adminViewAs === 'company') {
+          return NextResponse.next();
+        }
         return NextResponse.redirect(new URL('/onboarding', req.url));
       }
       // Only redirect to who-are-you when we have confirmed the user has no accountType. Otherwise allow through so existing users are not shown who-are-you.
