@@ -14,6 +14,82 @@ import SeniorityLevelSelector from "../components/Onboarding/SeniorityLevelSelec
 import { JOB_CATEGORIES } from "../../lib/constants/jobCategories";
 import { WatsonHealthRotate_360 } from "@carbon/icons-react";
 
+function ExistingCompanyPicker({ companies, onSelect }) {
+  const [query, setQuery] = useState("");
+
+  const normalizedQuery = query.toLowerCase().trim();
+  const filtered =
+    !normalizedQuery
+      ? companies
+      : companies.filter((c) => {
+          const name = (c.name || "").toLowerCase();
+          const description = (c.description || "").toLowerCase();
+          const state = (c.state || "").toLowerCase();
+          const district = (c.district || "").toLowerCase();
+          return (
+            name.includes(normalizedQuery) ||
+            description.includes(normalizedQuery) ||
+            state.includes(normalizedQuery) ||
+            district.includes(normalizedQuery)
+          );
+        });
+
+  return (
+    <div className="w-full border border-brand-stroke-weak rounded-lg bg-white/95 shadow-sm px-3 py-3 space-y-2">
+      <div className="flex items-center justify-between gap-2">
+        <p className="text-sm font-semibold text-brand-text-strong">
+          Or pick an existing company
+        </p>
+      </div>
+      <input
+        type="text"
+        value={query}
+        onChange={(e) => setQuery(e.target.value)}
+        placeholder="Search companies by name or location..."
+        className="w-full px-3 py-2 text-sm border border-brand-stroke-weak rounded-md bg-brand-bg-white placeholder:text-brand-text-placeholder text-brand-text-strong focus:outline-none focus:border-brand-text-strong"
+      />
+      <div className="max-h-60 overflow-y-auto rounded-md border border-brand-stroke-subtle bg-brand-bg-white/80">
+        {filtered.length === 0 ? (
+          <div className="px-3 py-2 text-xs text-brand-text-weak">
+            No existing companies match. Type a new name above to create a new company.
+          </div>
+        ) : (
+          filtered.map((company) => {
+            const locationParts = [
+              company.district || null,
+              company.state || null,
+              company.pincode || null,
+            ].filter(Boolean);
+            const locationLabel = locationParts.join(", ");
+            return (
+              <button
+                key={company.id}
+                type="button"
+                onClick={() => onSelect(company)}
+                className="w-full text-left px-3 py-2 text-sm hover:bg-brand-bg-fill transition-colors flex flex-col gap-0.5"
+              >
+                <span className="font-medium text-brand-text-strong truncate">
+                  {company.name}
+                </span>
+                {company.description && (
+                  <span className="text-xs text-brand-text-weak line-clamp-2">
+                    {company.description}
+                  </span>
+                )}
+                {locationLabel && (
+                  <span className="text-xs text-brand-text-weak">
+                    {locationLabel}
+                  </span>
+                )}
+              </button>
+            );
+          })
+        )}
+      </div>
+    </div>
+  );
+}
+
 const COMPANY_FIELDS = {
   NAME: "company_name",
   STATE: "company_state",
@@ -58,6 +134,9 @@ export default function AdminCompanyChat() {
   const [collectingCompany, setCollectingCompany] = useState(true);
   const [createdCompany, setCreatedCompany] = useState(null);
   const [lastJobCoords, setLastJobCoords] = useState(null);
+  const [existingJobCompanies, setExistingJobCompanies] = useState([]);
+  const [existingJobCompaniesLoaded, setExistingJobCompaniesLoaded] =
+    useState(false);
   const scrollToInlineRef = useRef(null);
   const [isMobile, setIsMobile] = useState(false);
   const [recentJobsActive, setRecentJobsActive] = useState(false);
@@ -70,6 +149,111 @@ export default function AdminCompanyChat() {
   useEffect(() => {
     createdCompanyRef.current = createdCompany;
   }, [createdCompany]);
+
+  useEffect(() => {
+    // Fetch admin jobs once to derive companies that already have at least one active job
+    const fetchExistingCompanies = async () => {
+      try {
+        const res = await fetch("/api/admin/jobs", {
+          method: "GET",
+          credentials: "include",
+        });
+        const data = await res.json().catch(() => ({}));
+        const jobs = Array.isArray(data.jobs) ? data.jobs : [];
+        const byId = new Map();
+        for (const job of jobs) {
+          const c = job?.company;
+          if (!c || !c.id) continue;
+          if (!byId.has(c.id)) {
+            byId.set(c.id, {
+              id: c.id,
+              name: c.name || "",
+              description: c.description || "",
+              websiteUrl: c.websiteUrl || "",
+              latitude:
+                c.latitude != null && Number.isFinite(Number(c.latitude))
+                  ? Number(c.latitude)
+                  : null,
+              longitude:
+                c.longitude != null && Number.isFinite(Number(c.longitude))
+                  ? Number(c.longitude)
+                  : null,
+              state: c.state || "",
+              district: c.district || "",
+              pincode: c.pincode || "",
+              logoPath: c.logoPath || "",
+            });
+          }
+        }
+        setExistingJobCompanies(Array.from(byId.values()));
+      } catch (err) {
+        console.error("Failed to fetch existing admin companies with jobs:", err);
+      } finally {
+        setExistingJobCompaniesLoaded(true);
+      }
+    };
+
+    fetchExistingCompanies();
+  }, []);
+
+  const handleExistingCompanySelected = async (company) => {
+    // Synthetic user message so history is clear
+    setChatMessages((prev) => [
+      ...prev,
+      { type: "user", text: `Use existing company: ${company?.name || ""}` },
+    ]);
+
+    // Prefill local company data for any later use (map zoom, etc.)
+    setCompanyData({
+      name: company.name || "",
+      description: company.description || "",
+      websiteUrl: company.websiteUrl || "",
+      state: company.state || "",
+      district: company.district || "",
+      pincode: company.pincode || "",
+      latitude: company.latitude ?? null,
+      longitude: company.longitude ?? null,
+      logoPath: company.logoPath || "",
+    });
+
+    // Treat this as the selected company for subsequent job submissions
+    const normalizedCompany = {
+      id: company.id,
+      name: company.name || "",
+      description: company.description || null,
+      websiteUrl: company.websiteUrl || null,
+      state: company.state || null,
+      district: company.district || null,
+      pincode: company.pincode || null,
+      latitude: company.latitude ?? null,
+      longitude: company.longitude ?? null,
+      logoPath: company.logoPath || null,
+    };
+    setCreatedCompany(normalizedCompany);
+
+    setCollectingCompany(false);
+    setCurrentField(JOB_FIELDS.TITLE);
+    setInlineComponent(null);
+
+    const locationParts = [
+      normalizedCompany.district || null,
+      normalizedCompany.state || null,
+      normalizedCompany.pincode || null,
+    ].filter(Boolean);
+    const locationLabel = locationParts.join(", ");
+
+    const descriptionText = normalizedCompany.description
+      ? `Description: ${normalizedCompany.description}`
+      : "No description saved yet.";
+
+    const prefix = locationLabel
+      ? `Using existing company "${normalizedCompany.name}" at ${locationLabel}. `
+      : `Using existing company "${normalizedCompany.name}". `;
+
+    await addAIMessage(
+      `${prefix}${descriptionText} Now let's add a new job. What's the job title?`
+    );
+  };
 
   const handleShowRecentJobs = async () => {
     setRecentJobsActive(true);
@@ -177,6 +361,30 @@ export default function AdminCompanyChat() {
     window.addEventListener("resize", check);
     return () => window.removeEventListener("resize", check);
   }, []);
+
+  useEffect(() => {
+    // When starting from the very first question and admin already has jobs,
+    // offer a dropdown to reuse an existing company instead of re-answering company questions.
+    if (
+      !existingJobCompaniesLoaded ||
+      existingJobCompanies.length === 0 ||
+      !collectingCompany ||
+      currentField !== COMPANY_FIELDS.NAME
+    ) {
+      return;
+    }
+    setInlineComponent(
+      <ExistingCompanyPicker
+        companies={existingJobCompanies}
+        onSelect={handleExistingCompanySelected}
+      />
+    );
+  }, [
+    existingJobCompanies,
+    existingJobCompaniesLoaded,
+    collectingCompany,
+    currentField,
+  ]);
 
   const addAIMessage = async (text) => {
     setIsTyping(true);
