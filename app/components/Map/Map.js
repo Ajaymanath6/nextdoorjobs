@@ -609,8 +609,13 @@ const MapComponent = ({ onOpenSettings, onViewModeChange, effectiveUser = null, 
     });
     clusterGroupRef.current = clusterGroup;
 
-    // Create markers for each company
-    companies.forEach((company, index) => {
+    // Create markers for each company (filter out companies with zero active jobs for non-Company users)
+    const companiesToRender =
+      userAccountType === "Company"
+        ? companies || []
+        : (companies || []).filter((c) => (c.jobCount ?? 0) > 0);
+
+    companiesToRender.forEach((company, index) => {
       const companyName = company.company_name || company.name;
       
       // Logo fallback hierarchy:
@@ -1940,7 +1945,8 @@ const MapComponent = ({ onOpenSettings, onViewModeChange, effectiveUser = null, 
     });
   };
 
-  // Job posting pindrop: round, primary border, shadow; optional logoUrl (else gemni.png). Optional companyName + jobCount show two badges: company name (top, white bg), openings count (bottom, primary).
+// Job posting pindrop: square card with light primary border; optional logoUrl (else gemni.png).
+// Optional companyName + jobCount show two badges: company name (top, white bg), openings count (bottom, primary).
   const PRIMARY_BORDER = "#F84416";
   const DEFAULT_LOGO = "/gemni.png";
   const badgeStyleFirst = `white-space:nowrap;background:#FFFFFF;color:#1A1A1A;font-size:10px;font-weight:600;padding:2px 6px;border-radius:10px;box-shadow:0 1px 4px rgba(0,0,0,0.2);font-family:'Open Sans',sans-serif;max-width:90px;overflow:hidden;text-overflow:ellipsis;border:1px solid #E5E5E5;`;
@@ -1955,7 +1961,10 @@ const MapComponent = ({ onOpenSettings, onViewModeChange, effectiveUser = null, 
     const totalBadgeH = badgeCount * badgeHeight;
     const totalH = size + totalBadgeH;
     const countLabel = jobCount === 1 ? "1 position open" : `${jobCount} positions open`;
-    const safeName = (companyName || "").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
+    const safeName = (companyName || "")
+      .replace(/</g, "&lt;")
+      .replace(/>/g, "&gt;")
+      .replace(/"/g, "&quot;");
     let badgeHtml = "";
     let top = size;
     if (hasNameBadge) {
@@ -1965,7 +1974,38 @@ const MapComponent = ({ onOpenSettings, onViewModeChange, effectiveUser = null, 
     if (hasCountBadge) {
       badgeHtml += `<div class="company-marker-badge" style="position:absolute;left:50%;top:${top}px;transform:translateX(-50%);${badgeStyleSecond}">${countLabel}</div>`;
     }
-    const html = `<div class="company-marker" style="position:relative;width:${size}px;height:${totalH}px;cursor:pointer;"><div style="position:relative;width:${size}px;height:${size}px;background-color:#FFFFFF;border-radius:50%;display:flex;align-items:center;justify-content:center;transition:transform 0.2s ease;box-shadow:0 2px 8px rgba(0,0,0,0.15),0 1px 3px rgba(0,0,0,0.1);border:2px solid ${PRIMARY_BORDER};overflow:hidden;"><img src="${safeSrc}" alt="Job" style="width:100%;height:100%;object-fit:cover;" onerror="this.onerror=null;this.src='${DEFAULT_LOGO}';" /></div>${badgeHtml}</div>`;
+
+    // Square favicon-style marker with light primary border; inner image is contained so avatars/logos never overflow
+    const html = `<div class="company-marker" style="position:relative;width:${size}px;height:${totalH}px;cursor:pointer;">
+      <div style="
+        position:relative;
+        width:${size}px;
+        height:${size}px;
+        background-color:#FFFFFF;
+        border-radius:8px;
+        display:flex;
+        align-items:center;
+        justify-content:center;
+        transition:transform 0.2s ease, box-shadow 0.2s ease;
+        box-shadow:0 2px 8px rgba(0,0,0,0.15),0 1px 3px rgba(0,0,0,0.1);
+        border:2px solid rgba(248,68,22,0.35);
+        overflow:hidden;
+      ">
+        <div style="
+          width:76%;
+          height:76%;
+          border-radius:6px;
+          background:#F8F8F8;
+          display:flex;
+          align-items:center;
+          justify-content:center;
+          overflow:hidden;
+        ">
+          <img src="${safeSrc}" alt="Job" style="width:100%;height:100%;object-fit:contain;" onerror="this.onerror=null;this.src='${DEFAULT_LOGO}';" />
+        </div>
+      </div>
+      ${badgeHtml}
+    </div>`;
     return L.divIcon({
       html,
       className: "custom-pindrop-marker",
@@ -1983,7 +2023,10 @@ const MapComponent = ({ onOpenSettings, onViewModeChange, effectiveUser = null, 
     const totalBadgeH = badgeCount * badgeHeight;
     const totalH = size + totalBadgeH;
     const countLabel = jobCount === 1 ? "1 position open" : `${jobCount} positions open`;
-    const safeName = (companyName || "").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
+    const safeName = (companyName || "")
+      .replace(/</g, "&lt;")
+      .replace(/>/g, "&gt;")
+      .replace(/"/g, "&quot;");
     let badgeHtml = "";
     let top = size;
     if (hasNameBadge) {
@@ -1993,18 +2036,20 @@ const MapComponent = ({ onOpenSettings, onViewModeChange, effectiveUser = null, 
     if (hasCountBadge) {
       badgeHtml += `<div style="position:absolute;left:50%;top:${top}px;transform:translateX(-50%);${badgeStyleSecond}">${countLabel}</div>`;
     }
+
+    // Square fallback marker (no logo) with light primary border and group icon
     const html = `
       <div style="position:relative;width:${size}px;height:${totalH}px;">
         <div style="
-          width: ${size}px;
-          height: ${size}px;
-          border-radius: 50%;
-          background: linear-gradient(135deg, #F84416 0%, #FF6B47 100%);
-          display: flex;
-          align-items: center;
-          justify-content: center;
-          border: 3px solid white;
-          box-shadow: 0 2px 8px rgba(0,0,0,0.2);
+          width:${size}px;
+          height:${size}px;
+          border-radius:8px;
+          background:linear-gradient(135deg, #F84416 0%, #FF6B47 100%);
+          display:flex;
+          align-items:center;
+          justify-content:center;
+          border:2px solid rgba(248,68,22,0.35);
+          box-shadow:0 2px 8px rgba(0,0,0,0.2);
         ">
           <svg width="${size * 0.6}" height="${size * 0.6}" viewBox="0 0 32 32" fill="white">
             <path d="M16 2C14.3 2 13 3.3 13 5s1.3 3 3 3 3-1.3 3-3-1.3-3-3-3zM8 8C6.3 8 5 9.3 5 11s1.3 3 3 3 3-1.3 3-3-1.3-3-3-3zM24 8c-1.7 0-3 1.3-3 3s1.3 3 3 3 3-1.3 3-3-1.3-3-3-3zM16 14c-3.3 0-6 2.7-6 6v10h12V20c0-3.3-2.7-6-6-6z"/>
@@ -2576,8 +2621,14 @@ const MapComponent = ({ onOpenSettings, onViewModeChange, effectiveUser = null, 
         });
         clusterGroupRef.current = clusterGroup;
 
+        // For non-Company users, filter out companies that have zero active jobs so map pins only represent active postings
+        const companiesToRender =
+          userAccountType === "Company"
+            ? companies || []
+            : (companies || []).filter((c) => (c.jobCount ?? 0) > 0);
+
         // Create company markers (single pin per company; image from stored logoPath/logoUrl only, fallback to org icon)
-        companies.forEach((company, index) => {
+        companiesToRender.forEach((company, index) => {
           const companyLogoUrl = company.logoPath || company.logoUrl || null;
           const positionsOpen = company.jobCount ?? 0;
           const nameForBadge = company.company_name || company.name || "";
