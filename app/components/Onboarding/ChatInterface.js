@@ -270,26 +270,45 @@ export default function ChatInterface({
                     <p className="text-sm text-brand-text-weak" style={{ fontFamily: "Open Sans, sans-serif" }}>No job postings yet.</p>
                   ) : (
                     <ul className="space-y-2">
-                      {(message.jobs || []).map((job) => (
+                      {(message.jobs || []).map((job) => {
+                        const companyName = job.companyName || job.company?.name || "";
+                        const logoUrl = job.company?.logoPath || (job.company?.websiteUrl ? (() => {
+                          try {
+                            const h = new URL(job.company.websiteUrl).hostname;
+                            return h ? `https://www.google.com/s2/favicons?domain=${encodeURIComponent(h)}&sz=128` : null;
+                          } catch (_) { return null; }
+                        })() : null);
+                        return (
                         <li
                           key={job.id}
                           className="flex items-center gap-2 py-2 border-b border-brand-stroke-weak last:border-b-0 last:pb-0 first:pt-0"
                         >
                           <div className="flex-1 min-w-0">
+                            {(companyName || logoUrl) ? (
+                              <div className="flex items-center gap-2 mb-1.5 shrink-0">
+                                <div className="w-7 h-7 rounded overflow-hidden flex-shrink-0 bg-brand-bg-fill flex items-center justify-center">
+                                  {logoUrl ? (
+                                    <img src={logoUrl} alt="" className="w-full h-full object-contain" />
+                                  ) : (
+                                    <span className="text-xs font-medium text-brand-text-strong" style={{ fontFamily: "Open Sans, sans-serif" }}>
+                                      {(companyName || "?").charAt(0).toUpperCase()}
+                                    </span>
+                                  )}
+                                </div>
+                                <p
+                                  className="text-xs text-brand-text-strong truncate min-w-0"
+                                  style={{ fontFamily: "Open Sans, sans-serif" }}
+                                >
+                                  {companyName || "Company"}
+                                </p>
+                              </div>
+                            ) : null}
                             <p
                               className="text-sm font-medium text-brand-text-strong truncate"
                               style={{ fontFamily: "Open Sans, sans-serif" }}
                             >
                               {job.title}
                             </p>
-                            { (job.companyName || job.company?.name) && (
-                              <p
-                                className="text-xs text-brand-text-strong truncate mt-0.5"
-                                style={{ fontFamily: "Open Sans, sans-serif" }}
-                              >
-                                {job.companyName || job.company?.name}
-                              </p>
-                            )}
                             <p
                               className="text-xs text-brand-text-weak mt-0.5 break-words"
                               style={{ fontFamily: "Open Sans, sans-serif" }}
@@ -360,7 +379,8 @@ export default function ChatInterface({
                             ) : null}
                           </div>
                         </li>
-                      ))}
+                        );
+                      })}
                     </ul>
                   )}
                 </div>

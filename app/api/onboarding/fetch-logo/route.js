@@ -46,9 +46,13 @@ export async function GET(request) {
       signal: AbortSignal.timeout(5000),
     };
 
-    function isImageResponse(response) {
+    function isImageResponse(response, requestUrl = null) {
       const ct = response.headers.get("content-type");
-      return ct && ct.split(";")[0].trim().toLowerCase().startsWith("image/");
+      const type = ct ? ct.split(";")[0].trim().toLowerCase() : "";
+      if (type.startsWith("image/")) return true;
+      const isFaviconUrl = requestUrl && (requestUrl.toLowerCase().includes("favicon") || requestUrl.toLowerCase().endsWith(".ico"));
+      if (isFaviconUrl && (type === "application/octet-stream" || type === "image/x-icon")) return true;
+      return false;
     }
 
     let logoUrl = null;
@@ -64,13 +68,20 @@ export async function GET(request) {
         if (!verify.ok && verify.status === 405) {
           verify = await fetch(resolved, { ...fetchOpts, method: "GET" });
         }
-        if (verify.ok && isImageResponse(verify)) {
+        if (verify.ok && isImageResponse(verify, resolved)) {
           return NextResponse.json({ success: true, logoUrl: resolved });
         }
       }
     } catch (_) {
       // Library failed or returned nothing; continue with fallbacks
     }
+
+    // Early Google favicon fallback (works for JS-heavy or non-standard sites e.g. codecrafttech.com)
+    try {
+      const googleFavicon = `https://www.google.com/s2/favicons?domain=${encodeURIComponent(hostname)}&sz=128`;
+      const gfRes = await fetch(googleFavicon, { ...fetchOpts, method: "GET" });
+      if (gfRes.ok) return NextResponse.json({ success: true, logoUrl: googleFavicon });
+    } catch (_) {}
 
     // 2) Try multiple logo sources (direct paths)
     const logoSources = [
@@ -87,14 +98,14 @@ export async function GET(request) {
         if (!response.ok && response.status === 405) {
           response = await fetch(source, { ...fetchOpts, method: "GET" });
         }
-        if (response.ok && isImageResponse(response)) {
+        if (response.ok && isImageResponse(response, source)) {
           logoUrl = source;
           break;
         }
       } catch (e) {
         try {
           const getRes = await fetch(source, { ...fetchOpts, method: "GET" });
-          if (getRes.ok && isImageResponse(getRes)) {
+          if (getRes.ok && isImageResponse(getRes, source)) {
             logoUrl = source;
             break;
           }
@@ -143,7 +154,7 @@ export async function GET(request) {
         if (!verifyResponse.ok && verifyResponse.status === 405) {
           verifyResponse = await fetch(logoUrl, { ...fetchOpts, method: "GET" });
         }
-        if (verifyResponse.ok && isImageResponse(verifyResponse)) {
+        if (verifyResponse.ok && isImageResponse(verifyResponse, logoUrl)) {
           return NextResponse.json({ success: true, logoUrl });
         }
       } catch (e) {
