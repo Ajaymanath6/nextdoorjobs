@@ -559,11 +559,16 @@ body {
   z-index: 10000 !important;
   opacity: 1 !important;
   visibility: visible !important;
+  max-width: 220px !important;
+  min-height: auto !important;
 }
 
 .cluster-tooltip .leaflet-tooltip-content {
   margin: 0 !important;
   padding: 0 !important;
+  max-width: 200px !important;
+  word-wrap: break-word !important;
+  overflow-wrap: break-word !important;
 }
 
 /* Ensure Leaflet tooltips are visible */
@@ -572,6 +577,7 @@ body {
   opacity: 1 !important;
   visibility: visible !important;
   display: block !important;
+  max-width: 220px !important;
 }
 
 /* User location pindrop - theme glow to differentiate from other gig workers */

@@ -12,10 +12,12 @@ import SalaryRangeBadges from "../components/Onboarding/SalaryRangeBadges";
 import RemoteTypeSelector from "../components/Onboarding/RemoteTypeSelector";
 import SeniorityLevelSelector from "../components/Onboarding/SeniorityLevelSelector";
 import { JOB_CATEGORIES } from "../../lib/constants/jobCategories";
-import { WatsonHealthRotate_360 } from "@carbon/icons-react";
+import { WatsonHealthRotate_360, TrashCan } from "@carbon/icons-react";
 
-function ExistingCompanyPicker({ companies, onSelect }) {
+function ExistingCompanyPicker({ companies, onSelect, onDelete }) {
   const [query, setQuery] = useState("");
+  const [deletingId, setDeletingId] = useState(null);
+  const [confirmDeleteId, setConfirmDeleteId] = useState(null);
 
   const normalizedQuery = query.toLowerCase().trim();
   const filtered =
@@ -33,6 +35,33 @@ function ExistingCompanyPicker({ companies, onSelect }) {
             district.includes(normalizedQuery)
           );
         });
+
+  const handleDeleteClick = async (e, companyId, companyName) => {
+    e.stopPropagation();
+    if (confirmDeleteId === companyId) {
+      setDeletingId(companyId);
+      try {
+        const res = await fetch(`/api/admin/companies/${companyId}`, {
+          method: "DELETE",
+          credentials: "include",
+        });
+        if (res.ok) {
+          if (onDelete) onDelete(companyId);
+          setConfirmDeleteId(null);
+        } else {
+          const data = await res.json().catch(() => ({}));
+          alert(data.error || "Failed to delete company");
+        }
+      } catch (err) {
+        alert("Network error. Please try again.");
+      } finally {
+        setDeletingId(null);
+      }
+    } else {
+      setConfirmDeleteId(companyId);
+      setTimeout(() => setConfirmDeleteId(null), 3000);
+    }
+  };
 
   return (
     <div className="w-full border border-brand-stroke-weak rounded-lg bg-white/95 shadow-sm px-3 py-3 space-y-2">
@@ -61,27 +90,46 @@ function ExistingCompanyPicker({ companies, onSelect }) {
               company.pincode || null,
             ].filter(Boolean);
             const locationLabel = locationParts.join(", ");
+            const isDeleting = deletingId === company.id;
+            const isConfirming = confirmDeleteId === company.id;
             return (
-              <button
+              <div
                 key={company.id}
-                type="button"
-                onClick={() => onSelect(company)}
-                className="w-full text-left px-3 py-2 text-sm hover:bg-brand-bg-fill transition-colors flex flex-col gap-0.5"
+                className="w-full text-left px-3 py-2 text-sm hover:bg-brand-bg-fill transition-colors flex items-start gap-2 group"
               >
-                <span className="font-medium text-brand-text-strong truncate">
-                  {company.name}
-                </span>
-                {company.description && (
-                  <span className="text-xs text-brand-text-weak line-clamp-2">
-                    {company.description}
+                <button
+                  type="button"
+                  onClick={() => onSelect(company)}
+                  className="flex-1 flex flex-col gap-0.5 min-w-0"
+                >
+                  <span className="font-medium text-brand-text-strong truncate">
+                    {company.name}
                   </span>
-                )}
-                {locationLabel && (
-                  <span className="text-xs text-brand-text-weak">
-                    {locationLabel}
-                  </span>
-                )}
-              </button>
+                  {company.description && (
+                    <span className="text-xs text-brand-text-weak line-clamp-2">
+                      {company.description}
+                    </span>
+                  )}
+                  {locationLabel && (
+                    <span className="text-xs text-brand-text-weak">
+                      {locationLabel}
+                    </span>
+                  )}
+                </button>
+                <button
+                  type="button"
+                  onClick={(e) => handleDeleteClick(e, company.id, company.name)}
+                  disabled={isDeleting}
+                  className={`shrink-0 p-1.5 rounded transition-colors ${
+                    isConfirming
+                      ? "bg-red-100 text-red-600 hover:bg-red-200"
+                      : "text-brand-text-weak hover:text-red-600 hover:bg-red-50 opacity-0 group-hover:opacity-100"
+                  } ${isDeleting ? "opacity-50 cursor-not-allowed" : ""}`}
+                  title={isConfirming ? "Click again to confirm delete" : "Delete company"}
+                >
+                  <TrashCan size={16} />
+                </button>
+              </div>
             );
           })
         )}
@@ -196,6 +244,10 @@ export default function AdminCompanyChat() {
     fetchExistingCompanies();
   }, []);
 
+  const handleCompanyDeleted = (companyId) => {
+    setExistingJobCompanies((prev) => prev.filter((c) => c.id !== companyId));
+  };
+
   const handleExistingCompanySelected = async (company) => {
     // Synthetic user message so history is clear
     setChatMessages((prev) => [
@@ -259,25 +311,24 @@ export default function AdminCompanyChat() {
     setRecentJobsActive(true);
     setIsLoading(true);
     try {
-      const res = await fetch("/api/admin/jobs", {
+      const res = await fetch("/api/admin/jobs?filter=recent", {
         method: "GET",
         credentials: "include",
       });
       const data = await res.json().catch(() => ({}));
       const jobsRaw = Array.isArray(data.jobs) ? data.jobs : [];
-      // Extra safety: filter out any inactive jobs if they slip through
       const jobs = jobsRaw.filter((job) => job && job.isActive !== false);
 
       setAdminJobsCache(jobs);
       setChatMessages((prev) => {
         const next = [...prev];
         const lastIdx = next.length - 1;
-        const isRecentJobsAi = (msg) =>
-          msg?.type === "ai" && (msg?.text?.includes("recent posted jobs") || msg?.text?.includes("don't have any recent"));
+        const isJobsAi = (msg) =>
+          msg?.type === "ai" && (msg?.text?.includes("posted jobs") || msg?.text?.includes("don't have any"));
         if (lastIdx >= 0 && next[lastIdx].type === "jobList") {
           next.pop();
-          if (lastIdx - 1 >= 0 && isRecentJobsAi(next[lastIdx - 1])) next.pop();
-        } else if (lastIdx >= 0 && isRecentJobsAi(next[lastIdx])) {
+          if (lastIdx - 1 >= 0 && isJobsAi(next[lastIdx - 1])) next.pop();
+        } else if (lastIdx >= 0 && isJobsAi(next[lastIdx])) {
           next.pop();
         }
         return [
@@ -285,8 +336,8 @@ export default function AdminCompanyChat() {
           {
             type: "ai",
             text: jobs.length
-              ? "Here are your recent posted jobs:"
-              : "You don't have any recent posted jobs yet.",
+              ? "Here are your recent posted jobs (today):"
+              : "You don't have any jobs posted today yet.",
           },
           ...(jobs.length ? [{ type: "jobList", jobs }] : []),
         ];
@@ -302,6 +353,55 @@ export default function AdminCompanyChat() {
         },
       ]);
       setRecentJobsActive(false);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const handleShowAllJobs = async () => {
+    setIsLoading(true);
+    try {
+      const res = await fetch("/api/admin/jobs?filter=all", {
+        method: "GET",
+        credentials: "include",
+      });
+      const data = await res.json().catch(() => ({}));
+      const jobsRaw = Array.isArray(data.jobs) ? data.jobs : [];
+      const jobs = jobsRaw.filter((job) => job && job.isActive !== false);
+
+      setAdminJobsCache(jobs);
+      setChatMessages((prev) => {
+        const next = [...prev];
+        const lastIdx = next.length - 1;
+        const isJobsAi = (msg) =>
+          msg?.type === "ai" && (msg?.text?.includes("posted jobs") || msg?.text?.includes("don't have any"));
+        if (lastIdx >= 0 && next[lastIdx].type === "jobList") {
+          next.pop();
+          if (lastIdx - 1 >= 0 && isJobsAi(next[lastIdx - 1])) next.pop();
+        } else if (lastIdx >= 0 && isJobsAi(next[lastIdx])) {
+          next.pop();
+        }
+        return [
+          ...next,
+          {
+            type: "ai",
+            text: jobs.length
+              ? "Here are all your posted jobs:"
+              : "You don't have any posted jobs yet.",
+          },
+          ...(jobs.length ? [{ type: "jobList", jobs }] : []),
+        ];
+      });
+    } catch (err) {
+      console.error("Failed to load all admin jobs:", err);
+      setChatMessages((prev) => [
+        ...prev,
+        {
+          type: "ai",
+          text:
+            "Couldn't load posted jobs right now. Please try again in a moment.",
+        },
+      ]);
     } finally {
       setIsLoading(false);
     }
@@ -377,6 +477,7 @@ export default function AdminCompanyChat() {
       <ExistingCompanyPicker
         companies={existingJobCompanies}
         onSelect={handleExistingCompanySelected}
+        onDelete={handleCompanyDeleted}
       />
     );
   }, [
@@ -1239,7 +1340,14 @@ export default function AdminCompanyChat() {
             recentJobsActive ? "bg-brand-bg-fill" : "hover:bg-brand-bg-fill"
           }`}
         >
-          Job listings
+          Recent Jobs
+        </button>
+        <button
+          type="button"
+          onClick={handleShowAllJobs}
+          className="flex items-center gap-2 px-3 py-2 rounded-md border border-brand-stroke-weak text-brand-text-strong text-sm font-medium hover:bg-brand-bg-fill transition-colors"
+        >
+          All Jobs
         </button>
         <button
           type="button"

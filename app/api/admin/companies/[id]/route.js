@@ -102,3 +102,53 @@ export async function PATCH(request, { params }) {
     );
   }
 }
+
+/**
+ * DELETE /api/admin/companies/[id]
+ * Delete a company and all its associated jobs (cascade).
+ * Only allows deleting companies owned by the admin owner user.
+ */
+export async function DELETE(request, { params }) {
+  const session = await getAdminSession();
+  if (!session) {
+    return NextResponse.json({ error: "Not authenticated" }, { status: 401 });
+  }
+  const adminUserId = await getAdminOwnerUserId();
+  if (!adminUserId) {
+    return NextResponse.json(
+      { error: "Admin owner not configured. Set ADMIN_OWNER_USER_ID or ADMIN_OWNER_EMAIL." },
+      { status: 503 }
+    );
+  }
+
+  const resolvedParams = await params;
+  const companyId = parseInt(resolvedParams.id, 10);
+  if (Number.isNaN(companyId)) {
+    return NextResponse.json({ error: "Invalid company ID" }, { status: 400 });
+  }
+
+  const existing = await prisma.company.findUnique({
+    where: { id: companyId },
+    select: { id: true, userId: true, name: true },
+  });
+  if (!existing) {
+    return NextResponse.json({ error: "Company not found" }, { status: 404 });
+  }
+  if (existing.userId !== adminUserId) {
+    return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+  }
+
+  try {
+    await companyService.deleteCompany(companyId);
+    return NextResponse.json({
+      success: true,
+      message: `Company "${existing.name}" and all associated jobs deleted successfully`,
+    });
+  } catch (e) {
+    console.error("Admin DELETE company error:", e);
+    return NextResponse.json(
+      { error: e.message || "Internal server error" },
+      { status: 500 }
+    );
+  }
+}

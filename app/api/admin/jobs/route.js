@@ -20,7 +20,7 @@ async function getAdminOwnerUserId() {
   return null;
 }
 
-export async function GET() {
+export async function GET(request) {
   const session = await getAdminSession();
   if (!session) {
     return NextResponse.json({ error: "Not authenticated" }, { status: 401 });
@@ -37,6 +37,9 @@ export async function GET() {
   }
 
   try {
+    const { searchParams } = new URL(request.url);
+    const filter = searchParams.get("filter");
+
     const companies = await prisma.company.findMany({
       where: { userId },
       select: { id: true, name: true },
@@ -46,11 +49,19 @@ export async function GET() {
       return NextResponse.json({ success: true, jobs: [] });
     }
 
+    const whereClause = {
+      companyId: { in: companyIds },
+      isActive: true,
+    };
+
+    if (filter === "recent") {
+      const todayStart = new Date();
+      todayStart.setHours(0, 0, 0, 0);
+      whereClause.createdAt = { gte: todayStart };
+    }
+
     const jobs = await prisma.jobPosition.findMany({
-      where: {
-        companyId: { in: companyIds },
-        isActive: true,
-      },
+      where: whereClause,
       select: {
         id: true,
         title: true,
