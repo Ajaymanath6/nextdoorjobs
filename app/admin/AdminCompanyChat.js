@@ -325,27 +325,21 @@ export default function AdminCompanyChat() {
       await addAIMessage("Website skipped.");
     }
 
-    await addAIMessage("What's the funding series? (or skip)");
-    setCurrentField(COMPANY_FIELDS.FUNDING);
+    await addAIMessage(
+      "Add company location (coordinates), or skip to enter pincode only."
+    );
+    setCurrentField(COMPANY_FIELDS.LOCATION);
     setInlineComponent(
-      <FundingSeriesBadges
-        onSelect={(series) => {
-          setCompanyData((prev) => ({
-            ...prev,
-            fundingSeries: series,
-          }));
+      <GetCoordinatesButton
+        isMobile={isMobile}
+        onCoordinatesReceived={(lat, lon) => {
           setInlineComponent(null);
-          addAIMessage("Short company description? (Type or skip)").then(() => {
-            setCurrentField(COMPANY_FIELDS.DESCRIPTION);
-          });
+          handleLocationReceived(lat, lon);
         }}
         onSkip={() => {
           setInlineComponent(null);
-          addAIMessage("Short company description? (Type or skip)").then(() => {
-            setCurrentField(COMPANY_FIELDS.DESCRIPTION);
-          });
+          handleLocationSkipped();
         }}
-        selectedValue={companyData?.fundingSeries}
       />
     );
     scrollToInline();
@@ -611,20 +605,23 @@ export default function AdminCompanyChat() {
               setCompanyData((prev) => ({ ...prev, description: value }));
             }
             await addAIMessage(
-              "Add company location (coordinates), or skip to enter pincode only."
+              "Do you have a company website URL? (Enter URL or skip)"
             );
-            setCurrentField(COMPANY_FIELDS.LOCATION);
+            setCurrentField(COMPANY_FIELDS.WEBSITE);
             setInlineComponent(
-              <GetCoordinatesButton
-                isMobile={isMobile}
-                onCoordinatesReceived={(lat, lon) => {
+              <UrlInput
+                onUrlSubmit={(url) => {
+                  if (url.toLowerCase() !== "skip") {
+                    setCompanyData((prev) => ({ ...prev, websiteUrl: url }));
+                  }
                   setInlineComponent(null);
-                  handleLocationReceived(lat, lon);
+                  handleWebsiteSubmitted(url);
                 }}
                 onSkip={() => {
                   setInlineComponent(null);
-                  handleLocationSkipped();
+                  handleWebsiteSubmitted("skip");
                 }}
+                placeholder="Enter website URL or click skip..."
               />
             );
             scrollToInline();
