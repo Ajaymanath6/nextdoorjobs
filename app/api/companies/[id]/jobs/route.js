@@ -36,6 +36,7 @@ export async function GET(request, { params }) {
         teamSize: true,
         perks: true,
         holidays: true,
+        applicationUrl: true,
         createdAt: true,
         updatedAt: true,
       },

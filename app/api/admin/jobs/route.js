@@ -60,6 +60,7 @@ export async function GET() {
         salaryMax: true,
         remoteType: true,
         seniorityLevel: true,
+        applicationUrl: true,
         isActive: true,
         createdAt: true,
         company: {
@@ -87,6 +88,7 @@ export async function GET() {
       salaryMax: job.salaryMax,
       remoteType: job.remoteType,
       seniorityLevel: job.seniorityLevel,
+      applicationUrl: job.applicationUrl ?? undefined,
       isActive: job.isActive,
       createdAt: job.createdAt,
       companyName: job.company?.name ?? undefined,
@@ -133,6 +135,7 @@ export async function POST(request) {
       teamSize,
       perks,
       holidays,
+      applicationUrl,
       companyId,
     } = body;
 
@@ -160,6 +163,7 @@ export async function POST(request) {
       teamSize: teamSize || null,
       perks: Array.isArray(perks) ? perks : [],
       holidays: holidays || null,
+      applicationUrl: applicationUrl || null,
       companyId: parseInt(companyId, 10),
     });
 

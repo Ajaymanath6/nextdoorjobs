@@ -91,7 +91,15 @@ export default function CompanyJobsSidebar({ company, jobs, isOpen, onClose }) {
             <p className="text-sm text-brand-text-weak">No jobs posted yet.</p>
           ) : (
             jobs.map((job) => (
-              <JobDetailCard key={job.id} job={job} company={company} onApply={() => {}} />
+              <JobDetailCard
+                key={job.id}
+                job={job}
+                company={company}
+                onApply={(j) => {
+                  const url = j?.applicationUrl;
+                  if (url) window.open(url, "_blank");
+                }}
+              />
             ))
           )}
         </div>

@@ -47,6 +47,7 @@ const JOB_FIELDS = {
   REMOTE_TYPE: "job_remote_type",
   RELOCATION: "job_relocation",
   SENIORITY: "job_seniority",
+  APPLICATION_LINK: "job_application_link",
   YEARS: "job_years",
   SALARY: "job_salary",
   TEAM_SIZE: "job_team_size",
@@ -1332,6 +1333,35 @@ export default function OnboardingPage() {
     await saveConversation(JOB_FIELDS.SENIORITY, lastAIMessageTextRef.current, level);
     setIsLoading(true);
     await addAIMessage(`Seniority level: ${level}.`);
+    await addAIMessage("Job application link? (optional URL where applicants can apply, or skip)");
+    setCurrentField(JOB_FIELDS.APPLICATION_LINK);
+    setInlineComponent(
+      <UrlInput
+        onUrlSubmit={(url) => {
+          if (url.toLowerCase() !== "skip") {
+            const normalized = /^https?:\/\//i.test(url) ? url : `https://${url}`;
+            setJobData((prev) => ({ ...prev, applicationUrl: normalized }));
+          }
+          setInlineComponent(null);
+          handleApplicationLinkSubmitted(url);
+        }}
+        onSkip={() => {
+          setInlineComponent(null);
+          handleApplicationLinkSubmitted("skip");
+        }}
+        placeholder="Enter application URL or skip..."
+      />
+    );
+    setIsLoading(false);
+  };
+
+  // After job application link (or skip), continue to years
+  const handleApplicationLinkSubmitted = async (url) => {
+    await saveConversation(JOB_FIELDS.APPLICATION_LINK, lastAIMessageTextRef.current, url === "skip" ? "skip" : url);
+    setIsLoading(true);
+    if (url && url.toLowerCase() !== "skip") {
+      await addAIMessage("Application link noted.");
+    }
     await addAIMessage("How many years of experience are required?");
     setCurrentField(JOB_FIELDS.YEARS);
     setInlineComponent(
@@ -1807,6 +1837,7 @@ export default function OnboardingPage() {
         teamSize: jobData.teamSize || null,
         perks: jobData.perks || [],
         holidays: jobData.holidays || null,
+        applicationUrl: jobData.applicationUrl || null,
         companyId: companyResult.company.id,
       };
 

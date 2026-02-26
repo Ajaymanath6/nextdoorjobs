@@ -20,6 +20,7 @@ export default function EditJobModal({ isOpen, onClose, job, onSaved, jobApiPref
   const [companyWebsiteUrl, setCompanyWebsiteUrl] = useState("");
   const [companyDescription, setCompanyDescription] = useState("");
   const [companyLogoFile, setCompanyLogoFile] = useState(null);
+  const [applicationUrl, setApplicationUrl] = useState("");
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState(null);
 
@@ -42,6 +43,7 @@ export default function EditJobModal({ isOpen, onClose, job, onSaved, jobApiPref
       setCompanyWebsiteUrl(job.company?.websiteUrl || "");
       setCompanyDescription(job.company?.description ?? "");
       setCompanyLogoFile(null);
+      setApplicationUrl(job.applicationUrl || "");
       setError(null);
     }
   }, [job, isOpen]);
@@ -71,6 +73,11 @@ export default function EditJobModal({ isOpen, onClose, job, onSaved, jobApiPref
           teamSize: teamSize || null,
           perks,
           holidays: holidays.trim() || null,
+          applicationUrl: (() => {
+            const raw = (applicationUrl || "").trim();
+            if (!raw) return null;
+            return /^https?:\/\//i.test(raw) ? raw : `https://${raw}`;
+          })(),
         }),
         credentials: "same-origin",
       });
@@ -373,6 +380,23 @@ export default function EditJobModal({ isOpen, onClose, job, onSaved, jobApiPref
               className={inputClasses}
               placeholder="e.g., 25 days paid leave"
             />
+          </div>
+
+          {/* Job application link */}
+          <div>
+            <label className={`block text-sm font-medium ${brand.text.strong} mb-2`}>
+              Job application link (Optional)
+            </label>
+            <input
+              type="url"
+              value={applicationUrl}
+              onChange={(e) => setApplicationUrl(e.target.value)}
+              className={inputClasses}
+              placeholder="https://example.com/careers/apply"
+            />
+            <p className={`text-xs ${brand.text.weak} mt-1`}>
+              Link where applicants can apply for this job. Opens in a new tab when they click Apply on the map.
+            </p>
           </div>
         </div>
 

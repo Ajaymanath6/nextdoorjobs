@@ -2446,8 +2446,6 @@ const MapComponent = ({ onOpenSettings, onViewModeChange, effectiveUser = null, 
           if (res.ok) {
             const data = await res.json();
             companies = data.companies || [];
-            setTotalCompaniesCount(companies.length);
-            console.log("✅ Fetched companies for map:", companies.length);
           } else {
             console.error("Failed to fetch companies:", res.status);
             setTotalCompaniesCount(0);
@@ -2469,6 +2467,12 @@ const MapComponent = ({ onOpenSettings, onViewModeChange, effectiveUser = null, 
         const name = company.name || company.company_name || "";
         return name !== "Test234";
       });
+
+      // Set count after filter so Total Companies matches the pins shown (excludes Test234; never includes user avatar)
+      if (userAccountType !== "Company") {
+        setTotalCompaniesCount(companies.length);
+        console.log("✅ Fetched companies for map:", companies.length);
+      }
 
       if (companies && companies.length > 0) {
         // Create marker cluster group for companies with glassmorphism style

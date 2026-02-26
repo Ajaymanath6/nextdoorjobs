@@ -37,6 +37,7 @@ export async function POST(request) {
       teamSize,
       perks,
       holidays,
+      applicationUrl,
       companyId,
     } = body;
 
@@ -64,6 +65,7 @@ export async function POST(request) {
         teamSize,
         perks,
         holidays,
+        applicationUrl: applicationUrl || null,
         companyId,
       });
 
@@ -83,6 +85,7 @@ export async function POST(request) {
           teamSize: jobPosition.teamSize,
           perks: jobPosition.perks,
           holidays: jobPosition.holidays,
+          applicationUrl: jobPosition.applicationUrl,
           companyId: jobPosition.companyId,
           isActive: jobPosition.isActive,
         },

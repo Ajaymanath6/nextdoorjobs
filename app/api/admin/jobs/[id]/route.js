@@ -126,6 +126,7 @@ export async function PATCH(request, { params }) {
     if (body.teamSize !== undefined) updateData.teamSize = body.teamSize;
     if (body.perks !== undefined) updateData.perks = body.perks;
     if (body.holidays !== undefined) updateData.holidays = body.holidays;
+    if (body.applicationUrl !== undefined) updateData.applicationUrl = body.applicationUrl || null;
     if (body.expiresAt !== undefined) {
       updateData.expiresAt = body.expiresAt ? new Date(body.expiresAt) : null;
     }

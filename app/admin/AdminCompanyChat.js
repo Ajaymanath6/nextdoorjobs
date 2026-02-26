@@ -33,6 +33,7 @@ const JOB_FIELDS = {
   SALARY: "job_salary",
   REMOTE_TYPE: "job_remote_type",
   SENIORITY: "job_seniority",
+  APPLICATION_LINK: "job_application_link",
 };
 
 const INITIAL_AI_MESSAGE =
@@ -466,6 +467,7 @@ export default function AdminCompanyChat() {
           salaryMax: Number.isNaN(salaryMax) ? null : salaryMax,
           remoteType: j.remoteType?.trim() || null,
           seniorityLevel: j.seniorityLevel?.trim() || null,
+          applicationUrl: j.applicationUrl?.trim() || null,
         }),
       });
       const result = await res.json().catch(() => ({}));
@@ -527,6 +529,31 @@ export default function AdminCompanyChat() {
     } finally {
       setIsLoading(false);
     }
+  };
+
+  const handleApplicationLinkSubmitted = async (url) => {
+    setInlineComponent(null);
+    if (url && url.toLowerCase() !== "skip") {
+      const normalized = /^https?:\/\//i.test(url) ? url : `https://${url}`;
+      setJobData((prev) => ({ ...prev, applicationUrl: normalized }));
+    }
+    await addAIMessage("Submitting job posting...");
+    await handleJobSubmit();
+  };
+
+  const goToApplicationLinkStep = () => {
+    addAIMessage(
+      "Job application link? (URL where applicants can apply, or skip)"
+    );
+    setCurrentField(JOB_FIELDS.APPLICATION_LINK);
+    setInlineComponent(
+      <UrlInput
+        onUrlSubmit={(url) => handleApplicationLinkSubmitted(url)}
+        onSkip={() => handleApplicationLinkSubmitted("skip")}
+        placeholder="Enter application URL or skip..."
+      />
+    );
+    scrollToInline();
   };
 
   const handleViewOnMap = async () => {
@@ -747,21 +774,13 @@ export default function AdminCompanyChat() {
                                                           setInlineComponent(
                                                             null
                                                           );
-                                                          addAIMessage(
-                                                            "Submitting job posting..."
-                                                          ).then(() => {
-                                                            handleJobSubmit();
-                                                          });
+                                                          goToApplicationLinkStep();
                                                         }}
                                                         onSkip={() => {
                                                           setInlineComponent(
                                                             null
                                                           );
-                                                          addAIMessage(
-                                                            "Submitting job posting..."
-                                                          ).then(() => {
-                                                            handleJobSubmit();
-                                                          });
+                                                          goToApplicationLinkStep();
                                                         }}
                                                       />
                                                     );
@@ -802,21 +821,13 @@ export default function AdminCompanyChat() {
                                                           setInlineComponent(
                                                             null
                                                           );
-                                                          addAIMessage(
-                                                            "Submitting job posting..."
-                                                          ).then(() => {
-                                                            handleJobSubmit();
-                                                          });
+                                                          goToApplicationLinkStep();
                                                         }}
                                                         onSkip={() => {
                                                           setInlineComponent(
                                                             null
                                                           );
-                                                          addAIMessage(
-                                                            "Submitting job posting..."
-                                                          ).then(() => {
-                                                            handleJobSubmit();
-                                                          });
+                                                          goToApplicationLinkStep();
                                                         }}
                                                       />
                                                     );
@@ -886,21 +897,13 @@ export default function AdminCompanyChat() {
                                                           setInlineComponent(
                                                             null
                                                           );
-                                                          addAIMessage(
-                                                            "Submitting job posting..."
-                                                          ).then(() => {
-                                                            handleJobSubmit();
-                                                          });
+                                                          goToApplicationLinkStep();
                                                         }}
                                                         onSkip={() => {
                                                           setInlineComponent(
                                                             null
                                                           );
-                                                          addAIMessage(
-                                                            "Submitting job posting..."
-                                                          ).then(() => {
-                                                            handleJobSubmit();
-                                                          });
+                                                          goToApplicationLinkStep();
                                                         }}
                                                       />
                                                     );
@@ -941,21 +944,13 @@ export default function AdminCompanyChat() {
                                                           setInlineComponent(
                                                             null
                                                           );
-                                                          addAIMessage(
-                                                            "Submitting job posting..."
-                                                          ).then(() => {
-                                                            handleJobSubmit();
-                                                          });
+                                                          goToApplicationLinkStep();
                                                         }}
                                                         onSkip={() => {
                                                           setInlineComponent(
                                                             null
                                                           );
-                                                          addAIMessage(
-                                                            "Submitting job posting..."
-                                                          ).then(() => {
-                                                            handleJobSubmit();
-                                                          });
+                                                          goToApplicationLinkStep();
                                                         }}
                                                       />
                                                     );
@@ -1005,6 +1000,14 @@ export default function AdminCompanyChat() {
           case JOB_FIELDS.SENIORITY:
             if (value.toLowerCase() !== "skip" && value) {
               setJobData((prev) => ({ ...prev, seniorityLevel: value }));
+            }
+            goToApplicationLinkStep();
+            break;
+
+          case JOB_FIELDS.APPLICATION_LINK:
+            if (value.toLowerCase() !== "skip" && value) {
+              const normalized = /^https?:\/\//i.test(value) ? value : `https://${value}`;
+              setJobData((prev) => ({ ...prev, applicationUrl: normalized }));
             }
             await addAIMessage("Submitting job posting...");
             await handleJobSubmit();
