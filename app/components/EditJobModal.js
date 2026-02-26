@@ -86,6 +86,8 @@ export default function EditJobModal({ isOpen, onClose, job, onSaved, jobApiPref
         const data = await res.json();
         let updatedJob = data.job;
         if (job.company?.id) {
+          const companyApiBase = jobApiPrefix === "/api/admin/jobs" ? "/api/admin/companies" : "/api/onboarding/company";
+          const companyUrl = `${companyApiBase}/${job.company.id}`;
           const rawWebsite = (companyWebsiteUrl || "").trim();
           const normalizedWebsite = rawWebsite && !/^https?:\/\//i.test(rawWebsite) ? `https://${rawWebsite}` : rawWebsite;
           const websiteChanged = normalizedWebsite !== (job.company?.websiteUrl || "").trim();
@@ -96,7 +98,7 @@ export default function EditJobModal({ isOpen, onClose, job, onSaved, jobApiPref
             if (websiteChanged) formData.append("websiteUrl", normalizedWebsite);
             if (descriptionChanged) formData.append("description", (companyDescription || "").trim());
             if (hasLogoFile) formData.append("logo", companyLogoFile);
-            const companyRes = await fetch(`/api/onboarding/company/${job.company.id}`, {
+            const companyRes = await fetch(companyUrl, {
               method: "PATCH",
               body: formData,
               credentials: "same-origin",
@@ -114,7 +116,7 @@ export default function EditJobModal({ isOpen, onClose, job, onSaved, jobApiPref
                   if (logoData.success && logoData.logoUrl) {
                     const logoForm = new FormData();
                     logoForm.append("logoPath", logoData.logoUrl);
-                    const logoPatchRes = await fetch(`/api/onboarding/company/${job.company.id}`, {
+                    const logoPatchRes = await fetch(companyUrl, {
                       method: "PATCH",
                       body: logoForm,
                       credentials: "same-origin",
