@@ -6,7 +6,6 @@ import StateDistrictSelector from "../components/Onboarding/StateDistrictSelecto
 import GetCoordinatesButton from "../components/Onboarding/GetCoordinatesButton";
 import UrlInput from "../components/Onboarding/UrlInput";
 import FundingSeriesBadges from "../components/Onboarding/FundingSeriesBadges";
-import PincodeDropdown from "../components/Onboarding/PincodeDropdown";
 import ExperienceRangeSelect from "../components/Onboarding/ExperienceRangeSelect";
 import SalaryRangeBadges from "../components/Onboarding/SalaryRangeBadges";
 import RemoteTypeSelector from "../components/Onboarding/RemoteTypeSelector";
@@ -739,45 +738,11 @@ export default function AdminCompanyChat() {
       `Location saved: ${latitude.toFixed(4)}, ${longitude.toFixed(4)}${district && state ? ` • ${district}, ${state}` : ""}.`
     );
 
-    let pincodes = [];
-    if (district && state) {
-      try {
-        const pinRes = await fetch(
-          `/api/pincodes/by-district?district=${encodeURIComponent(district)}&state=${encodeURIComponent(state)}`
-        );
-        if (pinRes.ok) {
-          const { pincodes: list } = await pinRes.json();
-          pincodes = Array.isArray(list) ? list.slice(0, 8) : [];
-        }
-      } catch (_) {}
-    }
-    if (pincodes.length > 0) {
-      await addAIMessage("What's the pincode? (Choose one or skip)");
-      setCurrentField(COMPANY_FIELDS.PINCODE);
-      setInlineComponent(
-        <PincodeDropdown
-          pincodes={pincodes}
-          onSelect={(pincode) => {
-            setCompanyData((prev) => ({ ...prev, pincode }));
-            setInlineComponent(null);
-            handleCompanySubmit({ pincode });
-          }}
-          onSkip={() => {
-            setInlineComponent(null);
-            handleCompanySubmit({});
-          }}
-        />
-      );
-      scrollToInline();
-    } else {
-      await addAIMessage('What\'s the pincode? (Type pincode or "skip")');
-      setCurrentField(COMPANY_FIELDS.PINCODE);
-    }
+    await handleCompanySubmit({});
   };
 
   const handleLocationSkipped = async () => {
-    await addAIMessage('What\'s the pincode? (Type pincode or "skip")');
-    setCurrentField(COMPANY_FIELDS.PINCODE);
+    await handleCompanySubmit({});
   };
 
   const handleWebsiteSubmitted = async (url) => {
@@ -846,7 +811,7 @@ export default function AdminCompanyChat() {
     }
 
     await addAIMessage(
-      "Add company location (coordinates), or skip to enter pincode only."
+      "Add company location (coordinates), or skip."
     );
     setCurrentField(COMPANY_FIELDS.LOCATION);
     setInlineComponent(
@@ -1171,13 +1136,6 @@ export default function AdminCompanyChat() {
               />
             );
             scrollToInline();
-            break;
-
-          case COMPANY_FIELDS.PINCODE:
-            if (value.toLowerCase() !== "skip" && value) {
-              setCompanyData((prev) => ({ ...prev, pincode: value }));
-            }
-            await handleCompanySubmit();
             break;
 
           default:
