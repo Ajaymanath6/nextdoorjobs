@@ -1299,7 +1299,7 @@ const MapComponent = ({ onOpenSettings, onViewModeChange, effectiveUser = null, 
               setTimeout(() => {
                 const popupEl = marker.getPopup()?.getElement();
                 if (!popupEl) return;
-                const wrapper = popupEl.querySelector?.('.leaflet-popup-content-wrapper') || popupEl.closest?.('.leaflet-popup-content-wrapper') || popupEl.parentElement;
+                const wrapper = popupEl.closest?.('.leaflet-popup-content-wrapper') || popupEl.querySelector?.('.leaflet-popup-content-wrapper') || popupEl.parentElement;
                 if (wrapper) wrapper.classList.add('gig-popup-with-twin');
                 const chatIconLink = popupEl.querySelector('.map-popup-action-chat');
                 if (chatIconLink) chatIconLink.classList.add('active');
@@ -1326,7 +1326,7 @@ const MapComponent = ({ onOpenSettings, onViewModeChange, effectiveUser = null, 
                     setTimeout(() => {
                       const popupEl2 = marker.getPopup()?.getElement();
                       if (popupEl2) {
-                        const wrap = popupEl2.querySelector?.('.leaflet-popup-content-wrapper') || popupEl2.closest?.('.leaflet-popup-content-wrapper') || popupEl2.parentElement;
+                        const wrap = popupEl2.closest?.('.leaflet-popup-content-wrapper') || popupEl2.querySelector?.('.leaflet-popup-content-wrapper') || popupEl2.parentElement;
                         if (wrap) wrap.classList.remove('gig-popup-with-twin');
                         const chatLink2 = popupEl2.querySelector('.map-popup-action-chat');
                         if (chatLink2) chatLink2.classList.remove('active');
@@ -3735,7 +3735,7 @@ const MapComponent = ({ onOpenSettings, onViewModeChange, effectiveUser = null, 
               setTimeout(() => {
                 const popupEl = marker.getPopup()?.getElement();
                 if (!popupEl) return;
-                const wrapper = popupEl.querySelector?.('.leaflet-popup-content-wrapper') || popupEl.closest?.('.leaflet-popup-content-wrapper') || popupEl.parentElement;
+                const wrapper = popupEl.closest?.('.leaflet-popup-content-wrapper') || popupEl.querySelector?.('.leaflet-popup-content-wrapper') || popupEl.parentElement;
                 if (wrapper) wrapper.classList.add('gig-popup-with-twin');
                 const chatIconLink = popupEl.querySelector('.map-popup-action-chat');
                 if (chatIconLink) chatIconLink.classList.add('active');
@@ -3762,7 +3762,7 @@ const MapComponent = ({ onOpenSettings, onViewModeChange, effectiveUser = null, 
                     setTimeout(() => {
                       const popupEl2 = marker.getPopup()?.getElement();
                       if (popupEl2) {
-                        const wrap = popupEl2.querySelector?.('.leaflet-popup-content-wrapper') || popupEl2.closest?.('.leaflet-popup-content-wrapper') || popupEl2.parentElement;
+                        const wrap = popupEl2.closest?.('.leaflet-popup-content-wrapper') || popupEl2.querySelector?.('.leaflet-popup-content-wrapper') || popupEl2.parentElement;
                         if (wrap) wrap.classList.remove('gig-popup-with-twin');
                         const chatLink2 = popupEl2.querySelector('.map-popup-action-chat');
                         if (chatLink2) chatLink2.classList.remove('active');
@@ -4802,9 +4802,9 @@ const MapComponent = ({ onOpenSettings, onViewModeChange, effectiveUser = null, 
       {/* Map Container */}
       <div ref={mapRef} className="w-full h-full absolute inset-0" />
 
-      {/* Karma toasts (Company account, candidates view) — top-right */}
+      {/* Karma toasts (Company account, candidates view) — bottom-right */}
       {userAccountType === "Company" && searchMode === "person" && topCandidatesByKarma.length > 0 && (
-        <div className="absolute top-4 right-4 z-[1000] flex flex-col gap-2 max-w-[320px] pointer-events-auto">
+        <div className="absolute bottom-4 right-4 z-[1000] flex flex-col gap-2 max-w-[320px] pointer-events-auto">
           {topCandidatesByKarma
             .filter((g) => g.user?.id != null && !dismissedKarmaToastIds.has(g.user.id))
             .map((gig) => {
@@ -4828,13 +4828,13 @@ const MapComponent = ({ onOpenSettings, onViewModeChange, effectiveUser = null, 
                   <div className="min-w-0 flex-1">
                     <div className="font-medium text-brand-text-strong truncate">{name}</div>
                     {email && (
-                      <div className="text-sm text-brand-text-muted truncate">{email}</div>
+                      <div className="text-sm text-brand-text-weak truncate">{email}</div>
                     )}
                     <div className="flex items-center gap-1.5 mt-1.5 text-brand">
                       <StarFilled size={16} className="shrink-0" />
-                      <span className="text-sm font-medium">Karma points: {karma.toLocaleString()}</span>
+                      <span className="text-sm font-medium text-brand-text-strong">Karma points: {karma.toLocaleString()}</span>
                     </div>
-                    <p className="text-xs text-brand-text-muted mt-0.5">
+                    <p className="text-xs text-brand-text-weak mt-0.5">
                       This candidate is getting a lot of interest from recruiters
                     </p>
                   </div>

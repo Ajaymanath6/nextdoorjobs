@@ -396,6 +396,7 @@ body {
 .leaflet-popup-content-wrapper.gig-popup-with-twin {
   max-width: 620px !important;
   max-height: 85vh !important;
+  min-height: 50vh;
   border-radius: 8px !important;
   overflow: hidden;
 }
@@ -403,6 +404,7 @@ body {
   display: flex;
   align-items: stretch;
   min-width: 0;
+  min-height: 50vh;
   width: 100%;
   max-width: 100%;
 }
