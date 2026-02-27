@@ -94,6 +94,18 @@ enum JobCategory {
   LegalRegulatory
   ResearchDevelopment
   StrategicTopManagement
+  MobileDevelopment
+  GraphicDesign
+  SEO
+  DevOpsCloud
+  SupportCustomerCare
+  EducationTraining
+  HealthcareLifeSciences
+  SupplyChainLogistics
+  BusinessOperations
+  GrowthPartnerships
+  TechnicalWriting
+  BrandCreative
 }
 
 model User {

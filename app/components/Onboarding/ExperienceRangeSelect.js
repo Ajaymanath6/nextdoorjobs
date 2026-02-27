@@ -2,10 +2,14 @@
 
 const EXPERIENCE_RANGES = [
   { value: 1, label: "0–1 years" },
+  { value: 2, label: "1–2 years" },
   { value: 3, label: "1–3 years" },
   { value: 5, label: "3–5 years" },
+  { value: 7, label: "5–7 years" },
   { value: 10, label: "5–10 years" },
+  { value: 14, label: "10–14 years" },
   { value: 15, label: "10+ years" },
+  { value: 20, label: "20+ years" },
 ];
 
 export default function ExperienceRangeSelect({ onSelect, selectedValue = null }) {

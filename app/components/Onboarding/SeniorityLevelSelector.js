@@ -3,13 +3,18 @@
 const SENIORITY_LEVELS = [
   { value: "Internship", label: "Internship" },
   { value: "Entry Level", label: "Entry Level" },
+  { value: "Associate", label: "Associate" },
   { value: "Mid Level", label: "Mid Level" },
   { value: "Senior Level", label: "Senior Level" },
+  { value: "Principal", label: "Principal" },
+  { value: "Staff", label: "Staff" },
   { value: "Lead", label: "Lead" },
   { value: "Manager", label: "Manager" },
+  { value: "Head", label: "Head" },
   { value: "Director", label: "Director" },
   { value: "VP", label: "VP" },
   { value: "C-Level", label: "C-Level" },
+  { value: "Specialist", label: "Specialist" },
 ];
 
 export default function SeniorityLevelSelector({ onSelect, onSkip, selectedValue = null }) {
