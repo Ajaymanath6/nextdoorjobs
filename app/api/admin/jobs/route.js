@@ -90,7 +90,7 @@ export async function GET(request) {
         },
       },
       orderBy: { createdAt: "desc" },
-      take: 20,
+      ...(filter === "recent" ? { take: 20 } : {}),
     });
 
     const formatted = jobs.map((job) => ({

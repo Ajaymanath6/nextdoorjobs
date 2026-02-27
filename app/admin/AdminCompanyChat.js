@@ -169,10 +169,10 @@ function formatPostedAt(createdAt) {
   const yesterdayStart = new Date(todayStart);
   yesterdayStart.setDate(yesterdayStart.getDate() - 1);
   const jobDayStart = new Date(date.getFullYear(), date.getMonth(), date.getDate());
-  if (jobDayStart.getTime() === todayStart.getTime()) return "Today";
-  if (jobDayStart.getTime() === yesterdayStart.getTime()) return "Yesterday";
-  const days = Math.floor((todayStart.getTime() - jobDayStart.getTime()) / (24 * 60 * 60 * 1000));
-  return `${days} days ago`;
+  if (jobDayStart.getTime() === todayStart.getTime()) return "Posted today";
+  if (jobDayStart.getTime() === yesterdayStart.getTime()) return "Posted yesterday";
+  const weekday = date.toLocaleDateString("en-IN", { weekday: "long" });
+  return `Posted ${weekday}`;
 }
 
 function JobListingPanelJobs({
@@ -208,8 +208,11 @@ function JobListingPanelJobs({
   }
   return (
     <div className="space-y-6">
-      {groups.map((group) => (
-        <div key={group.company?.id ?? group.companyName ?? "unknown"}>
+      {groups.map((group, groupIndex) => (
+        <div
+          key={group.company?.id ?? group.companyName ?? "unknown"}
+          className={groupIndex === 0 ? "" : "pt-4 border-t border-brand-stroke-weak"}
+        >
           <div className="flex items-center gap-2 mb-2">
             {group.company?.logoPath ? (
               <img
@@ -252,7 +255,7 @@ function JobListingPanelJobs({
                   </div>
                   <div className="shrink-0 flex items-center gap-1.5">
                     {formatPostedAt(job.createdAt) ? (
-                      <span className="text-xs text-brand-text-weak whitespace-nowrap" style={{ fontFamily: "Open Sans, sans-serif" }}>
+                      <span className="text-xs text-brand-text-weak whitespace-nowrap" style={{ fontFamily: "Open Sans, sans-serif", marginLeft: 16 }}>
                         {formatPostedAt(job.createdAt)}
                       </span>
                     ) : null}
@@ -1561,16 +1564,25 @@ export default function AdminCompanyChat() {
         </button>
         <button
           type="button"
-          onClick={handleResetChat}
+          onClick={() => {
+            setJobListingOpen(false);
+            handleResetChat();
+          }}
           className="flex items-center gap-2 px-3 py-2 rounded-md border border-brand-stroke-weak text-brand-text-strong text-sm font-medium hover:bg-brand-bg-fill transition-colors"
-          title="Reset chat"
+          title="Start a new job posting"
         >
           <WatsonHealthRotate_360 size={18} />
-          Reset chat
+          New Job Posting
         </button>
       </div>
       {jobListingOpen && (
         <div className="flex-1 min-h-0 flex flex-col rounded-lg border border-brand-stroke-weak bg-brand-bg-white overflow-hidden">
+          <div className="shrink-0 flex items-center gap-2 px-4 py-3 border-b border-brand-stroke-weak">
+            <img src="/onlylogo.svg" alt="" className="w-8 h-8" aria-hidden />
+            <h2 className="text-base font-semibold text-brand-text-strong" style={{ fontFamily: "Open Sans, sans-serif" }}>
+              Map my gigs
+            </h2>
+          </div>
           <div className="flex border-b border-brand-stroke-weak shrink-0">
             <button
               type="button"
