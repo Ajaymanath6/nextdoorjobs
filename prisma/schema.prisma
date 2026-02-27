@@ -126,6 +126,7 @@ model User {
   chatMessagesSent    ChatMessage[]
   notifications       Notification[]
   notificationsSent   Notification[] @relation("NotificationSender")
+  candidateKarma      CandidateKarma?
 
   @@index([email])
   @@index([clerkId])
@@ -356,4 +357,14 @@ model Notification {
 enum NotificationType {
   MESSAGE
   SYSTEM
+}
+
+model CandidateKarma {
+  id               Int   @id @default(autoincrement())
+  candidateUserId  Int   @unique @map("candidate_user_id")
+  emailClicks      Int   @default(0) @map("email_clicks")
+  chatClicks       Int   @default(0) @map("chat_clicks")
+  candidate        User  @relation(fields: [candidateUserId], references: [id], onDelete: Cascade)
+
+  @@map("candidate_karma")
 }

@@ -24,6 +24,7 @@ import {
   Add,
   Settings,
   Logout,
+  StarFilled,
 } from "@carbon/icons-react";
 import { RiArrowDownSLine } from "@remixicon/react";
 import FilterDropdown from "./FilterDropdown";
@@ -109,6 +110,7 @@ const MapComponent = ({ onOpenSettings, onViewModeChange, effectiveUser = null, 
   const [userAccountType, setUserAccountType] = useState(null);
   const [meUser, setMeUser] = useState(null);
   const [totalCompaniesCount, setTotalCompaniesCount] = useState(0);
+  const [totalJobsCount, setTotalJobsCount] = useState(0);
 
   // Flattened company list for filter modal (main companies + per-locality companies)
   const flattenedCompanies = useMemo(() => {
@@ -190,6 +192,17 @@ const MapComponent = ({ onOpenSettings, onViewModeChange, effectiveUser = null, 
   const chatConversationIdRef = useRef(null);
   const homeMarkerRef = useRef(null);
   const homeToGigLineRef = useRef(null);
+
+  // Top candidates by karma for Company view (person mode) — for gamified toasts
+  const topCandidatesByKarma = useMemo(() => {
+    if (userAccountType !== "Company" || searchMode !== "person" || !gigs.length) return [];
+    return [...gigs]
+      .filter((g) => (g.karmaScore ?? 0) > 0)
+      .sort((a, b) => (b.karmaScore ?? 0) - (a.karmaScore ?? 0))
+      .slice(0, 5);
+  }, [userAccountType, searchMode, gigs]);
+
+  const [dismissedKarmaToastIds, setDismissedKarmaToastIds] = useState(new Set());
 
   // Parse response as JSON safely (avoids "Unexpected token '<'" when server returns HTML)
   const parseJsonResponse = async (response) => {
@@ -1226,6 +1239,14 @@ const MapComponent = ({ onOpenSettings, onViewModeChange, effectiveUser = null, 
             e.preventDefault();
             const candidateId = gig.user?.id;
             if (!candidateId) return;
+            if (isCandidate) {
+              fetch("/api/candidates/karma", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                credentials: "same-origin",
+                body: JSON.stringify({ candidateUserId: candidateId, action: "chat" }),
+              }).catch(() => {});
+            }
             const map = mapInstanceRef.current;
             const displayEmail = (gig.resume?.emailOverride != null && gig.resume.emailOverride !== "") ? gig.resume.emailOverride : (gig.email || gig.user?.email || "");
             try {
@@ -1339,6 +1360,27 @@ const MapComponent = ({ onOpenSettings, onViewModeChange, effectiveUser = null, 
           };
           chatLink.onclick = openChatFn;
           marker._openChatHandler = openChatFn;
+        }
+        if (isCandidate && gig.user?.id) {
+          const actionsDiv = el.querySelector(".map-popup-actions");
+          if (actionsDiv) {
+            const emailLink = actionsDiv.querySelector("a.map-popup-action-link:not(.map-popup-action-chat)");
+            if (emailLink && emailLink.href && !emailLink.classList.contains("map-popup-action-email-disabled")) {
+              const href = emailLink.getAttribute("href");
+              if (href && href !== "#") {
+                emailLink.addEventListener("click", async (e) => {
+                  e.preventDefault();
+                  fetch("/api/candidates/karma", {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    credentials: "same-origin",
+                    body: JSON.stringify({ candidateUserId: gig.user.id, action: "email" }),
+                  }).catch(() => {});
+                  window.open(href, "_blank");
+                });
+              }
+            }
+          }
         }
       });
       marker.on("popupclose", () => {
@@ -2093,6 +2135,7 @@ const MapComponent = ({ onOpenSettings, onViewModeChange, effectiveUser = null, 
               return name !== "Test234";
             });
             setTotalCompaniesCount(visibleCompanies.length);
+            setTotalJobsCount(visibleCompanies.reduce((s, c) => s + (c.jobCount || 0), 0));
           }
         })
         .catch(() => {});
@@ -2123,6 +2166,7 @@ const MapComponent = ({ onOpenSettings, onViewModeChange, effectiveUser = null, 
                   return name !== "Test234";
                 });
                 setTotalCompaniesCount(visibleCompanies.length);
+            setTotalJobsCount(visibleCompanies.reduce((s, c) => s + (c.jobCount || 0), 0));
               }
             })
             .catch(() => {});
@@ -2480,10 +2524,12 @@ const MapComponent = ({ onOpenSettings, onViewModeChange, effectiveUser = null, 
             // Company account: only one avatar on map; side panel shows all jobs for that company
             companies = withCoords.length > 0 ? [withCoords[0]] : [];
             setTotalCompaniesCount(companies.length);
+            setTotalJobsCount(companies.reduce((s, c) => s + (c.jobCount || 0), 0));
             console.log("[Map] Company account: showing single avatar for map");
           } else {
             console.error("[Map] Failed to fetch current user's companies:", res.status);
             setTotalCompaniesCount(0);
+            setTotalJobsCount(0);
           }
         } else {
           // Individual/Gig worker accounts: show all companies with active jobs
@@ -2494,11 +2540,13 @@ const MapComponent = ({ onOpenSettings, onViewModeChange, effectiveUser = null, 
           } else {
             console.error("Failed to fetch companies:", res.status);
             setTotalCompaniesCount(0);
+            setTotalJobsCount(0);
           }
         }
       } catch (error) {
         console.error("Error fetching companies:", error);
         setTotalCompaniesCount(0);
+        setTotalJobsCount(0);
       }
 
       if (clusterGroupRef.current) {
@@ -2518,6 +2566,7 @@ const MapComponent = ({ onOpenSettings, onViewModeChange, effectiveUser = null, 
         setTotalCompaniesCount(companies.length);
         console.log("✅ Fetched companies for map:", companies.length);
       }
+      setTotalJobsCount((companies || []).reduce((s, c) => s + (c.jobCount || 0), 0));
 
       if (companies && companies.length > 0) {
         // Create marker cluster group for companies with glassmorphism style
@@ -3612,6 +3661,14 @@ const MapComponent = ({ onOpenSettings, onViewModeChange, effectiveUser = null, 
             e.preventDefault();
             const candidateId = gig.user?.id;
             if (!candidateId) return;
+            if (isCandidate) {
+              fetch("/api/candidates/karma", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                credentials: "same-origin",
+                body: JSON.stringify({ candidateUserId: candidateId, action: "chat" }),
+              }).catch(() => {});
+            }
             const map = mapInstanceRef.current;
             const displayEmail = (gig.resume?.emailOverride != null && gig.resume.emailOverride !== "") ? gig.resume.emailOverride : (gig.email || gig.user?.email || "");
             try {
@@ -3725,6 +3782,27 @@ const MapComponent = ({ onOpenSettings, onViewModeChange, effectiveUser = null, 
           };
           chatLink.onclick = openChatFn;
           marker._openChatHandler = openChatFn;
+        }
+        if (isCandidate && gig.user?.id) {
+          const actionsDiv = el.querySelector(".map-popup-actions");
+          if (actionsDiv) {
+            const emailLink = actionsDiv.querySelector("a.map-popup-action-link:not(.map-popup-action-chat)");
+            if (emailLink && emailLink.href && !emailLink.classList.contains("map-popup-action-email-disabled")) {
+              const href = emailLink.getAttribute("href");
+              if (href && href !== "#") {
+                emailLink.addEventListener("click", async (e) => {
+                  e.preventDefault();
+                  fetch("/api/candidates/karma", {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    credentials: "same-origin",
+                    body: JSON.stringify({ candidateUserId: gig.user.id, action: "email" }),
+                  }).catch(() => {});
+                  window.open(href, "_blank");
+                });
+              }
+            }
+          }
         }
       });
       marker.on("popupclose", () => {
@@ -4693,6 +4771,56 @@ const MapComponent = ({ onOpenSettings, onViewModeChange, effectiveUser = null, 
       {/* Map Container */}
       <div ref={mapRef} className="w-full h-full absolute inset-0" />
 
+      {/* Karma toasts (Company account, candidates view) — top-right */}
+      {userAccountType === "Company" && searchMode === "person" && topCandidatesByKarma.length > 0 && (
+        <div className="absolute top-4 right-4 z-[1000] flex flex-col gap-2 max-w-[320px] pointer-events-auto">
+          {topCandidatesByKarma
+            .filter((g) => g.user?.id != null && !dismissedKarmaToastIds.has(g.user.id))
+            .map((gig) => {
+              const uid = gig.user?.id;
+              const name = gig.user?.name || "Candidate";
+              const email = gig.email || gig.user?.email || "";
+              const karma = gig.karmaScore ?? 0;
+              const avatarUrl = gig.user?.avatarId
+                ? getAvatarUrlById(gig.user.avatarId)
+                : gig.user?.avatarUrl || "/avatars/avatar1.png";
+              return (
+                <div
+                  key={uid}
+                  className="flex gap-3 p-3 rounded-lg border border-brand-stroke-border bg-brand-bg-white shadow-lg"
+                >
+                  <img
+                    src={avatarUrl}
+                    alt=""
+                    className="w-10 h-10 rounded-full object-cover shrink-0"
+                  />
+                  <div className="min-w-0 flex-1">
+                    <div className="font-medium text-brand-text-strong truncate">{name}</div>
+                    {email && (
+                      <div className="text-sm text-brand-text-muted truncate">{email}</div>
+                    )}
+                    <div className="flex items-center gap-1.5 mt-1.5 text-brand">
+                      <StarFilled size={16} className="shrink-0" />
+                      <span className="text-sm font-medium">Karma points: {karma.toLocaleString()}</span>
+                    </div>
+                    <p className="text-xs text-brand-text-muted mt-0.5">
+                      This candidate is getting a lot of interest from recruiters
+                    </p>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => setDismissedKarmaToastIds((s) => new Set(s).add(uid))}
+                    className="shrink-0 p-1 rounded hover:bg-brand-bg-fill text-brand-text-muted hover:text-brand-text-strong"
+                    aria-label="Dismiss"
+                  >
+                    <Close size={16} />
+                  </button>
+                </div>
+              );
+            })}
+        </div>
+      )}
+
       {/* Search Bar - visible on all viewports */}
       {isGlobeView && (
         <div className={`flex flex-col gap-4 top-3 md:top-4 ${searchBar.container} w-[calc(100vw-16px)] max-w-[800px]`}>
@@ -5314,17 +5442,30 @@ const MapComponent = ({ onOpenSettings, onViewModeChange, effectiveUser = null, 
               </div>
             </div>
           ) : (
-            <div className="bg-white border border-brand-stroke-border rounded-lg shadow-lg px-2 py-1.5 md:px-3 md:py-2 flex items-center gap-1.5 md:gap-2 pointer-events-auto font-sans">
-              <Enterprise size={14} className="shrink-0 text-brand" />
-              <div className="flex flex-col leading-tight">
-                <span className="text-[10px] md:text-xs text-brand-text-weak font-normal">
-                  Total Companies
-                </span>
-                <span className="text-sm md:text-base text-brand-text-strong font-semibold">
-                  {totalCompaniesCount.toLocaleString()}
-                </span>
+            <>
+              <div className="bg-white border border-brand-stroke-border rounded-lg shadow-lg px-2 py-1.5 md:px-3 md:py-2 flex items-center gap-1.5 md:gap-2 pointer-events-auto font-sans">
+                <Enterprise size={14} className="shrink-0 text-brand" />
+                <div className="flex flex-col leading-tight">
+                  <span className="text-[10px] md:text-xs text-brand-text-weak font-normal">
+                    Total Companies
+                  </span>
+                  <span className="text-sm md:text-base text-brand-text-strong font-semibold">
+                    {totalCompaniesCount.toLocaleString()}
+                  </span>
+                </div>
               </div>
-            </div>
+              <div className="bg-white border border-brand-stroke-border rounded-lg shadow-lg px-2 py-1.5 md:px-3 md:py-2 flex items-center gap-1.5 md:gap-2 pointer-events-auto font-sans">
+                <List size={14} className="shrink-0 text-brand" />
+                <div className="flex flex-col leading-tight">
+                  <span className="text-[10px] md:text-xs text-brand-text-weak font-normal">
+                    Total jobs
+                  </span>
+                  <span className="text-sm md:text-base text-brand-text-strong font-semibold">
+                    {totalJobsCount.toLocaleString()}
+                  </span>
+                </div>
+              </div>
+            </>
           )
         ) : (
           /* Individual/Gig Worker Account: Show Total Gigs in person mode, Total Companies in company mode */

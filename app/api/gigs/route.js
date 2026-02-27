@@ -195,6 +195,9 @@ export async function GET(request) {
             homeState: true,
             jobSeekerSkills: true,
             jobSeekerExperience: true,
+            candidateKarma: {
+              select: { emailClicks: true, chatClicks: true },
+            },
             resume: {
               include: {
                 workExperiences: { orderBy: { orderIndex: "asc" } },
@@ -261,6 +264,7 @@ export async function GET(request) {
               jobSeekerExperience: seeker.jobSeekerExperience,
               resume: seeker.resume || null,
               email: seeker.email,
+              karmaScore: (seeker.candidateKarma?.emailClicks || 0) + (seeker.candidateKarma?.chatClicks || 0),
             };
           })
           .filter(Boolean);
@@ -343,6 +347,9 @@ export async function GET(request) {
               homeState: true,
               jobSeekerSkills: true,
               jobSeekerExperience: true,
+              candidateKarma: {
+                select: { emailClicks: true, chatClicks: true },
+              },
               resume: {
                 include: {
                   workExperiences: { orderBy: { orderIndex: "asc" } },
@@ -376,6 +383,7 @@ export async function GET(request) {
           jobSeekerExperience: seeker.jobSeekerExperience,
           resume: seeker.resume || null,
           email: seeker.email,
+          karmaScore: (seeker.candidateKarma?.emailClicks || 0) + (seeker.candidateKarma?.chatClicks || 0),
         }));
 
         let companies = [];

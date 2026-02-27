@@ -1568,7 +1568,9 @@ export default function AdminCompanyChat() {
             setJobListingOpen(false);
             handleResetChat();
           }}
-          className="flex items-center gap-2 px-3 py-2 rounded-md border border-brand-stroke-weak text-brand-text-strong text-sm font-medium hover:bg-brand-bg-fill transition-colors"
+          className={`flex items-center gap-2 px-3 py-2 rounded-md border border-brand-stroke-weak text-brand-text-strong text-sm font-medium transition-colors ${
+            !jobListingOpen ? "bg-brand-bg-fill" : "hover:bg-brand-bg-fill"
+          }`}
           title="Start a new job posting"
         >
           <WatsonHealthRotate_360 size={18} />
@@ -1578,10 +1580,7 @@ export default function AdminCompanyChat() {
       {jobListingOpen && (
         <div className="flex-1 min-h-0 flex flex-col rounded-lg border border-brand-stroke-weak bg-brand-bg-white overflow-hidden">
           <div className="shrink-0 flex items-center gap-2 px-4 py-3 border-b border-brand-stroke-weak">
-            <img src="/onlylogo.svg" alt="" className="w-8 h-8" aria-hidden />
-            <h2 className="text-base font-semibold text-brand-text-strong" style={{ fontFamily: "Open Sans, sans-serif" }}>
-              Map my gigs
-            </h2>
+            <img src="/logo.svg" alt="mapmyGig" className="h-8 w-auto" style={{ width: "auto", height: "2rem" }} aria-hidden />
           </div>
           <div className="flex border-b border-brand-stroke-weak shrink-0">
             <button
