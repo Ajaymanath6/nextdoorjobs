@@ -392,28 +392,28 @@ body {
 }
 
 /* Resume popup with twin panel (message extension) */
-/* Wider popup when twin chat is open so both panels fit inside */
+/* First panel stays fixed; chat twin extends to the right as an extension (no push, no horizontal scroll) */
+.leaflet-popup.gig-popup-with-twin {
+  overflow: visible !important;
+}
 .leaflet-popup-content-wrapper.gig-popup-with-twin {
-  max-width: 620px !important;
+  width: 320px !important;
+  max-width: 320px !important;
   max-height: 85vh !important;
   min-height: 50vh;
   border-radius: 8px !important;
-  overflow: hidden;
+  overflow: visible;
 }
 .gig-popup .map-popup-with-twin {
-  display: flex;
-  align-items: stretch;
-  min-width: 0;
+  position: relative;
+  width: 320px;
   min-height: 50vh;
-  width: 100%;
-  max-width: 100%;
+  overflow: visible;
 }
 .gig-popup .map-popup-resume-panel {
-  flex: 0 0 auto;
   width: 320px;
-  min-width: 280px;
-  max-width: 50%;
-  border-right: 1px solid var(--brand-stroke-weak);
+  min-width: 320px;
+  border-right: none;
   overflow: auto;
 }
 .gig-popup .map-popup-resume-panel .map-popup-content {
@@ -421,14 +421,18 @@ body {
   min-width: 0;
 }
 .gig-popup .map-popup-twin-panel {
-  flex: 0 0 280px;
+  position: absolute;
+  left: 100%;
+  top: 0;
+  bottom: 0;
   width: 280px;
-  min-width: 0;
+  min-width: 280px;
+  min-height: 200px;
   display: flex;
   flex-direction: column;
   background: var(--brand-bg-white);
-  min-height: 200px;
-  max-height: 85vh;
+  border-left: 1px solid var(--brand-stroke-weak);
+  box-shadow: 4px 0 12px rgba(0, 0, 0, 0.08);
   overflow: hidden;
   border-top-right-radius: 8px;
   border-bottom-right-radius: 8px;

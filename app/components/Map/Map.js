@@ -1300,7 +1300,11 @@ const MapComponent = ({ onOpenSettings, onViewModeChange, effectiveUser = null, 
                 const popupEl = marker.getPopup()?.getElement();
                 if (!popupEl) return;
                 const wrapper = popupEl.closest?.('.leaflet-popup-content-wrapper') || popupEl.querySelector?.('.leaflet-popup-content-wrapper') || popupEl.parentElement;
-                if (wrapper) wrapper.classList.add('gig-popup-with-twin');
+                if (wrapper) {
+                  wrapper.classList.add('gig-popup-with-twin');
+                  const popupContainer = wrapper.closest?.('.leaflet-popup');
+                  if (popupContainer) popupContainer.classList.add('gig-popup-with-twin');
+                }
                 const chatIconLink = popupEl.querySelector('.map-popup-action-chat');
                 if (chatIconLink) chatIconLink.classList.add('active');
                 const seeBtn = popupEl.querySelector('[data-action="see-distance"]');
@@ -1327,7 +1331,11 @@ const MapComponent = ({ onOpenSettings, onViewModeChange, effectiveUser = null, 
                       const popupEl2 = marker.getPopup()?.getElement();
                       if (popupEl2) {
                         const wrap = popupEl2.closest?.('.leaflet-popup-content-wrapper') || popupEl2.querySelector?.('.leaflet-popup-content-wrapper') || popupEl2.parentElement;
-                        if (wrap) wrap.classList.remove('gig-popup-with-twin');
+                        if (wrap) {
+                          wrap.classList.remove('gig-popup-with-twin');
+                          const popupContainer = wrap.closest?.('.leaflet-popup');
+                          if (popupContainer) popupContainer.classList.remove('gig-popup-with-twin');
+                        }
                         const chatLink2 = popupEl2.querySelector('.map-popup-action-chat');
                         if (chatLink2) chatLink2.classList.remove('active');
                         const seeBtn2 = popupEl2.querySelector('[data-action="see-distance"]');
@@ -3736,7 +3744,11 @@ const MapComponent = ({ onOpenSettings, onViewModeChange, effectiveUser = null, 
                 const popupEl = marker.getPopup()?.getElement();
                 if (!popupEl) return;
                 const wrapper = popupEl.closest?.('.leaflet-popup-content-wrapper') || popupEl.querySelector?.('.leaflet-popup-content-wrapper') || popupEl.parentElement;
-                if (wrapper) wrapper.classList.add('gig-popup-with-twin');
+                if (wrapper) {
+                  wrapper.classList.add('gig-popup-with-twin');
+                  const popupContainer = wrapper.closest?.('.leaflet-popup');
+                  if (popupContainer) popupContainer.classList.add('gig-popup-with-twin');
+                }
                 const chatIconLink = popupEl.querySelector('.map-popup-action-chat');
                 if (chatIconLink) chatIconLink.classList.add('active');
                 const seeBtn = popupEl.querySelector('[data-action="see-distance"]');
@@ -3763,7 +3775,11 @@ const MapComponent = ({ onOpenSettings, onViewModeChange, effectiveUser = null, 
                       const popupEl2 = marker.getPopup()?.getElement();
                       if (popupEl2) {
                         const wrap = popupEl2.closest?.('.leaflet-popup-content-wrapper') || popupEl2.querySelector?.('.leaflet-popup-content-wrapper') || popupEl2.parentElement;
-                        if (wrap) wrap.classList.remove('gig-popup-with-twin');
+                        if (wrap) {
+                          wrap.classList.remove('gig-popup-with-twin');
+                          const popupContainer = wrap.closest?.('.leaflet-popup');
+                          if (popupContainer) popupContainer.classList.remove('gig-popup-with-twin');
+                        }
                         const chatLink2 = popupEl2.querySelector('.map-popup-action-chat');
                         if (chatLink2) chatLink2.classList.remove('active');
                         const seeBtn2 = popupEl2.querySelector('[data-action="see-distance"]');
