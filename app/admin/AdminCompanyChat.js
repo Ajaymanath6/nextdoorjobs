@@ -1552,35 +1552,35 @@ export default function AdminCompanyChat() {
 
   return (
     <div className="flex flex-col h-full min-h-0">
-      <div className="shrink-0 flex justify-end gap-2 mb-2">
-        <button
-          type="button"
-          onClick={handleOpenJobListing}
-          className={`flex items-center gap-2 px-3 py-2 rounded-md border border-brand-stroke-weak text-brand-text-strong text-sm font-medium transition-colors ${
-            jobListingOpen ? "bg-brand-bg-fill" : "hover:bg-brand-bg-fill"
-          }`}
-        >
-          Job Listing
-        </button>
-        <button
-          type="button"
-          onClick={() => {
-            setJobListingOpen(false);
-            handleResetChat();
-          }}
-          className={`flex items-center gap-2 px-3 py-2 rounded-md border border-brand-stroke-weak text-brand-text-strong text-sm font-medium transition-colors ${
-            !jobListingOpen ? "bg-brand-bg-fill" : "hover:bg-brand-bg-fill"
-          }`}
-          title="Start a new job posting"
-        >
-          <WatsonHealthRotate_360 size={18} />
-          New Job Posting
-        </button>
-      </div>
       {jobListingOpen && (
         <div className="flex-1 min-h-0 flex flex-col rounded-lg border border-brand-stroke-weak bg-brand-bg-white overflow-hidden">
-          <div className="shrink-0 flex items-center gap-2 px-4 py-3 border-b border-brand-stroke-weak">
+          <div className="shrink-0 flex items-center justify-between gap-2 px-4 py-3 border-b border-brand-stroke-weak">
             <img src="/logo.svg" alt="mapmyGig" className="h-8 w-auto" style={{ width: "auto", height: "2rem" }} aria-hidden />
+            <div className="flex items-center gap-2">
+              <button
+                type="button"
+                onClick={handleOpenJobListing}
+                className={`flex items-center gap-2 px-3 py-2 rounded-md border border-brand-stroke-weak text-brand-text-strong text-sm font-medium transition-colors ${
+                  jobListingOpen ? "bg-brand-bg-fill" : "hover:bg-brand-bg-fill"
+                }`}
+              >
+                Job Listing
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  setJobListingOpen(false);
+                  handleResetChat();
+                }}
+                className={`flex items-center gap-2 px-3 py-2 rounded-md border border-brand-stroke-weak text-brand-text-strong text-sm font-medium transition-colors ${
+                  !jobListingOpen ? "bg-brand-bg-fill" : "hover:bg-brand-bg-fill"
+                }`}
+                title="Start a new job posting"
+              >
+                <WatsonHealthRotate_360 size={18} />
+                New Job Posting
+              </button>
+            </div>
           </div>
           <div className="flex border-b border-brand-stroke-weak shrink-0">
             <button
@@ -1651,25 +1651,52 @@ export default function AdminCompanyChat() {
         </div>
       )}
       {!jobListingOpen && (
-      <div className="flex-1 min-h-0 rounded-lg border border-brand-stroke-weak bg-brand-bg-white overflow-hidden">
-        <ChatInterface
-          messages={chatMessages}
-          onSendMessage={handleChatMessage}
-          isLoading={isLoading}
-          inlineComponent={inlineComponent}
-          typingText={typingText || null}
-          onScrollRequest={(fn) => {
-            scrollToInlineRef.current = fn;
-          }}
-          onViewOnMap={lastJobCoords ? handleViewOnMap : undefined}
-          onStartNext={handleStartNext}
-          showFindOrPostButtons={false}
-          onJobDeleted={handleAdminJobDeleted}
-          onJobEdited={handleAdminJobEdited}
-          jobApiPrefix="/api/admin/jobs"
-          openMapInNewTab={true}
-        />
-      </div>
+        <div className="flex-1 min-h-0 rounded-lg border border-brand-stroke-weak bg-brand-bg-white overflow-hidden flex flex-col">
+          <ChatInterface
+            messages={chatMessages}
+            onSendMessage={handleChatMessage}
+            isLoading={isLoading}
+            inlineComponent={inlineComponent}
+            typingText={typingText || null}
+            onScrollRequest={(fn) => {
+              scrollToInlineRef.current = fn;
+            }}
+            onViewOnMap={lastJobCoords ? handleViewOnMap : undefined}
+            onStartNext={handleStartNext}
+            showFindOrPostButtons={false}
+            onJobDeleted={handleAdminJobDeleted}
+            onJobEdited={handleAdminJobEdited}
+            jobApiPrefix="/api/admin/jobs"
+            openMapInNewTab={true}
+            headerRightContent={
+              <div className="flex items-center gap-2">
+                <button
+                  type="button"
+                  onClick={handleOpenJobListing}
+                  className={`flex items-center gap-2 px-3 py-2 rounded-md border border-brand-stroke-weak text-brand-text-strong text-sm font-medium transition-colors ${
+                    jobListingOpen ? "bg-brand-bg-fill" : "hover:bg-brand-bg-fill"
+                  }`}
+                >
+                  Job Listing
+                </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setJobListingOpen(false);
+                    handleResetChat();
+                  }}
+                  className={`flex items-center gap-2 px-3 py-2 rounded-md border border-brand-stroke-weak text-brand-text-strong text-sm font-medium transition-colors ${
+                    !jobListingOpen ? "bg-brand-bg-fill" : "hover:bg-brand-bg-fill"
+                  }`}
+                  title="Start a new job posting"
+                >
+                  <WatsonHealthRotate_360 size={18} />
+                  New Job Posting
+                </button>
+              </div>
+            }
+          />
+        </div>
       )}
       <ConfirmDeleteModal
         isOpen={jobListingDeleteConfirmOpen}

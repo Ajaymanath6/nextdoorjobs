@@ -32,6 +32,7 @@ export default function ChatInterface({
   onShowJobListings,
   jobApiPrefix = "/api/jobs",
   openMapInNewTab = false,
+  headerRightContent = null,
 }) {
   const router = useRouter();
   const messagesEndRef = useRef(null);
@@ -228,7 +229,7 @@ export default function ChatInterface({
     <div className="flex flex-col h-full min-h-0 bg-white rounded-lg relative overflow-hidden">
       {/* Logo - Sticky at Top */}
       <div className="sticky top-0 z-10 shrink-0 bg-white px-4 py-3 border-b border-brand-stroke-weak">
-        <div className="flex items-center justify-start">
+        <div className="flex items-center justify-between gap-2">
           <div className="h-8 flex items-center">
             <Image
               src="/logo.svg"
@@ -239,6 +240,7 @@ export default function ChatInterface({
               style={{ width: "auto", height: "2rem" }}
             />
           </div>
+          {headerRightContent != null ? headerRightContent : null}
         </div>
       </div>
 

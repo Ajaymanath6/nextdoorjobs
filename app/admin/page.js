@@ -138,7 +138,7 @@ export default function AdminDashboardPage() {
               </div>
             </div>
 
-            <section className="rounded-md border border-brand-stroke-weak bg-brand-bg-white p-6 shadow">
+            <section className="space-y-2">
               <h2 className="text-lg font-medium text-brand-text-strong mb-2">View as</h2>
               <p className="text-sm text-brand-text-weak mb-4">
                 Use the chat flows below to post as a gig worker or as a company.
