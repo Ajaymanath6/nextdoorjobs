@@ -126,16 +126,6 @@ function ExistingCompanyPicker({ companies, onSelect, onDelete }) {
                   <span className="font-medium text-brand-text-strong truncate">
                     {company.name}
                   </span>
-                  {company.description && (
-                    <span className="text-xs text-brand-text-weak line-clamp-2">
-                      {company.description}
-                    </span>
-                  )}
-                  {locationLabel && (
-                    <span className="text-xs text-brand-text-weak">
-                      {locationLabel}
-                    </span>
-                  )}
                 </button>
                 <button
                   type="button"
@@ -1668,6 +1658,7 @@ export default function AdminCompanyChat() {
             onJobEdited={handleAdminJobEdited}
             jobApiPrefix="/api/admin/jobs"
             openMapInNewTab={true}
+            compactInput={true}
             headerRightContent={
               <div className="flex items-center gap-2">
                 <button

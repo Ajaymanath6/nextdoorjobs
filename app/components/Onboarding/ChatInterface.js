@@ -33,6 +33,7 @@ export default function ChatInterface({
   jobApiPrefix = "/api/jobs",
   openMapInNewTab = false,
   headerRightContent = null,
+  compactInput = false,
 }) {
   const router = useRouter();
   const messagesEndRef = useRef(null);
@@ -735,7 +736,11 @@ export default function ChatInterface({
           <textarea
             ref={inputRef}
             placeholder="Type your message..."
-            className="w-full min-h-[88px] md:min-h-[120px] pl-2 pr-2 py-3 md:py-4 bg-brand-bg-white border border-brand-stroke-weak shadow-sm rounded-lg focus:outline-none focus:border-brand-text-strong hover:bg-brand-bg-fill resize-none text-base m-0 placeholder:text-brand-text-placeholder text-brand-text-strong"
+            className={`w-full pl-2 pr-2 bg-brand-bg-white border border-brand-stroke-weak shadow-sm rounded-lg focus:outline-none focus:border-brand-text-strong hover:bg-brand-bg-fill resize-none text-base m-0 placeholder:text-brand-text-placeholder text-brand-text-strong ${
+              compactInput
+                ? "min-h-[44px] md:min-h-[60px] py-2 md:py-2"
+                : "min-h-[88px] md:min-h-[120px] py-3 md:py-4"
+            }`}
             style={{ fontFamily: "Open Sans, sans-serif", borderWidth: "1px" }}
             disabled={isLoading}
             onFocus={() => {

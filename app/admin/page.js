@@ -172,12 +172,12 @@ export default function AdminDashboardPage() {
 
           <div className="flex-1 min-h-0 overflow-y-auto flex flex-col">
             {viewSection === "gig" && (
-              <div className="flex-1 min-h-0 flex flex-col w-full p-6">
+              <div className="flex-1 min-h-0 flex flex-col w-full px-6">
                 <AdminGigChat />
               </div>
             )}
             {viewSection === "company" && (
-              <div className="flex-1 min-h-0 flex flex-col w-full p-6">
+              <div className="flex-1 min-h-0 flex flex-col w-full px-6">
                 <AdminCompanyChat />
               </div>
             )}
