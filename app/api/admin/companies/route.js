@@ -1,27 +1,9 @@
 import { NextResponse } from "next/server";
-import { getAdminSession } from "../../../../lib/adminAuth";
-import { prisma } from "../../../../lib/prisma";
+import { getAdminSessionOrClerkOwner, getAdminOwnerUserId } from "../../../../lib/adminAuth";
 import { companyService } from "../../../../lib/services/company.service";
 
-async function getAdminOwnerUserId() {
-  const idFromEnv = process.env.ADMIN_OWNER_USER_ID;
-  if (idFromEnv) {
-    const id = parseInt(String(idFromEnv).trim(), 10);
-    if (!Number.isNaN(id) && id > 0) return id;
-  }
-  const email = process.env.ADMIN_OWNER_EMAIL;
-  if (email && String(email).trim()) {
-    const user = await prisma.user.findUnique({
-      where: { email: String(email).trim().toLowerCase() },
-      select: { id: true },
-    });
-    if (user) return user.id;
-  }
-  return null;
-}
-
 export async function GET() {
-  const session = await getAdminSession();
+  const session = await getAdminSessionOrClerkOwner();
   if (!session) {
     return NextResponse.json({ error: "Not authenticated" }, { status: 401 });
   }
@@ -42,7 +24,7 @@ export async function GET() {
 }
 
 export async function POST(request) {
-  const session = await getAdminSession();
+  const session = await getAdminSessionOrClerkOwner();
   if (!session) {
     return NextResponse.json({ error: "Not authenticated" }, { status: 401 });
   }
