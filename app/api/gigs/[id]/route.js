@@ -53,6 +53,7 @@ export async function GET(request, { params }) {
 
     const response = {
       ...gig,
+      isOwner: currentUser?.id === gig.userId,
       user: gig.user
         ? {
             ...gig.user,

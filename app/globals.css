@@ -403,18 +403,22 @@ body {
   min-height: 50vh;
   border-radius: 8px !important;
   overflow: visible;
+  background: var(--brand-bg-white);
 }
 .gig-popup .map-popup-with-twin {
   position: relative;
   width: 320px;
   min-height: 50vh;
+  height: 100%;
   overflow: visible;
 }
 .gig-popup .map-popup-resume-panel {
   width: 320px;
   min-width: 320px;
+  min-height: 100%;
   border-right: none;
   overflow: auto;
+  background: var(--brand-bg-white);
 }
 .gig-popup .map-popup-resume-panel .map-popup-content {
   padding: 12px;
@@ -431,8 +435,6 @@ body {
   display: flex;
   flex-direction: column;
   background: var(--brand-bg-white);
-  border-left: 1px solid var(--brand-stroke-weak);
-  box-shadow: 4px 0 12px rgba(0, 0, 0, 0.08);
   overflow: hidden;
   border-top-right-radius: 8px;
   border-bottom-right-radius: 8px;
