@@ -149,6 +149,7 @@ model User {
   notifications       Notification[]
   notificationsSent   Notification[] @relation("NotificationSender")
   candidateKarma      CandidateKarma?
+  gigRequests         GigRequest[]
 
   @@index([email])
   @@index([clerkId])
@@ -270,6 +271,22 @@ model Gig {
   @@index([district])
   @@index([pincode])
   @@map("gigs")
+}
+
+model GigRequest {
+  id          Int       @id @default(autoincrement())
+  userId      Int       @map("user_id")
+  category    String    @db.VarChar(100)
+  title       String    @db.VarChar(255)
+  description String    @db.Text
+  deadline    DateTime?
+  location    String?   @db.VarChar(255)
+  createdAt   DateTime  @default(now()) @map("created_at")
+  user        User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([category])
+  @@map("gig_requests")
 }
 
 model Resume {

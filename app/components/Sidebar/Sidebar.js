@@ -14,11 +14,12 @@ import {
   EarthFilled,
   Settings,
   Notification,
+  TaskAdd,
 } from "@carbon/icons-react";
 import Tooltip from "../Tooltip";
 import { useUnreadNotificationCount } from "../../hooks/useUnreadNotificationCount";
 
-export default function Sidebar({ activeItem = "jobs-near-you", onToggle, isOpen: externalIsOpen, onOpenSettingsWithSection, viewMode = "person", effectiveUser = null, effectiveUserLoading = true }) {
+export default function Sidebar({ activeItem = "jobs-near-you", onToggle, isOpen: externalIsOpen, onOpenSettingsWithSection, viewMode = "person", effectiveUser = null, effectiveUserLoading = true, onRequestGig }) {
   const router = useRouter();
   const [isOpen, setIsOpen] = useState(externalIsOpen !== undefined ? externalIsOpen : true);
   const [accountTypeFromAuth, setAccountTypeFromAuth] = useState(null);
@@ -76,6 +77,9 @@ export default function Sidebar({ activeItem = "jobs-near-you", onToggle, isOpen
     { id: "jobs-near-you", label: jobsNearYouLabel, icon: EarthFilled, route: "/jobs-near-you" },
     { id: "notifications", label: "Notifications", icon: Notification, route: notificationsRoute, badge: true },
     { id: "post-gig", label: postLabel, icon: Add, route: postRoute },
+    ...(accountType === "Individual" && typeof onRequestGig === "function"
+      ? [{ id: "request-gig", label: "Request a gig", icon: TaskAdd, onRequestGigAction: true }]
+      : []),
     manageItem,
     // Only show the dedicated Manage JDs item for non-company accounts (as today)
     ...(accountType === "Company"
@@ -87,6 +91,10 @@ export default function Sidebar({ activeItem = "jobs-near-you", onToggle, isOpen
   const isDev = process.env.NODE_ENV !== "production";
 
   const handleNavigation = (item) => {
+    if (item.onRequestGigAction && typeof onRequestGig === "function") {
+      onRequestGig();
+      return;
+    }
     if (item.openSettingsSection && typeof onOpenSettingsWithSection === "function") {
       onOpenSettingsWithSection(item.openSettingsSection);
       return;
@@ -145,7 +153,7 @@ export default function Sidebar({ activeItem = "jobs-near-you", onToggle, isOpen
             const IconComponent = item.icon;
             const isActive = activeItem === item.id;
             const enabledIdsProdForCompany = ["jobs-near-you", "notifications", "post-gig", "manage-jds", "settings"];
-            const enabledIdsProdForIndividual = ["jobs-near-you", "notifications", "post-gig", "manage-resume", "settings"];
+            const enabledIdsProdForIndividual = ["jobs-near-you", "notifications", "post-gig", "request-gig", "manage-resume", "settings"];
             const enabledIds = accountType === "Company" ? enabledIdsProdForCompany : enabledIdsProdForIndividual;
             const isComingSoon = !isDev && !enabledIds.includes(item.id);
             const isDisabled = isComingSoon || (!isActive && !isDev && !enabledIds.includes(item.id));

@@ -4,9 +4,11 @@ import { useState, useEffect } from "react";
 import Sidebar from "./components/Sidebar/Sidebar";
 import Map from "./components/Map/Map";
 import SettingsModal from "./components/SettingsModal";
+import RequestGigModal from "./components/RequestGigModal";
 
 export default function Home() {
   const [showSettingsModal, setShowSettingsModal] = useState(false);
+  const [showRequestGigModal, setShowRequestGigModal] = useState(false);
   const [settingsInitialSection, setSettingsInitialSection] = useState(null);
   const [viewMode, setViewMode] = useState("person");
   const [effectiveUser, setEffectiveUser] = useState(null);
@@ -86,6 +88,7 @@ export default function Home() {
             viewMode={viewMode}
             effectiveUser={effectiveUser}
             effectiveUserLoading={effectiveUserLoading}
+            onRequestGig={() => setShowRequestGigModal(true)}
           />
         </div>
 
@@ -103,6 +106,10 @@ export default function Home() {
           onClose={handleCloseSettings}
           initialSection={settingsInitialSection}
         />
+      <RequestGigModal
+        isOpen={showRequestGigModal}
+        onClose={() => setShowRequestGigModal(false)}
+      />
     </div>
   );
 }

@@ -378,6 +378,8 @@ body {
 /* Wider popup when twin chat is open so both panels fit inside */
 .leaflet-popup-content-wrapper.gig-popup-with-twin {
   max-width: 620px !important;
+  border-radius: 8px !important;
+  overflow: hidden;
 }
 .gig-popup .map-popup-with-twin {
   display: flex;
@@ -408,6 +410,8 @@ body {
   min-height: 200px;
   max-height: 70vh;
   overflow: hidden;
+  border-top-right-radius: 8px;
+  border-bottom-right-radius: 8px;
 }
 .gig-popup .map-popup-twin-header {
   display: flex;

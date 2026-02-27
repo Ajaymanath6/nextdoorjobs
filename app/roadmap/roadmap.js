@@ -4,14 +4,20 @@ import { useState } from "react";
 import Sidebar from "../components/Sidebar/Sidebar";
 import InputField from "../components/InputField";
 import SettingsModal from "../components/SettingsModal";
+import RequestGigModal from "../components/RequestGigModal";
 
 export default function RoadmapPage() {
   const [showSettingsModal, setShowSettingsModal] = useState(false);
+  const [showRequestGigModal, setShowRequestGigModal] = useState(false);
 
   return (
     <div className="flex h-screen overflow-hidden bg-brand-bg-fill">
       {/* Sidebar - Left Side */}
-      <Sidebar activeItem="roadmap" onOpenSettings={() => setShowSettingsModal(true)} />
+      <Sidebar
+        activeItem="roadmap"
+        onOpenSettings={() => setShowSettingsModal(true)}
+        onRequestGig={() => setShowRequestGigModal(true)}
+      />
 
       {/* Main Content - Right Side */}
       <main className="flex-1 overflow-y-auto bg-brand-bg-fill">
@@ -97,6 +103,10 @@ export default function RoadmapPage() {
       <SettingsModal
         isOpen={showSettingsModal}
         onClose={() => setShowSettingsModal(false)}
+      />
+      <RequestGigModal
+        isOpen={showRequestGigModal}
+        onClose={() => setShowRequestGigModal(false)}
       />
     </div>
   );
