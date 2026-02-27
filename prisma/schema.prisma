@@ -114,6 +114,8 @@ enum JobCategory {
   SAPConsultant
   SAPIntegration
   SAPAnalytics
+  MotionDesigner
+  Animation
 }
 
 model User {
