@@ -12,7 +12,7 @@ import SalaryRangeBadges from "../components/Onboarding/SalaryRangeBadges";
 import RemoteTypeSelector from "../components/Onboarding/RemoteTypeSelector";
 import SeniorityLevelSelector from "../components/Onboarding/SeniorityLevelSelector";
 import { JOB_CATEGORIES } from "../../lib/constants/jobCategories";
-import { WatsonHealthRotate_360, TrashCan, Location, Edit, Renew } from "@carbon/icons-react";
+import { WatsonHealthRotate_360, TrashCan, Location, Edit, Renew, DocumentBlank } from "@carbon/icons-react";
 import ConfirmDeleteModal from "../components/ConfirmDeleteModal";
 import EditJobModal from "../components/EditJobModal";
 
@@ -160,6 +160,21 @@ function ExistingCompanyPicker({ companies, onSelect, onDelete }) {
   );
 }
 
+function formatPostedAt(createdAt) {
+  if (!createdAt) return "";
+  const date = typeof createdAt === "string" ? new Date(createdAt) : createdAt;
+  if (!(date instanceof Date) || Number.isNaN(date.getTime())) return "";
+  const now = new Date();
+  const todayStart = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+  const yesterdayStart = new Date(todayStart);
+  yesterdayStart.setDate(yesterdayStart.getDate() - 1);
+  const jobDayStart = new Date(date.getFullYear(), date.getMonth(), date.getDate());
+  if (jobDayStart.getTime() === todayStart.getTime()) return "Today";
+  if (jobDayStart.getTime() === yesterdayStart.getTime()) return "Yesterday";
+  const days = Math.floor((todayStart.getTime() - jobDayStart.getTime()) / (24 * 60 * 60 * 1000));
+  return `${days} days ago`;
+}
+
 function JobListingPanelJobs({
   jobs,
   emptyMessage,
@@ -171,114 +186,133 @@ function JobListingPanelJobs({
 }) {
   if (!jobs || jobs.length === 0) {
     return (
-      <p className="text-sm text-brand-text-weak" style={{ fontFamily: "Open Sans, sans-serif" }}>
-        {emptyMessage}
-      </p>
+      <div className="flex flex-col items-center justify-center py-12 px-4 text-center">
+        <DocumentBlank size={48} className="text-brand-text-weak mb-3" aria-hidden />
+        <p className="text-sm text-brand-text-weak" style={{ fontFamily: "Open Sans, sans-serif" }}>
+          {emptyMessage}
+        </p>
+      </div>
     );
   }
+  const groups = [];
+  const byKey = new Map();
+  for (const job of jobs) {
+    const key = job.company?.id ?? job.companyName ?? "unknown";
+    if (!byKey.has(key)) {
+      const companyName = job.company?.name || job.companyName || "Company";
+      const company = job.company;
+      byKey.set(key, { companyName, company, jobs: [] });
+      groups.push(byKey.get(key));
+    }
+    byKey.get(key).jobs.push(job);
+  }
   return (
-    <ul className="space-y-2">
-      {jobs.map((job) => {
-        const companyName = job.companyName || job.company?.name || "";
-        const logoUrl = job.company?.logoPath || (job.company?.websiteUrl ? (() => {
-          try {
-            const h = new URL(job.company.websiteUrl).hostname;
-            return h ? `https://www.google.com/s2/favicons?domain=${encodeURIComponent(h)}&sz=128` : null;
-          } catch (_) { return null; }
-        })() : null);
-        return (
-          <li
-            key={job.id}
-            className="flex items-center gap-2 py-2 border-b border-brand-stroke-weak last:border-b-0 last:pb-0 first:pt-0"
-          >
-            <div className="flex-1 min-w-0">
-              {(companyName || logoUrl) ? (
-                <div className="flex items-center gap-2 mb-1.5 shrink-0">
-                  <div className="w-7 h-7 rounded overflow-hidden shrink-0 bg-brand-bg-fill flex items-center justify-center">
-                    {logoUrl ? (
-                      <img src={logoUrl} alt="" className="w-full h-full object-contain" />
-                    ) : (
-                      <span className="text-xs font-medium text-brand-text-strong" style={{ fontFamily: "Open Sans, sans-serif" }}>
-                        {(companyName || "?").charAt(0).toUpperCase()}
-                      </span>
-                    )}
+    <div className="space-y-6">
+      {groups.map((group) => (
+        <div key={group.company?.id ?? group.companyName ?? "unknown"}>
+          <div className="flex items-center gap-2 mb-2">
+            {group.company?.logoPath ? (
+              <img
+                src={group.company.logoPath}
+                alt=""
+                className="w-6 h-6 rounded object-contain bg-brand-bg-fill"
+              />
+            ) : null}
+            <h3 className="text-sm font-semibold text-brand-text-strong" style={{ fontFamily: "Open Sans, sans-serif" }}>
+              {group.companyName}
+            </h3>
+          </div>
+          <ul className="space-y-2">
+            {group.jobs.map((job) => {
+              const companyName = job.companyName || job.company?.name || "";
+              const logoUrl = job.company?.logoPath || (job.company?.websiteUrl ? (() => {
+                try {
+                  const h = new URL(job.company.websiteUrl).hostname;
+                  return h ? `https://www.google.com/s2/favicons?domain=${encodeURIComponent(h)}&sz=128` : null;
+                } catch (_) { return null; }
+              })() : null);
+              return (
+                <li
+                  key={job.id}
+                  className="flex items-center gap-2 py-2 border-b border-brand-stroke-weak last:border-b-0 last:pb-0 first:pt-0"
+                >
+                  <div className="flex-1 min-w-0">
+                    <p
+                      className="text-sm font-medium text-brand-text-strong truncate"
+                      style={{ fontFamily: "Open Sans, sans-serif" }}
+                    >
+                      {job.title}
+                    </p>
+                    <p
+                      className="text-xs text-brand-text-weak mt-0.5 break-words"
+                      style={{ fontFamily: "Open Sans, sans-serif" }}
+                    >
+                      {job.jobDescription}
+                    </p>
                   </div>
-                  <p
-                    className="text-xs text-brand-text-strong truncate min-w-0"
-                    style={{ fontFamily: "Open Sans, sans-serif" }}
-                  >
-                    {companyName || "Company"}
-                  </p>
-                </div>
-              ) : null}
-              <p
-                className="text-sm font-medium text-brand-text-strong truncate"
-                style={{ fontFamily: "Open Sans, sans-serif" }}
-              >
-                {job.title}
-              </p>
-              <p
-                className="text-xs text-brand-text-weak mt-0.5 break-words"
-                style={{ fontFamily: "Open Sans, sans-serif" }}
-              >
-                {job.jobDescription}
-              </p>
-            </div>
-            <div className="shrink-0 flex items-center gap-1.5">
-              {job.company?.latitude != null && job.company?.longitude != null ? (
-                <button
-                  type="button"
-                  onClick={() => onSeeOnMap(job)}
-                  className="p-1.5 rounded-md text-brand-text-weak hover:bg-brand-bg-fill hover:text-brand-stroke-strong transition-colors"
-                  title="See on map"
-                  aria-label="See on map"
-                >
-                  <Location size={18} />
-                </button>
-              ) : null}
-              {onExtend ? (
-                <button
-                  type="button"
-                  onClick={() => onExtend(job.id)}
-                  disabled={extendingId === job.id}
-                  className="p-1.5 rounded-md text-brand-text-weak hover:bg-green-50 hover:text-green-600 transition-colors disabled:opacity-50 relative"
-                  title="Extend posting by 2 weeks"
-                  aria-label="Extend job"
-                >
-                  {extendingId === job.id ? (
-                    <div className="w-[18px] h-[18px] border-2 border-green-600 border-t-transparent rounded-full animate-spin" />
-                  ) : (
-                    <Renew size={18} />
-                  )}
-                </button>
-              ) : null}
-              {onEdit ? (
-                <button
-                  type="button"
-                  onClick={() => onEdit(job)}
-                  className="p-1.5 rounded-md text-brand-text-weak hover:bg-brand-bg-fill hover:text-brand-stroke-strong transition-colors"
-                  title="Edit job"
-                  aria-label="Edit job"
-                >
-                  <Edit size={18} />
-                </button>
-              ) : null}
-              {onDelete ? (
-                <button
-                  type="button"
-                  onClick={() => onDelete(job)}
-                  className="p-1.5 rounded-md text-brand-text-weak hover:bg-red-50 hover:text-red-600 transition-colors"
-                  title="Delete job"
-                  aria-label="Delete job"
-                >
-                  <TrashCan size={18} />
-                </button>
-              ) : null}
-            </div>
-          </li>
-        );
-      })}
-    </ul>
+                  <div className="shrink-0 flex items-center gap-1.5">
+                    {formatPostedAt(job.createdAt) ? (
+                      <span className="text-xs text-brand-text-weak whitespace-nowrap" style={{ fontFamily: "Open Sans, sans-serif" }}>
+                        {formatPostedAt(job.createdAt)}
+                      </span>
+                    ) : null}
+                    {job.company?.latitude != null && job.company?.longitude != null ? (
+                      <button
+                        type="button"
+                        onClick={() => onSeeOnMap(job)}
+                        className="p-1.5 rounded-md text-brand-text-weak hover:bg-brand-bg-fill hover:text-brand-stroke-strong transition-colors"
+                        title="See on map"
+                        aria-label="See on map"
+                      >
+                        <Location size={18} />
+                      </button>
+                    ) : null}
+                    {onExtend ? (
+                      <button
+                        type="button"
+                        onClick={() => onExtend(job.id)}
+                        disabled={extendingId === job.id}
+                        className="p-1.5 rounded-md text-brand-text-weak hover:bg-green-50 hover:text-green-600 transition-colors disabled:opacity-50 relative"
+                        title="Extend posting by 2 weeks"
+                        aria-label="Extend job"
+                      >
+                        {extendingId === job.id ? (
+                          <div className="w-[18px] h-[18px] border-2 border-green-600 border-t-transparent rounded-full animate-spin" />
+                        ) : (
+                          <Renew size={18} />
+                        )}
+                      </button>
+                    ) : null}
+                    {onEdit ? (
+                      <button
+                        type="button"
+                        onClick={() => onEdit(job)}
+                        className="p-1.5 rounded-md text-brand-text-weak hover:bg-brand-bg-fill hover:text-brand-stroke-strong transition-colors"
+                        title="Edit job"
+                        aria-label="Edit job"
+                      >
+                        <Edit size={18} />
+                      </button>
+                    ) : null}
+                    {onDelete ? (
+                      <button
+                        type="button"
+                        onClick={() => onDelete(job)}
+                        className="p-1.5 rounded-md text-brand-text-weak hover:bg-red-50 hover:text-red-600 transition-colors"
+                        title="Delete job"
+                        aria-label="Delete job"
+                      >
+                        <TrashCan size={18} />
+                      </button>
+                    ) : null}
+                  </div>
+                </li>
+              );
+            })}
+          </ul>
+        </div>
+      ))}
+    </div>
   );
 }
 
@@ -1536,8 +1570,8 @@ export default function AdminCompanyChat() {
         </button>
       </div>
       {jobListingOpen && (
-        <div className="shrink-0 mb-2 rounded-lg border border-brand-stroke-weak bg-brand-bg-white overflow-hidden">
-          <div className="flex border-b border-brand-stroke-weak">
+        <div className="flex-1 min-h-0 flex flex-col rounded-lg border border-brand-stroke-weak bg-brand-bg-white overflow-hidden">
+          <div className="flex border-b border-brand-stroke-weak shrink-0">
             <button
               type="button"
               onClick={() => handleJobListingTabChange("recent")}
@@ -1561,7 +1595,7 @@ export default function AdminCompanyChat() {
               All Jobs
             </button>
           </div>
-          <div className="max-h-80 overflow-y-auto p-4">
+          <div className="flex-1 min-h-0 overflow-y-auto p-4">
             {jobListingTab === "recent" && loadingRecent && (
               <p className="text-sm text-brand-text-weak">Loading recent jobs…</p>
             )}
@@ -1605,6 +1639,7 @@ export default function AdminCompanyChat() {
           </div>
         </div>
       )}
+      {!jobListingOpen && (
       <div className="flex-1 min-h-0 rounded-lg border border-brand-stroke-weak bg-brand-bg-white overflow-hidden">
         <ChatInterface
           messages={chatMessages}
@@ -1624,6 +1659,7 @@ export default function AdminCompanyChat() {
           openMapInNewTab={true}
         />
       </div>
+      )}
       <ConfirmDeleteModal
         isOpen={jobListingDeleteConfirmOpen}
         onClose={() => {
