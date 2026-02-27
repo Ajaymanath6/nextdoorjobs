@@ -33,6 +33,7 @@ import GigFilterDropdown from "./GigFilterDropdown";
 import LocalityAutocomplete from "./LocalityAutocomplete";
 import AddHomeModal from "./AddHomeModal";
 import GetCoordinatesModal from "./GetCoordinatesModal";
+import GigWorkerProfileModal from "./GigWorkerProfileModal";
 import JobTitleAutocomplete from "./JobTitleAutocomplete";
 import CollegeAutocomplete from "./CollegeAutocomplete";
 import EmptyState from "./EmptyState";
@@ -174,6 +175,8 @@ const MapComponent = ({ onOpenSettings, onViewModeChange, effectiveUser = null, 
   const [showSuggestionsDropdown, setShowSuggestionsDropdown] = useState(false);
   const [showAddHomeModal, setShowAddHomeModal] = useState(false);
   const [showLocateMeCoordModal, setShowLocateMeCoordModal] = useState(false);
+  const [showGigWorkerProfileModal, setShowGigWorkerProfileModal] = useState(false);
+  const [selectedGigForProfileModal, setSelectedGigForProfileModal] = useState(null);
   const homeSuggestionsRef = useRef(null);
   const [showDistanceFromHome, setShowDistanceFromHome] = useState(false);
   const [selectedGigForDistance, setSelectedGigForDistance] = useState(null);
@@ -1003,6 +1006,7 @@ const MapComponent = ({ onOpenSettings, onViewModeChange, effectiveUser = null, 
                 <a href="#" class="map-popup-action-link map-popup-action-chat ${disableChat ? 'map-popup-action-chat-disabled' : ''}" title="Chat" aria-label="Chat" data-action="chat" data-gig-id="${gig.id}">
                   <svg width="20" height="20" viewBox="0 0 32 32" fill="currentColor" xmlns="http://www.w3.org/2000/svg"><path d="M17.74,30,16,29l4-7h6a2,2,0,0,0,2-2V8a2,2,0,0,0-2-2H6A2,2,0,0,0,4,8V20a2,2,0,0,0,2,2h9v2H6a4,4,0,0,1-4-4V8A4,4,0,0,1,6,4H26a4,4,0,0,1,4,4V20a4,4,0,0,1-4,4H21.16Z"/><path d="M8 10H24V12H8zM8 16H18V18H8z"/></svg>
                 </a>
+                <button type="button" class="map-popup-action-see-more map-popup-action-link" data-action="see-more-work" data-gig-id="${gig.id}" title="See more work">See more work</button>
               </div>
             </div>
           </div>`;
@@ -1060,6 +1064,7 @@ const MapComponent = ({ onOpenSettings, onViewModeChange, effectiveUser = null, 
             <a href="#" class="map-popup-action-link map-popup-action-chat${chatDisabledClass}" title="Chat" aria-label="Chat" data-action="chat" data-gig-id="${gig.id}">
               <svg width="20" height="20" viewBox="0 0 32 32" fill="currentColor" xmlns="http://www.w3.org/2000/svg"><path d="M17.74,30,16,29l4-7h6a2,2,0,0,0,2-2V8a2,2,0,0,0-2-2H6A2,2,0,0,0,4,8V20a2,2,0,0,0,2,2h9v2H6a4,4,0,0,1-4-4V8A4,4,0,0,1,6,4H26a4,4,0,0,1,4,4V20a4,4,0,0,1-4,4H21.16Z"/><path d="M8 10H24V12H8zM8 16H18V18H8z"/></svg>
             </a>
+            <button type="button" class="map-popup-action-see-more map-popup-action-link" data-action="see-more-work" data-gig-id="${gig.id}" title="See more work">See more work</button>
           </div>
         </div>
       `;
@@ -1302,6 +1307,8 @@ const MapComponent = ({ onOpenSettings, onViewModeChange, effectiveUser = null, 
                 if (seeBtn) seeBtn.onclick = () => { setSelectedGigForDistance(gig); setShowDistanceFromHome(true); };
                 const addBtn = popupEl.querySelector('[data-action="add-home"]');
                 if (addBtn) addBtn.onclick = () => { setSelectedGigForDistance(gig); setShowAddHomeModal(true); };
+                const seeMoreBtnTwin = popupEl.querySelector('[data-action="see-more-work"]');
+                if (seeMoreBtnTwin) seeMoreBtnTwin.onclick = (e) => { e.preventDefault(); setSelectedGigForProfileModal(gig); setShowGigWorkerProfileModal(true); };
                 const closeBtn = popupEl.querySelector('.map-popup-twin-close');
                 if (closeBtn) closeBtn.onclick = (e) => {
                   e.preventDefault();
@@ -1328,6 +1335,8 @@ const MapComponent = ({ onOpenSettings, onViewModeChange, effectiveUser = null, 
                         const addBtn2 = popupEl2.querySelector('[data-action="add-home"]');
                         if (addBtn2) addBtn2.onclick = () => { setSelectedGigForDistance(gig); setShowAddHomeModal(true); };
                         if (chatLink2 && marker._openChatHandler) chatLink2.onclick = marker._openChatHandler;
+                        const seeMoreBtn2 = popupEl2.querySelector('[data-action="see-more-work"]');
+                        if (seeMoreBtn2) seeMoreBtn2.onclick = (e) => { e.preventDefault(); setSelectedGigForProfileModal(gig); setShowGigWorkerProfileModal(true); };
                       }
                     }, 0);
                   }
@@ -1360,6 +1369,14 @@ const MapComponent = ({ onOpenSettings, onViewModeChange, effectiveUser = null, 
           };
           chatLink.onclick = openChatFn;
           marker._openChatHandler = openChatFn;
+        }
+        const seeMoreBtn = el.querySelector('[data-action="see-more-work"]');
+        if (seeMoreBtn) {
+          seeMoreBtn.onclick = (e) => {
+            e.preventDefault();
+            setSelectedGigForProfileModal(gig);
+            setShowGigWorkerProfileModal(true);
+          };
         }
         if (isCandidate && gig.user?.id) {
           const actionsDiv = el.querySelector(".map-popup-actions");
@@ -3425,6 +3442,7 @@ const MapComponent = ({ onOpenSettings, onViewModeChange, effectiveUser = null, 
                 <a href="#" class="map-popup-action-link map-popup-action-chat ${disableChat ? 'map-popup-action-chat-disabled' : ''}" title="Chat" aria-label="Chat" data-action="chat" data-gig-id="${gig.id}">
                   <svg width="20" height="20" viewBox="0 0 32 32" fill="currentColor" xmlns="http://www.w3.org/2000/svg"><path d="M17.74,30,16,29l4-7h6a2,2,0,0,0,2-2V8a2,2,0,0,0-2-2H6A2,2,0,0,0,4,8V20a2,2,0,0,0,2,2h9v2H6a4,4,0,0,1-4-4V8A4,4,0,0,1,6,4H26a4,4,0,0,1,4,4V20a4,4,0,0,1-4,4H21.16Z"/><path d="M8 10H24V12H8zM8 16H18V18H8z"/></svg>
                 </a>
+                <button type="button" class="map-popup-action-see-more map-popup-action-link" data-action="see-more-work" data-gig-id="${gig.id}" title="See more work">See more work</button>
               </div>
             </div>
           </div>`;
@@ -3482,6 +3500,7 @@ const MapComponent = ({ onOpenSettings, onViewModeChange, effectiveUser = null, 
             <a href="#" class="map-popup-action-link map-popup-action-chat${chatDisabledClass}" title="Chat" aria-label="Chat" data-action="chat" data-gig-id="${gig.id}">
               <svg width="20" height="20" viewBox="0 0 32 32" fill="currentColor" xmlns="http://www.w3.org/2000/svg"><path d="M17.74,30,16,29l4-7h6a2,2,0,0,0,2-2V8a2,2,0,0,0-2-2H6A2,2,0,0,0,4,8V20a2,2,0,0,0,2,2h9v2H6a4,4,0,0,1-4-4V8A4,4,0,0,1,6,4H26a4,4,0,0,1,4,4V20a4,4,0,0,1-4,4H21.16Z"/><path d="M8 10H24V12H8zM8 16H18V18H8z"/></svg>
             </a>
+            <button type="button" class="map-popup-action-see-more map-popup-action-link" data-action="see-more-work" data-gig-id="${gig.id}" title="See more work">See more work</button>
           </div>
         </div>
       `;
@@ -3724,6 +3743,8 @@ const MapComponent = ({ onOpenSettings, onViewModeChange, effectiveUser = null, 
                 if (seeBtn) seeBtn.onclick = () => { setSelectedGigForDistance(gig); setShowDistanceFromHome(true); };
                 const addBtn = popupEl.querySelector('[data-action="add-home"]');
                 if (addBtn) addBtn.onclick = () => { setSelectedGigForDistance(gig); setShowAddHomeModal(true); };
+                const seeMoreBtnTwin = popupEl.querySelector('[data-action="see-more-work"]');
+                if (seeMoreBtnTwin) seeMoreBtnTwin.onclick = (e) => { e.preventDefault(); setSelectedGigForProfileModal(gig); setShowGigWorkerProfileModal(true); };
                 const closeBtn = popupEl.querySelector('.map-popup-twin-close');
                 if (closeBtn) closeBtn.onclick = (e) => {
                   e.preventDefault();
@@ -3750,6 +3771,8 @@ const MapComponent = ({ onOpenSettings, onViewModeChange, effectiveUser = null, 
                         const addBtn2 = popupEl2.querySelector('[data-action="add-home"]');
                         if (addBtn2) addBtn2.onclick = () => { setSelectedGigForDistance(gig); setShowAddHomeModal(true); };
                         if (chatLink2 && marker._openChatHandler) chatLink2.onclick = marker._openChatHandler;
+                        const seeMoreBtn2 = popupEl2.querySelector('[data-action="see-more-work"]');
+                        if (seeMoreBtn2) seeMoreBtn2.onclick = (e) => { e.preventDefault(); setSelectedGigForProfileModal(gig); setShowGigWorkerProfileModal(true); };
                       }
                     }, 0);
                   }
@@ -3782,6 +3805,14 @@ const MapComponent = ({ onOpenSettings, onViewModeChange, effectiveUser = null, 
           };
           chatLink.onclick = openChatFn;
           marker._openChatHandler = openChatFn;
+        }
+        const seeMoreBtn = el.querySelector('[data-action="see-more-work"]');
+        if (seeMoreBtn) {
+          seeMoreBtn.onclick = (e) => {
+            e.preventDefault();
+            setSelectedGigForProfileModal(gig);
+            setShowGigWorkerProfileModal(true);
+          };
         }
         if (isCandidate && gig.user?.id) {
           const actionsDiv = el.querySelector(".map-popup-actions");
@@ -5592,6 +5623,12 @@ const MapComponent = ({ onOpenSettings, onViewModeChange, effectiveUser = null, 
           }
           setShowLocateMeCoordModal(false);
         }}
+      />
+
+      <GigWorkerProfileModal
+        isOpen={showGigWorkerProfileModal}
+        onClose={() => { setShowGigWorkerProfileModal(false); setSelectedGigForProfileModal(null); }}
+        gig={selectedGigForProfileModal}
       />
 
       <CompanyJobsSidebar

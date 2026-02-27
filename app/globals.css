@@ -309,6 +309,23 @@ body {
   color: var(--brand-text-weak);
   opacity: 0.4;
 }
+.gig-popup .map-popup-content .map-popup-actions .map-popup-action-see-more {
+  margin-left: auto;
+  color: var(--brand-color);
+  font-weight: 500;
+  font-size: 13px;
+  cursor: pointer;
+  text-decoration: none;
+  background: none;
+  border: none;
+  padding: 0;
+  display: inline-flex;
+  align-items: center;
+}
+.gig-popup .map-popup-content .map-popup-actions .map-popup-action-see-more:hover {
+  color: var(--brand-hover, var(--brand-color));
+  opacity: 0.9;
+}
 
 /* Toggle button styles */
 .gig-popup .map-popup-toggle-wrapper {
@@ -378,6 +395,7 @@ body {
 /* Wider popup when twin chat is open so both panels fit inside */
 .leaflet-popup-content-wrapper.gig-popup-with-twin {
   max-width: 620px !important;
+  max-height: 85vh !important;
   border-radius: 8px !important;
   overflow: hidden;
 }
@@ -408,7 +426,7 @@ body {
   flex-direction: column;
   background: var(--brand-bg-white);
   min-height: 200px;
-  max-height: 70vh;
+  max-height: 85vh;
   overflow: hidden;
   border-top-right-radius: 8px;
   border-bottom-right-radius: 8px;

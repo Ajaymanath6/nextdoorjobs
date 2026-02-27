@@ -150,6 +150,7 @@ model User {
   notificationsSent   Notification[] @relation("NotificationSender")
   candidateKarma      CandidateKarma?
   gigRequests         GigRequest[]
+  gigReviewsGiven     GigReview[]     @relation("GigReviewReviewer")
 
   @@index([email])
   @@index([clerkId])
@@ -262,15 +263,46 @@ model Gig {
   locality           String?  @db.VarChar(255)
   latitude           Float?
   longitude          Float?
+  instagramLink      String?  @map("instagram_link") @db.VarChar(512)
   createdAt          DateTime @default(now()) @map("created_at")
   updatedAt          DateTime @updatedAt @map("updated_at")
   user               User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  portfolioImages    GigPortfolioImage[]
+  reviews            GigReview[]
 
   @@index([userId])
   @@index([state])
   @@index([district])
   @@index([pincode])
   @@map("gigs")
+}
+
+model GigPortfolioImage {
+  id        Int     @id @default(autoincrement())
+  gigId     Int     @map("gig_id")
+  imageUrl  String  @map("image_url") @db.VarChar(1024)
+  caption   String? @db.VarChar(500)
+  orderIndex Int    @default(0) @map("order_index")
+  gig       Gig     @relation(fields: [gigId], references: [id], onDelete: Cascade)
+
+  @@index([gigId])
+  @@map("gig_portfolio_images")
+}
+
+model GigReview {
+  id             Int      @id @default(autoincrement())
+  gigId          Int      @map("gig_id")
+  reviewerUserId Int      @map("reviewer_user_id")
+  rating         Int
+  comment        String?  @db.Text
+  createdAt      DateTime @default(now()) @map("created_at")
+  gig            Gig      @relation(fields: [gigId], references: [id], onDelete: Cascade)
+  reviewer       User     @relation("GigReviewReviewer", fields: [reviewerUserId], references: [id], onDelete: Cascade)
+
+  @@unique([gigId, reviewerUserId])
+  @@index([gigId])
+  @@index([reviewerUserId])
+  @@map("gig_reviews")
 }
 
 model GigRequest {

@@ -22,6 +22,9 @@ export default function EditGigModal({ isOpen, onClose, gig, onSaved }) {
   const [locality, setLocality] = useState("");
   const [latitude, setLatitude] = useState("");
   const [longitude, setLongitude] = useState("");
+  const [instagramLink, setInstagramLink] = useState("");
+  const [portfolioImages, setPortfolioImages] = useState([]);
+  const [portfolioUploading, setPortfolioUploading] = useState(false);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState(null);
 
@@ -44,9 +47,23 @@ export default function EditGigModal({ isOpen, onClose, gig, onSaved }) {
       setLocality(gig.locality || "");
       setLatitude(gig.latitude != null ? String(gig.latitude) : "");
       setLongitude(gig.longitude != null ? String(gig.longitude) : "");
+      setInstagramLink(gig.instagramLink || "");
+      setPortfolioImages(gig.portfolioImages || []);
       setError(null);
     }
   }, [gig, isOpen]);
+
+  useEffect(() => {
+    if (isOpen && gig?.id && (!gig.portfolioImages || gig.portfolioImages.length === 0)) {
+      fetch(`/api/gigs/${gig.id}`, { credentials: "same-origin" })
+        .then((r) => (r.ok ? r.json() : null))
+        .then((data) => {
+          if (data?.portfolioImages) setPortfolioImages(data.portfolioImages);
+          if (data?.instagramLink != null) setInstagramLink(data.instagramLink || "");
+        })
+        .catch(() => {});
+    }
+  }, [isOpen, gig?.id]);
 
   const getEffectiveServiceType = () => {
     if (serviceType === "Other" && customServiceType.trim()) return customServiceType.trim();
@@ -85,6 +102,7 @@ export default function EditGigModal({ isOpen, onClose, gig, onSaved }) {
       locality: locality.trim() || null,
       latitude: latitude && longitude ? parseFloat(latitude) : null,
       longitude: latitude && longitude ? parseFloat(longitude) : null,
+      instagramLink: instagramLink.trim() || null,
     };
 
     if (Number.isNaN(data.customersTillDate)) data.customersTillDate = null;
@@ -257,6 +275,81 @@ export default function EditGigModal({ isOpen, onClose, gig, onSaved }) {
                   className={inputClasses}
                   placeholder="Locality / area (optional)"
                 />
+              </div>
+            </div>
+
+            <div>
+              <label className={`block text-sm font-medium ${brand.text.strong} mb-1`}>Portfolio &amp; links</label>
+              <div className="space-y-3">
+                <div>
+                  <label className="block text-xs text-brand-text-weak mb-1">Instagram (reels / video)</label>
+                  <input
+                    type="url"
+                    value={instagramLink}
+                    onChange={(e) => setInstagramLink(e.target.value)}
+                    className={inputClasses}
+                    placeholder="https://instagram.com/..."
+                  />
+                </div>
+                <div>
+                  <label className="block text-xs text-brand-text-weak mb-1">Portfolio photos</label>
+                  {portfolioImages.length > 0 && (
+                    <div className="grid grid-cols-3 gap-2 mb-2">
+                      {portfolioImages.map((img) => (
+                        <div key={img.id} className="relative aspect-square rounded-lg overflow-hidden border border-brand-stroke-weak">
+                          <img src={img.imageUrl} alt={img.caption || ""} className="w-full h-full object-cover" />
+                          <button
+                            type="button"
+                            onClick={async () => {
+                              try {
+                                await fetch(`/api/gigs/${gig.id}/portfolio/${img.id}`, { method: "DELETE", credentials: "same-origin" });
+                                setPortfolioImages((prev) => prev.filter((i) => i.id !== img.id));
+                              } catch (_) {}
+                            }}
+                            className="absolute top-1 right-1 w-6 h-6 rounded bg-red-500 text-white text-xs flex items-center justify-center hover:bg-red-600"
+                            aria-label="Remove"
+                          >
+                            ×
+                          </button>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                  <input
+                    type="file"
+                    accept="image/*"
+                    className="hidden"
+                    id="edit-gig-portfolio-upload"
+                    onChange={async (e) => {
+                      const file = e.target.files?.[0];
+                      if (!file || !gig?.id) return;
+                      e.target.value = "";
+                      setPortfolioUploading(true);
+                      try {
+                        const formData = new FormData();
+                        formData.append("image", file);
+                        const uploadRes = await fetch("/api/profile/avatar/upload", { method: "POST", body: formData, credentials: "same-origin" });
+                        const uploadData = await uploadRes.json().catch(() => ({}));
+                        if (!uploadRes.ok || !uploadData.url) throw new Error(uploadData.error || "Upload failed");
+                        const addRes = await fetch(`/api/gigs/${gig.id}/portfolio`, {
+                          method: "POST",
+                          headers: { "Content-Type": "application/json" },
+                          credentials: "same-origin",
+                          body: JSON.stringify({ imageUrl: uploadData.url }),
+                        });
+                        const addData = await addRes.json().catch(() => ({}));
+                        if (addRes.ok && addData.image) setPortfolioImages((prev) => [...prev, addData.image]);
+                      } catch (_) {}
+                      setPortfolioUploading(false);
+                    }}
+                  />
+                  <label
+                    htmlFor="edit-gig-portfolio-upload"
+                    className={`inline-block px-3 py-2 rounded-lg border border-brand-stroke-weak text-sm text-brand-text-strong hover:bg-brand-bg-fill cursor-pointer ${portfolioUploading ? "opacity-50 pointer-events-none" : ""}`}
+                  >
+                    {portfolioUploading ? "Uploading…" : "Add photo"}
+                  </label>
+                </div>
               </div>
             </div>
 
