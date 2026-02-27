@@ -1659,6 +1659,7 @@ export default function AdminCompanyChat() {
             jobApiPrefix="/api/admin/jobs"
             openMapInNewTab={true}
             compactInput={true}
+            hideInputIcons={true}
             headerRightContent={
               <div className="flex items-center gap-2">
                 <button

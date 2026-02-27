@@ -34,6 +34,7 @@ export default function ChatInterface({
   openMapInNewTab = false,
   headerRightContent = null,
   compactInput = false,
+  hideInputIcons = false,
 }) {
   const router = useRouter();
   const messagesEndRef = useRef(null);
@@ -768,6 +769,7 @@ export default function ChatInterface({
           />
 
           {/* Icons at Left Bottom - Mobile: @ and + only; Desktop: @, Screenshot, Attachment */}
+          {!hideInputIcons && (
           <div className="absolute bottom-4 left-2 flex items-center gap-2 z-10" ref={savedFilesDropdownRef}>
             {/* Mobile only: @ and + (Add) */}
             <div className="relative flex items-center gap-2 md:hidden">
@@ -897,6 +899,7 @@ export default function ChatInterface({
               )}
             </div>
           </div>
+          )}
 
           {/* Submit Button */}
           <button
