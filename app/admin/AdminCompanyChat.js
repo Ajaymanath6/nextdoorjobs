@@ -484,7 +484,8 @@ export default function AdminCompanyChat() {
       : `Using existing company "${normalizedCompany.name}". `;
 
     await addAIMessage(
-      `${prefix}${descriptionText} Now let's add a new job. What's the job title?`
+      `${prefix}${descriptionText} Now let's add a new job. What's the job title?`,
+      { skipTyping: true }
     );
   };
 
@@ -696,7 +697,12 @@ export default function AdminCompanyChat() {
     currentField,
   ]);
 
-  const addAIMessage = async (text) => {
+  const addAIMessage = async (text, options = {}) => {
+    const skipTyping = options.skipTyping === true;
+    if (skipTyping) {
+      setChatMessages((prev) => [...prev, { type: "ai", text }]);
+      return;
+    }
     setIsTyping(true);
     setTypingText("");
     for (let i = 0; i < text.length; i++) {

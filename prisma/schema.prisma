@@ -110,6 +110,10 @@ enum JobCategory {
   SAPDeveloper
   SAPUXDesigner
   SAPCustomerSupport
+  SAPBusinessDevelopment
+  SAPConsultant
+  SAPIntegration
+  SAPAnalytics
 }
 
 model User {
