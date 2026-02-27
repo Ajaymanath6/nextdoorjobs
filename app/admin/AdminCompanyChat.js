@@ -12,12 +12,30 @@ import SalaryRangeBadges from "../components/Onboarding/SalaryRangeBadges";
 import RemoteTypeSelector from "../components/Onboarding/RemoteTypeSelector";
 import SeniorityLevelSelector from "../components/Onboarding/SeniorityLevelSelector";
 import { JOB_CATEGORIES } from "../../lib/constants/jobCategories";
-import { WatsonHealthRotate_360, TrashCan } from "@carbon/icons-react";
+import { WatsonHealthRotate_360, TrashCan, Location, Edit, Renew } from "@carbon/icons-react";
+import ConfirmDeleteModal from "../components/ConfirmDeleteModal";
+import EditJobModal from "../components/EditJobModal";
 
 function ExistingCompanyPicker({ companies, onSelect, onDelete }) {
   const [query, setQuery] = useState("");
   const [deletingId, setDeletingId] = useState(null);
   const [confirmDeleteId, setConfirmDeleteId] = useState(null);
+  const [isListOpen, setIsListOpen] = useState(true);
+  const containerRef = useRef(null);
+
+  useEffect(() => {
+    const handleClickOutside = (e) => {
+      if (containerRef.current && !containerRef.current.contains(e.target)) {
+        setIsListOpen(false);
+      }
+    };
+    document.addEventListener("mousedown", handleClickOutside);
+    document.addEventListener("touchstart", handleClickOutside);
+    return () => {
+      document.removeEventListener("mousedown", handleClickOutside);
+      document.removeEventListener("touchstart", handleClickOutside);
+    };
+  }, []);
 
   const normalizedQuery = query.toLowerCase().trim();
   const filtered =
@@ -64,7 +82,7 @@ function ExistingCompanyPicker({ companies, onSelect, onDelete }) {
   };
 
   return (
-    <div className="w-full border border-brand-stroke-weak rounded-lg bg-white/95 shadow-sm px-3 py-3 space-y-2">
+    <div ref={containerRef} className="w-full border border-brand-stroke-weak rounded-lg bg-white/95 shadow-sm px-3 py-3 space-y-2">
       <div className="flex items-center justify-between gap-2">
         <p className="text-sm font-semibold text-brand-text-strong">
           Or pick an existing company
@@ -74,9 +92,12 @@ function ExistingCompanyPicker({ companies, onSelect, onDelete }) {
         type="text"
         value={query}
         onChange={(e) => setQuery(e.target.value)}
+        onFocus={() => setIsListOpen(true)}
+        onClick={() => setIsListOpen(true)}
         placeholder="Search companies by name or location..."
         className="w-full px-3 py-2 text-sm border border-brand-stroke-weak rounded-md bg-brand-bg-white placeholder:text-brand-text-placeholder text-brand-text-strong focus:outline-none focus:border-brand-text-strong"
       />
+      {isListOpen && (
       <div className="max-h-60 overflow-y-auto rounded-md border border-brand-stroke-subtle bg-brand-bg-white/80">
         {filtered.length === 0 ? (
           <div className="px-3 py-2 text-xs text-brand-text-weak">
@@ -134,7 +155,130 @@ function ExistingCompanyPicker({ companies, onSelect, onDelete }) {
           })
         )}
       </div>
+      )}
     </div>
+  );
+}
+
+function JobListingPanelJobs({
+  jobs,
+  emptyMessage,
+  onSeeOnMap,
+  onExtend,
+  extendingId,
+  onEdit,
+  onDelete,
+}) {
+  if (!jobs || jobs.length === 0) {
+    return (
+      <p className="text-sm text-brand-text-weak" style={{ fontFamily: "Open Sans, sans-serif" }}>
+        {emptyMessage}
+      </p>
+    );
+  }
+  return (
+    <ul className="space-y-2">
+      {jobs.map((job) => {
+        const companyName = job.companyName || job.company?.name || "";
+        const logoUrl = job.company?.logoPath || (job.company?.websiteUrl ? (() => {
+          try {
+            const h = new URL(job.company.websiteUrl).hostname;
+            return h ? `https://www.google.com/s2/favicons?domain=${encodeURIComponent(h)}&sz=128` : null;
+          } catch (_) { return null; }
+        })() : null);
+        return (
+          <li
+            key={job.id}
+            className="flex items-center gap-2 py-2 border-b border-brand-stroke-weak last:border-b-0 last:pb-0 first:pt-0"
+          >
+            <div className="flex-1 min-w-0">
+              {(companyName || logoUrl) ? (
+                <div className="flex items-center gap-2 mb-1.5 shrink-0">
+                  <div className="w-7 h-7 rounded overflow-hidden shrink-0 bg-brand-bg-fill flex items-center justify-center">
+                    {logoUrl ? (
+                      <img src={logoUrl} alt="" className="w-full h-full object-contain" />
+                    ) : (
+                      <span className="text-xs font-medium text-brand-text-strong" style={{ fontFamily: "Open Sans, sans-serif" }}>
+                        {(companyName || "?").charAt(0).toUpperCase()}
+                      </span>
+                    )}
+                  </div>
+                  <p
+                    className="text-xs text-brand-text-strong truncate min-w-0"
+                    style={{ fontFamily: "Open Sans, sans-serif" }}
+                  >
+                    {companyName || "Company"}
+                  </p>
+                </div>
+              ) : null}
+              <p
+                className="text-sm font-medium text-brand-text-strong truncate"
+                style={{ fontFamily: "Open Sans, sans-serif" }}
+              >
+                {job.title}
+              </p>
+              <p
+                className="text-xs text-brand-text-weak mt-0.5 break-words"
+                style={{ fontFamily: "Open Sans, sans-serif" }}
+              >
+                {job.jobDescription}
+              </p>
+            </div>
+            <div className="shrink-0 flex items-center gap-1.5">
+              {job.company?.latitude != null && job.company?.longitude != null ? (
+                <button
+                  type="button"
+                  onClick={() => onSeeOnMap(job)}
+                  className="p-1.5 rounded-md text-brand-text-weak hover:bg-brand-bg-fill hover:text-brand-stroke-strong transition-colors"
+                  title="See on map"
+                  aria-label="See on map"
+                >
+                  <Location size={18} />
+                </button>
+              ) : null}
+              {onExtend ? (
+                <button
+                  type="button"
+                  onClick={() => onExtend(job.id)}
+                  disabled={extendingId === job.id}
+                  className="p-1.5 rounded-md text-brand-text-weak hover:bg-green-50 hover:text-green-600 transition-colors disabled:opacity-50 relative"
+                  title="Extend posting by 2 weeks"
+                  aria-label="Extend job"
+                >
+                  {extendingId === job.id ? (
+                    <div className="w-[18px] h-[18px] border-2 border-green-600 border-t-transparent rounded-full animate-spin" />
+                  ) : (
+                    <Renew size={18} />
+                  )}
+                </button>
+              ) : null}
+              {onEdit ? (
+                <button
+                  type="button"
+                  onClick={() => onEdit(job)}
+                  className="p-1.5 rounded-md text-brand-text-weak hover:bg-brand-bg-fill hover:text-brand-stroke-strong transition-colors"
+                  title="Edit job"
+                  aria-label="Edit job"
+                >
+                  <Edit size={18} />
+                </button>
+              ) : null}
+              {onDelete ? (
+                <button
+                  type="button"
+                  onClick={() => onDelete(job)}
+                  className="p-1.5 rounded-md text-brand-text-weak hover:bg-red-50 hover:text-red-600 transition-colors"
+                  title="Delete job"
+                  aria-label="Delete job"
+                >
+                  <TrashCan size={18} />
+                </button>
+              ) : null}
+            </div>
+          </li>
+        );
+      })}
+    </ul>
   );
 }
 
@@ -187,8 +331,19 @@ export default function AdminCompanyChat() {
     useState(false);
   const scrollToInlineRef = useRef(null);
   const [isMobile, setIsMobile] = useState(false);
-  const [recentJobsActive, setRecentJobsActive] = useState(false);
+  const [jobListingOpen, setJobListingOpen] = useState(false);
+  const [jobListingTab, setJobListingTab] = useState("recent");
+  const [jobListingRecentJobs, setJobListingRecentJobs] = useState([]);
+  const [jobListingAllJobs, setJobListingAllJobs] = useState([]);
+  const [loadingRecent, setLoadingRecent] = useState(false);
+  const [loadingAll, setLoadingAll] = useState(false);
   const [adminJobsCache, setAdminJobsCache] = useState([]);
+  const [jobListingDeleteConfirmOpen, setJobListingDeleteConfirmOpen] = useState(false);
+  const [jobListingToDelete, setJobListingToDelete] = useState(null);
+  const [jobListingDeletingId, setJobListingDeletingId] = useState(null);
+  const [jobListingEditModalOpen, setJobListingEditModalOpen] = useState(false);
+  const [jobListingToEdit, setJobListingToEdit] = useState(null);
+  const [jobListingExtendingId, setJobListingExtendingId] = useState(null);
   const jobDataRef = useRef({});
   const createdCompanyRef = useRef(null);
   useEffect(() => {
@@ -308,8 +463,7 @@ export default function AdminCompanyChat() {
   };
 
   const handleShowRecentJobs = async () => {
-    setRecentJobsActive(true);
-    setIsLoading(true);
+    setLoadingRecent(true);
     try {
       const res = await fetch("/api/admin/jobs?filter=recent", {
         method: "GET",
@@ -318,48 +472,16 @@ export default function AdminCompanyChat() {
       const data = await res.json().catch(() => ({}));
       const jobsRaw = Array.isArray(data.jobs) ? data.jobs : [];
       const jobs = jobsRaw.filter((job) => job && job.isActive !== false);
-
-      setAdminJobsCache(jobs);
-      setChatMessages((prev) => {
-        const next = [...prev];
-        const lastIdx = next.length - 1;
-        const isJobsAi = (msg) =>
-          msg?.type === "ai" && (msg?.text?.includes("posted jobs") || msg?.text?.includes("don't have any"));
-        if (lastIdx >= 0 && next[lastIdx].type === "jobList") {
-          next.pop();
-          if (lastIdx - 1 >= 0 && isJobsAi(next[lastIdx - 1])) next.pop();
-        } else if (lastIdx >= 0 && isJobsAi(next[lastIdx])) {
-          next.pop();
-        }
-        return [
-          ...next,
-          {
-            type: "ai",
-            text: jobs.length
-              ? "Here are your recent posted jobs (today):"
-              : "You don't have any jobs posted today yet.",
-          },
-          ...(jobs.length ? [{ type: "jobList", jobs }] : []),
-        ];
-      });
+      setJobListingRecentJobs(jobs);
     } catch (err) {
       console.error("Failed to load recent admin jobs:", err);
-      setChatMessages((prev) => [
-        ...prev,
-        {
-          type: "ai",
-          text:
-            "Couldn't load recent posted jobs right now. Please try again in a moment.",
-        },
-      ]);
-      setRecentJobsActive(false);
     } finally {
-      setIsLoading(false);
+      setLoadingRecent(false);
     }
   };
 
   const handleShowAllJobs = async () => {
-    setIsLoading(true);
+    setLoadingAll(true);
     try {
       const res = await fetch("/api/admin/jobs?filter=all", {
         method: "GET",
@@ -368,43 +490,104 @@ export default function AdminCompanyChat() {
       const data = await res.json().catch(() => ({}));
       const jobsRaw = Array.isArray(data.jobs) ? data.jobs : [];
       const jobs = jobsRaw.filter((job) => job && job.isActive !== false);
-
-      setAdminJobsCache(jobs);
-      setChatMessages((prev) => {
-        const next = [...prev];
-        const lastIdx = next.length - 1;
-        const isJobsAi = (msg) =>
-          msg?.type === "ai" && (msg?.text?.includes("posted jobs") || msg?.text?.includes("don't have any"));
-        if (lastIdx >= 0 && next[lastIdx].type === "jobList") {
-          next.pop();
-          if (lastIdx - 1 >= 0 && isJobsAi(next[lastIdx - 1])) next.pop();
-        } else if (lastIdx >= 0 && isJobsAi(next[lastIdx])) {
-          next.pop();
-        }
-        return [
-          ...next,
-          {
-            type: "ai",
-            text: jobs.length
-              ? "Here are all your posted jobs:"
-              : "You don't have any posted jobs yet.",
-          },
-          ...(jobs.length ? [{ type: "jobList", jobs }] : []),
-        ];
-      });
+      setJobListingAllJobs(jobs);
     } catch (err) {
       console.error("Failed to load all admin jobs:", err);
-      setChatMessages((prev) => [
-        ...prev,
-        {
-          type: "ai",
-          text:
-            "Couldn't load posted jobs right now. Please try again in a moment.",
-        },
-      ]);
     } finally {
-      setIsLoading(false);
+      setLoadingAll(false);
     }
+  };
+
+  const handleOpenJobListing = () => {
+    setJobListingOpen((prev) => {
+      if (!prev) {
+        setJobListingTab("recent");
+        handleShowRecentJobs();
+      }
+      return !prev;
+    });
+  };
+
+  const handleJobListingTabChange = (tab) => {
+    setJobListingTab(tab);
+    if (tab === "all" && jobListingAllJobs.length === 0 && !loadingAll) {
+      handleShowAllJobs();
+    }
+  };
+
+  const handleJobListingSeeOnMap = async (job) => {
+    const company = job.company;
+    const lat = company?.latitude != null ? Number(company.latitude) : null;
+    const lng = company?.longitude != null ? Number(company.longitude) : null;
+    if (lat == null || lng == null) return;
+    const payload = {
+      lat,
+      lng,
+      companyName: company?.name || job.title || "Job posting",
+      logoUrl: company?.logoPath || null,
+    };
+    if (typeof sessionStorage !== "undefined") sessionStorage.setItem("zoomToJobCoords", JSON.stringify(payload));
+    if (typeof localStorage !== "undefined") localStorage.setItem("zoomToJobCoords", JSON.stringify(payload));
+    try {
+      await fetch("/api/admin/set-view-as", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        credentials: "include",
+        body: JSON.stringify({ role: "individual" }),
+      });
+    } catch (_) {}
+    if (typeof window !== "undefined") window.open("/", "_blank");
+  };
+
+  const handleJobListingExtend = async (jobId) => {
+    setJobListingExtendingId(jobId);
+    try {
+      const res = await fetch(`/api/admin/jobs/${jobId}/extend`, {
+        method: "POST",
+        credentials: "same-origin",
+      });
+      if (res.ok) {
+        const data = await res.json().catch(() => ({}));
+        const updated = data.jobPosition || data.job;
+        if (updated) {
+          handleAdminJobEdited(updated);
+          setJobListingRecentJobs((prev) => prev.map((j) => (j.id === jobId ? { ...j, ...updated } : j)));
+          setJobListingAllJobs((prev) => prev.map((j) => (j.id === jobId ? { ...j, ...updated } : j)));
+        }
+      }
+    } catch (err) {
+      console.error("Failed to extend job:", err);
+    } finally {
+      setJobListingExtendingId(null);
+    }
+  };
+
+  const handleJobListingDelete = async (jobId) => {
+    setJobListingDeletingId(jobId);
+    try {
+      const res = await fetch(`/api/admin/jobs/${jobId}`, {
+        method: "DELETE",
+        credentials: "same-origin",
+      });
+      if (res.ok) {
+        setJobListingDeleteConfirmOpen(false);
+        setJobListingToDelete(null);
+        handleAdminJobDeleted(jobId);
+        setJobListingRecentJobs((prev) => prev.filter((j) => j.id !== jobId));
+        setJobListingAllJobs((prev) => prev.filter((j) => j.id !== jobId));
+      }
+    } catch (err) {
+      console.error("Failed to delete job:", err);
+    } finally {
+      setJobListingDeletingId(null);
+    }
+  };
+
+  const handleJobListingEdited = (updatedJob) => {
+    if (!updatedJob?.id) return;
+    handleAdminJobEdited(updatedJob);
+    setJobListingRecentJobs((prev) => prev.map((j) => (j.id === updatedJob.id ? { ...j, ...updatedJob } : j)));
+    setJobListingAllJobs((prev) => prev.map((j) => (j.id === updatedJob.id ? { ...j, ...updatedJob } : j)));
   };
 
   const handleAdminJobDeleted = (jobId) => {
@@ -1335,19 +1518,12 @@ export default function AdminCompanyChat() {
       <div className="shrink-0 flex justify-end gap-2 mb-2">
         <button
           type="button"
-          onClick={handleShowRecentJobs}
+          onClick={handleOpenJobListing}
           className={`flex items-center gap-2 px-3 py-2 rounded-md border border-brand-stroke-weak text-brand-text-strong text-sm font-medium transition-colors ${
-            recentJobsActive ? "bg-brand-bg-fill" : "hover:bg-brand-bg-fill"
+            jobListingOpen ? "bg-brand-bg-fill" : "hover:bg-brand-bg-fill"
           }`}
         >
-          Recent Jobs
-        </button>
-        <button
-          type="button"
-          onClick={handleShowAllJobs}
-          className="flex items-center gap-2 px-3 py-2 rounded-md border border-brand-stroke-weak text-brand-text-strong text-sm font-medium hover:bg-brand-bg-fill transition-colors"
-        >
-          All Jobs
+          Job Listing
         </button>
         <button
           type="button"
@@ -1359,6 +1535,76 @@ export default function AdminCompanyChat() {
           Reset chat
         </button>
       </div>
+      {jobListingOpen && (
+        <div className="shrink-0 mb-2 rounded-lg border border-brand-stroke-weak bg-brand-bg-white overflow-hidden">
+          <div className="flex border-b border-brand-stroke-weak">
+            <button
+              type="button"
+              onClick={() => handleJobListingTabChange("recent")}
+              className={`flex-1 px-4 py-3 text-sm font-medium transition-colors ${
+                jobListingTab === "recent"
+                  ? "bg-brand-bg-fill text-brand-text-strong border-b-2 border-brand-stroke-strong -mb-px"
+                  : "text-brand-text-weak hover:bg-brand-bg-fill hover:text-brand-text-strong"
+              }`}
+            >
+              Recent Jobs
+            </button>
+            <button
+              type="button"
+              onClick={() => handleJobListingTabChange("all")}
+              className={`flex-1 px-4 py-3 text-sm font-medium transition-colors ${
+                jobListingTab === "all"
+                  ? "bg-brand-bg-fill text-brand-text-strong border-b-2 border-brand-stroke-strong -mb-px"
+                  : "text-brand-text-weak hover:bg-brand-bg-fill hover:text-brand-text-strong"
+              }`}
+            >
+              All Jobs
+            </button>
+          </div>
+          <div className="max-h-80 overflow-y-auto p-4">
+            {jobListingTab === "recent" && loadingRecent && (
+              <p className="text-sm text-brand-text-weak">Loading recent jobs…</p>
+            )}
+            {jobListingTab === "recent" && !loadingRecent && (
+              <JobListingPanelJobs
+                jobs={jobListingRecentJobs}
+                emptyMessage="No jobs posted today yet."
+                onSeeOnMap={handleJobListingSeeOnMap}
+                onExtend={handleJobListingExtend}
+                extendingId={jobListingExtendingId}
+                onEdit={(job) => {
+                  setJobListingToEdit(job);
+                  setJobListingEditModalOpen(true);
+                }}
+                onDelete={(job) => {
+                  setJobListingToDelete(job);
+                  setJobListingDeleteConfirmOpen(true);
+                }}
+              />
+            )}
+            {jobListingTab === "all" && loadingAll && (
+              <p className="text-sm text-brand-text-weak">Loading all jobs…</p>
+            )}
+            {jobListingTab === "all" && !loadingAll && (
+              <JobListingPanelJobs
+                jobs={jobListingAllJobs}
+                emptyMessage="No posted jobs yet."
+                onSeeOnMap={handleJobListingSeeOnMap}
+                onExtend={handleJobListingExtend}
+                extendingId={jobListingExtendingId}
+                onEdit={(job) => {
+                  setJobListingToEdit(job);
+                  setJobListingEditModalOpen(true);
+                }}
+                onDelete={(job) => {
+                  setJobListingToDelete(job);
+                  setJobListingDeleteConfirmOpen(true);
+                }}
+              />
+            )}
+          </div>
+        </div>
+      )}
       <div className="flex-1 min-h-0 rounded-lg border border-brand-stroke-weak bg-brand-bg-white overflow-hidden">
         <ChatInterface
           messages={chatMessages}
@@ -1378,6 +1624,35 @@ export default function AdminCompanyChat() {
           openMapInNewTab={true}
         />
       </div>
+      <ConfirmDeleteModal
+        isOpen={jobListingDeleteConfirmOpen}
+        onClose={() => {
+          setJobListingDeleteConfirmOpen(false);
+          setJobListingToDelete(null);
+        }}
+        onConfirm={() => jobListingToDelete && handleJobListingDelete(jobListingToDelete.id)}
+        title="Delete this job?"
+        message="This will remove the job from the map and listings. This cannot be undone."
+        confirmText="Delete"
+        cancelText="Cancel"
+        isDeleting={!!jobListingDeletingId}
+      />
+      {jobListingToEdit && (
+        <EditJobModal
+          isOpen={jobListingEditModalOpen}
+          onClose={() => {
+            setJobListingEditModalOpen(false);
+            setJobListingToEdit(null);
+          }}
+          job={jobListingToEdit}
+          onSaved={(updated) => {
+            handleJobListingEdited(updated);
+            setJobListingEditModalOpen(false);
+            setJobListingToEdit(null);
+          }}
+          jobApiPrefix="/api/admin/jobs"
+        />
+      )}
     </div>
   );
 }
