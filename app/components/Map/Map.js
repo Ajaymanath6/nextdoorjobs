@@ -686,12 +686,12 @@ const MapComponent = ({ onOpenSettings, onViewModeChange, effectiveUser = null, 
           const displayTitles = titles.slice(0, 5);
           
           const tooltipContent = `
-            <div style="font-family: 'Open Sans', sans-serif; padding: 8px; max-width: 200px; word-wrap: break-word;">
-              <div style="font-weight: 600; font-size: 13px; color: #0A0A0A; margin-bottom: 6px;">
+            <div style="font-family: 'Open Sans', sans-serif; padding: 8px; max-width: 200px; box-sizing: border-box; overflow: hidden; word-wrap: break-word; overflow-wrap: break-word; word-break: break-word;">
+              <div style="font-weight: 600; font-size: 13px; color: #0A0A0A; margin-bottom: 6px; max-width: 100%; overflow: hidden; word-wrap: break-word; overflow-wrap: break-word; word-break: break-word;">
                 ${companyCount} ${companyCount === 1 ? 'company' : 'companies'} hiring
               </div>
               ${displayTitles.length > 0 ? `
-                <div style="font-size: 11px; color: #575757; line-height: 1.4;">
+                <div style="font-size: 11px; color: #575757; line-height: 1.4; max-width: 100%; overflow: hidden; word-wrap: break-word; overflow-wrap: break-word; word-break: break-word;">
                   ${displayTitles.join(', ')}${titles.length > 5 ? '...' : ''}
                 </div>
               ` : ''}
@@ -2695,12 +2695,12 @@ const MapComponent = ({ onOpenSettings, onViewModeChange, effectiveUser = null, 
               const displayTitles = titles.slice(0, 5);
               
               const tooltipContent = `
-                <div style="font-family: 'Open Sans', sans-serif; padding: 8px; max-width: 200px; word-wrap: break-word;">
-                  <div style="font-weight: 600; font-size: 13px; color: #0A0A0A; margin-bottom: 6px;">
+                <div style="font-family: 'Open Sans', sans-serif; padding: 8px; max-width: 200px; box-sizing: border-box; overflow: hidden; word-wrap: break-word; overflow-wrap: break-word; word-break: break-word;">
+                  <div style="font-weight: 600; font-size: 13px; color: #0A0A0A; margin-bottom: 6px; max-width: 100%; overflow: hidden; word-wrap: break-word; overflow-wrap: break-word; word-break: break-word;">
                     ${companyCount} ${companyCount === 1 ? 'company' : 'companies'} hiring
                   </div>
                   ${displayTitles.length > 0 ? `
-                    <div style="font-size: 11px; color: #575757; line-height: 1.4;">
+                    <div style="font-size: 11px; color: #575757; line-height: 1.4; max-width: 100%; overflow: hidden; word-wrap: break-word; overflow-wrap: break-word; word-break: break-word;">
                       ${displayTitles.join(', ')}${titles.length > 5 ? '...' : ''}
                     </div>
                   ` : ''}

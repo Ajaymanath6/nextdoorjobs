@@ -561,14 +561,28 @@ body {
   visibility: visible !important;
   max-width: 220px !important;
   min-height: auto !important;
+  overflow: hidden !important;
+  box-sizing: border-box !important;
 }
 
 .cluster-tooltip .leaflet-tooltip-content {
   margin: 0 !important;
   padding: 0 !important;
   max-width: 200px !important;
+  width: 100% !important;
+  overflow: hidden !important;
+  box-sizing: border-box !important;
   word-wrap: break-word !important;
   overflow-wrap: break-word !important;
+  word-break: break-word !important;
+}
+
+.cluster-tooltip .leaflet-tooltip-content > div {
+  max-width: 100% !important;
+  overflow: hidden !important;
+  word-wrap: break-word !important;
+  overflow-wrap: break-word !important;
+  word-break: break-word !important;
 }
 
 /* Ensure Leaflet tooltips are visible */
@@ -578,6 +592,7 @@ body {
   visibility: visible !important;
   display: block !important;
   max-width: 220px !important;
+  overflow: hidden !important;
 }
 
 /* User location pindrop - theme glow to differentiate from other gig workers */
