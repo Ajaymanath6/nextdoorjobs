@@ -137,22 +137,24 @@ export default function EmailAuthForm({ onSubmit, isLoading = false }) {
           </div>
         </header>
 
-        {/* Content area – scrollable, leaves room for bottom cards */}
+        {/* Content area – flex column; privacy at bottom of card */}
         <div className="relative flex-1 min-h-0 flex flex-col overflow-hidden">
-          <div className="relative mx-auto pt-8 px-2 shrink-0" style={{ maxWidth: "680px" }}>
-            {/* Headline – 4 words, single line, 56px */}
+          <div className="relative mx-auto pt-8 px-2 shrink-0 w-full flex flex-col items-center" style={{ maxWidth: "680px" }}>
+            {/* Main heading – two lines, centered on card, better copy */}
             <h1
-              className="text-center text-brand-text-strong font-semibold mb-4 leading-tight whitespace-nowrap"
+              className="text-center text-brand-text-strong font-semibold mb-4 leading-tight w-full"
               style={{ fontFamily: "var(--font-geist-sans), Open Sans, sans-serif", fontSize: "56px" }}
             >
-              Gigs. Jobs. Community. Local.
+              Find gigs &amp; jobs.
+              <br />
+              Connect with your community.
             </h1>
             <p className="text-center text-sm text-brand-text-weak mb-6" style={{ fontFamily: "Open Sans, sans-serif" }}>
               Sign in once. Get full access.
             </p>
 
             {/* Social Sign-in Buttons */}
-            <div className="space-y-3">
+            <div className="space-y-3 w-full">
               <button
                 type="button"
                 onClick={handleGoogleAuth}
@@ -198,29 +200,20 @@ export default function EmailAuthForm({ onSubmit, isLoading = false }) {
             <p className="text-center text-brand-text-weak text-xs mt-5" style={{ fontFamily: "Open Sans, sans-serif" }}>
               Find work and connect—all in your neighborhood
             </p>
-
-            <div className="mt-4 text-center">
-              <Link
-                href="/privacy-policy"
-                target="_blank"
-                rel="noopener noreferrer"
-                className="text-xs text-brand-text-weak hover:text-brand-text-strong hover:underline transition-colors"
-                style={{ fontFamily: "Open Sans, sans-serif" }}
-              >
-                Privacy Policy
-              </Link>
-            </div>
           </div>
 
-          {/* Feature cards – aligned to bottom of main card, no tilt, cloud avatar on each */}
-          <div className="mt-auto shrink-0 px-2 pb-6 pt-4 w-full">
-            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 w-full max-w-3xl mx-auto">
-              <div className="relative overflow-hidden rounded-xl border border-brand-stroke-weak bg-white/90 p-5 shadow-sm flex items-start gap-3 min-h-[120px]">
-                <div className="absolute top-0 left-0 w-16 h-16 pointer-events-none">
-                  <Image src="/cloud-avatar.png" alt="" width={64} height={64} className="object-contain object-top-left" />
+          {/* Feature cards – full width of main card, taller, warm bg, tilt left/center/right, text below avatar */}
+          <div className="mt-6 shrink-0 px-4 w-full flex-1 min-h-0 flex flex-col">
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 w-full flex-1 min-h-[180px]">
+              <div
+                className="relative overflow-hidden rounded-xl border border-brand-stroke-weak p-5 shadow-sm flex flex-col min-h-[180px]"
+                style={{ backgroundColor: "rgba(255, 247, 237, 0.95)", transform: "rotate(-3deg)" }}
+              >
+                <div className="flex justify-center pt-1 pb-2">
+                  <Image src="/cloud-avatar.png" alt="" width={72} height={72} className="object-contain" />
                 </div>
-                <div className="flex-1 min-w-0 pl-0 pt-0">
-                  <div className="flex items-center gap-2 text-brand-text-strong font-medium mb-1.5 text-sm" style={{ fontFamily: "Open Sans, sans-serif" }}>
+                <div className="flex-1 flex flex-col justify-center text-center">
+                  <div className="flex items-center justify-center gap-2 text-brand-text-strong font-medium mb-1.5 text-sm" style={{ fontFamily: "Open Sans, sans-serif" }}>
                     <Location size={18} className="text-brand shrink-0" />
                     <span>Finding gig workers near you</span>
                   </div>
@@ -229,12 +222,15 @@ export default function EmailAuthForm({ onSubmit, isLoading = false }) {
                   </p>
                 </div>
               </div>
-              <div className="relative overflow-hidden rounded-xl border border-brand-stroke-weak bg-white/90 p-5 shadow-sm flex items-start gap-3 min-h-[120px]">
-                <div className="absolute top-0 left-0 w-16 h-16 pointer-events-none">
-                  <Image src="/cloud-avatar.png" alt="" width={64} height={64} className="object-contain object-top-left" />
+              <div
+                className="relative overflow-hidden rounded-xl border border-brand-stroke-weak p-5 shadow-sm flex flex-col min-h-[180px]"
+                style={{ backgroundColor: "rgba(255, 250, 240, 0.95)" }}
+              >
+                <div className="flex justify-center pt-1 pb-2">
+                  <Image src="/cloud-avatar.png" alt="" width={72} height={72} className="object-contain" />
                 </div>
-                <div className="flex-1 min-w-0">
-                  <div className="flex items-center gap-2 text-brand-text-strong font-medium mb-1.5 text-sm" style={{ fontFamily: "Open Sans, sans-serif" }}>
+                <div className="flex-1 flex flex-col justify-center text-center">
+                  <div className="flex items-center justify-center gap-2 text-brand-text-strong font-medium mb-1.5 text-sm" style={{ fontFamily: "Open Sans, sans-serif" }}>
                     <UserMultiple size={18} className="text-brand shrink-0" />
                     <span>Post jobs. Hire local.</span>
                   </div>
@@ -243,12 +239,15 @@ export default function EmailAuthForm({ onSubmit, isLoading = false }) {
                   </p>
                 </div>
               </div>
-              <div className="relative overflow-hidden rounded-xl border border-brand-stroke-weak bg-white/90 p-5 shadow-sm flex items-start gap-3 min-h-[120px]">
-                <div className="absolute top-0 left-0 w-16 h-16 pointer-events-none">
-                  <Image src="/cloud-avatar.png" alt="" width={64} height={64} className="object-contain object-top-left" />
+              <div
+                className="relative overflow-hidden rounded-xl border border-brand-stroke-weak p-5 shadow-sm flex flex-col min-h-[180px]"
+                style={{ backgroundColor: "rgba(254, 243, 232, 0.95)", transform: "rotate(3deg)" }}
+              >
+                <div className="flex justify-center pt-1 pb-2">
+                  <Image src="/cloud-avatar.png" alt="" width={72} height={72} className="object-contain" />
                 </div>
-                <div className="flex-1 min-w-0">
-                  <div className="flex items-center gap-2 text-brand-text-strong font-medium mb-1.5 text-sm" style={{ fontFamily: "Open Sans, sans-serif" }}>
+                <div className="flex-1 flex flex-col justify-center text-center">
+                  <div className="flex items-center justify-center gap-2 text-brand-text-strong font-medium mb-1.5 text-sm" style={{ fontFamily: "Open Sans, sans-serif" }}>
                     <Chat size={18} className="text-brand shrink-0" />
                     <span>Connect with your community</span>
                   </div>
@@ -258,6 +257,19 @@ export default function EmailAuthForm({ onSubmit, isLoading = false }) {
                 </div>
               </div>
             </div>
+          </div>
+
+          {/* Privacy Policy – at bottom of main card (hero height) */}
+          <div className="mt-auto shrink-0 py-4 text-center px-2">
+            <Link
+              href="/privacy-policy"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="text-xs text-brand-text-weak hover:text-brand-text-strong hover:underline transition-colors"
+              style={{ fontFamily: "Open Sans, sans-serif" }}
+            >
+              Privacy Policy
+            </Link>
           </div>
         </div>
       </div>
