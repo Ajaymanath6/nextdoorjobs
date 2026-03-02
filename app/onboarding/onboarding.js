@@ -1864,8 +1864,8 @@ setCurrentField(GIG_FIELDS.CUSTOMERS_TILL_DATE);
         {/* Animated bubble background above the image */}
         <ProfileBubbleBackground />
         
-        {/* Sign-up modal overlay – card aligned to top */}
-        <div className="absolute inset-0 z-10 flex items-start justify-center pt-8 pb-8 px-0 overflow-y-auto">
+        {/* Sign-up modal overlay – card aligned to top, 24px margin */}
+        <div className="absolute inset-0 z-10 flex items-start justify-center pt-6 pb-8 px-0 overflow-y-auto">
           <EmailAuthForm onSubmit={handleEmailAuth} isLoading={isLoading} />
         </div>
       </div>

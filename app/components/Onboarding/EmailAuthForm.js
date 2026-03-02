@@ -65,9 +65,14 @@ export default function EmailAuthForm({ onSubmit, isLoading = false }) {
   return (
     <div
       className="w-full box-border"
-      style={{ marginLeft: "32px", marginRight: "32px", maxWidth: "calc(100vw - 64px)" }}
+      style={{ marginLeft: "24px", marginRight: "24px", marginTop: "24px", maxWidth: "calc(100vw - 48px)" }}
     >
-      <div className="relative bg-brand-bg-white rounded-lg p-8 pt-10 pb-16 border border-brand-stroke-weak w-full overflow-hidden">
+      <div
+        className="relative rounded-lg p-8 pt-10 pb-16 border border-brand-stroke-weak w-full overflow-hidden"
+        style={{
+          background: "linear-gradient(to right, rgba(255,255,255,0.7) 0%, transparent 50%, rgba(255,255,255,0.7) 100%)",
+        }}
+      >
         {/* Bottom blend: soft fade into background image */}
         <div
           className="absolute inset-x-0 bottom-0 h-28 pointer-events-none"
@@ -80,10 +85,11 @@ export default function EmailAuthForm({ onSubmit, isLoading = false }) {
 
         {/* Content centred within the wide card */}
         <div className="relative mx-auto" style={{ maxWidth: "400px" }}>
-        {/* Headline above logo */}
-        <p className="text-center text-brand-text-weak text-sm font-medium mb-4" style={{ fontFamily: "var(--font-geist-sans), Open Sans, sans-serif" }}>
-          Find gigs, jobs & connect with your community
-        </p>
+        {/* Headline above logo – H1, two lines */}
+        <h1 className="text-center text-brand-text-strong text-xl font-semibold mb-4 leading-tight" style={{ fontFamily: "var(--font-geist-sans), Open Sans, sans-serif" }}>
+          Find gigs, jobs &<br />
+          connect with your community
+        </h1>
         {/* Logo and Title */}
         <div className="flex flex-col items-center mb-6">
           <div className="flex items-center justify-center mb-3">
