@@ -26,13 +26,14 @@ import FundingSeriesBadges from "./Onboarding/FundingSeriesBadges";
 const SECTIONS = [
   { id: "general", label: "General", icon: Settings },
   { id: "resume", label: "Resume", icon: Document },
+  { id: "yourWork", label: "Your Work", icon: Add },
   { id: "company", label: "Company Details", icon: Receipt },
   { id: "subscription", label: "Subscription", icon: Receipt },
   { id: "integration", label: "Integration", icon: DataConnected, disabled: true },
   { id: "other", label: "Other", icon: SettingsAdjust, disabled: true },
 ];
 
-const VALID_SECTIONS = ["general", "resume", "company", "subscription", "integration", "other"];
+const VALID_SECTIONS = ["general", "resume", "yourWork", "company", "subscription", "integration", "other"];
 
 const SUBSCRIPTION_PLANS = [
   {
@@ -106,6 +107,7 @@ export default function SettingsModal({ isOpen, onClose, initialSection }) {
   const fileInputRef = useRef(null);
   const companyLogoInputRef = useRef(null);
   const resumeFileInputRef = useRef(null);
+  const workPhotoInputRef = useRef(null);
   const [resume, setResume] = useState(null);
   const [resumeLoading, setResumeLoading] = useState(false);
   const [resumeSaving, setResumeSaving] = useState(false);
@@ -133,6 +135,13 @@ export default function SettingsModal({ isOpen, onClose, initialSection }) {
   const [editingCompanyFunding, setEditingCompanyFunding] = useState(false);
   const [companyEditSaving, setCompanyEditSaving] = useState(false);
   const [companyEditError, setCompanyEditError] = useState(null);
+
+  // Your Work (portfolio photos for gig workers)
+  const [myGig, setMyGig] = useState(null);
+  const [workGalleryLoading, setWorkGalleryLoading] = useState(false);
+  const [workGalleryError, setWorkGalleryError] = useState(null);
+  const [workPhotoUploading, setWorkPhotoUploading] = useState(false);
+  const [workPhotoError, setWorkPhotoError] = useState(null);
 
   useEffect(() => {
     if (!isOpen) return;
@@ -340,6 +349,36 @@ export default function SettingsModal({ isOpen, onClose, initialSection }) {
       })
       .catch(() => setResume(null))
       .finally(() => setResumeLoading(false));
+  }, [isOpen, activeSection, user?.accountType]);
+
+  // Fetch current user's gig for Your Work section (portfolio photos)
+  useEffect(() => {
+    if (!isOpen || activeSection !== "yourWork" || user?.accountType !== "Individual") {
+      setMyGig(null);
+      setWorkGalleryError(null);
+      return;
+    }
+    setWorkGalleryLoading(true);
+    setWorkGalleryError(null);
+    fetch("/api/gigs?mine=1", { credentials: "same-origin" })
+      .then((res) => (res.ok ? res.json() : null))
+      .then(async (data) => {
+        if (data?.success && Array.isArray(data.gigs) && data.gigs.length > 0) {
+          const firstGig = data.gigs[0];
+          const fullRes = await fetch(`/api/gigs/${firstGig.id}`, { credentials: "same-origin" });
+          const fullData = fullRes.ok ? await fullRes.json().catch(() => null) : null;
+          setMyGig(fullData && Array.isArray(fullData.portfolioImages) ? fullData : { ...firstGig, portfolioImages: [] });
+          setWorkGalleryError(null);
+        } else {
+          setMyGig(null);
+          setWorkGalleryError(null);
+        }
+      })
+      .catch(() => {
+        setMyGig(null);
+        setWorkGalleryError("Could not load your gig.");
+      })
+      .finally(() => setWorkGalleryLoading(false));
   }, [isOpen, activeSection, user?.accountType]);
 
   const handleResumeFileSelect = async (e) => {
@@ -583,6 +622,57 @@ export default function SettingsModal({ isOpen, onClose, initialSection }) {
     }
   };
 
+  const handleWorkPhotoSelect = async (e) => {
+    const file = e.target?.files?.[0];
+    e.target.value = "";
+    if (!file || !myGig?.id) return;
+    if (!file.type.startsWith("image/")) {
+      setWorkPhotoError("Please select an image file");
+      return;
+    }
+    if (file.size > 5 * 1024 * 1024) {
+      setWorkPhotoError("File size must be less than 5MB");
+      return;
+    }
+    setWorkPhotoUploading(true);
+    setWorkPhotoError(null);
+    try {
+      const formData = new FormData();
+      formData.append("image", file);
+      const uploadRes = await fetch("/api/profile/avatar/upload", {
+        method: "POST",
+        body: formData,
+        credentials: "same-origin",
+      });
+      const uploadData = await uploadRes.json().catch(() => ({}));
+      if (!uploadRes.ok || !uploadData.success || !uploadData.url) {
+        setWorkPhotoError(uploadData.error || "Upload failed");
+        setWorkPhotoUploading(false);
+        return;
+      }
+      const addRes = await fetch(`/api/gigs/${myGig.id}/portfolio`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        credentials: "same-origin",
+        body: JSON.stringify({ imageUrl: uploadData.url }),
+      });
+      const addData = await addRes.json().catch(() => ({}));
+      if (addRes.ok && addData.image) {
+        setMyGig((prev) =>
+          prev
+            ? { ...prev, portfolioImages: [...(prev.portfolioImages ?? []), addData.image] }
+            : prev
+        );
+      } else {
+        setWorkPhotoError(addData.error || "Failed to add photo");
+      }
+    } catch (err) {
+      setWorkPhotoError("Network or server error. Try again.");
+    } finally {
+      setWorkPhotoUploading(false);
+    }
+  };
+
   const handleSelectAvatar = async (avatar) => {
     setAvatarSaving(true);
     setAvatarError(null);
@@ -788,6 +878,7 @@ export default function SettingsModal({ isOpen, onClose, initialSection }) {
                 {SECTIONS.filter(section => {
                   if (section.id === "company") return user?.accountType === "Company";
                   if (section.id === "resume") return user?.accountType === "Individual";
+                  if (section.id === "yourWork") return user?.accountType === "Individual";
                   if (section.id === "subscription") return user?.accountType === "Individual";
                   return true;
                 }).map(({ id, label, icon: Icon, disabled }) => (
@@ -1740,6 +1831,56 @@ export default function SettingsModal({ isOpen, onClose, initialSection }) {
                       </div>
                     </>
                   )}
+                </div>
+              ) : activeSection === "yourWork" ? (
+                <div className="space-y-6">
+                  <h2 className="text-base font-semibold text-brand-text-strong">Your Work</h2>
+                  <p className="text-sm text-brand-text-weak">Photos here appear in your See more work gallery.</p>
+                  <input
+                    ref={workPhotoInputRef}
+                    type="file"
+                    accept="image/*"
+                    className="hidden"
+                    aria-label="Upload work photo"
+                    onChange={handleWorkPhotoSelect}
+                  />
+                  {workGalleryLoading ? (
+                    <p className="text-sm text-brand-text-weak">Loading…</p>
+                  ) : workGalleryError ? (
+                    <p className="text-sm text-red-600">{workGalleryError}</p>
+                  ) : !myGig ? (
+                    <p className="text-sm text-brand-text-weak">Create a gig from the map first to add work photos.</p>
+                  ) : (
+                    <div className="flex flex-wrap items-start gap-3">
+                      {myGig.portfolioImages?.length > 0 && (
+                        <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
+                          {myGig.portfolioImages.map((img) => (
+                            <div key={img.id} className="aspect-square rounded-lg overflow-hidden border border-brand-stroke-weak bg-brand-bg-fill">
+                              <img
+                                src={img.imageUrl}
+                                alt={img.caption || "Work"}
+                                className="w-full h-full object-cover"
+                              />
+                              {img.caption && (
+                                <p className="text-xs text-brand-text-weak p-2 truncate">{img.caption}</p>
+                              )}
+                            </div>
+                          ))}
+                        </div>
+                      )}
+                      <button
+                        type="button"
+                        onClick={() => workPhotoInputRef.current?.click()}
+                        disabled={workPhotoUploading}
+                        className="w-14 h-14 rounded-full border-2 border-dashed border-brand-stroke-weak bg-brand-bg-fill flex items-center justify-center text-brand-stroke-strong hover:border-brand hover:text-brand hover:bg-brand-bg-fill transition-colors disabled:opacity-50 disabled:pointer-events-none shrink-0"
+                        aria-label="Add work photo"
+                      >
+                        <Add size={28} className="shrink-0" />
+                      </button>
+                    </div>
+                  )}
+                  {workPhotoUploading && <p className="text-sm text-brand-text-weak">Uploading…</p>}
+                  {workPhotoError && <p className="text-sm text-red-600 mt-2" role="alert">{workPhotoError}</p>}
                 </div>
               ) : activeSection === "subscription" ? (
                 <div className="space-y-6">

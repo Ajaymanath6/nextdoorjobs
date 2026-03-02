@@ -393,7 +393,7 @@ body {
 
 /* Resume popup with twin panel (Variation 2: avatar+chat split)
    Single double-width popup with vertical divider: left = gig/resume, right = chat.
-   Width hugs content (640px preferred) but capped by viewport so nothing is cut off. */
+   Height hugs content (no extra gap); chat input stays visible at bottom of right panel. */
 .leaflet-popup.gig-popup-with-twin {
   overflow: hidden !important;
 }
@@ -401,26 +401,31 @@ body {
   width: 640px !important;
   max-width: 95vw !important;
   max-height: 85vh !important;
-  min-height: 50vh;
+  min-height: 280px;
   border-radius: 8px !important;
   overflow: hidden;
   background: var(--brand-bg-white);
   box-sizing: border-box;
+}
+.leaflet-popup-content-wrapper.gig-popup-with-twin .leaflet-popup-content {
+  width: 100%;
+  height: 100%;
+  margin: 0;
+  min-height: 0;
 }
 .gig-popup .map-popup-with-twin {
   display: flex;
   flex-direction: row;
   width: 100%;
   min-width: 0;
-  min-height: 50vh;
-  height: 100%;
+  min-height: 280px;
+  align-items: stretch;
   overflow: hidden;
   box-sizing: border-box;
 }
 .gig-popup .map-popup-resume-panel {
   width: 320px;
   min-width: 320px;
-  min-height: 100%;
   border-right: none;
   overflow: auto;
   background: var(--brand-bg-white);
@@ -446,6 +451,13 @@ body {
   border-top-right-radius: 8px;
   border-bottom-right-radius: 8px;
   box-sizing: border-box;
+}
+/* Keep chat header and input always visible; messages area scrolls in between */
+.gig-popup .map-popup-twin-panel .map-popup-twin-header {
+  flex-shrink: 0;
+}
+.gig-popup .map-popup-twin-panel .map-popup-twin-input-wrapper {
+  flex-shrink: 0;
 }
 .gig-popup .map-popup-twin-header {
   display: flex;
@@ -499,8 +511,8 @@ body {
   color: var(--brand-text-strong);
 }
 .gig-popup .map-popup-twin-messages {
-  flex: 1;
-  min-height: 80px;
+  flex: 1 1 0;
+  min-height: 0;
   overflow-y: auto;
   padding: 8px;
   display: flex;
