@@ -63,11 +63,16 @@ export default function EmailAuthForm({ onSubmit, isLoading = false }) {
   };
 
   return (
-    <div className="mx-auto" style={{ width: "100%", maxWidth: "400px", boxSizing: "border-box" }}>
-      <div className="bg-white rounded-lg shadow-lg p-8 border border-[#E5E5E5]" style={{ width: "100%" }}>
+    <div
+      className="w-full box-border"
+      style={{ marginLeft: "64px", marginRight: "64px", maxWidth: "calc(100vw - 128px)" }}
+    >
+      <div className="bg-white rounded-lg shadow-lg p-8 border border-[#E5E5E5] w-full">
         {/* Clerk CAPTCHA widget container - required for Smart CAPTCHA bot protection */}
         <div id="clerk-captcha" style={{ display: "none" }} />
-        
+
+        {/* Content centred within the wide card */}
+        <div className="mx-auto" style={{ maxWidth: "400px" }}>
         {/* Logo and Title */}
         <div className="flex flex-col items-center mb-6">
           <div className="flex items-center justify-center mb-3">
@@ -145,6 +150,7 @@ export default function EmailAuthForm({ onSubmit, isLoading = false }) {
           </Link>
         </div>
 
+        </div>
       </div>
     </div>
   );
