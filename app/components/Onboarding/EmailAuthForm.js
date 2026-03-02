@@ -2,7 +2,6 @@
 
 import { useState } from "react";
 import { useSignIn } from "@clerk/nextjs";
-import Image from "next/image";
 import Link from "next/link";
 
 export default function EmailAuthForm({ onSubmit, isLoading = false }) {
@@ -91,32 +90,17 @@ export default function EmailAuthForm({ onSubmit, isLoading = false }) {
 
         {/* Content centred within the wide card */}
         <div className="relative mx-auto" style={{ maxWidth: "400px" }}>
-        {/* Headline above logo – H1, two lines, 72px */}
+        {/* Headline – H1, two lines, 56px (logo is in header) */}
         <h1
           className="text-center text-brand-text-strong font-semibold mb-4 leading-tight"
-          style={{ fontFamily: "var(--font-geist-sans), Open Sans, sans-serif", fontSize: "72px" }}
+          style={{ fontFamily: "var(--font-geist-sans), Open Sans, sans-serif", fontSize: "56px" }}
         >
           Find gigs, jobs &<br />
           connect with your community
         </h1>
-        {/* Logo and Title */}
-        <div className="flex flex-col items-center mb-6">
-          <div className="flex items-center justify-center mb-3">
-            <Image
-              src="/logo.svg"
-              alt="mapmyGig"
-              width={40}
-              height={40}
-              className="h-10 w-auto"
-              style={{ width: "auto", height: "2.5rem" }}
-              loading="eager"
-              priority
-            />
-          </div>
-          <p className="text-sm text-brand-text-weak mt-2" style={{ fontFamily: "Open Sans, sans-serif" }}>
-            Sign in to continue
-          </p>
-        </div>
+        <p className="text-center text-sm text-brand-text-weak mb-6" style={{ fontFamily: "Open Sans, sans-serif" }}>
+          Sign in to continue
+        </p>
 
         {/* Social Sign-in Buttons */}
         <div className="space-y-3">
