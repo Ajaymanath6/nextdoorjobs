@@ -1273,6 +1273,7 @@ const MapComponent = ({ onOpenSettings, onViewModeChange, effectiveUser = null, 
               setChatCandidateName(gig.user?.name || "Candidate");
               setChatCandidateEmail(displayEmail || "");
               setActiveChatPopupGigId(gig.id);
+              // Variation 2: single double-width popup (left = gig/resume, right = chat). Variation 1 = avatar click only; Variation 3 = "See more work" opens GigWorkerProfileModal.
               const initialMsgHtml = '<div class="map-popup-twin-msg-placeholder">Loading…</div>';
               const sendSvg = '<svg width="20" height="20" viewBox="0 0 32 32" fill="currentColor" xmlns="http://www.w3.org/2000/svg"><path d="M27.45,15.11l-22-10a1,1,0,0,0-1.08.12,1,1,0,0,0-.37,1L6,16,3.94,25.81A1,1,0,0,0,4.94,27a1,1,0,0,0,.66-.25L16,19l8.6,6.16a1,1,0,0,0,1.19.13,1,1,0,0,0,.6-.91V16A1,1,0,0,0,27.45,15.11ZM5.92,24.63l1.36-6.86,4.42,4.42Zm2.48-7.26L21.5,15,9.8,10.63ZM26,22.13,18.24,16,26,9.87Z"/></svg>';
               const twinHtml = `
@@ -3717,6 +3718,7 @@ const MapComponent = ({ onOpenSettings, onViewModeChange, effectiveUser = null, 
               setChatCandidateName(gig.user?.name || "Candidate");
               setChatCandidateEmail(displayEmail || "");
               setActiveChatPopupGigId(gig.id);
+              // Variation 2: single double-width popup (left = gig/resume, right = chat). Variation 1 = avatar click only; Variation 3 = "See more work" opens GigWorkerProfileModal.
               const initialMsgHtml = '<div class="map-popup-twin-msg-placeholder">Loading…</div>';
               const sendSvg = '<svg width="20" height="20" viewBox="0 0 32 32" fill="currentColor" xmlns="http://www.w3.org/2000/svg"><path d="M27.45,15.11l-22-10a1,1,0,0,0-1.08.12,1,1,0,0,0-.37,1L6,16,3.94,25.81A1,1,0,0,0,4.94,27a1,1,0,0,0,.66-.25L16,19l8.6,6.16a1,1,0,0,0,1.19.13,1,1,0,0,0,.6-.91V16A1,1,0,0,0,27.45,15.11ZM5.92,24.63l1.36-6.86,4.42,4.42Zm2.48-7.26L21.5,15,9.8,10.63ZM26,22.13,18.24,16,26,9.87Z"/></svg>';
               const twinHtml = `
