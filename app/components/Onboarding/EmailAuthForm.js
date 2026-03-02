@@ -64,20 +64,26 @@ export default function EmailAuthForm({ onSubmit, isLoading = false }) {
 
   return (
     <div
-      className="w-full box-border"
-      style={{ marginLeft: "24px", marginRight: "24px", marginTop: "24px", maxWidth: "calc(100vw - 48px)" }}
+      className="w-full box-border flex flex-col"
+      style={{
+        marginLeft: "24px",
+        marginRight: "24px",
+        marginTop: "24px",
+        maxWidth: "calc(100vw - 48px)",
+        minHeight: "calc(100dvh - 48px)",
+      }}
     >
       <div
-        className="relative rounded-lg p-8 pt-10 pb-16 border border-brand-stroke-weak w-full overflow-hidden"
+        className="relative rounded-lg p-8 pt-10 pb-16 border border-brand-stroke-weak w-full overflow-hidden flex-1 min-h-0 flex flex-col"
         style={{
-          background: "linear-gradient(to right, rgba(255,255,255,0.7) 0%, transparent 50%, rgba(255,255,255,0.7) 100%)",
+          background: "linear-gradient(to right, rgba(255,255,255,0.7) 0%, #fff 25%, #fff 75%, rgba(255,255,255,0.7) 100%)",
         }}
       >
         {/* Bottom blend: soft fade into background image */}
         <div
           className="absolute inset-x-0 bottom-0 h-28 pointer-events-none"
           style={{
-            background: "linear-gradient(to top, var(--brand-bg-white) 0%, rgba(255,255,255,0.6) 40%, transparent 100%)",
+            background: "linear-gradient(to top, #fff 0%, rgba(255,255,255,0.6) 40%, transparent 100%)",
           }}
         />
         {/* Clerk CAPTCHA widget container - required for Smart CAPTCHA bot protection */}
@@ -85,8 +91,11 @@ export default function EmailAuthForm({ onSubmit, isLoading = false }) {
 
         {/* Content centred within the wide card */}
         <div className="relative mx-auto" style={{ maxWidth: "400px" }}>
-        {/* Headline above logo – H1, two lines */}
-        <h1 className="text-center text-brand-text-strong text-xl font-semibold mb-4 leading-tight" style={{ fontFamily: "var(--font-geist-sans), Open Sans, sans-serif" }}>
+        {/* Headline above logo – H1, two lines, 72px */}
+        <h1
+          className="text-center text-brand-text-strong font-semibold mb-4 leading-tight"
+          style={{ fontFamily: "var(--font-geist-sans), Open Sans, sans-serif", fontSize: "72px" }}
+        >
           Find gigs, jobs &<br />
           connect with your community
         </h1>
