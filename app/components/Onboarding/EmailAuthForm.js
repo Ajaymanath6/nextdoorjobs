@@ -4,6 +4,7 @@ import { useState } from "react";
 import { useSignIn } from "@clerk/nextjs";
 import Image from "next/image";
 import Link from "next/link";
+import { Location, UserMultiple } from "@carbon/icons-react";
 
 export default function EmailAuthForm({ onSubmit, isLoading = false }) {
   const { signIn } = useSignIn();
@@ -79,12 +80,12 @@ export default function EmailAuthForm({ onSubmit, isLoading = false }) {
           background: "linear-gradient(to right, rgba(255,255,255,0.7) 0%, #fff 25%, #fff 75%, rgba(255,255,255,0.7) 100%)",
         }}
       >
-        {/* Decorative images – left and right, vertical middle, with margin from card edge */}
-        <div className="absolute left-4 top-1/2 -translate-y-1/2 w-24 h-24 pointer-events-none opacity-80" aria-hidden>
-          <Image src="/claude.png" alt="" fill className="object-contain object-left" sizes="96px" />
+        {/* Decorative cloud – left and right, larger, vertical middle */}
+        <div className="absolute left-4 top-1/2 -translate-y-1/2 w-48 h-48 pointer-events-none opacity-85" aria-hidden>
+          <Image src="/cloud.png" alt="" fill className="object-contain object-left" sizes="192px" />
         </div>
-        <div className="absolute right-4 top-1/2 -translate-y-1/2 w-24 h-24 pointer-events-none opacity-80" aria-hidden>
-          <Image src="/claude.png" alt="" fill className="object-contain object-right" sizes="96px" />
+        <div className="absolute right-4 top-1/2 -translate-y-1/2 w-48 h-48 pointer-events-none opacity-85" aria-hidden>
+          <Image src="/cloud.png" alt="" fill className="object-contain object-right" sizes="192px" />
         </div>
 
         {/* Bottom blend: soft fade into background image */}
@@ -97,8 +98,8 @@ export default function EmailAuthForm({ onSubmit, isLoading = false }) {
         {/* Clerk CAPTCHA widget container - required for Smart CAPTCHA bot protection */}
         <div id="clerk-captcha" style={{ display: "none" }} />
 
-        {/* Header bar – inside card, top; half width, light border, soft shadow */}
-        <header className="relative flex items-center justify-between w-1/2 mx-auto py-4 px-4 border border-brand-stroke-weak rounded-lg shrink-0 shadow-sm bg-white/80">
+        {/* Header bar – inside card, top; half width, rounded corners, light border, soft shadow */}
+        <header className="relative flex items-center justify-between w-1/2 mx-auto py-4 px-4 border border-brand-stroke-weak rounded-2xl shrink-0 shadow-sm bg-white/80">
           <div className="flex items-center gap-6">
             <Image
               src="/logo.svg"
@@ -137,14 +138,13 @@ export default function EmailAuthForm({ onSubmit, isLoading = false }) {
         </header>
 
         {/* Content centred within the wide card */}
-        <div className="relative mx-auto pt-8" style={{ maxWidth: "400px" }}>
-        {/* Headline – benefit-focused, two lines */}
+        <div className="relative mx-auto pt-8 px-2" style={{ maxWidth: "680px" }}>
+        {/* Headline – 4 words, single line, 56px */}
         <h1
-          className="text-center text-brand-text-strong font-semibold mb-4 leading-tight"
-          style={{ fontFamily: "var(--font-geist-sans), Open Sans, sans-serif", fontSize: "28px" }}
+          className="text-center text-brand-text-strong font-semibold mb-4 leading-tight whitespace-nowrap"
+          style={{ fontFamily: "var(--font-geist-sans), Open Sans, sans-serif", fontSize: "56px" }}
         >
-          Local gigs, real jobs,<br />
-          one community
+          Gigs. Jobs. Community. Local.
         </h1>
         <p className="text-center text-sm text-brand-text-weak mb-6" style={{ fontFamily: "Open Sans, sans-serif" }}>
           Sign in once. Get full access.
@@ -194,8 +194,43 @@ export default function EmailAuthForm({ onSubmit, isLoading = false }) {
           </button>
         </div>
 
-        {/* Tagline below auth buttons */}
-        <p className="text-center text-brand-text-weak text-xs mt-5" style={{ fontFamily: "Open Sans, sans-serif" }}>
+        {/* Two feature cards below buttons */}
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mt-8 w-full max-w-2xl mx-auto">
+          <div
+            className="relative overflow-hidden rounded-xl border border-brand-stroke-weak bg-white/90 p-5 shadow-sm flex items-start gap-4"
+            style={{ transform: "rotate(-2deg)" }}
+          >
+            <div className="absolute top-0 left-0 w-20 h-20 pointer-events-none">
+              <Image src="/cloud-avatar.png" alt="" width={80} height={80} className="object-contain object-top-left" />
+            </div>
+            <div className="flex-1 min-w-0 pl-1 pt-1">
+              <div className="flex items-center gap-2 text-brand-text-strong font-medium mb-2" style={{ fontFamily: "Open Sans, sans-serif" }}>
+                <Location size={20} className="text-brand shrink-0" />
+                <span>Finding gig workers near you</span>
+              </div>
+              <p className="text-sm text-brand-text-weak" style={{ fontFamily: "Open Sans, sans-serif" }}>
+                Discover and hire local talent in your area.
+              </p>
+            </div>
+          </div>
+          <div
+            className="relative overflow-hidden rounded-xl border border-brand-stroke-weak bg-white/90 p-5 shadow-sm flex items-start gap-4"
+            style={{ transform: "rotate(2deg)" }}
+          >
+            <div className="flex-1 min-w-0">
+              <div className="flex items-center gap-2 text-brand-text-strong font-medium mb-2" style={{ fontFamily: "Open Sans, sans-serif" }}>
+                <UserMultiple size={20} className="text-brand shrink-0" />
+                <span>Post jobs. Hire local.</span>
+              </div>
+              <p className="text-sm text-brand-text-weak" style={{ fontFamily: "Open Sans, sans-serif" }}>
+                Reach nearby candidates and grow your team.
+              </p>
+            </div>
+          </div>
+        </div>
+
+        {/* Tagline below cards */}
+        <p className="text-center text-brand-text-weak text-xs mt-6" style={{ fontFamily: "Open Sans, sans-serif" }}>
           Find work and connect—all in your neighborhood
         </p>
 
