@@ -1,7 +1,6 @@
 "use client";
 
 import { useState, useEffect, useRef } from "react";
-import Image from "next/image";
 import { useRouter } from "next/navigation";
 import { useUser, useClerk } from "@clerk/nextjs";
 import { WatsonHealthRotate_360, List, UserAvatar, User, Settings, Logout, EarthFilled, Chat, ArrowLeft, Location, Notification } from "@carbon/icons-react";
@@ -1865,40 +1864,7 @@ setCurrentField(GIG_FIELDS.CUSTOMERS_TILL_DATE);
         {/* Animated bubble background above the image */}
         <ProfileBubbleBackground />
 
-        {/* Header bar: logo left, nav, CTA right */}
-        <header
-          className="absolute top-0 left-0 right-0 z-20 flex items-center justify-between py-4 bg-white/60 backdrop-blur-sm"
-          style={{ paddingLeft: "24px", paddingRight: "24px" }}
-        >
-          <div className="flex items-center gap-8">
-            <Image
-              src="/logo.svg"
-              alt="mapmyGig"
-              width={32}
-              height={32}
-              className="h-8 w-auto"
-              style={{ width: "auto", height: "2rem" }}
-              loading="eager"
-              priority
-            />
-            <nav className="flex items-center gap-6">
-              <a href="#product" className="text-sm font-medium text-brand-text-strong hover:opacity-80">Product</a>
-              <a href="#imagine" className="text-sm font-medium text-brand-text-strong hover:opacity-80">Imagine</a>
-              <a href="#community" className="text-sm font-medium text-brand-text-strong hover:opacity-80">Community</a>
-              <a href="#pricing" className="text-sm font-medium text-brand-text-strong hover:opacity-80">Pricing</a>
-            </nav>
-          </div>
-          <a
-            href="#"
-            onClick={(e) => { e.preventDefault(); }}
-            className="px-4 py-2 rounded-lg text-sm font-medium text-white bg-brand hover:opacity-90 transition-opacity"
-            style={{ fontFamily: "Open Sans, sans-serif" }}
-          >
-            Try mapmyGig for free
-          </a>
-        </header>
-
-        {/* Sign-up modal overlay – card aligned to top, 24px margin */}
+        {/* Sign-up modal overlay – card aligned to top, 24px margin (header is inside the card) */}
         <div className="absolute inset-0 z-10 flex items-start justify-center pt-6 pb-8 px-0 overflow-y-auto">
           <EmailAuthForm onSubmit={handleEmailAuth} isLoading={isLoading} />
         </div>

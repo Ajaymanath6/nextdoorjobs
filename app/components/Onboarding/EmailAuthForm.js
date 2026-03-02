@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { useSignIn } from "@clerk/nextjs";
+import Image from "next/image";
 import Link from "next/link";
 
 export default function EmailAuthForm({ onSubmit, isLoading = false }) {
@@ -73,11 +74,19 @@ export default function EmailAuthForm({ onSubmit, isLoading = false }) {
       }}
     >
       <div
-        className="relative rounded-lg p-8 pt-10 pb-16 border border-brand-stroke-weak w-full overflow-hidden flex-1 min-h-0 flex flex-col"
+        className="relative rounded-lg p-8 pt-0 pb-16 border border-brand-stroke-weak w-full overflow-hidden flex-1 min-h-0 flex flex-col"
         style={{
           background: "linear-gradient(to right, rgba(255,255,255,0.7) 0%, #fff 25%, #fff 75%, rgba(255,255,255,0.7) 100%)",
         }}
       >
+        {/* Cloud accents – left and right corners */}
+        <div className="absolute top-0 left-0 w-40 h-40 pointer-events-none opacity-90" aria-hidden>
+          <Image src="/coud.png" alt="" fill className="object-contain object-top-left" sizes="160px" />
+        </div>
+        <div className="absolute top-0 right-0 w-40 h-40 pointer-events-none opacity-90" aria-hidden>
+          <Image src="/coud.png" alt="" fill className="object-contain object-top-right" sizes="160px" />
+        </div>
+
         {/* Bottom blend: soft fade into background image */}
         <div
           className="absolute inset-x-0 bottom-0 h-28 pointer-events-none"
@@ -88,12 +97,51 @@ export default function EmailAuthForm({ onSubmit, isLoading = false }) {
         {/* Clerk CAPTCHA widget container - required for Smart CAPTCHA bot protection */}
         <div id="clerk-captcha" style={{ display: "none" }} />
 
+        {/* Header bar – inside card, top */}
+        <header className="relative flex items-center justify-between w-full py-4 border-b border-brand-stroke-weak shrink-0">
+          <div className="flex items-center gap-6">
+            <Image
+              src="/logo.svg"
+              alt="mapmyGig"
+              width={28}
+              height={28}
+              className="h-7 w-auto"
+              style={{ width: "auto", height: "1.75rem" }}
+              loading="eager"
+              priority
+            />
+            <nav className="flex items-center gap-5">
+              <a href="#product" className="text-sm font-medium text-brand-text-strong hover:opacity-80">Product</a>
+              <a href="#imagine" className="text-sm font-medium text-brand-text-strong hover:opacity-80">Imagine</a>
+              <a href="#community" className="text-sm font-medium text-brand-text-strong hover:opacity-80">Community</a>
+              <a href="#pricing" className="text-sm font-medium text-brand-text-strong hover:opacity-80">Pricing</a>
+            </nav>
+          </div>
+          <div className="flex items-center gap-3">
+            <button
+              type="button"
+              className="text-sm font-medium text-brand-text-strong hover:opacity-80 bg-transparent border-0 cursor-pointer py-2 px-0"
+              style={{ fontFamily: "Open Sans, sans-serif" }}
+            >
+              Login
+            </button>
+            <a
+              href="#"
+              onClick={(e) => e.preventDefault()}
+              className="px-4 py-2 rounded-lg text-sm font-medium text-white bg-brand-text-strong hover:opacity-90 transition-opacity"
+              style={{ fontFamily: "Open Sans, sans-serif" }}
+            >
+              Try mapmyGig for free
+            </a>
+          </div>
+        </header>
+
         {/* Content centred within the wide card */}
-        <div className="relative mx-auto" style={{ maxWidth: "400px" }}>
-        {/* Headline – H1, two lines, 56px (logo is in header) */}
+        <div className="relative mx-auto pt-8" style={{ maxWidth: "400px" }}>
+        {/* Headline – H1, two lines, reduced size */}
         <h1
           className="text-center text-brand-text-strong font-semibold mb-4 leading-tight"
-          style={{ fontFamily: "var(--font-geist-sans), Open Sans, sans-serif", fontSize: "56px" }}
+          style={{ fontFamily: "var(--font-geist-sans), Open Sans, sans-serif", fontSize: "28px" }}
         >
           Find gigs, jobs &<br />
           connect with your community
