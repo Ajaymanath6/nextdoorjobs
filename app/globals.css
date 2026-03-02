@@ -392,26 +392,30 @@ body {
 }
 
 /* Resume popup with twin panel (Variation 2: avatar+chat split)
-   Single double-width popup (640px) with vertical divider: left = gig/resume, right = chat. */
+   Single double-width popup with vertical divider: left = gig/resume, right = chat.
+   Width hugs content (640px preferred) but capped by viewport so nothing is cut off. */
 .leaflet-popup.gig-popup-with-twin {
   overflow: hidden !important;
 }
 .leaflet-popup-content-wrapper.gig-popup-with-twin {
   width: 640px !important;
-  max-width: 640px !important;
+  max-width: 95vw !important;
   max-height: 85vh !important;
   min-height: 50vh;
   border-radius: 8px !important;
   overflow: hidden;
   background: var(--brand-bg-white);
+  box-sizing: border-box;
 }
 .gig-popup .map-popup-with-twin {
   display: flex;
   flex-direction: row;
-  width: 640px;
+  width: 100%;
+  min-width: 0;
   min-height: 50vh;
   height: 100%;
   overflow: hidden;
+  box-sizing: border-box;
 }
 .gig-popup .map-popup-resume-panel {
   width: 320px;
@@ -420,9 +424,11 @@ body {
   border-right: none;
   overflow: auto;
   background: var(--brand-bg-white);
+  box-sizing: border-box;
 }
 .gig-popup .map-popup-with-twin .map-popup-resume-panel {
   flex: 0 0 320px;
+  min-width: 240px;
   border-right: 1px solid var(--brand-stroke-weak);
 }
 .gig-popup .map-popup-resume-panel .map-popup-content {
@@ -430,9 +436,8 @@ body {
   min-width: 0;
 }
 .gig-popup .map-popup-twin-panel {
-  flex: 1;
-  min-width: 0;
-  width: 320px;
+  flex: 1 1 320px;
+  min-width: 260px;
   min-height: 200px;
   display: flex;
   flex-direction: column;
@@ -440,6 +445,7 @@ body {
   overflow: hidden;
   border-top-right-radius: 8px;
   border-bottom-right-radius: 8px;
+  box-sizing: border-box;
 }
 .gig-popup .map-popup-twin-header {
   display: flex;
