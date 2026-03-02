@@ -65,14 +65,25 @@ export default function EmailAuthForm({ onSubmit, isLoading = false }) {
   return (
     <div
       className="w-full box-border"
-      style={{ marginLeft: "64px", marginRight: "64px", maxWidth: "calc(100vw - 128px)" }}
+      style={{ marginLeft: "32px", marginRight: "32px", maxWidth: "calc(100vw - 64px)" }}
     >
-      <div className="bg-white rounded-lg shadow-lg p-8 border border-[#E5E5E5] w-full">
+      <div className="relative bg-brand-bg-white rounded-lg p-8 pt-10 pb-16 border border-brand-stroke-weak w-full overflow-hidden">
+        {/* Bottom blend: soft fade into background image */}
+        <div
+          className="absolute inset-x-0 bottom-0 h-28 pointer-events-none"
+          style={{
+            background: "linear-gradient(to top, var(--brand-bg-white) 0%, rgba(255,255,255,0.6) 40%, transparent 100%)",
+          }}
+        />
         {/* Clerk CAPTCHA widget container - required for Smart CAPTCHA bot protection */}
         <div id="clerk-captcha" style={{ display: "none" }} />
 
         {/* Content centred within the wide card */}
-        <div className="mx-auto" style={{ maxWidth: "400px" }}>
+        <div className="relative mx-auto" style={{ maxWidth: "400px" }}>
+        {/* Headline above logo */}
+        <p className="text-center text-brand-text-weak text-sm font-medium mb-4" style={{ fontFamily: "var(--font-geist-sans), Open Sans, sans-serif" }}>
+          Find gigs, jobs & connect with your community
+        </p>
         {/* Logo and Title */}
         <div className="flex flex-col items-center mb-6">
           <div className="flex items-center justify-center mb-3">
@@ -87,8 +98,7 @@ export default function EmailAuthForm({ onSubmit, isLoading = false }) {
               priority
             />
           </div>
-         
-          <p className="text-sm text-gray-600 mt-2" style={{ fontFamily: "Open Sans, sans-serif" }}>
+          <p className="text-sm text-brand-text-weak mt-2" style={{ fontFamily: "Open Sans, sans-serif" }}>
             Sign in to continue
           </p>
         </div>
@@ -99,7 +109,7 @@ export default function EmailAuthForm({ onSubmit, isLoading = false }) {
             type="button"
             onClick={handleGoogleAuth}
             disabled={isLoading || isGoogleLoading}
-            className="w-full flex items-center justify-center gap-3 px-4 py-3 border border-gray-300 rounded-lg bg-white text-gray-700 hover:bg-gray-50 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+            className="w-full flex items-center justify-center gap-3 px-4 py-3 border border-brand-stroke-weak rounded-lg bg-brand-bg-white text-brand-text-strong hover:bg-brand-bg-fill transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
             style={{ fontFamily: "Open Sans, sans-serif", fontSize: "14px" }}
           >
             <svg className="w-5 h-5" viewBox="0 0 24 24">
@@ -127,7 +137,7 @@ export default function EmailAuthForm({ onSubmit, isLoading = false }) {
             type="button"
             onClick={handleLinkedInAuth}
             disabled={isLoading || isLinkedInLoading}
-            className="w-full flex items-center justify-center gap-3 px-4 py-3 border border-gray-300 rounded-lg bg-white text-gray-700 hover:bg-gray-50 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+            className="w-full flex items-center justify-center gap-3 px-4 py-3 border border-brand-stroke-weak rounded-lg bg-brand-bg-white text-brand-text-strong hover:bg-brand-bg-fill transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
             style={{ fontFamily: "Open Sans, sans-serif", fontSize: "14px" }}
           >
             <svg className="w-5 h-5" viewBox="0 0 24 24" fill="currentColor">
@@ -137,13 +147,18 @@ export default function EmailAuthForm({ onSubmit, isLoading = false }) {
           </button>
         </div>
 
+        {/* Tagline below auth buttons */}
+        <p className="text-center text-brand-text-weak text-xs mt-5" style={{ fontFamily: "Open Sans, sans-serif" }}>
+          One place for gigs, jobs, and community
+        </p>
+
         {/* Privacy Policy Link - goes to full updated policy page */}
         <div className="mt-4 text-center">
           <Link
             href="/privacy-policy"
             target="_blank"
             rel="noopener noreferrer"
-            className="text-xs text-gray-600 hover:text-gray-800 hover:underline transition-colors"
+            className="text-xs text-brand-text-weak hover:text-brand-text-strong hover:underline transition-colors"
             style={{ fontFamily: "Open Sans, sans-serif" }}
           >
             Privacy Policy
