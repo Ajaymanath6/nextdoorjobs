@@ -69,15 +69,15 @@ export default function EmailAuthForm({ onSubmit, isLoading = false }) {
       style={{
         marginLeft: "24px",
         marginRight: "24px",
-        marginTop: "24px",
+        marginTop: "8px",
         maxWidth: "calc(100vw - 48px)",
-        minHeight: "calc(100dvh - 48px)",
+        minHeight: "calc(100dvh - 32px)",
       }}
     >
       <div
         className="relative rounded-lg p-8 pt-6 pb-16 border border-brand-stroke-weak w-full overflow-hidden flex-1 min-h-0 flex flex-col"
         style={{
-          background: "linear-gradient(to right, rgba(255,255,255,0.7) 0%, #fff 25%, #fff 75%, rgba(255,255,255,0.7) 100%)",
+          background: "linear-gradient(to right, rgba(255,255,255,0.52) 0%, #fff 22%, #fff 78%, rgba(255,255,255,0.52) 100%)",
         }}
       >
         {/* Decorative cloud – left and right, increased size, vertical middle */}
@@ -98,8 +98,8 @@ export default function EmailAuthForm({ onSubmit, isLoading = false }) {
         {/* Clerk CAPTCHA widget container - required for Smart CAPTCHA bot protection */}
         <div id="clerk-captcha" style={{ display: "none" }} />
 
-        {/* Header bar – inside card, top; half width, full rounded (pill), light border, soft shadow */}
-        <header className="relative flex items-center justify-between w-1/2 mx-auto py-4 px-6 border border-brand-stroke-weak rounded-full shrink-0 shadow-sm bg-white/80">
+        {/* Header bar – wider on laptop so no wrap; full rounded (pill), light border, soft shadow */}
+        <header className="relative flex items-center justify-between w-full max-w-3xl mx-auto py-4 px-6 border border-brand-stroke-weak rounded-full shrink-0 shadow-sm bg-white/80">
           <div className="flex items-center gap-6">
             <Image
               src="/logo.svg"
@@ -140,14 +140,14 @@ export default function EmailAuthForm({ onSubmit, isLoading = false }) {
         {/* Content area – flex column; privacy at bottom of card */}
         <div className="relative flex-1 min-h-0 flex flex-col overflow-hidden">
           <div className="relative mx-auto pt-8 px-2 shrink-0 w-full flex flex-col items-center" style={{ maxWidth: "680px" }}>
-            {/* Main heading – two lines, centered on card, better copy */}
+            {/* Main heading – 2 lines, 4 words each, copywriter-style */}
             <h1
               className="text-center text-brand-text-strong font-semibold mb-4 leading-tight w-full"
               style={{ fontFamily: "var(--font-geist-sans), Open Sans, sans-serif", fontSize: "56px" }}
             >
-              Find gigs &amp; jobs.
+              Local gigs. Real jobs.
               <br />
-              Connect with your community.
+              One community. One place.
             </h1>
             <p className="text-center text-sm text-brand-text-weak mb-6" style={{ fontFamily: "Open Sans, sans-serif" }}>
               Sign in once. Get full access.
@@ -202,59 +202,62 @@ export default function EmailAuthForm({ onSubmit, isLoading = false }) {
             </p>
           </div>
 
-          {/* Feature cards – full width of main card, taller, warm bg, tilt left/center/right, text below avatar */}
+          {/* Feature cards – colors like reference (soft lavender, seafoam, warm yellow), title + sub-details, label */}
           <div className="mt-6 shrink-0 px-4 w-full flex-1 min-h-0 flex flex-col">
-            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 w-full flex-1 min-h-[180px]">
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 w-full flex-1 min-h-[200px]">
+              {/* Card 1 – soft lavender-blue */}
               <div
-                className="relative overflow-hidden rounded-xl border border-brand-stroke-weak p-5 shadow-sm flex flex-col min-h-[180px]"
-                style={{ backgroundColor: "rgba(255, 247, 237, 0.95)", transform: "rotate(-3deg)" }}
+                className="relative overflow-hidden rounded-xl border border-brand-stroke-weak p-5 shadow-md flex flex-col min-h-[200px]"
+                style={{ backgroundColor: "rgba(232, 230, 245, 0.98)", transform: "rotate(-3deg)" }}
               >
                 <div className="flex justify-center pt-1 pb-2">
                   <Image src="/cloud-avatar.png" alt="" width={72} height={72} className="object-contain" />
                 </div>
-                <div className="flex-1 flex flex-col justify-center text-center">
-                  <div className="flex items-center justify-center gap-2 text-brand-text-strong font-medium mb-1.5 text-sm" style={{ fontFamily: "Open Sans, sans-serif" }}>
-                    <Location size={18} className="text-brand shrink-0" />
-                    <span>Finding gig workers near you</span>
-                  </div>
-                  <p className="text-xs text-brand-text-weak" style={{ fontFamily: "Open Sans, sans-serif" }}>
-                    Discover and hire local talent.
-                  </p>
-                </div>
+                <p className="text-center text-xs font-medium tracking-widest text-brand-text-strong/80 mb-2 uppercase" style={{ fontFamily: "Open Sans, sans-serif" }}>
+                  Find
+                </p>
+                <h3 className="text-center text-brand-text-strong font-semibold text-sm mb-1.5" style={{ fontFamily: "Open Sans, sans-serif" }}>
+                  Finding gig workers near you
+                </h3>
+                <p className="text-center text-xs text-brand-text-weak flex-1" style={{ fontFamily: "Open Sans, sans-serif" }}>
+                  Discover and hire local talent in your area.
+                </p>
               </div>
+              {/* Card 2 – soft seafoam / mint */}
               <div
-                className="relative overflow-hidden rounded-xl border border-brand-stroke-weak p-5 shadow-sm flex flex-col min-h-[180px]"
-                style={{ backgroundColor: "rgba(255, 250, 240, 0.95)" }}
+                className="relative overflow-hidden rounded-xl border border-brand-stroke-weak p-5 shadow-md flex flex-col min-h-[200px]"
+                style={{ backgroundColor: "rgba(224, 242, 235, 0.98)" }}
               >
                 <div className="flex justify-center pt-1 pb-2">
                   <Image src="/cloud-avatar.png" alt="" width={72} height={72} className="object-contain" />
                 </div>
-                <div className="flex-1 flex flex-col justify-center text-center">
-                  <div className="flex items-center justify-center gap-2 text-brand-text-strong font-medium mb-1.5 text-sm" style={{ fontFamily: "Open Sans, sans-serif" }}>
-                    <UserMultiple size={18} className="text-brand shrink-0" />
-                    <span>Post jobs. Hire local.</span>
-                  </div>
-                  <p className="text-xs text-brand-text-weak" style={{ fontFamily: "Open Sans, sans-serif" }}>
-                    Reach nearby candidates fast.
-                  </p>
-                </div>
+                <p className="text-center text-xs font-medium tracking-widest text-brand-text-strong/80 mb-2 uppercase" style={{ fontFamily: "Open Sans, sans-serif" }}>
+                  Hire
+                </p>
+                <h3 className="text-center text-brand-text-strong font-semibold text-sm mb-1.5" style={{ fontFamily: "Open Sans, sans-serif" }}>
+                  Post jobs. Hire local.
+                </h3>
+                <p className="text-center text-xs text-brand-text-weak flex-1" style={{ fontFamily: "Open Sans, sans-serif" }}>
+                  Reach nearby candidates fast and grow your team.
+                </p>
               </div>
+              {/* Card 3 – soft warm yellow */}
               <div
-                className="relative overflow-hidden rounded-xl border border-brand-stroke-weak p-5 shadow-sm flex flex-col min-h-[180px]"
-                style={{ backgroundColor: "rgba(254, 243, 232, 0.95)", transform: "rotate(3deg)" }}
+                className="relative overflow-hidden rounded-xl border border-brand-stroke-weak p-5 shadow-md flex flex-col min-h-[200px]"
+                style={{ backgroundColor: "rgba(254, 249, 230, 0.98)", transform: "rotate(3deg)" }}
               >
                 <div className="flex justify-center pt-1 pb-2">
                   <Image src="/cloud-avatar.png" alt="" width={72} height={72} className="object-contain" />
                 </div>
-                <div className="flex-1 flex flex-col justify-center text-center">
-                  <div className="flex items-center justify-center gap-2 text-brand-text-strong font-medium mb-1.5 text-sm" style={{ fontFamily: "Open Sans, sans-serif" }}>
-                    <Chat size={18} className="text-brand shrink-0" />
-                    <span>Connect with your community</span>
-                  </div>
-                  <p className="text-xs text-brand-text-weak" style={{ fontFamily: "Open Sans, sans-serif" }}>
-                    Chat and collaborate locally.
-                  </p>
-                </div>
+                <p className="text-center text-xs font-medium tracking-widest text-brand-text-strong/80 mb-2 uppercase" style={{ fontFamily: "Open Sans, sans-serif" }}>
+                  Connect
+                </p>
+                <h3 className="text-center text-brand-text-strong font-semibold text-sm mb-1.5" style={{ fontFamily: "Open Sans, sans-serif" }}>
+                  Connect with your community
+                </h3>
+                <p className="text-center text-xs text-brand-text-weak flex-1" style={{ fontFamily: "Open Sans, sans-serif" }}>
+                  Chat and collaborate with people nearby.
+                </p>
               </div>
             </div>
           </div>
