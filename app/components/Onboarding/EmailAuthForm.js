@@ -4,7 +4,6 @@ import { useState } from "react";
 import { useSignIn } from "@clerk/nextjs";
 import Image from "next/image";
 import Link from "next/link";
-import { Location, UserMultiple, Chat, Document } from "@carbon/icons-react";
 
 export default function EmailAuthForm({ onSubmit, isLoading = false }) {
   const { signIn } = useSignIn();
@@ -131,8 +130,8 @@ export default function EmailAuthForm({ onSubmit, isLoading = false }) {
               className="text-center text-brand-text-strong font-semibold mb-4 leading-tight w-full"
               style={{ fontFamily: "var(--font-geist-sans), Open Sans, sans-serif", fontSize: "56px" }}
             >
-              <span className="whitespace-nowrap block">Find local gigs, real jobs on startup.</span>
-              <span className="whitespace-nowrap block">Build community and skills.</span>
+              <span className="whitespace-nowrap block">Find local gigs and real jobs.</span>
+              <span className="whitespace-nowrap block">Build your community. Grow your skills.</span>
             </h1>
             <p className="text-center text-sm text-brand-text-weak mb-6" style={{ fontFamily: "Open Sans, sans-serif" }}>
               Sign in once. Get full access.
@@ -195,13 +194,18 @@ export default function EmailAuthForm({ onSubmit, isLoading = false }) {
             </div>
           </div>
 
-          {/* Feature cards – title 34px, subtitle 16px, icon; top center */}
+          {/* Feature cards – dot pattern, title 34px, subtitle 16px, card1 image; half-round */}
           <div className="pt-4 px-4 w-full flex-1 min-h-0 flex flex-col overflow-visible">
             <div className="grid grid-cols-1 sm:grid-cols-4 gap-4 w-full flex-1 min-h-0 items-stretch">
               {/* Card 1 – Finding gig workers */}
               <div
                 className="relative overflow-hidden rounded-xl border border-brand-stroke-weak p-5 shadow-md flex flex-col items-center text-center"
-                style={{ backgroundColor: "#B6CAF4", transform: "rotate(-3deg)" }}
+                style={{
+                  backgroundColor: "#B6CAF4",
+                  transform: "rotate(-3deg)",
+                  backgroundImage: "radial-gradient(circle, rgba(0,0,0,0.06) 1px, transparent 1px)",
+                  backgroundSize: "12px 12px",
+                }}
               >
                 <div className="flex flex-col items-center justify-start w-full">
                   <h3 className="text-brand-text-strong font-semibold shrink-0" style={{ fontFamily: "Open Sans, sans-serif", fontSize: "34px" }}>
@@ -210,15 +214,19 @@ export default function EmailAuthForm({ onSubmit, isLoading = false }) {
                   <p className="shrink-0 mt-2 bg-gradient-to-r from-brand-text-strong/90 to-brand-text-weak bg-clip-text text-transparent" style={{ fontFamily: "Open Sans, sans-serif", fontSize: "16px" }}>
                     Discover local talent in your area.
                   </p>
-                  <div className="mt-4 rounded-lg bg-white/95 p-4 shrink-0 border border-white/80 shadow-sm">
-                    <Location size={40} className="text-brand" />
+                  <div className="mt-4 p-4 shrink-0 w-full rounded-2xl overflow-hidden bg-white/90">
+                    <Image src="/card1.png" alt="" width={240} height={160} className="w-full h-auto object-cover rounded-2xl" />
                   </div>
                 </div>
               </div>
               {/* Card 2 – Post jobs */}
               <div
                 className="relative overflow-hidden rounded-xl border border-brand-stroke-weak p-5 shadow-md flex flex-col items-center text-center"
-                style={{ backgroundColor: "#9ED5EF" }}
+                style={{
+                  backgroundColor: "#9ED5EF",
+                  backgroundImage: "radial-gradient(circle, rgba(0,0,0,0.06) 1px, transparent 1px)",
+                  backgroundSize: "12px 12px",
+                }}
               >
                 <div className="flex flex-col items-center justify-start w-full">
                   <h3 className="text-brand-text-strong font-semibold shrink-0" style={{ fontFamily: "Open Sans, sans-serif", fontSize: "34px" }}>
@@ -227,15 +235,20 @@ export default function EmailAuthForm({ onSubmit, isLoading = false }) {
                   <p className="shrink-0 mt-2 bg-gradient-to-r from-brand-text-strong/90 to-brand-text-weak bg-clip-text text-transparent" style={{ fontFamily: "Open Sans, sans-serif", fontSize: "16px" }}>
                     Reach nearby candidates fast.
                   </p>
-                  <div className="mt-4 rounded-lg bg-white/95 p-4 shrink-0 border border-white/80 shadow-sm">
-                    <UserMultiple size={40} className="text-brand" />
+                  <div className="mt-4 p-4 shrink-0 w-full rounded-2xl overflow-hidden bg-white/90">
+                    <Image src="/card1.png" alt="" width={240} height={160} className="w-full h-auto object-cover rounded-2xl" />
                   </div>
                 </div>
               </div>
               {/* Card 3 – Community */}
               <div
                 className="relative overflow-hidden rounded-xl border border-brand-stroke-weak p-5 shadow-md flex flex-col items-center text-center"
-                style={{ backgroundColor: "#D3F0DB", transform: "rotate(3deg)" }}
+                style={{
+                  backgroundColor: "#D3F0DB",
+                  transform: "rotate(3deg)",
+                  backgroundImage: "radial-gradient(circle, rgba(0,0,0,0.06) 1px, transparent 1px)",
+                  backgroundSize: "12px 12px",
+                }}
               >
                 <div className="flex flex-col items-center justify-start w-full">
                   <h3 className="text-brand-text-strong font-semibold shrink-0" style={{ fontFamily: "Open Sans, sans-serif", fontSize: "34px" }}>
@@ -244,15 +257,19 @@ export default function EmailAuthForm({ onSubmit, isLoading = false }) {
                   <p className="shrink-0 mt-2 bg-gradient-to-r from-brand-text-strong/90 to-brand-text-weak bg-clip-text text-transparent" style={{ fontFamily: "Open Sans, sans-serif", fontSize: "16px" }}>
                     Chat and collaborate nearby.
                   </p>
-                  <div className="mt-4 rounded-lg bg-white/95 p-4 shrink-0 border border-white/80 shadow-sm">
-                    <Chat size={40} className="text-brand" />
+                  <div className="mt-4 p-4 shrink-0 w-full rounded-2xl overflow-hidden bg-white/90">
+                    <Image src="/card1.png" alt="" width={240} height={160} className="w-full h-auto object-cover rounded-2xl" />
                   </div>
                 </div>
               </div>
               {/* Card 4 – Create resume */}
               <div
                 className="relative overflow-hidden rounded-xl border border-brand-stroke-weak p-5 shadow-md flex flex-col items-center text-center"
-                style={{ backgroundColor: "#F5E6D3" }}
+                style={{
+                  backgroundColor: "#F5E6D3",
+                  backgroundImage: "radial-gradient(circle, rgba(0,0,0,0.06) 1px, transparent 1px)",
+                  backgroundSize: "12px 12px",
+                }}
               >
                 <div className="flex flex-col items-center justify-start w-full">
                   <h3 className="text-brand-text-strong font-semibold shrink-0" style={{ fontFamily: "Open Sans, sans-serif", fontSize: "34px" }}>
@@ -261,8 +278,8 @@ export default function EmailAuthForm({ onSubmit, isLoading = false }) {
                   <p className="shrink-0 mt-2 bg-gradient-to-r from-brand-text-strong/90 to-brand-text-weak bg-clip-text text-transparent" style={{ fontFamily: "Open Sans, sans-serif", fontSize: "16px" }}>
                     Stand out to employers.
                   </p>
-                  <div className="mt-4 rounded-lg bg-white/95 p-4 shrink-0 border border-white/80 shadow-sm">
-                    <Document size={40} className="text-brand" />
+                  <div className="mt-4 p-4 shrink-0 w-full rounded-2xl overflow-hidden bg-white/90">
+                    <Image src="/card1.png" alt="" width={240} height={160} className="w-full h-auto object-cover rounded-2xl" />
                   </div>
                 </div>
               </div>
