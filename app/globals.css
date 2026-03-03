@@ -52,6 +52,18 @@
     0 3px 10px rgba(0, 0, 0, 0.08);
 }
 
+/* 5% primary tint on hover for Google / LinkedIn buttons */
+.glass-sign-in-hover:hover::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: var(--brand-color);
+  opacity: 0.05;
+  pointer-events: none;
+  border-radius: inherit;
+  z-index: -5;
+}
+
 @theme inline {
   --color-background: var(--background);
   --color-foreground: var(--foreground);

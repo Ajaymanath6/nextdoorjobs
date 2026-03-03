@@ -85,12 +85,12 @@ export default function EmailAuthForm({ onSubmit, isLoading = false }) {
           boxShadow: "0 0 48px rgba(255,255,255,0.25), 0 6px 20px rgba(0,0,0,0.05)",
         }}
       >
-        {/* Decorative cloud – bottom corners of main card */}
-        <div className="absolute left-0 bottom-0 w-72 h-72 pointer-events-none opacity-85" aria-hidden>
-          <Image src="/cloud.png" alt="" fill className="object-contain object-left-bottom" sizes="288px" />
+        {/* Decorative cloud – top left and top right corners of main card */}
+        <div className="absolute left-0 top-0 w-72 h-72 pointer-events-none opacity-85" aria-hidden>
+          <Image src="/cloud.png" alt="" fill className="object-contain object-left-top" sizes="288px" />
         </div>
-        <div className="absolute right-0 bottom-0 w-72 h-72 pointer-events-none opacity-85" aria-hidden>
-          <Image src="/cloud.png" alt="" fill className="object-contain object-right-bottom" sizes="288px" />
+        <div className="absolute right-0 top-0 w-72 h-72 pointer-events-none opacity-85" aria-hidden>
+          <Image src="/cloud.png" alt="" fill className="object-contain object-right-top" sizes="288px" />
         </div>
 
         {/* Bottom blend: soft fade into background image */}
@@ -121,9 +121,11 @@ export default function EmailAuthForm({ onSubmit, isLoading = false }) {
             type="button"
             onClick={handleGoogleAuth}
             disabled={isLoading || isGoogleLoading}
-            className="px-4 py-2 rounded-full text-sm font-medium text-white bg-brand-text-strong hover:opacity-90 transition-opacity disabled:opacity-50 disabled:cursor-not-allowed"
+            className="glass-sign-in-button glass-cta-brand relative px-5 py-2.5 rounded-full overflow-hidden text-sm font-medium text-white transition-opacity disabled:opacity-50 disabled:cursor-not-allowed"
             style={{ fontFamily: "Open Sans, sans-serif" }}
           >
+            <span className="absolute inset-0 opacity-95 -z-20" style={{ backgroundColor: "var(--brand-color)" }} aria-hidden />
+            <span className="glass-button-gradient-bg absolute inset-0 -z-10 opacity-40" aria-hidden />
             Try mapmyGig for free
           </button>
         </header>
@@ -149,7 +151,7 @@ export default function EmailAuthForm({ onSubmit, isLoading = false }) {
                 type="button"
                 onClick={handleGoogleAuth}
                 disabled={isLoading || isGoogleLoading}
-                className="glass-sign-in-button relative w-full flex items-center justify-center gap-3 px-6 py-3.5 rounded-full overflow-hidden text-brand-text-strong font-medium hover:opacity-95 transition-opacity disabled:opacity-50 disabled:cursor-not-allowed"
+                className="glass-sign-in-button glass-sign-in-hover relative w-full flex items-center justify-center gap-3 px-6 py-3.5 rounded-full overflow-hidden text-brand-text-strong font-medium transition-opacity disabled:opacity-50 disabled:cursor-not-allowed"
                 style={{ fontFamily: "Open Sans, sans-serif", fontSize: "14px" }}
               >
                 <span className="glass-button-gradient-bg absolute inset-0 -z-10 opacity-90" aria-hidden />
@@ -178,7 +180,7 @@ export default function EmailAuthForm({ onSubmit, isLoading = false }) {
                 type="button"
                 onClick={handleLinkedInAuth}
                 disabled={isLoading || isLinkedInLoading}
-                className="glass-sign-in-button relative w-full flex items-center justify-center gap-3 px-6 py-3.5 rounded-full overflow-hidden text-brand-text-strong font-medium hover:opacity-95 transition-opacity disabled:opacity-50 disabled:cursor-not-allowed"
+                className="glass-sign-in-button glass-sign-in-hover relative w-full flex items-center justify-center gap-3 px-6 py-3.5 rounded-full overflow-hidden text-brand-text-strong font-medium transition-opacity disabled:opacity-50 disabled:cursor-not-allowed"
                 style={{ fontFamily: "Open Sans, sans-serif", fontSize: "14px" }}
               >
                 <span className="glass-button-gradient-bg absolute inset-0 -z-10 opacity-90" aria-hidden />
@@ -207,7 +209,7 @@ export default function EmailAuthForm({ onSubmit, isLoading = false }) {
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 w-full flex-1 min-h-0 items-stretch">
               {/* Card 1 – Finding gig workers */}
               <div
-                className="relative overflow-hidden rounded-xl border border-brand-stroke-weak p-5 shadow-md flex flex-col items-center text-center -rotate-3 transition-transform duration-200 ease-out hover:-rotate-6"
+                className="relative overflow-hidden rounded-xl border border-brand-stroke-weak p-5 pb-0 shadow-md flex flex-col items-center text-center -rotate-3 transition-transform duration-200 ease-out hover:-rotate-6"
                 style={{
                   backgroundColor: "#B6CAF4",
                   backgroundImage: "radial-gradient(circle, rgba(0,0,0,0.06) 1px, transparent 1px)",
@@ -228,7 +230,7 @@ export default function EmailAuthForm({ onSubmit, isLoading = false }) {
               </div>
               {/* Card 2 – Post jobs */}
               <div
-                className="relative overflow-hidden rounded-xl border border-brand-stroke-weak p-5 shadow-md flex flex-col items-center text-center transition-transform duration-200 ease-out hover:rotate-3"
+                className="relative overflow-hidden rounded-xl border border-brand-stroke-weak p-5 pb-0 shadow-md flex flex-col items-center text-center transition-transform duration-200 ease-out hover:rotate-3"
                 style={{
                   backgroundColor: "#9ED5EF",
                   backgroundImage: "radial-gradient(circle, rgba(0,0,0,0.06) 1px, transparent 1px)",
@@ -251,7 +253,7 @@ export default function EmailAuthForm({ onSubmit, isLoading = false }) {
               </div>
               {/* Card 3 – Community (hidden on laptop) */}
               <div
-                className="relative overflow-hidden rounded-xl border border-brand-stroke-weak p-5 shadow-md flex flex-col items-center text-center rotate-3 transition-transform duration-200 ease-out hover:rotate-6 lg:hidden"
+                className="relative overflow-hidden rounded-xl border border-brand-stroke-weak p-5 pb-0 shadow-md flex flex-col items-center text-center rotate-3 transition-transform duration-200 ease-out hover:rotate-6 lg:hidden"
                 style={{
                   backgroundColor: "#D3F0DB",
                   backgroundImage: "radial-gradient(circle, rgba(0,0,0,0.06) 1px, transparent 1px)",
@@ -272,7 +274,7 @@ export default function EmailAuthForm({ onSubmit, isLoading = false }) {
               </div>
               {/* Card 4 – Create resume */}
               <div
-                className="relative overflow-hidden rounded-xl border border-brand-stroke-weak p-5 shadow-md flex flex-col items-center text-center transition-transform duration-200 ease-out hover:-rotate-3"
+                className="relative overflow-hidden rounded-xl border border-brand-stroke-weak p-5 pb-0 shadow-md flex flex-col items-center text-center transition-transform duration-200 ease-out hover:-rotate-3"
                 style={{
                   backgroundColor: "#F5E6D3",
                   backgroundImage: "radial-gradient(circle, rgba(0,0,0,0.06) 1px, transparent 1px)",

@@ -1865,7 +1865,7 @@ setCurrentField(GIG_FIELDS.CUSTOMERS_TILL_DATE);
         <ProfileBubbleBackground />
 
         {/* Sign-up modal overlay – card aligned to top, 24px margin (header is inside the card) */}
-        <div className="absolute inset-0 z-10 flex items-start justify-center pt-4 pb-8 px-0 overflow-y-auto">
+        <div className="absolute inset-0 z-10 flex items-start justify-center px-0 overflow-y-auto">
           <EmailAuthForm onSubmit={handleEmailAuth} isLoading={isLoading} />
         </div>
       </div>
