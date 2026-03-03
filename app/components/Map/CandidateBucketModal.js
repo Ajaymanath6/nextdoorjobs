@@ -44,6 +44,9 @@ export default function CandidateBucketModal({
   const [removedIds, setRemovedIds] = useState(() => new Set());
   const [selectedIds, setSelectedIds] = useState(() => new Set());
   const [removingId, setRemovingId] = useState(null);
+  const [selectedDistrict, setSelectedDistrict] = useState(null);
+  /** State selected in the list (for Proceed); not the same as selectedState which triggers candidates view */
+  const [stateSelectedInList, setStateSelectedInList] = useState(null);
   const hasAppliedPreselectRef = useRef(false);
 
   useEffect(() => {
@@ -64,7 +67,7 @@ export default function CandidateBucketModal({
   }, [isOpen]);
 
   const stateForPreselect = selectedLocationFromSearch?.state || preselectedState;
-
+  /** Do not auto-advance: only set which state is selected in the list for Proceed */
   useEffect(() => {
     if (!isOpen || statesLoading || statesList.length === 0 || hasAppliedPreselectRef.current) return;
     const fromLocation = stateForPreselect && statesList.find((s) => normalizeName(s) === normalizeName(stateForPreselect));
@@ -73,9 +76,13 @@ export default function CandidateBucketModal({
     const found = fromLocation || fromSearch;
     if (found) {
       hasAppliedPreselectRef.current = true;
-      setSelectedState(found);
+      setStateSelectedInList(found);
     }
   }, [isOpen, statesLoading, statesList, stateForPreselect, initialSearchQuery]);
+
+  const handleProceedFromStateList = () => {
+    if (stateSelectedInList) setSelectedState(stateSelectedInList);
+  };
 
   useEffect(() => {
     if (!isOpen || !selectedState) {
@@ -90,7 +97,10 @@ export default function CandidateBucketModal({
     setRemovedIds(new Set());
     setSelectedIds(new Set());
     setActiveTab(TAB_ALL);
-    fetch(`/api/gigs?state=${encodeURIComponent(selectedState)}`, {
+    const url = selectedDistrict
+      ? `/api/gigs?state=${encodeURIComponent(selectedState)}&district=${encodeURIComponent(selectedDistrict)}`
+      : `/api/gigs?state=${encodeURIComponent(selectedState)}`;
+    fetch(url, {
       credentials: "same-origin",
     })
       .then((r) => {
@@ -106,7 +116,7 @@ export default function CandidateBucketModal({
       })
       .catch(() => setCandidatesError("Could not load candidates"))
       .finally(() => setCandidatesLoading(false));
-  }, [isOpen, selectedState]);
+  }, [isOpen, selectedState, selectedDistrict]);
 
   useEffect(() => {
     if (!isOpen || !selectedState) {
@@ -127,6 +137,7 @@ export default function CandidateBucketModal({
 
   const handleBackToStates = () => {
     setSelectedState(null);
+    setSelectedDistrict(null);
     setCandidates([]);
     setCandidatesError(null);
     setActiveTab(TAB_ALL);
@@ -267,6 +278,10 @@ export default function CandidateBucketModal({
                       {selectedState}
                     </span>
                   </>
+                ) : stateForPreselect && selectedLocationFromSearch?.name ? (
+                  `Fetch candidates from state ${stateForPreselect} – ${selectedLocationFromSearch.name}`
+                ) : stateForPreselect ? (
+                  `Fetch candidates from state ${stateForPreselect}`
                 ) : (
                   "Fetch candidates"
                 )}
@@ -326,21 +341,37 @@ export default function CandidateBucketModal({
                 Areas in {selectedState}
               </p>
               <div className="flex flex-wrap gap-1.5">
+                <button
+                  type="button"
+                  onClick={() => setSelectedDistrict(null)}
+                  className={`inline-block px-2.5 py-1 rounded-full text-xs font-medium transition-colors ${
+                    !selectedDistrict
+                      ? "bg-brand/20 text-brand border border-brand"
+                      : "bg-brand-bg-fill text-brand-text-weak border border-brand-stroke-weak hover:bg-brand-bg-white"
+                  }`}
+                >
+                  All areas
+                </button>
                 {districtsList.map((district, idx) => {
                   const isPreselectedDistrict =
+                    !selectedDistrict &&
                     selectedLocationFromSearch?.district &&
                     normalizeName(district) === normalizeName(selectedLocationFromSearch.district);
+                  const isSelected = selectedDistrict && normalizeName(district) === normalizeName(selectedDistrict);
+                  const isHighlighted = isPreselectedDistrict || isSelected;
                   return (
-                    <span
+                    <button
                       key={idx}
-                      className={`inline-block px-2.5 py-1 rounded-full text-xs font-medium ${
-                        isPreselectedDistrict
+                      type="button"
+                      onClick={() => setSelectedDistrict((prev) => (prev && normalizeName(prev) === normalizeName(district) ? null : district))}
+                      className={`inline-block px-2.5 py-1 rounded-full text-xs font-medium transition-colors ${
+                        isHighlighted
                           ? "bg-brand/20 text-brand border border-brand"
-                          : "bg-brand-bg-fill text-brand-text-weak border border-brand-stroke-weak"
+                          : "bg-brand-bg-fill text-brand-text-weak border border-brand-stroke-weak hover:bg-brand-bg-white"
                       }`}
                     >
                       {district}
-                    </span>
+                    </button>
                   );
                 })}
               </div>
@@ -362,26 +393,45 @@ export default function CandidateBucketModal({
                   </div>
                 )}
                 {!statesLoading && statesList.length > 0 && (
-                  <ul className="space-y-1">
-                    {statesList.map((state, index) => {
-                      const isPreselected = stateForPreselect && normalizeName(state) === normalizeName(stateForPreselect);
-                      return (
-                        <li key={index}>
-                          <button
-                            type="button"
-                            onClick={() => setSelectedState(state)}
-                            className={`w-full flex items-center justify-between gap-2 py-3 px-3 rounded-lg border text-left transition-colors font-medium ${
-                              isPreselected
-                                ? "border-brand bg-brand/20 text-brand"
-                                : "border-brand-stroke-weak bg-brand-bg-white hover:bg-brand-bg-fill hover:border-brand-stroke-border text-brand-text-strong"
-                            }`}
-                          >
-                            {state}
-                          </button>
-                        </li>
-                      );
-                    })}
-                  </ul>
+                  <>
+                    <ul className="space-y-1">
+                      {statesList.map((state, index) => {
+                        const isSelected = stateSelectedInList && normalizeName(state) === normalizeName(stateSelectedInList);
+                        return (
+                          <li key={index}>
+                            <button
+                              type="button"
+                              onClick={() => setStateSelectedInList(state)}
+                              className={`w-full flex items-center justify-between gap-2 py-3 px-3 rounded-lg border text-left transition-colors font-medium ${
+                                isSelected
+                                  ? "border-brand bg-brand/20 text-brand"
+                                  : "border-brand-stroke-weak bg-brand-bg-white hover:bg-brand-bg-fill hover:border-brand-stroke-border text-brand-text-strong"
+                              }`}
+                            >
+                              {state}
+                            </button>
+                          </li>
+                        );
+                      })}
+                    </ul>
+                    <div className="mt-4 flex items-center justify-end gap-2">
+                      <button
+                        type="button"
+                        onClick={onClose}
+                        className="px-4 py-2 rounded-lg border border-brand-stroke-border bg-brand-bg-white text-brand-text-strong text-sm font-medium hover:bg-brand-bg-fill transition-colors"
+                      >
+                        Cancel
+                      </button>
+                      <button
+                        type="button"
+                        onClick={handleProceedFromStateList}
+                        disabled={!stateSelectedInList}
+                        className="px-4 py-2 rounded-lg bg-brand-text-strong text-white text-sm font-medium hover:opacity-90 transition-opacity disabled:opacity-50 disabled:cursor-not-allowed"
+                      >
+                        Proceed
+                      </button>
+                    </div>
+                  </>
                 )}
               </>
             ) : (
