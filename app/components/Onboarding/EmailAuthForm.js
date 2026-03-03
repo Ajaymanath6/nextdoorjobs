@@ -85,12 +85,12 @@ export default function EmailAuthForm({ onSubmit, isLoading = false }) {
           boxShadow: "0 0 48px rgba(255,255,255,0.25), 0 6px 20px rgba(0,0,0,0.05)",
         }}
       >
-        {/* Decorative cloud – top left and top right corners of main card */}
-        <div className="absolute left-0 top-0 w-72 h-72 pointer-events-none opacity-85" aria-hidden>
-          <Image src="/cloud.png" alt="" fill className="object-contain object-left-top" sizes="288px" />
+        {/* Decorative cloud – left and right, vertically centered in viewport */}
+        <div className="absolute left-4 top-1/2 -translate-y-1/2 w-72 h-72 pointer-events-none opacity-85" aria-hidden>
+          <Image src="/cloud.png" alt="" fill className="object-contain object-left" sizes="288px" />
         </div>
-        <div className="absolute right-0 top-0 w-72 h-72 pointer-events-none opacity-85" aria-hidden>
-          <Image src="/cloud.png" alt="" fill className="object-contain object-right-top" sizes="288px" />
+        <div className="absolute right-4 top-1/2 -translate-y-1/2 w-72 h-72 pointer-events-none opacity-85" aria-hidden>
+          <Image src="/cloud.png" alt="" fill className="object-contain object-right" sizes="288px" />
         </div>
 
         {/* Bottom blend: soft fade into background image */}
@@ -121,11 +121,11 @@ export default function EmailAuthForm({ onSubmit, isLoading = false }) {
             type="button"
             onClick={handleGoogleAuth}
             disabled={isLoading || isGoogleLoading}
-            className="glass-sign-in-button glass-cta-brand relative px-5 py-2.5 rounded-full overflow-hidden text-sm font-medium text-white transition-opacity disabled:opacity-50 disabled:cursor-not-allowed"
+            className="glass-sign-in-button relative px-5 py-2.5 rounded-full overflow-hidden text-sm font-medium text-brand-text-strong transition-opacity disabled:opacity-50 disabled:cursor-not-allowed"
             style={{ fontFamily: "Open Sans, sans-serif" }}
           >
-            <span className="absolute inset-0 opacity-95 -z-20" style={{ backgroundColor: "var(--brand-color)" }} aria-hidden />
-            <span className="glass-button-gradient-bg absolute inset-0 -z-10 opacity-40" aria-hidden />
+            <span className="absolute inset-0 bg-white -z-20" aria-hidden />
+            <span className="glass-button-gradient-bg absolute inset-0 -z-10 opacity-70" aria-hidden />
             Try mapmyGig for free
           </button>
         </header>
