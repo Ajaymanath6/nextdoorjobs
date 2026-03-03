@@ -9,6 +9,7 @@ import {
   TrashCan,
   BookmarkAdd,
   BookmarkFilled,
+  Location,
 } from "@carbon/icons-react";
 import { getAvatarUrlById } from "../../../lib/avatars";
 import LoadingSpinner from "../LoadingSpinner";
@@ -22,6 +23,7 @@ export default function CandidateBucketModal({
   onClose,
   onSelectCandidate,
   preselectedState = null,
+  initialSearchQuery = "",
 }) {
   const [statesList, setStatesList] = useState([]);
   const [statesLoading, setStatesLoading] = useState(false);
@@ -54,13 +56,16 @@ export default function CandidateBucketModal({
   }, [isOpen]);
 
   useEffect(() => {
-    if (!isOpen || statesLoading || statesList.length === 0 || !preselectedState || hasAppliedPreselectRef.current) return;
-    const found = statesList.find((s) => s.trim().toLowerCase() === preselectedState.trim().toLowerCase());
+    if (!isOpen || statesLoading || statesList.length === 0 || hasAppliedPreselectRef.current) return;
+    const q = (initialSearchQuery || "").trim().toLowerCase();
+    const fromFilter = preselectedState && statesList.find((s) => s.trim().toLowerCase() === (preselectedState || "").trim().toLowerCase());
+    const fromSearch = q && statesList.find((s) => s.trim().toLowerCase().includes(q) || s.trim().toLowerCase().startsWith(q));
+    const found = fromFilter || fromSearch;
     if (found) {
       hasAppliedPreselectRef.current = true;
       setSelectedState(found);
     }
-  }, [isOpen, statesLoading, statesList, preselectedState]);
+  }, [isOpen, statesLoading, statesList, preselectedState, initialSearchQuery]);
 
   useEffect(() => {
     if (!isOpen || !selectedState) {
@@ -204,7 +209,7 @@ export default function CandidateBucketModal({
         aria-labelledby="candidate-bucket-title"
       >
         <div
-          className="bg-brand-bg-white rounded-lg border border-brand-stroke-weak shadow-lg w-full max-w-2xl max-h-[85vh] overflow-hidden flex flex-col"
+          className="bg-brand-bg-white rounded-lg border border-brand-stroke-weak shadow-lg w-full max-w-4xl max-h-[85vh] overflow-hidden flex flex-col"
           onClick={(e) => e.stopPropagation()}
           style={{ fontFamily: "Open Sans, sans-serif" }}
         >
@@ -309,7 +314,7 @@ export default function CandidateBucketModal({
                             onClick={() => setSelectedState(state)}
                             className={`w-full flex items-center justify-between gap-2 py-3 px-3 rounded-lg border text-left transition-colors font-medium ${
                               isPreselected
-                                ? "border-brand/30 bg-brand/15 text-brand-text-strong"
+                                ? "border-brand bg-brand/20 text-brand"
                                 : "border-brand-stroke-weak bg-brand-bg-white hover:bg-brand-bg-fill hover:border-brand-stroke-border text-brand-text-strong"
                             }`}
                           >
@@ -361,12 +366,8 @@ export default function CandidateBucketModal({
                             gig.user?.name || gig.title || "Candidate";
                           const email =
                             gig.email || gig.user?.email || "—";
-                          const jobProfile =
-                            gig.serviceType ||
-                            (gig.jobSeekerExperience
-                              ? "Job seeker"
-                              : "Job seeker");
-                          const stateLabel = gig.state || selectedState || "—";
+                          const locationParts = [gig.locality, gig.district, gig.state || selectedState].filter(Boolean);
+                          const locationLabel = locationParts.length > 0 ? locationParts.join(", ") : (gig.state || selectedState || "—");
                           const jobTitle =
                             gig.resume?.currentPosition ||
                             gig.resume?.workExperiences?.[0]?.position ||
@@ -390,7 +391,8 @@ export default function CandidateBucketModal({
                                     checked={isSelected}
                                     onChange={(e) => toggleSelected(e, gig)}
                                     onClick={(e) => e.stopPropagation()}
-                                    className="shrink-0 w-4 h-4 rounded border-brand-stroke-border text-brand focus:ring-brand"
+                                    className="shrink-0 w-4 h-4 rounded border-brand-stroke-border focus:ring-brand"
+                                    style={{ accentColor: "var(--color-brand, #F84416)" }}
                                     aria-label={`Select ${name}`}
                                   />
                                 )}
@@ -411,15 +413,13 @@ export default function CandidateBucketModal({
                                     <div className="text-sm text-brand-text-weak truncate">
                                       {email}
                                     </div>
-                                    {jobTitle && (
-                                      <div className="text-xs text-brand-text-weak truncate mt-0.5">
-                                        {jobTitle}
-                                      </div>
-                                    )}
-                                    <div className="flex items-center gap-2 mt-0.5 text-xs text-brand-text-weak">
-                                      <span>{jobProfile}</span>
-                                      <span>·</span>
-                                      <span>{stateLabel}</span>
+                                    <div className="flex items-center gap-1.5 mt-0.5 text-xs text-brand-text-weak truncate">
+                                      {jobTitle && <span className="truncate">{jobTitle}</span>}
+                                      {jobTitle && locationLabel && <span>·</span>}
+                                      <span className="flex items-center gap-1 min-w-0 truncate">
+                                        <Location size={12} className="shrink-0 text-brand-stroke-strong" />
+                                        <span className="truncate">{locationLabel}</span>
+                                      </span>
                                     </div>
                                   </div>
                                 </button>

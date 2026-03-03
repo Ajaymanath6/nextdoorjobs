@@ -5443,7 +5443,7 @@ const MapComponent = ({ onOpenSettings, onViewModeChange, effectiveUser = null, 
           <button
             type="button"
             onClick={() => setShowCandidateBucketModal(true)}
-            className="shrink-0 h-[34px] flex items-center gap-2 px-3 rounded-full border border-brand-stroke-border bg-brand-bg-white hover:bg-brand-bg-fill text-sm font-medium text-brand-text-strong transition-colors"
+            className="shrink-0 h-[60px] flex items-center gap-2 px-4 rounded-full border border-brand-stroke-border bg-brand-bg-white hover:bg-brand-bg-fill text-sm font-medium text-brand-text-strong transition-colors"
             aria-label="Fetch candidates"
             title="View candidates by state"
           >
@@ -5738,6 +5738,7 @@ const MapComponent = ({ onOpenSettings, onViewModeChange, effectiveUser = null, 
         isOpen={showCandidateBucketModal}
         onClose={() => setShowCandidateBucketModal(false)}
         preselectedState={selectedFilterOption?.state ?? null}
+        initialSearchQuery={searchQuery?.trim() || ""}
         onSelectCandidate={(gig) => {
           setSelectedGigForProfileModal(gig);
           setShowGigWorkerProfileModal(true);

@@ -75,7 +75,7 @@ export default function EmailAuthForm({ onSubmit, isLoading = false }) {
       }}
     >
       <div
-        className="relative rounded-lg p-8 pt-6 border border-brand-stroke-weak w-full overflow-hidden flex-1 min-h-0 flex flex-col"
+        className="relative rounded-lg p-8 pt-6 pb-0 border border-brand-stroke-weak w-full overflow-hidden flex-1 min-h-0 flex flex-col"
         style={{
           background: "linear-gradient(to right, rgba(255,255,255,0.52) 0%, #fff 22%, #fff 78%, rgba(255,255,255,0.52) 100%)",
         }}
@@ -99,7 +99,7 @@ export default function EmailAuthForm({ onSubmit, isLoading = false }) {
         <div id="clerk-captcha" style={{ display: "none" }} />
 
         {/* Header bar – wider on laptop so no wrap; full rounded (pill), light border, soft shadow */}
-        <header className="relative flex items-center justify-between w-full max-w-3xl mx-auto py-4 px-6 border border-brand-stroke-weak rounded-full shrink-0 shadow-sm bg-white/80">
+        <header className="relative flex items-center justify-between w-full max-w-3xl mx-auto h-[56px] px-6 border border-brand-stroke-weak rounded-full shrink-0 shadow-sm bg-white/80">
           <div className="flex items-center gap-6">
             <Image
               src="/logo.svg"
@@ -196,6 +196,18 @@ export default function EmailAuthForm({ onSubmit, isLoading = false }) {
               </button>
             </div>
 
+            <div className="text-center mt-3">
+              <Link
+                href="/privacy-policy"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="text-xs text-brand-text-weak hover:text-brand-text-strong hover:underline transition-colors"
+                style={{ fontFamily: "Open Sans, sans-serif" }}
+              >
+                Privacy Policy
+              </Link>
+            </div>
+
             <p className="text-center text-brand-text-weak text-xs mt-5" style={{ fontFamily: "Open Sans, sans-serif" }}>
               Find work and connect—all in your neighborhood
             </p>
@@ -286,19 +298,6 @@ export default function EmailAuthForm({ onSubmit, isLoading = false }) {
                 </div>
               </div>
             </div>
-          </div>
-
-          {/* Privacy Policy – at bottom of main card (hero height) */}
-          <div className="mt-auto shrink-0 py-4 text-center px-2">
-            <Link
-              href="/privacy-policy"
-              target="_blank"
-              rel="noopener noreferrer"
-              className="text-xs text-brand-text-weak hover:text-brand-text-strong hover:underline transition-colors"
-              style={{ fontFamily: "Open Sans, sans-serif" }}
-            >
-              Privacy Policy
-            </Link>
           </div>
         </div>
       </div>
