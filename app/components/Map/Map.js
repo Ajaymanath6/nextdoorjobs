@@ -169,6 +169,8 @@ const MapComponent = ({ onOpenSettings, onViewModeChange, effectiveUser = null, 
   const [stateForBucketModal, setStateForBucketModal] = useState(null);
   const [showStateCandidatesModal, setShowStateCandidatesModal] = useState(false);
   const [showCandidateBucketModal, setShowCandidateBucketModal] = useState(false);
+  /** Last selected India place from search autocomplete or location filter: { type, name, state, district? } */
+  const [lastSelectedIndiaPlace, setLastSelectedIndiaPlace] = useState(null);
 
   // Notify parent of view mode (person = gigs, company = jobs) for sidebar label
   useEffect(() => {
@@ -4616,6 +4618,12 @@ const MapComponent = ({ onOpenSettings, onViewModeChange, effectiveUser = null, 
       handleLocalitySelect(item);
       return;
     }
+    setLastSelectedIndiaPlace({
+      type: item.type || "place",
+      name: item.name,
+      state: item.state || item.name,
+      district: item.district ?? null,
+    });
     setSearchQuery(item.state ? `${item.name}, ${item.state}` : item.name);
     setShowAutocomplete(false);
     setSelectedCollege(null);
@@ -5386,7 +5394,17 @@ const MapComponent = ({ onOpenSettings, onViewModeChange, effectiveUser = null, 
                       onClose={() => setShowFilterDropdown(false)}
                       dropdownRef={filterDropdownRef}
                       selectedOption={selectedFilterOption}
-                      onSelect={(option) => setSelectedFilterOption(option)}
+                      onSelect={(option) => {
+                        setSelectedFilterOption(option);
+                        if (option?.state) {
+                          setLastSelectedIndiaPlace({
+                            type: "state",
+                            name: option.state,
+                            state: option.state,
+                            district: null,
+                          });
+                        }
+                      }}
                       showBucketIcon={userAccountType === "Company" && searchMode === "person"}
                       onBucketClick={(state) => {
                         setShowFilterDropdown(false);
@@ -5421,7 +5439,17 @@ const MapComponent = ({ onOpenSettings, onViewModeChange, effectiveUser = null, 
                 isOpen={showFilterDropdown}
                 onClose={() => setShowFilterDropdown(false)}
                 selectedOption={selectedFilterOption}
-                onSelect={(option) => setSelectedFilterOption(option)}
+                onSelect={(option) => {
+                  setSelectedFilterOption(option);
+                  if (option?.state) {
+                    setLastSelectedIndiaPlace({
+                      type: "state",
+                      name: option.state,
+                      state: option.state,
+                      district: null,
+                    });
+                  }
+                }}
                 localities={localities}
                 jobTitles={jobTitles}
                 colleges={colleges}
@@ -5737,7 +5765,8 @@ const MapComponent = ({ onOpenSettings, onViewModeChange, effectiveUser = null, 
       <CandidateBucketModal
         isOpen={showCandidateBucketModal}
         onClose={() => setShowCandidateBucketModal(false)}
-        preselectedState={selectedFilterOption?.state ?? null}
+        selectedLocationFromSearch={lastSelectedIndiaPlace}
+        preselectedState={selectedFilterOption?.state ?? lastSelectedIndiaPlace?.state ?? null}
         initialSearchQuery={searchQuery?.trim() || ""}
         onSelectCandidate={(gig) => {
           setSelectedGigForProfileModal(gig);

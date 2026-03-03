@@ -18,16 +18,23 @@ const TAB_ALL = "all";
 const TAB_BOOKMARKED = "bookmarked";
 const TAB_INVITED = "invited";
 
+function normalizeName(str) {
+  return (str || "").trim().toLowerCase().replace(/\s+/g, " ");
+}
+
 export default function CandidateBucketModal({
   isOpen,
   onClose,
   onSelectCandidate,
+  selectedLocationFromSearch = null,
   preselectedState = null,
   initialSearchQuery = "",
 }) {
   const [statesList, setStatesList] = useState([]);
   const [statesLoading, setStatesLoading] = useState(false);
   const [selectedState, setSelectedState] = useState(null);
+  const [districtsList, setDistrictsList] = useState([]);
+  const [districtsLoading, setDistrictsLoading] = useState(false);
   const [candidates, setCandidates] = useState([]);
   const [candidatesLoading, setCandidatesLoading] = useState(false);
   const [candidatesError, setCandidatesError] = useState(null);
@@ -36,6 +43,7 @@ export default function CandidateBucketModal({
   const [invitedIds, setInvitedIds] = useState(() => new Set());
   const [removedIds, setRemovedIds] = useState(() => new Set());
   const [selectedIds, setSelectedIds] = useState(() => new Set());
+  const [removingId, setRemovingId] = useState(null);
   const hasAppliedPreselectRef = useRef(false);
 
   useEffect(() => {
@@ -55,17 +63,19 @@ export default function CandidateBucketModal({
       .finally(() => setStatesLoading(false));
   }, [isOpen]);
 
+  const stateForPreselect = selectedLocationFromSearch?.state || preselectedState;
+
   useEffect(() => {
     if (!isOpen || statesLoading || statesList.length === 0 || hasAppliedPreselectRef.current) return;
+    const fromLocation = stateForPreselect && statesList.find((s) => normalizeName(s) === normalizeName(stateForPreselect));
     const q = (initialSearchQuery || "").trim().toLowerCase();
-    const fromFilter = preselectedState && statesList.find((s) => s.trim().toLowerCase() === (preselectedState || "").trim().toLowerCase());
-    const fromSearch = q && statesList.find((s) => s.trim().toLowerCase().includes(q) || s.trim().toLowerCase().startsWith(q));
-    const found = fromFilter || fromSearch;
+    const fromSearch = !fromLocation && q && statesList.find((s) => normalizeName(s).includes(q) || normalizeName(s).startsWith(q));
+    const found = fromLocation || fromSearch;
     if (found) {
       hasAppliedPreselectRef.current = true;
       setSelectedState(found);
     }
-  }, [isOpen, statesLoading, statesList, preselectedState, initialSearchQuery]);
+  }, [isOpen, statesLoading, statesList, stateForPreselect, initialSearchQuery]);
 
   useEffect(() => {
     if (!isOpen || !selectedState) {
@@ -96,6 +106,23 @@ export default function CandidateBucketModal({
       })
       .catch(() => setCandidatesError("Could not load candidates"))
       .finally(() => setCandidatesLoading(false));
+  }, [isOpen, selectedState]);
+
+  useEffect(() => {
+    if (!isOpen || !selectedState) {
+      setDistrictsList([]);
+      return;
+    }
+    setDistrictsLoading(true);
+    fetch(`/api/india/districts?state=${encodeURIComponent(selectedState)}`, {
+      credentials: "same-origin",
+    })
+      .then((res) => res.json())
+      .then((data) => {
+        setDistrictsList(Array.isArray(data.districts) ? data.districts : []);
+      })
+      .catch(() => setDistrictsList([]))
+      .finally(() => setDistrictsLoading(false));
   }, [isOpen, selectedState]);
 
   const handleBackToStates = () => {
@@ -186,7 +213,11 @@ export default function CandidateBucketModal({
 
   const handleRemove = (e, gig) => {
     e.stopPropagation();
-    setRemovedIds((prev) => new Set(prev).add(gig.id));
+    setRemovingId(gig.id);
+    setTimeout(() => {
+      setRemovedIds((prev) => new Set(prev).add(gig.id));
+      setRemovingId(null);
+    }, 500);
   };
 
   const handleRowClick = (gig) => {
@@ -289,6 +320,33 @@ export default function CandidateBucketModal({
             </div>
           )}
 
+          {selectedState && districtsList.length > 0 && (
+            <div className="shrink-0 px-4 pt-2 pb-1 border-b border-brand-stroke-weak">
+              <p className="text-xs font-medium text-brand-text-weak mb-2" style={{ fontFamily: "Open Sans, sans-serif" }}>
+                Areas in {selectedState}
+              </p>
+              <div className="flex flex-wrap gap-1.5">
+                {districtsList.map((district, idx) => {
+                  const isPreselectedDistrict =
+                    selectedLocationFromSearch?.district &&
+                    normalizeName(district) === normalizeName(selectedLocationFromSearch.district);
+                  return (
+                    <span
+                      key={idx}
+                      className={`inline-block px-2.5 py-1 rounded-full text-xs font-medium ${
+                        isPreselectedDistrict
+                          ? "bg-brand/20 text-brand border border-brand"
+                          : "bg-brand-bg-fill text-brand-text-weak border border-brand-stroke-weak"
+                      }`}
+                    >
+                      {district}
+                    </span>
+                  );
+                })}
+              </div>
+            </div>
+          )}
+
           <div className="flex-1 min-h-0 overflow-y-auto p-4">
             {!selectedState ? (
               <>
@@ -306,7 +364,7 @@ export default function CandidateBucketModal({
                 {!statesLoading && statesList.length > 0 && (
                   <ul className="space-y-1">
                     {statesList.map((state, index) => {
-                      const isPreselected = preselectedState && state.trim().toLowerCase() === preselectedState.trim().toLowerCase();
+                      const isPreselected = stateForPreselect && normalizeName(state) === normalizeName(stateForPreselect);
                       return (
                         <li key={index}>
                           <button
@@ -381,11 +439,12 @@ export default function CandidateBucketModal({
                           const isSelected = selectedIds.has(gig.id);
                           const showActions = activeTab === TAB_ALL;
                           const hasEmail = !!(gig.email || gig.user?.email);
+                          const isRemoving = removingId === gig.id;
 
                           return (
                             <li key={gig.id}>
                               <div className="flex items-center gap-4 p-3 rounded-lg border border-brand-stroke-weak bg-brand-bg-white hover:bg-brand-bg-fill transition-colors">
-                                {showActions && (
+                                {showActions && !isRemoving && (
                                   <input
                                     type="checkbox"
                                     checked={isSelected}
@@ -396,6 +455,7 @@ export default function CandidateBucketModal({
                                     aria-label={`Select ${name}`}
                                   />
                                 )}
+                                {showActions && isRemoving && <div className="shrink-0 w-4 h-4" aria-hidden />}
                                 <button
                                   type="button"
                                   onClick={() => handleRowClick(gig)}
@@ -410,11 +470,11 @@ export default function CandidateBucketModal({
                                     <div className="font-medium text-brand-text-strong truncate">
                                       {name}
                                     </div>
-                                    <div className="text-sm text-brand-text-weak truncate">
+                                    <div className="text-sm text-blue-600 underline truncate">
                                       {email}
                                     </div>
                                     <div className="flex items-center gap-1.5 mt-0.5 text-xs text-brand-text-weak truncate">
-                                      {jobTitle && <span className="truncate">{jobTitle}</span>}
+                                      {jobTitle && <span className="font-semibold text-brand-text-strong truncate">{jobTitle}</span>}
                                       {jobTitle && locationLabel && <span>·</span>}
                                       <span className="flex items-center gap-1 min-w-0 truncate">
                                         <Location size={12} className="shrink-0 text-brand-stroke-strong" />
@@ -425,6 +485,13 @@ export default function CandidateBucketModal({
                                 </button>
                                 {showActions && (
                                   <div className="flex items-center gap-1 shrink-0">
+                                    {isRemoving ? (
+                                      <span className="flex items-center gap-2 text-sm text-brand-text-weak">
+                                        <LoadingSpinner size="sm" />
+                                        Deleting
+                                      </span>
+                                    ) : (
+                                      <>
                                     <button
                                       type="button"
                                       onClick={(e) => handleSendInvite(e, gig)}
@@ -457,6 +524,8 @@ export default function CandidateBucketModal({
                                     >
                                       <TrashCan size={16} />
                                     </button>
+                                    </>
+                                    )}
                                   </div>
                                 )}
                               </div>

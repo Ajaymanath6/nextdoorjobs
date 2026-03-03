@@ -4,7 +4,7 @@ import { useState } from "react";
 import { useSignIn } from "@clerk/nextjs";
 import Image from "next/image";
 import Link from "next/link";
-import { Location, UserMultiple, Chat } from "@carbon/icons-react";
+import { Location, UserMultiple, Chat, Document } from "@carbon/icons-react";
 
 export default function EmailAuthForm({ onSubmit, isLoading = false }) {
   const { signIn } = useSignIn();
@@ -112,9 +112,6 @@ export default function EmailAuthForm({ onSubmit, isLoading = false }) {
               priority
             />
             <nav className="flex items-center gap-5">
-              <a href="#product" className="text-sm font-medium text-brand-text-strong hover:opacity-80">Product</a>
-              <a href="#imagine" className="text-sm font-medium text-brand-text-strong hover:opacity-80">Imagine</a>
-              <a href="#community" className="text-sm font-medium text-brand-text-strong hover:opacity-80">Community</a>
               <a href="#pricing" className="text-sm font-medium text-brand-text-strong hover:opacity-80">Pricing</a>
             </nav>
           </div>
@@ -129,7 +126,7 @@ export default function EmailAuthForm({ onSubmit, isLoading = false }) {
             <a
               href="#"
               onClick={(e) => e.preventDefault()}
-              className="px-4 py-2 rounded-lg text-sm font-medium text-white bg-brand-text-strong hover:opacity-90 transition-opacity"
+              className="px-4 py-2 rounded-full text-sm font-medium text-white bg-brand-text-strong hover:opacity-90 transition-opacity"
               style={{ fontFamily: "Open Sans, sans-serif" }}
             >
               Try mapmyGig for free
@@ -215,7 +212,7 @@ export default function EmailAuthForm({ onSubmit, isLoading = false }) {
 
           {/* Feature cards – heading, subheading, illustration; fill height to bottom of main card; reference colors */}
           <div className="mt-6 px-4 w-full flex-1 min-h-0 flex flex-col">
-            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 w-full flex-1 min-h-0 items-stretch">
+            <div className="grid grid-cols-1 sm:grid-cols-4 gap-4 w-full flex-1 min-h-0 items-stretch">
               {/* Card 1 – #B6CAF4 */}
               <div
                 className="relative overflow-hidden rounded-xl border border-brand-stroke-weak p-5 shadow-md flex flex-col min-h-0"
@@ -290,6 +287,33 @@ export default function EmailAuthForm({ onSubmit, isLoading = false }) {
                       </div>
                       <p className="text-[10px] text-brand-text-weak">Chat</p>
                       <p className="text-[10px] text-brand-text-weak">Collaborate</p>
+                    </div>
+                    <div className="rounded-lg bg-white/90 shadow border border-white/80 p-2 shrink-0 -ml-2 mb-1">
+                      <Image src="/cloud-avatar.png" alt="" width={48} height={48} className="object-contain" />
+                    </div>
+                  </div>
+                </div>
+              </div>
+              {/* Card 4 – Create resume */}
+              <div
+                className="relative overflow-hidden rounded-xl border border-brand-stroke-weak p-5 shadow-md flex flex-col min-h-0"
+                style={{ backgroundColor: "#F5E6D3" }}
+              >
+                <h3 className="text-brand-text-strong font-semibold text-base mb-1.5 shrink-0" style={{ fontFamily: "Open Sans, sans-serif" }}>
+                  Create resume for the gig or job
+                </h3>
+                <p className="text-xs text-brand-text-weak mb-4 shrink-0" style={{ fontFamily: "Open Sans, sans-serif" }}>
+                  Build a tailored resume and stand out to employers.
+                </p>
+                <div className="flex-1 min-h-0 flex flex-col justify-end">
+                  <div className="relative flex gap-2 items-end">
+                    <div className="rounded-lg bg-white/95 shadow-sm border border-white/80 p-3 flex-1 min-w-0">
+                      <div className="flex items-center gap-2 text-brand-text-strong font-medium text-xs mb-2" style={{ fontFamily: "Open Sans, sans-serif" }}>
+                        <Document size={16} className="text-brand shrink-0" />
+                        <span>Create resume</span>
+                      </div>
+                      <p className="text-[10px] text-brand-text-weak">Gig or job</p>
+                      <p className="text-[10px] text-brand-text-weak">Stand out</p>
                     </div>
                     <div className="rounded-lg bg-white/90 shadow border border-white/80 p-2 shrink-0 -ml-2 mb-1">
                       <Image src="/cloud-avatar.png" alt="" width={48} height={48} className="object-contain" />
