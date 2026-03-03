@@ -35,6 +35,7 @@ import AddHomeModal from "./AddHomeModal";
 import GetCoordinatesModal from "./GetCoordinatesModal";
 import GigWorkerProfileModal from "./GigWorkerProfileModal";
 import StateCandidatesModal from "./StateCandidatesModal";
+import CandidateBucketModal from "./CandidateBucketModal";
 import JobTitleAutocomplete from "./JobTitleAutocomplete";
 import CollegeAutocomplete from "./CollegeAutocomplete";
 import EmptyState from "./EmptyState";
@@ -166,6 +167,7 @@ const MapComponent = ({ onOpenSettings, onViewModeChange, effectiveUser = null, 
   const gigFilterButtonRef = useRef(null);
   const [stateForBucketModal, setStateForBucketModal] = useState(null);
   const [showStateCandidatesModal, setShowStateCandidatesModal] = useState(false);
+  const [showCandidateBucketModal, setShowCandidateBucketModal] = useState(false);
 
   // Notify parent of view mode (person = gigs, company = jobs) for sidebar label
   useEffect(() => {
@@ -5412,6 +5414,18 @@ const MapComponent = ({ onOpenSettings, onViewModeChange, effectiveUser = null, 
                   </div>
                 </div>
 
+                {/* Candidate bucket: Company only, rounded-full button after location filter */}
+                {userAccountType === "Company" && searchMode === "person" && (
+                  <button
+                    type="button"
+                    onClick={() => setShowCandidateBucketModal(true)}
+                    className="shrink-0 px-3 py-1.5 rounded-full border border-brand-stroke-border bg-brand-bg-white hover:bg-brand-bg-fill text-sm font-medium text-brand-text-strong transition-colors"
+                    aria-label="Candidate bucket"
+                    title="View candidates by state"
+                  >
+                    Candidate bucket
+                  </button>
+                )}
               </div>
 
               {/* Mobile: bottom sheet */}
@@ -5712,6 +5726,15 @@ const MapComponent = ({ onOpenSettings, onViewModeChange, effectiveUser = null, 
         isOpen={showStateCandidatesModal}
         onClose={() => { setShowStateCandidatesModal(false); setStateForBucketModal(null); }}
         stateName={stateForBucketModal}
+        onSelectCandidate={(gig) => {
+          setSelectedGigForProfileModal(gig);
+          setShowGigWorkerProfileModal(true);
+        }}
+      />
+
+      <CandidateBucketModal
+        isOpen={showCandidateBucketModal}
+        onClose={() => setShowCandidateBucketModal(false)}
         onSelectCandidate={(gig) => {
           setSelectedGigForProfileModal(gig);
           setShowGigWorkerProfileModal(true);
