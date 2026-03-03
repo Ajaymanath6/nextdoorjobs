@@ -4928,7 +4928,7 @@ const MapComponent = ({ onOpenSettings, onViewModeChange, effectiveUser = null, 
 
       {/* Search Bar - visible on all viewports */}
       {isGlobeView && (
-        <div className={`flex flex-col gap-4 top-3 md:top-4 ${searchBar.container} w-[calc(100vw-16px)] max-w-[800px]`}>
+        <div className={`flex flex-col gap-4 top-3 md:top-4 ${searchBar.container} w-[calc(100vw-16px)] max-w-[960px]`}>
         <div className="flex flex-row items-center gap-2 w-full">
           {/* Search Bar Card - same corner radius (rounded-full), white bg; profile button is outside to the right. */}
           <div className={`flex-1 min-w-0 bg-brand-bg-white rounded-full border border-brand-stroke-border shadow-lg px-1.5 py-1.5 md:px-4 md:py-2`}>
@@ -5737,6 +5737,7 @@ const MapComponent = ({ onOpenSettings, onViewModeChange, effectiveUser = null, 
       <CandidateBucketModal
         isOpen={showCandidateBucketModal}
         onClose={() => setShowCandidateBucketModal(false)}
+        preselectedState={selectedFilterOption?.state ?? null}
         onSelectCandidate={(gig) => {
           setSelectedGigForProfileModal(gig);
           setShowGigWorkerProfileModal(true);

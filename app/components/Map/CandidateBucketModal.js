@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useMemo } from "react";
+import { useState, useEffect, useMemo, useRef } from "react";
 import Modal from "../Modal";
 import {
   Close,
@@ -21,6 +21,7 @@ export default function CandidateBucketModal({
   isOpen,
   onClose,
   onSelectCandidate,
+  preselectedState = null,
 }) {
   const [statesList, setStatesList] = useState([]);
   const [statesLoading, setStatesLoading] = useState(false);
@@ -32,6 +33,12 @@ export default function CandidateBucketModal({
   const [bookmarkedIds, setBookmarkedIds] = useState(() => new Set());
   const [invitedIds, setInvitedIds] = useState(() => new Set());
   const [removedIds, setRemovedIds] = useState(() => new Set());
+  const [selectedIds, setSelectedIds] = useState(() => new Set());
+  const hasAppliedPreselectRef = useRef(false);
+
+  useEffect(() => {
+    if (!isOpen) hasAppliedPreselectRef.current = false;
+  }, [isOpen]);
 
   useEffect(() => {
     if (!isOpen) return;
@@ -47,6 +54,15 @@ export default function CandidateBucketModal({
   }, [isOpen]);
 
   useEffect(() => {
+    if (!isOpen || statesLoading || statesList.length === 0 || !preselectedState || hasAppliedPreselectRef.current) return;
+    const found = statesList.find((s) => s.trim().toLowerCase() === preselectedState.trim().toLowerCase());
+    if (found) {
+      hasAppliedPreselectRef.current = true;
+      setSelectedState(found);
+    }
+  }, [isOpen, statesLoading, statesList, preselectedState]);
+
+  useEffect(() => {
     if (!isOpen || !selectedState) {
       setCandidates([]);
       setCandidatesError(null);
@@ -57,6 +73,7 @@ export default function CandidateBucketModal({
     setBookmarkedIds(new Set());
     setInvitedIds(new Set());
     setRemovedIds(new Set());
+    setSelectedIds(new Set());
     setActiveTab(TAB_ALL);
     fetch(`/api/gigs?state=${encodeURIComponent(selectedState)}`, {
       credentials: "same-origin",
@@ -84,6 +101,45 @@ export default function CandidateBucketModal({
     setBookmarkedIds(new Set());
     setInvitedIds(new Set());
     setRemovedIds(new Set());
+    setSelectedIds(new Set());
+  };
+
+  const toggleSelected = (e, gig) => {
+    e.stopPropagation();
+    setSelectedIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(gig.id)) next.delete(gig.id);
+      else next.add(gig.id);
+      return next;
+    });
+  };
+
+  const handleExportAs = () => {
+    const toExport = selectedIds.size > 0
+      ? visibleCandidates.filter((c) => selectedIds.has(c.id))
+      : visibleCandidates;
+    if (toExport.length === 0) return;
+    const jobTitle = (g) => g.resume?.currentPosition || g.resume?.workExperiences?.[0]?.position || "";
+    const header = "Name,Email,Job Title,State\n";
+    const rows = toExport.map((g) => {
+      const name = (g.user?.name || g.title || "Candidate").replace(/"/g, '""');
+      const email = (g.email || g.user?.email || "").replace(/"/g, '""');
+      const title = jobTitle(g).replace(/"/g, '""');
+      const state = (g.state || selectedState || "").replace(/"/g, '""');
+      return `"${name}","${email}","${title}","${state}"`;
+    });
+    const csv = header + rows.join("\n");
+    const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = `candidates-${selectedState || "export"}.csv`;
+    a.click();
+    URL.revokeObjectURL(url);
+  };
+
+  const handleCancelExport = () => {
+    setSelectedIds(new Set());
   };
 
   const visibleCandidates = useMemo(() => {
@@ -117,7 +173,10 @@ export default function CandidateBucketModal({
   const handleSendInvite = (e, gig) => {
     e.stopPropagation();
     setInvitedIds((prev) => new Set(prev).add(gig.id));
-    // Placeholder: could call API or show toast later
+    const email = gig.email || gig.user?.email || "";
+    if (email) {
+      window.location.href = `mailto:${email}`;
+    }
   };
 
   const handleRemove = (e, gig) => {
@@ -173,7 +232,7 @@ export default function CandidateBucketModal({
                     </span>
                   </>
                 ) : (
-                  "Candidate bucket"
+                  "Fetch candidates"
                 )}
               </h2>
             </div>
@@ -241,17 +300,24 @@ export default function CandidateBucketModal({
                 )}
                 {!statesLoading && statesList.length > 0 && (
                   <ul className="space-y-1">
-                    {statesList.map((state, index) => (
-                      <li key={index}>
-                        <button
-                          type="button"
-                          onClick={() => setSelectedState(state)}
-                          className="w-full flex items-center justify-between gap-2 py-3 px-3 rounded-lg border border-brand-stroke-weak bg-brand-bg-white hover:bg-brand-bg-fill hover:border-brand-stroke-border text-left transition-colors font-medium text-brand-text-strong"
-                        >
-                          {state}
-                        </button>
-                      </li>
-                    ))}
+                    {statesList.map((state, index) => {
+                      const isPreselected = preselectedState && state.trim().toLowerCase() === preselectedState.trim().toLowerCase();
+                      return (
+                        <li key={index}>
+                          <button
+                            type="button"
+                            onClick={() => setSelectedState(state)}
+                            className={`w-full flex items-center justify-between gap-2 py-3 px-3 rounded-lg border text-left transition-colors font-medium ${
+                              isPreselected
+                                ? "border-brand/30 bg-brand/15 text-brand-text-strong"
+                                : "border-brand-stroke-weak bg-brand-bg-white hover:bg-brand-bg-fill hover:border-brand-stroke-border text-brand-text-strong"
+                            }`}
+                          >
+                            {state}
+                          </button>
+                        </li>
+                      );
+                    })}
                   </ul>
                 )}
               </>
@@ -288,93 +354,136 @@ export default function CandidateBucketModal({
                 {!candidatesLoading &&
                   !candidatesError &&
                   candidatesByTab.length > 0 && (
-                    <ul className="space-y-2">
-                      {candidatesByTab.map((gig) => {
-                        const name =
-                          gig.user?.name || gig.title || "Candidate";
-                        const email =
-                          gig.email || gig.user?.email || "—";
-                        const jobProfile =
-                          gig.serviceType ||
-                          (gig.jobSeekerExperience
-                            ? "Job seeker"
-                            : "Job seeker");
-                        const stateLabel = gig.state || selectedState || "—";
-                        const avatarUrl =
-                          gig.user?.avatarUrl ||
-                          (gig.user?.avatarId
-                            ? getAvatarUrlById(gig.user.avatarId)
-                            : "/avatars/avatar1.png");
-                        const isBookmarked = bookmarkedIds.has(gig.id);
-                        const showActions = activeTab === TAB_ALL;
+                    <>
+                      <ul className="space-y-2">
+                        {candidatesByTab.map((gig) => {
+                          const name =
+                            gig.user?.name || gig.title || "Candidate";
+                          const email =
+                            gig.email || gig.user?.email || "—";
+                          const jobProfile =
+                            gig.serviceType ||
+                            (gig.jobSeekerExperience
+                              ? "Job seeker"
+                              : "Job seeker");
+                          const stateLabel = gig.state || selectedState || "—";
+                          const jobTitle =
+                            gig.resume?.currentPosition ||
+                            gig.resume?.workExperiences?.[0]?.position ||
+                            "";
+                          const avatarUrl =
+                            gig.user?.avatarUrl ||
+                            (gig.user?.avatarId
+                              ? getAvatarUrlById(gig.user.avatarId)
+                              : "/avatars/avatar1.png");
+                          const isBookmarked = bookmarkedIds.has(gig.id);
+                          const isSelected = selectedIds.has(gig.id);
+                          const showActions = activeTab === TAB_ALL;
+                          const hasEmail = !!(gig.email || gig.user?.email);
 
-                        return (
-                          <li key={gig.id}>
-                            <div className="flex items-center gap-4 p-3 rounded-lg border border-brand-stroke-weak bg-brand-bg-white hover:bg-brand-bg-fill transition-colors">
-                              <button
-                                type="button"
-                                onClick={() => handleRowClick(gig)}
-                                className="flex items-center gap-4 flex-1 min-w-0 text-left"
-                              >
-                                <img
-                                  src={avatarUrl}
-                                  alt=""
-                                  className="w-10 h-10 rounded-full object-cover border border-brand-stroke-weak shrink-0"
-                                />
-                                <div className="flex-1 min-w-0">
-                                  <div className="font-medium text-brand-text-strong truncate">
-                                    {name}
-                                  </div>
-                                  <div className="text-sm text-brand-text-weak truncate">
-                                    {email}
-                                  </div>
-                                  <div className="flex items-center gap-2 mt-0.5 text-xs text-brand-text-weak">
-                                    <span>{jobProfile}</span>
-                                    <span>·</span>
-                                    <span>{stateLabel}</span>
-                                  </div>
-                                </div>
-                              </button>
-                              {showActions && (
-                                <div className="flex items-center gap-1 shrink-0">
-                                  <button
-                                    type="button"
-                                    onClick={(e) => handleSendInvite(e, gig)}
-                                    className="p-2 rounded-md hover:bg-brand-stroke-weak text-brand-stroke-strong transition-colors"
-                                    title="Send invite email"
-                                    aria-label="Send invite email"
-                                  >
-                                    <Email size={16} />
-                                  </button>
-                                  <button
-                                    type="button"
-                                    onClick={(e) => handleBookmark(e, gig)}
-                                    className="p-2 rounded-md hover:bg-brand-stroke-weak text-brand-stroke-strong transition-colors"
-                                    title={isBookmarked ? "Unbookmark" : "Bookmark"}
-                                    aria-label={isBookmarked ? "Unbookmark" : "Bookmark"}
-                                  >
-                                    {isBookmarked ? (
-                                      <BookmarkFilled size={16} className="text-brand" />
-                                    ) : (
-                                      <BookmarkAdd size={16} />
+                          return (
+                            <li key={gig.id}>
+                              <div className="flex items-center gap-4 p-3 rounded-lg border border-brand-stroke-weak bg-brand-bg-white hover:bg-brand-bg-fill transition-colors">
+                                {showActions && (
+                                  <input
+                                    type="checkbox"
+                                    checked={isSelected}
+                                    onChange={(e) => toggleSelected(e, gig)}
+                                    onClick={(e) => e.stopPropagation()}
+                                    className="shrink-0 w-4 h-4 rounded border-brand-stroke-border text-brand focus:ring-brand"
+                                    aria-label={`Select ${name}`}
+                                  />
+                                )}
+                                <button
+                                  type="button"
+                                  onClick={() => handleRowClick(gig)}
+                                  className="flex items-center gap-4 flex-1 min-w-0 text-left"
+                                >
+                                  <img
+                                    src={avatarUrl}
+                                    alt=""
+                                    className="w-10 h-10 rounded-full object-cover border border-brand-stroke-weak shrink-0"
+                                  />
+                                  <div className="flex-1 min-w-0">
+                                    <div className="font-medium text-brand-text-strong truncate">
+                                      {name}
+                                    </div>
+                                    <div className="text-sm text-brand-text-weak truncate">
+                                      {email}
+                                    </div>
+                                    {jobTitle && (
+                                      <div className="text-xs text-brand-text-weak truncate mt-0.5">
+                                        {jobTitle}
+                                      </div>
                                     )}
-                                  </button>
-                                  <button
-                                    type="button"
-                                    onClick={(e) => handleRemove(e, gig)}
-                                    className="p-2 rounded-md hover:bg-brand-stroke-weak text-red-600 transition-colors"
-                                    title="Remove from list"
-                                    aria-label="Remove candidate"
-                                  >
-                                    <TrashCan size={16} />
-                                  </button>
-                                </div>
-                              )}
-                            </div>
-                          </li>
-                        );
-                      })}
-                    </ul>
+                                    <div className="flex items-center gap-2 mt-0.5 text-xs text-brand-text-weak">
+                                      <span>{jobProfile}</span>
+                                      <span>·</span>
+                                      <span>{stateLabel}</span>
+                                    </div>
+                                  </div>
+                                </button>
+                                {showActions && (
+                                  <div className="flex items-center gap-1 shrink-0">
+                                    <button
+                                      type="button"
+                                      onClick={(e) => handleSendInvite(e, gig)}
+                                      disabled={!hasEmail}
+                                      className="p-2 rounded-md hover:bg-brand-stroke-weak text-brand-stroke-strong transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                                      title={hasEmail ? "Send invite email" : "No email"}
+                                      aria-label="Send invite email"
+                                    >
+                                      <Email size={16} />
+                                    </button>
+                                    <button
+                                      type="button"
+                                      onClick={(e) => handleBookmark(e, gig)}
+                                      className="p-2 rounded-md hover:bg-brand-stroke-weak text-brand-stroke-strong transition-colors"
+                                      title={isBookmarked ? "Unbookmark" : "Bookmark"}
+                                      aria-label={isBookmarked ? "Unbookmark" : "Bookmark"}
+                                    >
+                                      {isBookmarked ? (
+                                        <BookmarkFilled size={16} className="text-brand" />
+                                      ) : (
+                                        <BookmarkAdd size={16} />
+                                      )}
+                                    </button>
+                                    <button
+                                      type="button"
+                                      onClick={(e) => handleRemove(e, gig)}
+                                      className="p-2 rounded-md hover:bg-brand-stroke-weak text-red-600 transition-colors"
+                                      title="Remove from list"
+                                      aria-label="Remove candidate"
+                                    >
+                                      <TrashCan size={16} />
+                                    </button>
+                                  </div>
+                                )}
+                              </div>
+                            </li>
+                          );
+                        })}
+                      </ul>
+                      {activeTab === TAB_ALL && visibleCandidates.length > 0 && (
+                        <div className="sticky bottom-0 mt-4 pt-4 flex items-center justify-end gap-2 border-t border-brand-stroke-weak bg-brand-bg-white -mx-4 px-4 -mb-4 pb-4">
+                          <button
+                            type="button"
+                            onClick={handleCancelExport}
+                            className="px-4 py-2 rounded-lg border border-brand-stroke-border bg-brand-bg-white text-brand-text-strong text-sm font-medium hover:bg-brand-bg-fill transition-colors"
+                          >
+                            Cancel
+                          </button>
+                          <button
+                            type="button"
+                            onClick={handleExportAs}
+                            className="px-4 py-2 rounded-lg bg-brand-text-strong text-white text-sm font-medium hover:opacity-90 transition-colors"
+                            title={selectedIds.size > 0 ? `Export ${selectedIds.size} selected` : "Export all"}
+                          >
+                            Export as
+                          </button>
+                        </div>
+                      )}
+                    </>
                   )}
               </>
             )}
