@@ -82,15 +82,15 @@ export default function EmailAuthForm({ onSubmit, isLoading = false }) {
         className="relative rounded-lg p-8 pt-6 pb-0 w-full overflow-hidden flex-1 min-h-0 flex flex-col"
         style={{
           background: "linear-gradient(to right, rgba(255,255,255,0.28) 0%, #fff 22%, #fff 78%, rgba(255,255,255,0.28) 100%)",
-          boxShadow: "0 4px 12px rgba(0,0,0,0.08)",
+          boxShadow: "0 0 48px rgba(255,255,255,0.25), 0 6px 20px rgba(0,0,0,0.05)",
         }}
       >
-        {/* Decorative cloud – left and right, increased size, vertical middle */}
-        <div className="absolute left-4 top-1/2 -translate-y-1/2 w-72 h-72 pointer-events-none opacity-85" aria-hidden>
-          <Image src="/cloud.png" alt="" fill className="object-contain object-left" sizes="288px" />
+        {/* Decorative cloud – bottom corners of main card */}
+        <div className="absolute left-0 bottom-0 w-72 h-72 pointer-events-none opacity-85" aria-hidden>
+          <Image src="/cloud.png" alt="" fill className="object-contain object-left-bottom" sizes="288px" />
         </div>
-        <div className="absolute right-4 top-1/2 -translate-y-1/2 w-72 h-72 pointer-events-none opacity-85" aria-hidden>
-          <Image src="/cloud.png" alt="" fill className="object-contain object-right" sizes="288px" />
+        <div className="absolute right-0 bottom-0 w-72 h-72 pointer-events-none opacity-85" aria-hidden>
+          <Image src="/cloud.png" alt="" fill className="object-contain object-right-bottom" sizes="288px" />
         </div>
 
         {/* Bottom blend: soft fade into background image */}
@@ -143,16 +143,16 @@ export default function EmailAuthForm({ onSubmit, isLoading = false }) {
               Sign in once. Get full access.
             </p>
 
-            {/* Social Sign-in Buttons – width to match heading */}
-            <div className="space-y-3 w-fit max-w-full mx-auto">
+            {/* Social Sign-in Buttons – glass style, pill shape, slightly wider */}
+            <div className="space-y-3 w-full max-w-[320px] mx-auto">
               <button
                 type="button"
                 onClick={handleGoogleAuth}
                 disabled={isLoading || isGoogleLoading}
-                className="relative w-full min-w-0 flex items-center justify-center gap-3 px-5 py-3 border border-brand-stroke-weak rounded-lg overflow-hidden text-brand-text-strong hover:bg-brand-bg-fill/50 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                className="glass-sign-in-button relative w-full flex items-center justify-center gap-3 px-6 py-3.5 rounded-full overflow-hidden text-brand-text-strong font-medium hover:opacity-95 transition-opacity disabled:opacity-50 disabled:cursor-not-allowed"
                 style={{ fontFamily: "Open Sans, sans-serif", fontSize: "14px" }}
               >
-                <span className="glass-button-gradient-bg absolute inset-0 -z-10 opacity-75" aria-hidden />
+                <span className="glass-button-gradient-bg absolute inset-0 -z-10 opacity-90" aria-hidden />
                 <svg className="w-5 h-5 shrink-0 relative z-0" viewBox="0 0 24 24">
                   <path
                     fill="#4285F4"
@@ -178,10 +178,10 @@ export default function EmailAuthForm({ onSubmit, isLoading = false }) {
                 type="button"
                 onClick={handleLinkedInAuth}
                 disabled={isLoading || isLinkedInLoading}
-                className="relative w-full min-w-0 flex items-center justify-center gap-3 px-5 py-3 border border-brand-stroke-weak rounded-lg overflow-hidden text-brand-text-strong hover:bg-brand-bg-fill/50 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                className="glass-sign-in-button relative w-full flex items-center justify-center gap-3 px-6 py-3.5 rounded-full overflow-hidden text-brand-text-strong font-medium hover:opacity-95 transition-opacity disabled:opacity-50 disabled:cursor-not-allowed"
                 style={{ fontFamily: "Open Sans, sans-serif", fontSize: "14px" }}
               >
-                <span className="glass-button-gradient-bg absolute inset-0 -z-10 opacity-75" aria-hidden />
+                <span className="glass-button-gradient-bg absolute inset-0 -z-10 opacity-90" aria-hidden />
                 <svg className="w-5 h-5 shrink-0 relative z-0" viewBox="0 0 24 24" fill="currentColor">
                   <path d="M20.447 20.452h-3.554v-5.569c0-1.328-.027-3.037-1.852-3.037-1.853 0-2.136 1.445-2.136 2.939v5.667H9.351V9h3.414v1.561h.046c.477-.9 1.637-1.85 3.37-1.85 3.601 0 4.267 2.37 4.267 5.455v6.286zM5.337 7.433c-1.144 0-2.063-.926-2.063-2.065 0-1.138.92-2.063 2.063-2.063 1.14 0 2.064.925 2.064 2.063 0 1.139-.925 2.065-2.064 2.065zm1.782 13.019H3.555V9h3.564v11.452zM22.225 0H1.771C.792 0 0 .774 0 1.729v20.542C0 23.227.792 24 1.771 24h20.451C23.2 24 24 23.227 24 22.271V1.729C24 .774 23.2 0 22.222 0h.003z"/>
                 </svg>
@@ -216,10 +216,10 @@ export default function EmailAuthForm({ onSubmit, isLoading = false }) {
               >
                 <div className="flex flex-col items-center justify-start w-full flex-1 min-h-0">
                   <h3 className="text-brand-text-strong font-semibold shrink-0 leading-tight" style={{ fontFamily: "Open Sans, sans-serif", fontSize: "34px" }}>
-                    Finding gig workers near you
+                    Hire next door.
                   </h3>
                   <p className="shrink-0 mt-2 bg-gradient-to-r from-brand-text-strong/90 to-brand-text-weak bg-clip-text text-transparent" style={{ fontFamily: "Open Sans, sans-serif", fontSize: "16px" }}>
-                    Discover local talent in your area.
+                    Skilled gig workers and hires—right next door, ready when you are.
                   </p>
                   <div className="mt-4 p-2 flex-1 min-h-[180px] w-full rounded-2xl overflow-hidden bg-white/90 relative">
                     <Image src={card1Img} alt="" fill className="object-cover object-center rounded-2xl" sizes="(max-width: 640px) 100vw, 25vw" />
@@ -237,13 +237,15 @@ export default function EmailAuthForm({ onSubmit, isLoading = false }) {
               >
                 <div className="flex flex-col items-center justify-start w-full flex-1 min-h-0">
                   <h3 className="text-brand-text-strong font-semibold shrink-0 leading-tight" style={{ fontFamily: "Open Sans, sans-serif", fontSize: "34px" }}>
-                    Post jobs. Hire local.
+                    Post. Get seen locally.
                   </h3>
                   <p className="shrink-0 mt-2 bg-gradient-to-r from-brand-text-strong/90 to-brand-text-weak bg-clip-text text-transparent" style={{ fontFamily: "Open Sans, sans-serif", fontSize: "16px" }}>
-                    Reach nearby candidates fast.
+                    Reach nearby candidates who want to work with you—no middleman.
                   </p>
                   <div className="mt-4 p-2 flex-1 min-h-[180px] w-full rounded-2xl overflow-hidden bg-white/90 relative">
-                    <Image src={card2Img} alt="" fill className="object-cover rounded-2xl" style={{ objectPosition: "50% 35%" }} sizes="(max-width: 640px) 100vw, 25vw" />
+                    <div className="absolute inset-[-12%]">
+                      <Image src={card2Img} alt="" fill className="object-cover rounded-2xl" style={{ objectPosition: "50% 35%" }} sizes="(max-width: 640px) 100vw, 25vw" />
+                    </div>
                   </div>
                 </div>
               </div>
@@ -258,10 +260,10 @@ export default function EmailAuthForm({ onSubmit, isLoading = false }) {
               >
                 <div className="flex flex-col items-center justify-start w-full flex-1 min-h-0">
                   <h3 className="text-brand-text-strong font-semibold shrink-0 leading-tight" style={{ fontFamily: "Open Sans, sans-serif", fontSize: "34px" }}>
-                    Connect with your community
+                    Connect with community.
                   </h3>
                   <p className="shrink-0 mt-2 bg-gradient-to-r from-brand-text-strong/90 to-brand-text-weak bg-clip-text text-transparent" style={{ fontFamily: "Open Sans, sans-serif", fontSize: "16px" }}>
-                    Chat and collaborate nearby.
+                    Chat, collaborate, and grow with people nearby.
                   </p>
                   <div className="mt-4 p-2 flex-1 min-h-[180px] w-full rounded-2xl overflow-hidden bg-white/90 relative">
                     <Image src={card3Img} alt="" fill className="object-cover object-center rounded-2xl" sizes="(max-width: 640px) 100vw, 25vw" />
@@ -279,10 +281,10 @@ export default function EmailAuthForm({ onSubmit, isLoading = false }) {
               >
                 <div className="flex flex-col items-center justify-start w-full flex-1 min-h-0">
                   <h3 className="text-brand-text-strong font-semibold shrink-0 leading-tight" style={{ fontFamily: "Open Sans, sans-serif", fontSize: "34px" }}>
-                    Create resume for the gig or job
+                    Create your resume.
                   </h3>
                   <p className="shrink-0 mt-2 bg-gradient-to-r from-brand-text-strong/90 to-brand-text-weak bg-clip-text text-transparent" style={{ fontFamily: "Open Sans, sans-serif", fontSize: "16px" }}>
-                    Stand out to employers.
+                    Show your best work and land the gigs that fit—in minutes.
                   </p>
                   <div className="mt-4 p-2 flex-1 min-h-[180px] w-full rounded-2xl overflow-hidden bg-white/90 relative">
                     <Image src={card4Img} alt="" fill className="object-cover object-center rounded-2xl" sizes="(max-width: 640px) 100vw, 25vw" />
