@@ -69,7 +69,7 @@ export default function EmailAuthForm({ onSubmit, isLoading = false }) {
 
   return (
     <div
-      className="w-full box-border flex flex-col"
+      className="relative w-full box-border flex flex-col overflow-visible"
       style={{
         marginLeft: "24px",
         marginRight: "24px",
@@ -78,21 +78,21 @@ export default function EmailAuthForm({ onSubmit, isLoading = false }) {
         minHeight: "calc(100dvh - 32px)",
       }}
     >
+      {/* Decorative cloud – left and right, centered; overflow onto page bg */}
+      <div className="absolute -left-6 top-1/2 -translate-y-1/2 w-72 h-72 pointer-events-none opacity-85 z-0" aria-hidden>
+        <Image src="/cloud.png" alt="" fill className="object-contain object-left" sizes="288px" />
+      </div>
+      <div className="absolute -right-6 top-1/2 -translate-y-1/2 w-72 h-72 pointer-events-none opacity-85 z-0" aria-hidden>
+        <Image src="/cloud.png" alt="" fill className="object-contain object-right" sizes="288px" />
+      </div>
+
       <div
-        className="relative rounded-lg p-8 pt-6 pb-0 w-full overflow-hidden flex-1 min-h-0 flex flex-col"
+        className="relative rounded-lg p-8 pt-6 pb-0 w-full overflow-hidden flex-1 min-h-0 flex flex-col z-10"
         style={{
-          background: "linear-gradient(to right, rgba(255,255,255,0.28) 0%, #fff 22%, #fff 78%, rgba(255,255,255,0.28) 100%)",
+          background: "linear-gradient(to right, rgba(255,255,255,0.12) 0%, #fff 22%, #fff 78%, rgba(255,255,255,0.12) 100%)",
           boxShadow: "0 0 48px rgba(255,255,255,0.25), 0 6px 20px rgba(0,0,0,0.05)",
         }}
       >
-        {/* Decorative cloud – left and right, vertically centered in viewport */}
-        <div className="absolute left-4 top-1/2 -translate-y-1/2 w-72 h-72 pointer-events-none opacity-85" aria-hidden>
-          <Image src="/cloud.png" alt="" fill className="object-contain object-left" sizes="288px" />
-        </div>
-        <div className="absolute right-4 top-1/2 -translate-y-1/2 w-72 h-72 pointer-events-none opacity-85" aria-hidden>
-          <Image src="/cloud.png" alt="" fill className="object-contain object-right" sizes="288px" />
-        </div>
-
         {/* Bottom blend: soft fade into background image */}
         <div
           className="absolute inset-x-0 bottom-0 h-28 pointer-events-none"
@@ -121,11 +121,11 @@ export default function EmailAuthForm({ onSubmit, isLoading = false }) {
             type="button"
             onClick={handleGoogleAuth}
             disabled={isLoading || isGoogleLoading}
-            className="glass-sign-in-button relative px-5 py-2.5 rounded-full overflow-hidden text-sm font-medium text-brand-text-strong transition-opacity disabled:opacity-50 disabled:cursor-not-allowed"
+            className="glass-sign-in-button relative px-5 py-2.5 rounded-full overflow-hidden text-sm font-medium text-white transition-opacity disabled:opacity-50 disabled:cursor-not-allowed"
             style={{ fontFamily: "Open Sans, sans-serif" }}
           >
-            <span className="absolute inset-0 bg-white -z-20" aria-hidden />
-            <span className="glass-button-gradient-bg absolute inset-0 -z-10 opacity-70" aria-hidden />
+            <span className="absolute inset-0 -z-20" style={{ backgroundColor: "var(--brand-text-strong)" }} aria-hidden />
+            <span className="glass-button-gradient-bg absolute inset-0 -z-10 opacity-50" aria-hidden />
             Try mapmyGig for free
           </button>
         </header>

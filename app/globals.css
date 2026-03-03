@@ -52,13 +52,13 @@
     0 3px 10px rgba(0, 0, 0, 0.08);
 }
 
-/* 9% primary tint on hover for Google / LinkedIn buttons */
+/* 12% primary tint on hover for Google / LinkedIn buttons */
 .glass-sign-in-hover:hover::after {
   content: "";
   position: absolute;
   inset: 0;
   background: var(--brand-color);
-  opacity: 0.09;
+  opacity: 0.12;
   pointer-events: none;
   border-radius: inherit;
   z-index: -5;
