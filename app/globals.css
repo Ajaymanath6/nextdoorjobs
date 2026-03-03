@@ -42,13 +42,13 @@
 /* Glass sign-in button: pill shape, soft shadow, subtle top highlight, no hard border */
 .glass-sign-in-button {
   box-shadow:
-    0 1px 2px rgba(255, 255, 255, 0.6) inset,
+    0 1px 2px rgba(255, 255, 255, 0.5) inset,
     0 2px 8px rgba(0, 0, 0, 0.06);
-  border: 1px solid rgba(255, 255, 255, 0.5);
+  border: 1px solid var(--brand-stroke-weak);
 }
 .glass-sign-in-button:hover {
   box-shadow:
-    0 1px 2px rgba(255, 255, 255, 0.7) inset,
+    0 1px 2px rgba(255, 255, 255, 0.55) inset,
     0 3px 10px rgba(0, 0, 0, 0.08);
 }
 

@@ -121,11 +121,9 @@ export default function EmailAuthForm({ onSubmit, isLoading = false }) {
             type="button"
             onClick={handleGoogleAuth}
             disabled={isLoading || isGoogleLoading}
-            className="glass-sign-in-button relative px-5 py-2.5 rounded-full overflow-hidden text-sm font-medium text-white transition-opacity disabled:opacity-50 disabled:cursor-not-allowed"
-            style={{ fontFamily: "Open Sans, sans-serif" }}
+            className="px-5 py-2.5 rounded-full text-sm font-medium text-white transition-opacity disabled:opacity-50 disabled:cursor-not-allowed border border-brand-stroke-weak"
+            style={{ fontFamily: "Open Sans, sans-serif", backgroundColor: "var(--brand-text-strong)" }}
           >
-            <span className="absolute inset-0 -z-20" style={{ backgroundColor: "var(--brand-text-strong)" }} aria-hidden />
-            <span className="glass-button-gradient-bg absolute inset-0 -z-10 opacity-50" aria-hidden />
             Try mapmyGig for free
           </button>
         </header>
@@ -151,7 +149,7 @@ export default function EmailAuthForm({ onSubmit, isLoading = false }) {
                 type="button"
                 onClick={handleGoogleAuth}
                 disabled={isLoading || isGoogleLoading}
-                className="glass-sign-in-button glass-sign-in-hover relative w-full flex items-center justify-center gap-3 px-6 py-3.5 rounded-full overflow-hidden text-brand-text-strong font-medium transition-opacity disabled:opacity-50 disabled:cursor-not-allowed"
+                className="glass-sign-in-button glass-sign-in-hover relative w-full flex items-center justify-center gap-3 px-6 py-3.5 rounded-full overflow-hidden text-brand-text-strong font-medium transition-opacity disabled:opacity-50 disabled:cursor-not-allowed border border-brand-stroke-weak"
                 style={{ fontFamily: "Open Sans, sans-serif", fontSize: "14px" }}
               >
                 <span className="glass-button-gradient-bg absolute inset-0 -z-10 opacity-90" aria-hidden />
@@ -180,7 +178,7 @@ export default function EmailAuthForm({ onSubmit, isLoading = false }) {
                 type="button"
                 onClick={handleLinkedInAuth}
                 disabled={isLoading || isLinkedInLoading}
-                className="glass-sign-in-button glass-sign-in-hover relative w-full flex items-center justify-center gap-3 px-6 py-3.5 rounded-full overflow-hidden text-brand-text-strong font-medium transition-opacity disabled:opacity-50 disabled:cursor-not-allowed"
+                className="glass-sign-in-button glass-sign-in-hover relative w-full flex items-center justify-center gap-3 px-6 py-3.5 rounded-full overflow-hidden text-brand-text-strong font-medium transition-opacity disabled:opacity-50 disabled:cursor-not-allowed border border-brand-stroke-weak"
                 style={{ fontFamily: "Open Sans, sans-serif", fontSize: "14px" }}
               >
                 <span className="glass-button-gradient-bg absolute inset-0 -z-10 opacity-90" aria-hidden />
