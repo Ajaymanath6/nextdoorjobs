@@ -19,6 +19,24 @@
   --brand-bg-white: #FFFFFF;
   --brand-marker-border: #87CEEB;
   --brand-primary-light: rgba(248, 68, 22, 0.12);
+
+  /* Glass button gradient */
+  --glass-gradient: linear-gradient(
+    135deg,
+    rgba(255, 255, 255, 0.6) 0%,
+    rgba(255, 255, 255, 0.2) 50%,
+    rgba(255, 255, 255, 0.35) 100%
+  );
+}
+
+.glass-button-gradient-bg {
+  background-image: var(--glass-gradient);
+  background-position: 50% 0;
+  background-size: 300% 300%;
+  transition: background-position 0.5s;
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
 }
 
 @theme inline {
