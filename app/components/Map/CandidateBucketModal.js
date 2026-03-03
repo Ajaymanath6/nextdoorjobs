@@ -393,45 +393,26 @@ export default function CandidateBucketModal({
                   </div>
                 )}
                 {!statesLoading && statesList.length > 0 && (
-                  <>
-                    <ul className="space-y-1">
-                      {statesList.map((state, index) => {
-                        const isSelected = stateSelectedInList && normalizeName(state) === normalizeName(stateSelectedInList);
-                        return (
-                          <li key={index}>
-                            <button
-                              type="button"
-                              onClick={() => setStateSelectedInList(state)}
-                              className={`w-full flex items-center justify-between gap-2 py-3 px-3 rounded-lg border text-left transition-colors font-medium ${
-                                isSelected
-                                  ? "border-brand bg-brand/20 text-brand"
-                                  : "border-brand-stroke-weak bg-brand-bg-white hover:bg-brand-bg-fill hover:border-brand-stroke-border text-brand-text-strong"
-                              }`}
-                            >
-                              {state}
-                            </button>
-                          </li>
-                        );
-                      })}
-                    </ul>
-                    <div className="mt-4 flex items-center justify-end gap-2">
-                      <button
-                        type="button"
-                        onClick={onClose}
-                        className="px-4 py-2 rounded-lg border border-brand-stroke-border bg-brand-bg-white text-brand-text-strong text-sm font-medium hover:bg-brand-bg-fill transition-colors"
-                      >
-                        Cancel
-                      </button>
-                      <button
-                        type="button"
-                        onClick={handleProceedFromStateList}
-                        disabled={!stateSelectedInList}
-                        className="px-4 py-2 rounded-lg bg-brand-text-strong text-white text-sm font-medium hover:opacity-90 transition-opacity disabled:opacity-50 disabled:cursor-not-allowed"
-                      >
-                        Proceed
-                      </button>
-                    </div>
-                  </>
+                  <ul className="space-y-1">
+                    {statesList.map((state, index) => {
+                      const isSelected = stateSelectedInList && normalizeName(state) === normalizeName(stateSelectedInList);
+                      return (
+                        <li key={index}>
+                          <button
+                            type="button"
+                            onClick={() => setStateSelectedInList(state)}
+                            className={`w-full flex items-center justify-between gap-2 py-3 px-3 rounded-lg border text-left transition-colors font-medium ${
+                              isSelected
+                                ? "border-brand bg-brand/25 text-brand"
+                                : "border-brand-stroke-weak bg-brand-bg-white hover:bg-brand-bg-fill hover:border-brand-stroke-border text-brand-text-strong"
+                            }`}
+                          >
+                            {state}
+                          </button>
+                        </li>
+                      );
+                    })}
+                  </ul>
                 )}
               </>
             ) : (
@@ -607,6 +588,26 @@ export default function CandidateBucketModal({
               </>
             )}
           </div>
+
+          {!selectedState && !statesLoading && statesList.length > 0 && (
+            <div className="shrink-0 border-t border-brand-stroke-weak p-4 flex items-center justify-end gap-2 bg-brand-bg-white">
+              <button
+                type="button"
+                onClick={onClose}
+                className="px-4 py-2 rounded-lg border border-brand-stroke-border bg-brand-bg-white text-brand-text-strong text-sm font-medium hover:bg-brand-bg-fill transition-colors"
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                onClick={handleProceedFromStateList}
+                disabled={!stateSelectedInList}
+                className="px-4 py-2 rounded-lg bg-brand-text-strong text-white text-sm font-medium hover:opacity-90 transition-opacity disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                Proceed
+              </button>
+            </div>
+          )}
         </div>
       </div>
     </Modal>

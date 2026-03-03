@@ -220,6 +220,18 @@ export async function GET(request) {
       const addr = (item) => item?.address || {};
       const stateFromAddr = (a) =>
         a.state || a.region || a["ISO3166-2-lvl4"] || "";
+      // Map Nominatim state to canonical name from states list so modal highlight matches
+      const canonicalState = (raw) => {
+        if (!raw || raw === "India") return raw || "India";
+        const rawNorm = normalize(raw);
+        const exact = statesData.find((s) => normalize(s.state || "") === rawNorm);
+        if (exact) return exact.state || raw;
+        const startsWith = statesData.find((s) => {
+          const sn = normalize(s.state || "");
+          return sn.startsWith(rawNorm) || rawNorm.startsWith(sn);
+        });
+        return startsWith ? startsWith.state : raw;
+      };
       for (const item of placeList || []) {
         if (item.lat == null || item.lon == null) continue;
         const a = addr(item);
@@ -228,10 +240,11 @@ export async function GET(request) {
         if (stateFilterNorm && stateNormItem !== stateFilterNorm) continue;
         const nameDisplay = item.display_name?.split(",")[0] || item.name || query;
         const postcode = a.postcode ? String(a.postcode).trim() : null;
+        const stateCanonical = canonicalState(stateName || "India");
         suggestions.push({
           type: "place",
           name: nameDisplay,
-          state: stateName || "India",
+          state: stateCanonical,
           district: a.county || a.state_district || null,
           lat: parseFloat(item.lat),
           lon: parseFloat(item.lon),

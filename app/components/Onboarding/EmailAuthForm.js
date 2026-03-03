@@ -131,8 +131,8 @@ export default function EmailAuthForm({ onSubmit, isLoading = false }) {
               className="text-center text-brand-text-strong font-semibold mb-4 leading-tight w-full"
               style={{ fontFamily: "var(--font-geist-sans), Open Sans, sans-serif", fontSize: "56px" }}
             >
-              <span className="whitespace-nowrap block">Local gigs. Real jobs.</span>
-              <span className="whitespace-nowrap block">One community. One place.</span>
+              <span className="whitespace-nowrap block">Find local gigs, real jobs on startup.</span>
+              <span className="whitespace-nowrap block">Build community and skills.</span>
             </h1>
             <p className="text-center text-sm text-brand-text-weak mb-6" style={{ fontFamily: "Open Sans, sans-serif" }}>
               Sign in once. Get full access.
@@ -182,7 +182,7 @@ export default function EmailAuthForm({ onSubmit, isLoading = false }) {
               </button>
             </div>
 
-            <div className="text-center mt-3">
+            <div className="text-center mt-3 pb-8">
               <Link
                 href="/privacy-policy"
                 target="_blank"
@@ -204,13 +204,15 @@ export default function EmailAuthForm({ onSubmit, isLoading = false }) {
                 style={{ backgroundColor: "#B6CAF4", transform: "rotate(-3deg)" }}
               >
                 <div className="flex flex-col items-center justify-start w-full">
-                  <Location size={40} className="text-brand mb-3 shrink-0" />
                   <h3 className="text-brand-text-strong font-semibold shrink-0" style={{ fontFamily: "Open Sans, sans-serif", fontSize: "34px" }}>
                     Finding gig workers near you
                   </h3>
-                  <p className="text-brand-text-weak shrink-0 mt-2" style={{ fontFamily: "Open Sans, sans-serif", fontSize: "16px" }}>
+                  <p className="shrink-0 mt-2 bg-gradient-to-r from-brand-text-strong/90 to-brand-text-weak bg-clip-text text-transparent" style={{ fontFamily: "Open Sans, sans-serif", fontSize: "16px" }}>
                     Discover local talent in your area.
                   </p>
+                  <div className="mt-4 rounded-lg bg-white/95 p-4 shrink-0 border border-white/80 shadow-sm">
+                    <Location size={40} className="text-brand" />
+                  </div>
                 </div>
               </div>
               {/* Card 2 – Post jobs */}
@@ -219,13 +221,15 @@ export default function EmailAuthForm({ onSubmit, isLoading = false }) {
                 style={{ backgroundColor: "#9ED5EF" }}
               >
                 <div className="flex flex-col items-center justify-start w-full">
-                  <UserMultiple size={40} className="text-brand mb-3 shrink-0" />
                   <h3 className="text-brand-text-strong font-semibold shrink-0" style={{ fontFamily: "Open Sans, sans-serif", fontSize: "34px" }}>
                     Post jobs. Hire local.
                   </h3>
-                  <p className="text-brand-text-weak shrink-0 mt-2" style={{ fontFamily: "Open Sans, sans-serif", fontSize: "16px" }}>
+                  <p className="shrink-0 mt-2 bg-gradient-to-r from-brand-text-strong/90 to-brand-text-weak bg-clip-text text-transparent" style={{ fontFamily: "Open Sans, sans-serif", fontSize: "16px" }}>
                     Reach nearby candidates fast.
                   </p>
+                  <div className="mt-4 rounded-lg bg-white/95 p-4 shrink-0 border border-white/80 shadow-sm">
+                    <UserMultiple size={40} className="text-brand" />
+                  </div>
                 </div>
               </div>
               {/* Card 3 – Community */}
@@ -234,13 +238,15 @@ export default function EmailAuthForm({ onSubmit, isLoading = false }) {
                 style={{ backgroundColor: "#D3F0DB", transform: "rotate(3deg)" }}
               >
                 <div className="flex flex-col items-center justify-start w-full">
-                  <Chat size={40} className="text-brand mb-3 shrink-0" />
                   <h3 className="text-brand-text-strong font-semibold shrink-0" style={{ fontFamily: "Open Sans, sans-serif", fontSize: "34px" }}>
                     Connect with your community
                   </h3>
-                  <p className="text-brand-text-weak shrink-0 mt-2" style={{ fontFamily: "Open Sans, sans-serif", fontSize: "16px" }}>
+                  <p className="shrink-0 mt-2 bg-gradient-to-r from-brand-text-strong/90 to-brand-text-weak bg-clip-text text-transparent" style={{ fontFamily: "Open Sans, sans-serif", fontSize: "16px" }}>
                     Chat and collaborate nearby.
                   </p>
+                  <div className="mt-4 rounded-lg bg-white/95 p-4 shrink-0 border border-white/80 shadow-sm">
+                    <Chat size={40} className="text-brand" />
+                  </div>
                 </div>
               </div>
               {/* Card 4 – Create resume */}
@@ -249,13 +255,15 @@ export default function EmailAuthForm({ onSubmit, isLoading = false }) {
                 style={{ backgroundColor: "#F5E6D3" }}
               >
                 <div className="flex flex-col items-center justify-start w-full">
-                  <Document size={40} className="text-brand mb-3 shrink-0" />
                   <h3 className="text-brand-text-strong font-semibold shrink-0" style={{ fontFamily: "Open Sans, sans-serif", fontSize: "34px" }}>
                     Create resume for the gig or job
                   </h3>
-                  <p className="text-brand-text-weak shrink-0 mt-2" style={{ fontFamily: "Open Sans, sans-serif", fontSize: "16px" }}>
+                  <p className="shrink-0 mt-2 bg-gradient-to-r from-brand-text-strong/90 to-brand-text-weak bg-clip-text text-transparent" style={{ fontFamily: "Open Sans, sans-serif", fontSize: "16px" }}>
                     Stand out to employers.
                   </p>
+                  <div className="mt-4 rounded-lg bg-white/95 p-4 shrink-0 border border-white/80 shadow-sm">
+                    <Document size={40} className="text-brand" />
+                  </div>
                 </div>
               </div>
             </div>
