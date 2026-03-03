@@ -2,7 +2,7 @@
 
 import { useState, useRef, useEffect } from "react";
 import { RiSearchLine } from "@remixicon/react";
-import { Push } from "@carbon/icons-react";
+import { Send } from "@carbon/icons-react";
 import themeClasses from "../../theme-utility-classes.json";
 
 const COUNTRY_DISPLAY = { name: "India", flag: "🇮🇳" };
@@ -166,7 +166,7 @@ export default function FilterDropdown({
                   aria-label={`View candidates in ${state}`}
                   title={`View candidates in ${state}`}
                 >
-                  <Push size={16} className="text-brand-stroke-strong" />
+                  <Send size={16} className="text-brand-stroke-strong" />
                 </button>
               ) : null}
             </div>
