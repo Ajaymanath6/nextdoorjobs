@@ -34,6 +34,7 @@ import LocalityAutocomplete from "./LocalityAutocomplete";
 import AddHomeModal from "./AddHomeModal";
 import GetCoordinatesModal from "./GetCoordinatesModal";
 import GigWorkerProfileModal from "./GigWorkerProfileModal";
+import StateCandidatesModal from "./StateCandidatesModal";
 import JobTitleAutocomplete from "./JobTitleAutocomplete";
 import CollegeAutocomplete from "./CollegeAutocomplete";
 import EmptyState from "./EmptyState";
@@ -151,6 +152,7 @@ const MapComponent = ({ onOpenSettings, onViewModeChange, effectiveUser = null, 
   const gigMarkersRef = useRef([]);
   const gigClusterGroupRef = useRef(null);
   const gigClusterHoverPopupRef = useRef(null);
+  const stateOverlayLayerRef = useRef(null);
   const [mobileSearchExpanded, setMobileSearchExpanded] = useState(false);
   const [showSearchModeDropdown, setShowSearchModeDropdown] = useState(false);
   const searchModeDropdownRef = useRef(null);
@@ -162,6 +164,8 @@ const MapComponent = ({ onOpenSettings, onViewModeChange, effectiveUser = null, 
   const [showGigFilterDropdown, setShowGigFilterDropdown] = useState(false);
   const gigFilterDropdownRef = useRef(null);
   const gigFilterButtonRef = useRef(null);
+  const [stateForBucketModal, setStateForBucketModal] = useState(null);
+  const [showStateCandidatesModal, setShowStateCandidatesModal] = useState(false);
 
   // Notify parent of view mode (person = gigs, company = jobs) for sidebar label
   useEffect(() => {
@@ -386,6 +390,51 @@ const MapComponent = ({ onOpenSettings, onViewModeChange, effectiveUser = null, 
     }
   }, [selectedFilterOption?.state]);
 
+  // State overlay: highlight selected state on map with GeoJSON layer
+  useEffect(() => {
+    const map = mapInstanceRef.current;
+    const L = typeof window !== "undefined" ? window.L : null;
+    const selectedState = selectedFilterOption?.state ?? null;
+
+    if (!map || !L) return;
+
+    const removeOverlay = () => {
+      if (stateOverlayLayerRef.current) {
+        map.removeLayer(stateOverlayLayerRef.current);
+        stateOverlayLayerRef.current = null;
+      }
+    };
+
+    if (!selectedState) {
+      removeOverlay();
+      return;
+    }
+
+    fetch("/geojson/india_states.geojson")
+      .then((r) => (r.ok ? r.json() : null))
+      .then((geojson) => {
+        if (!geojson || !mapInstanceRef.current) return;
+        removeOverlay();
+        const layer = L.geoJSON(geojson, {
+          style: (feature) => {
+            const name = feature?.properties?.ST_NM;
+            const match = name && name.trim() === selectedState.trim();
+            return {
+              fillColor: match ? "#3388ff" : "#cccccc",
+              fillOpacity: match ? 0.35 : 0,
+              weight: match ? 1.5 : 0,
+              color: match ? "#3388ff" : "transparent",
+            };
+          },
+        });
+        layer.addTo(mapInstanceRef.current);
+        stateOverlayLayerRef.current = layer;
+      })
+      .catch(() => removeOverlay());
+
+    return removeOverlay;
+  }, [selectedFilterOption?.state]);
+
   // Preload districts for selected state so suggestions can show faster
   useEffect(() => {
     const stateName = selectedFilterOption?.state;
@@ -405,10 +454,14 @@ const MapComponent = ({ onOpenSettings, onViewModeChange, effectiveUser = null, 
     return () => { cancelled = true; };
   }, [selectedFilterOption?.state]);
 
-  // Cleanup markers and lines on unmount
+  // Cleanup markers, lines, and state overlay on unmount
   useEffect(() => {
     return () => {
       if (mapInstanceRef.current) {
+        if (stateOverlayLayerRef.current) {
+          mapInstanceRef.current.removeLayer(stateOverlayLayerRef.current);
+          stateOverlayLayerRef.current = null;
+        }
         // Remove user location marker
         if (userLocationMarkerRef.current) {
           mapInstanceRef.current.removeLayer(userLocationMarkerRef.current);
@@ -5331,6 +5384,12 @@ const MapComponent = ({ onOpenSettings, onViewModeChange, effectiveUser = null, 
                       dropdownRef={filterDropdownRef}
                       selectedOption={selectedFilterOption}
                       onSelect={(option) => setSelectedFilterOption(option)}
+                      showBucketIcon={userAccountType === "Company" && searchMode === "person"}
+                      onBucketClick={(state) => {
+                        setShowFilterDropdown(false);
+                        setStateForBucketModal(state);
+                        setShowStateCandidatesModal(true);
+                      }}
                       position={
                         isGlobeView
                           ? {
@@ -5647,6 +5706,16 @@ const MapComponent = ({ onOpenSettings, onViewModeChange, effectiveUser = null, 
         isOpen={showGigWorkerProfileModal}
         onClose={() => { setShowGigWorkerProfileModal(false); setSelectedGigForProfileModal(null); }}
         gig={selectedGigForProfileModal}
+      />
+
+      <StateCandidatesModal
+        isOpen={showStateCandidatesModal}
+        onClose={() => { setShowStateCandidatesModal(false); setStateForBucketModal(null); }}
+        stateName={stateForBucketModal}
+        onSelectCandidate={(gig) => {
+          setSelectedGigForProfileModal(gig);
+          setShowGigWorkerProfileModal(true);
+        }}
       />
 
       <CompanyJobsSidebar

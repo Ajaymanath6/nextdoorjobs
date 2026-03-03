@@ -2,6 +2,7 @@
 
 import { useState, useRef, useEffect } from "react";
 import { RiSearchLine } from "@remixicon/react";
+import { Archive } from "@carbon/icons-react";
 import themeClasses from "../../theme-utility-classes.json";
 
 const COUNTRY_DISPLAY = { name: "India", flag: "🇮🇳" };
@@ -19,6 +20,8 @@ export default function FilterDropdown({
   width = "300px",
   selectedOption = null,
   onSelect,
+  showBucketIcon = false,
+  onBucketClick,
 }) {
   const filterClasses = themeClasses.components.filterDropdown;
   const [searchQuery, setSearchQuery] = useState("");
@@ -130,22 +133,43 @@ export default function FilterDropdown({
       >
         {filteredStates.length > 0 ? (
           filteredStates.map((state, index) => (
-            <button
+            <div
               key={index}
-              onClick={() => handleStateSelect(state)}
-              className={filterClasses["state-item"]}
+              className={`${filterClasses["state-item"]} group flex items-center justify-between gap-2 w-full text-left`}
               style={{ fontFamily: "Open Sans" }}
             >
-              <span
-                className={filterClasses["state-item-text"]}
-                style={{
-                  fontFamily: "Open Sans",
-                  fontWeight: selectedState === state ? 600 : 500,
-                }}
+              <button
+                type="button"
+                onClick={() => handleStateSelect(state)}
+                className="flex-1 min-w-0 py-2 pr-2 pl-0 border-0 bg-transparent cursor-pointer text-inherit"
+                style={{ fontFamily: "Open Sans" }}
               >
-                {state}
-              </span>
-            </button>
+                <span
+                  className={filterClasses["state-item-text"]}
+                  style={{
+                    fontFamily: "Open Sans",
+                    fontWeight: selectedState === state ? 600 : 500,
+                  }}
+                >
+                  {state}
+                </span>
+              </button>
+              {showBucketIcon && onBucketClick ? (
+                <button
+                  type="button"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    onBucketClick(state);
+                    onClose();
+                  }}
+                  className="shrink-0 p-1.5 rounded-md opacity-0 group-hover:opacity-100 hover:bg-brand-stroke-weak transition-all"
+                  aria-label={`View candidates in ${state}`}
+                  title={`View candidates in ${state}`}
+                >
+                  <Archive size={16} className="text-brand-stroke-strong" />
+                </button>
+              ) : null}
+            </div>
           ))
         ) : (
           <div
