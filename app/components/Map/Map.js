@@ -25,6 +25,7 @@ import {
   Settings,
   Logout,
   StarFilled,
+  UserMultiple,
 } from "@carbon/icons-react";
 import { RiArrowDownSLine } from "@remixicon/react";
 import FilterDropdown from "./FilterDropdown";
@@ -5413,19 +5414,6 @@ const MapComponent = ({ onOpenSettings, onViewModeChange, effectiveUser = null, 
                     />
                   </div>
                 </div>
-
-                {/* Candidate bucket: Company only, rounded-full button after location filter */}
-                {userAccountType === "Company" && searchMode === "person" && (
-                  <button
-                    type="button"
-                    onClick={() => setShowCandidateBucketModal(true)}
-                    className="shrink-0 px-3 py-1.5 rounded-full border border-brand-stroke-border bg-brand-bg-white hover:bg-brand-bg-fill text-sm font-medium text-brand-text-strong transition-colors"
-                    aria-label="Candidate bucket"
-                    title="View candidates by state"
-                  >
-                    Candidate bucket
-                  </button>
-                )}
               </div>
 
               {/* Mobile: bottom sheet */}
@@ -5449,6 +5437,20 @@ const MapComponent = ({ onOpenSettings, onViewModeChange, effectiveUser = null, 
               </button> */}
           </div>
         </div>
+
+        {/* Fetch candidates: Company only, outside search bar, same line/height */}
+        {userAccountType === "Company" && searchMode === "person" && (
+          <button
+            type="button"
+            onClick={() => setShowCandidateBucketModal(true)}
+            className="shrink-0 h-[34px] flex items-center gap-2 px-3 rounded-full border border-brand-stroke-border bg-brand-bg-white hover:bg-brand-bg-fill text-sm font-medium text-brand-text-strong transition-colors"
+            aria-label="Fetch candidates"
+            title="View candidates by state"
+          >
+            <UserMultiple size={18} className="shrink-0 text-brand-stroke-strong" />
+            <span>Fetch candidates</span>
+          </button>
+        )}
         </div>
 
           {/* Home badge - below search bar, when user has home and in person mode */}

@@ -75,7 +75,7 @@ export default function EmailAuthForm({ onSubmit, isLoading = false }) {
       }}
     >
       <div
-        className="relative rounded-lg p-8 pt-6 pb-16 border border-brand-stroke-weak w-full overflow-hidden flex-1 min-h-0 flex flex-col"
+        className="relative rounded-lg p-8 pt-6 border border-brand-stroke-weak w-full overflow-hidden flex-1 min-h-0 flex flex-col"
         style={{
           background: "linear-gradient(to right, rgba(255,255,255,0.52) 0%, #fff 22%, #fff 78%, rgba(255,255,255,0.52) 100%)",
         }}

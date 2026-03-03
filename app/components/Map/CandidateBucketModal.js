@@ -1,9 +1,21 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import Modal from "../Modal";
-import { Close, ArrowLeft } from "@carbon/icons-react";
+import {
+  Close,
+  ArrowLeft,
+  Email,
+  TrashCan,
+  BookmarkAdd,
+  BookmarkFilled,
+} from "@carbon/icons-react";
 import { getAvatarUrlById } from "../../../lib/avatars";
+import LoadingSpinner from "../LoadingSpinner";
+
+const TAB_ALL = "all";
+const TAB_BOOKMARKED = "bookmarked";
+const TAB_INVITED = "invited";
 
 export default function CandidateBucketModal({
   isOpen,
@@ -16,6 +28,10 @@ export default function CandidateBucketModal({
   const [candidates, setCandidates] = useState([]);
   const [candidatesLoading, setCandidatesLoading] = useState(false);
   const [candidatesError, setCandidatesError] = useState(null);
+  const [activeTab, setActiveTab] = useState(TAB_ALL);
+  const [bookmarkedIds, setBookmarkedIds] = useState(() => new Set());
+  const [invitedIds, setInvitedIds] = useState(() => new Set());
+  const [removedIds, setRemovedIds] = useState(() => new Set());
 
   useEffect(() => {
     if (!isOpen) return;
@@ -38,6 +54,10 @@ export default function CandidateBucketModal({
     }
     setCandidatesLoading(true);
     setCandidatesError(null);
+    setBookmarkedIds(new Set());
+    setInvitedIds(new Set());
+    setRemovedIds(new Set());
+    setActiveTab(TAB_ALL);
     fetch(`/api/gigs?state=${encodeURIComponent(selectedState)}`, {
       credentials: "same-origin",
     })
@@ -60,6 +80,49 @@ export default function CandidateBucketModal({
     setSelectedState(null);
     setCandidates([]);
     setCandidatesError(null);
+    setActiveTab(TAB_ALL);
+    setBookmarkedIds(new Set());
+    setInvitedIds(new Set());
+    setRemovedIds(new Set());
+  };
+
+  const visibleCandidates = useMemo(() => {
+    return candidates.filter((c) => !removedIds.has(c.id));
+  }, [candidates, removedIds]);
+
+  const bookmarkedCandidates = useMemo(() => {
+    return visibleCandidates.filter((c) => bookmarkedIds.has(c.id));
+  }, [visibleCandidates, bookmarkedIds]);
+
+  const invitedCandidates = useMemo(() => {
+    return visibleCandidates.filter((c) => invitedIds.has(c.id));
+  }, [visibleCandidates, invitedIds]);
+
+  const candidatesByTab = useMemo(() => {
+    if (activeTab === TAB_BOOKMARKED) return bookmarkedCandidates;
+    if (activeTab === TAB_INVITED) return invitedCandidates;
+    return visibleCandidates;
+  }, [activeTab, visibleCandidates, bookmarkedCandidates, invitedCandidates]);
+
+  const handleBookmark = (e, gig) => {
+    e.stopPropagation();
+    setBookmarkedIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(gig.id)) next.delete(gig.id);
+      else next.add(gig.id);
+      return next;
+    });
+  };
+
+  const handleSendInvite = (e, gig) => {
+    e.stopPropagation();
+    setInvitedIds((prev) => new Set(prev).add(gig.id));
+    // Placeholder: could call API or show toast later
+  };
+
+  const handleRemove = (e, gig) => {
+    e.stopPropagation();
+    setRemovedIds((prev) => new Set(prev).add(gig.id));
   };
 
   const handleRowClick = (gig) => {
@@ -124,12 +187,51 @@ export default function CandidateBucketModal({
             </button>
           </div>
 
+          {selectedState && (
+            <div className="shrink-0 flex border-b border-brand-stroke-weak px-4 gap-0">
+              <button
+                type="button"
+                onClick={() => setActiveTab(TAB_ALL)}
+                className={`px-4 py-3 text-sm font-medium border-b-2 -mb-px transition-colors ${
+                  activeTab === TAB_ALL
+                    ? "text-brand border-brand"
+                    : "text-brand-text-weak border-transparent hover:text-brand-text-strong"
+                }`}
+              >
+                All candidates
+              </button>
+              <button
+                type="button"
+                onClick={() => setActiveTab(TAB_BOOKMARKED)}
+                className={`px-4 py-3 text-sm font-medium border-b-2 -mb-px transition-colors ${
+                  activeTab === TAB_BOOKMARKED
+                    ? "text-brand border-brand"
+                    : "text-brand-text-weak border-transparent hover:text-brand-text-strong"
+                }`}
+              >
+                Bookmarked {bookmarkedIds.size > 0 && `(${bookmarkedIds.size})`}
+              </button>
+              <button
+                type="button"
+                onClick={() => setActiveTab(TAB_INVITED)}
+                className={`px-4 py-3 text-sm font-medium border-b-2 -mb-px transition-colors ${
+                  activeTab === TAB_INVITED
+                    ? "text-brand border-brand"
+                    : "text-brand-text-weak border-transparent hover:text-brand-text-strong"
+                }`}
+              >
+                Invited {invitedIds.size > 0 && `(${invitedIds.size})`}
+              </button>
+            </div>
+          )}
+
           <div className="flex-1 min-h-0 overflow-y-auto p-4">
             {!selectedState ? (
               <>
                 {statesLoading && (
-                  <div className="text-center py-8 text-brand-text-weak">
-                    Loading states…
+                  <div className="flex flex-col items-center justify-center py-8 gap-4 text-brand-text-weak">
+                    <LoadingSpinner size="lg" />
+                    <span>Loading states…</span>
                   </div>
                 )}
                 {!statesLoading && statesList.length === 0 && (
@@ -156,8 +258,9 @@ export default function CandidateBucketModal({
             ) : (
               <>
                 {candidatesLoading && (
-                  <div className="text-center py-8 text-brand-text-weak">
-                    Loading candidates…
+                  <div className="flex flex-col items-center justify-center py-8 gap-4 text-brand-text-weak">
+                    <LoadingSpinner size="lg" />
+                    <span>Loading candidates…</span>
                   </div>
                 )}
                 {candidatesError && (
@@ -165,58 +268,114 @@ export default function CandidateBucketModal({
                     {candidatesError}
                   </div>
                 )}
-                {!candidatesLoading && !candidatesError && candidates.length === 0 && (
-                  <div className="text-center py-8 text-brand-text-weak">
-                    No candidates in this state.
-                  </div>
-                )}
-                {!candidatesLoading && !candidatesError && candidates.length > 0 && (
-                  <ul className="space-y-2">
-                    {candidates.map((gig) => {
-                      const name =
-                        gig.user?.name || gig.title || "Candidate";
-                      const email = gig.email || gig.user?.email || "—";
-                      const jobProfile =
-                        gig.serviceType ||
-                        (gig.jobSeekerExperience ? "Job seeker" : "Job seeker");
-                      const stateLabel = gig.state || selectedState || "—";
-                      const avatarUrl =
-                        gig.user?.avatarUrl ||
-                        (gig.user?.avatarId
-                          ? getAvatarUrlById(gig.user.avatarId)
-                          : "/avatars/avatar1.png");
+                {!candidatesLoading &&
+                  !candidatesError &&
+                  candidates.length === 0 && (
+                    <div className="text-center py-8 text-brand-text-weak">
+                      No candidates in this state.
+                    </div>
+                  )}
+                {!candidatesLoading &&
+                  !candidatesError &&
+                  candidatesByTab.length === 0 &&
+                  candidates.length > 0 && (
+                    <div className="text-center py-8 text-brand-text-weak">
+                      {activeTab === TAB_BOOKMARKED &&
+                        "No bookmarked candidates."}
+                      {activeTab === TAB_INVITED && "No invited candidates yet."}
+                    </div>
+                  )}
+                {!candidatesLoading &&
+                  !candidatesError &&
+                  candidatesByTab.length > 0 && (
+                    <ul className="space-y-2">
+                      {candidatesByTab.map((gig) => {
+                        const name =
+                          gig.user?.name || gig.title || "Candidate";
+                        const email =
+                          gig.email || gig.user?.email || "—";
+                        const jobProfile =
+                          gig.serviceType ||
+                          (gig.jobSeekerExperience
+                            ? "Job seeker"
+                            : "Job seeker");
+                        const stateLabel = gig.state || selectedState || "—";
+                        const avatarUrl =
+                          gig.user?.avatarUrl ||
+                          (gig.user?.avatarId
+                            ? getAvatarUrlById(gig.user.avatarId)
+                            : "/avatars/avatar1.png");
+                        const isBookmarked = bookmarkedIds.has(gig.id);
+                        const showActions = activeTab === TAB_ALL;
 
-                      return (
-                        <li key={gig.id}>
-                          <button
-                            type="button"
-                            onClick={() => handleRowClick(gig)}
-                            className="w-full flex items-center gap-4 p-3 rounded-lg border border-brand-stroke-weak bg-brand-bg-white hover:bg-brand-bg-fill text-left transition-colors"
-                          >
-                            <img
-                              src={avatarUrl}
-                              alt=""
-                              className="w-10 h-10 rounded-full object-cover border border-brand-stroke-weak shrink-0"
-                            />
-                            <div className="flex-1 min-w-0">
-                              <div className="font-medium text-brand-text-strong truncate">
-                                {name}
-                              </div>
-                              <div className="text-sm text-brand-text-weak truncate">
-                                {email}
-                              </div>
-                              <div className="flex items-center gap-2 mt-0.5 text-xs text-brand-text-weak">
-                                <span>{jobProfile}</span>
-                                <span>·</span>
-                                <span>{stateLabel}</span>
-                              </div>
+                        return (
+                          <li key={gig.id}>
+                            <div className="flex items-center gap-4 p-3 rounded-lg border border-brand-stroke-weak bg-brand-bg-white hover:bg-brand-bg-fill transition-colors">
+                              <button
+                                type="button"
+                                onClick={() => handleRowClick(gig)}
+                                className="flex items-center gap-4 flex-1 min-w-0 text-left"
+                              >
+                                <img
+                                  src={avatarUrl}
+                                  alt=""
+                                  className="w-10 h-10 rounded-full object-cover border border-brand-stroke-weak shrink-0"
+                                />
+                                <div className="flex-1 min-w-0">
+                                  <div className="font-medium text-brand-text-strong truncate">
+                                    {name}
+                                  </div>
+                                  <div className="text-sm text-brand-text-weak truncate">
+                                    {email}
+                                  </div>
+                                  <div className="flex items-center gap-2 mt-0.5 text-xs text-brand-text-weak">
+                                    <span>{jobProfile}</span>
+                                    <span>·</span>
+                                    <span>{stateLabel}</span>
+                                  </div>
+                                </div>
+                              </button>
+                              {showActions && (
+                                <div className="flex items-center gap-1 shrink-0">
+                                  <button
+                                    type="button"
+                                    onClick={(e) => handleSendInvite(e, gig)}
+                                    className="p-2 rounded-md hover:bg-brand-stroke-weak text-brand-stroke-strong transition-colors"
+                                    title="Send invite email"
+                                    aria-label="Send invite email"
+                                  >
+                                    <Email size={16} />
+                                  </button>
+                                  <button
+                                    type="button"
+                                    onClick={(e) => handleBookmark(e, gig)}
+                                    className="p-2 rounded-md hover:bg-brand-stroke-weak text-brand-stroke-strong transition-colors"
+                                    title={isBookmarked ? "Unbookmark" : "Bookmark"}
+                                    aria-label={isBookmarked ? "Unbookmark" : "Bookmark"}
+                                  >
+                                    {isBookmarked ? (
+                                      <BookmarkFilled size={16} className="text-brand" />
+                                    ) : (
+                                      <BookmarkAdd size={16} />
+                                    )}
+                                  </button>
+                                  <button
+                                    type="button"
+                                    onClick={(e) => handleRemove(e, gig)}
+                                    className="p-2 rounded-md hover:bg-brand-stroke-weak text-red-600 transition-colors"
+                                    title="Remove from list"
+                                    aria-label="Remove candidate"
+                                  >
+                                    <TrashCan size={16} />
+                                  </button>
+                                </div>
+                              )}
                             </div>
-                          </button>
-                        </li>
-                      );
-                    })}
-                  </ul>
-                )}
+                          </li>
+                        );
+                      })}
+                    </ul>
+                  )}
               </>
             )}
           </div>
