@@ -3,31 +3,32 @@ import { prisma } from "../../../lib/prisma";
 
 /**
  * GET /api/companies
- * Fetch all companies with active jobs for map display
+ * Fetch all companies with active jobs for map display.
+ * Optional query: remoteType (e.g. Remote, Hybrid, Work from office) - filter companies that have at least one active job with that remoteType.
  */
 export async function GET(request) {
   try {
-    // Fetch all companies that have at least one active job
+    const { searchParams } = new URL(request.url);
+    const remoteType = searchParams.get("remoteType")?.trim() || null;
+
+    const jobPositionsCondition = remoteType
+      ? {
+          some: {
+            isActive: true,
+            OR: [
+              { remoteType: { equals: remoteType, mode: "insensitive" } },
+              { remoteType: { contains: remoteType, mode: "insensitive" } },
+            ],
+          },
+        }
+      : { some: { isActive: true } };
+
     const companies = await prisma.company.findMany({
       where: {
         AND: [
-          {
-            latitude: {
-              not: null,
-            },
-          },
-          {
-            longitude: {
-              not: null,
-            },
-          },
-          {
-            jobPositions: {
-              some: {
-                isActive: true,
-              },
-            },
-          },
+          { latitude: { not: null } },
+          { longitude: { not: null } },
+          { jobPositions: jobPositionsCondition },
         ],
       },
       select: {

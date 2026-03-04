@@ -31,6 +31,7 @@ import { RiArrowDownSLine } from "@remixicon/react";
 import FilterDropdown from "./FilterDropdown";
 import FilterBottomSheet from "./FilterBottomSheet";
 import GigFilterDropdown from "./GigFilterDropdown";
+import OptionListFilterDropdown from "./OptionListFilterDropdown";
 import LocalityAutocomplete from "./LocalityAutocomplete";
 import AddHomeModal from "./AddHomeModal";
 import GetCoordinatesModal from "./GetCoordinatesModal";
@@ -42,6 +43,7 @@ import CollegeAutocomplete from "./CollegeAutocomplete";
 import EmptyState from "./EmptyState";
 import CompanyJobsSidebar from "../CompanyJobsSidebar";
 import LoadingSpinner from "../LoadingSpinner";
+import Tooltip from "../Tooltip";
 import { getStateCenter } from "../../../lib/indiaStateCenters";
 import { getAvatarUrlById } from "../../../lib/avatars";
 // Import CSS files (Next.js handles these)
@@ -60,6 +62,11 @@ function haversineKm(lat1, lon1, lat2, lon2) {
       Math.sin(dLon / 2) ** 2;
   return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
 }
+
+// Company view filter options (work arrangement uses JobPosition.remoteType; company type and industry are UI-only until backend supports)
+const WORK_ARRANGEMENT_OPTIONS = ["Remote", "Hybrid", "Work from office"];
+const COMPANY_TYPE_OPTIONS = ["Startup", "MNC"];
+const INDUSTRY_TYPE_OPTIONS = ["Fintech", "Ed tech", "Health tech", "SaaS", "E-commerce"];
 
 // Dynamic import of Leaflet to avoid SSR issues
 const MapComponent = ({ onOpenSettings, onViewModeChange, effectiveUser = null, effectiveUserLoading = true }) => {
@@ -147,6 +154,8 @@ const MapComponent = ({ onOpenSettings, onViewModeChange, effectiveUser = null, 
   // Search bar mode toggle: "person" (users), "job" (company jobs), or "company" (all companies)
   // Default to "person" for Individual/Gig Worker accounts, "job" for Company accounts
   const [searchMode, setSearchMode] = useState("person");
+  /* Hiding Candidates/Companies toggle for now - do not delete */
+  const HIDE_CANDIDATES_COMPANIES_TOGGLE = true;
   // Last district/state from locality search (e.g. for gig workers fetch)
   const [lastSearchedDistrict, setLastSearchedDistrict] = useState(null);
   const [lastSearchedState, setLastSearchedState] = useState(null);
@@ -166,6 +175,27 @@ const MapComponent = ({ onOpenSettings, onViewModeChange, effectiveUser = null, 
   const [showGigFilterDropdown, setShowGigFilterDropdown] = useState(false);
   const gigFilterDropdownRef = useRef(null);
   const gigFilterButtonRef = useRef(null);
+  const [selectedYearsExperience, setSelectedYearsExperience] = useState(null);
+  const [selectedToolStack, setSelectedToolStack] = useState(null);
+  const [showYearsFilterDropdown, setShowYearsFilterDropdown] = useState(false);
+  const [showToolStackFilterDropdown, setShowToolStackFilterDropdown] = useState(false);
+  const yearsFilterDropdownRef = useRef(null);
+  const yearsFilterButtonRef = useRef(null);
+  const toolStackFilterDropdownRef = useRef(null);
+  const toolStackFilterButtonRef = useRef(null);
+  // Company view filters (searchMode === "company")
+  const [selectedWorkArrangement, setSelectedWorkArrangement] = useState(null);
+  const [selectedCompanyType, setSelectedCompanyType] = useState(null);
+  const [selectedIndustryType, setSelectedIndustryType] = useState(null);
+  const [showWorkArrangementDropdown, setShowWorkArrangementDropdown] = useState(false);
+  const [showCompanyTypeDropdown, setShowCompanyTypeDropdown] = useState(false);
+  const [showIndustryTypeDropdown, setShowIndustryTypeDropdown] = useState(false);
+  const workArrangementDropdownRef = useRef(null);
+  const workArrangementButtonRef = useRef(null);
+  const companyTypeDropdownRef = useRef(null);
+  const companyTypeButtonRef = useRef(null);
+  const industryTypeDropdownRef = useRef(null);
+  const industryTypeButtonRef = useRef(null);
   const [stateForBucketModal, setStateForBucketModal] = useState(null);
   const [showStateCandidatesModal, setShowStateCandidatesModal] = useState(false);
   const [showCandidateBucketModal, setShowCandidateBucketModal] = useState(false);
@@ -213,6 +243,26 @@ const MapComponent = ({ onOpenSettings, onViewModeChange, effectiveUser = null, 
       .sort((a, b) => (b.karmaScore ?? 0) - (a.karmaScore ?? 0))
       .slice(0, 5);
   }, [userAccountType, searchMode, gigs]);
+
+  // Years of experience and tool/stack options for Company candidate filters (from current gigs)
+  const candidateYearsOptions = useMemo(() => {
+    if (userAccountType !== "Company" || !gigs.length) return [];
+    const fromData = Array.from(
+      new Set(
+        gigs
+          .map((g) => (g.resume?.yearsExperience || "").toString().trim())
+          .filter(Boolean)
+      )
+    ).sort();
+    const fixed = ["0-1", "1-3", "3-5", "5+"];
+    return Array.from(new Set([...fixed, ...fromData]));
+  }, [userAccountType, gigs]);
+
+  const candidateToolStackOptions = useMemo(() => {
+    if (userAccountType !== "Company" || !gigs.length) return [];
+    const skills = gigs.flatMap((g) => g.jobSeekerSkills || []).filter((s) => String(s).trim());
+    return Array.from(new Set(skills)).sort();
+  }, [userAccountType, gigs]);
 
   const [dismissedKarmaToastIds, setDismissedKarmaToastIds] = useState(new Set());
 
@@ -836,9 +886,28 @@ const MapComponent = ({ onOpenSettings, onViewModeChange, effectiveUser = null, 
       // Also check individual words
       const positionWords = position.split(/[\s&,]+/).filter(Boolean);
       const filterWords = filter.split(/[\s&,]+/).filter(Boolean);
-      return filterWords.some((fw) => 
+      return filterWords.some((fw) =>
         positionWords.some((pw) => pw.includes(fw) || fw.includes(pw))
       );
+    };
+
+    const candidateMatchesYears = (gig, filterYears) => {
+      if (!filterYears) return true;
+      const years = (gig.resume?.yearsExperience || "").toString().trim();
+      if (!years) return false;
+      const y = years.toLowerCase();
+      const f = filterYears.toLowerCase().trim();
+      if (y === f) return true;
+      if (y.includes(f) || f.includes(y)) return true;
+      return false;
+    };
+
+    const candidateMatchesToolStack = (gig, filterTool) => {
+      if (!filterTool) return true;
+      const skills = gig.jobSeekerSkills || [];
+      if (!Array.isArray(skills) || skills.length === 0) return false;
+      const f = filterTool.toLowerCase().trim();
+      return skills.some((s) => String(s).toLowerCase().includes(f) || f.includes(String(s).toLowerCase()));
     };
 
     // Filter by selected gig type for gig workers, or by position for Company accounts
@@ -849,6 +918,12 @@ const MapComponent = ({ onOpenSettings, onViewModeChange, effectiveUser = null, 
       } else {
         filteredGigs = filteredGigs.filter((g) => gigMatchesFilter(g, selectedGigType));
       }
+    }
+    if (userAccountType === "Company" && selectedYearsExperience) {
+      filteredGigs = filteredGigs.filter((g) => candidateMatchesYears(g, selectedYearsExperience));
+    }
+    if (userAccountType === "Company" && selectedToolStack) {
+      filteredGigs = filteredGigs.filter((g) => candidateMatchesToolStack(g, selectedToolStack));
     }
 
     let withCoords = filteredGigs.filter(
@@ -2616,8 +2691,12 @@ const MapComponent = ({ onOpenSettings, onViewModeChange, effectiveUser = null, 
             setTotalJobsCount(0);
           }
         } else {
-          // Individual/Gig worker accounts: show all companies with active jobs
-          const res = await fetch("/api/companies");
+          // Individual/Gig worker accounts: show all companies with active jobs (optional work arrangement filter)
+          const url =
+            selectedWorkArrangement ?
+              `/api/companies?remoteType=${encodeURIComponent(selectedWorkArrangement)}`
+            : "/api/companies";
+          const res = await fetch(url);
           if (res.ok) {
             const data = await res.json();
             companies = data.companies || [];
@@ -2895,7 +2974,7 @@ const MapComponent = ({ onOpenSettings, onViewModeChange, effectiveUser = null, 
     };
 
     addMarkersToMap();
-  }, [mapInstanceRef.current, locationsData, searchMode, userAccountType]);
+  }, [mapInstanceRef.current, locationsData, searchMode, userAccountType, selectedWorkArrangement]);
 
   // Zoom to job coordinates when arriving from "See your posting on the map"
   useEffect(() => {
@@ -4422,6 +4501,72 @@ const MapComponent = ({ onOpenSettings, onViewModeChange, effectiveUser = null, 
     };
   }, [showGigFilterDropdown]);
 
+  // Close years/tool stack filter dropdowns when clicking outside
+  useEffect(() => {
+    const handleClickOutside = (event) => {
+      if (
+        yearsFilterDropdownRef.current &&
+        !yearsFilterDropdownRef.current.contains(event.target) &&
+        yearsFilterButtonRef.current &&
+        !yearsFilterButtonRef.current.contains(event.target)
+      ) {
+        setShowYearsFilterDropdown(false);
+      }
+    };
+    if (showYearsFilterDropdown) document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, [showYearsFilterDropdown]);
+
+  useEffect(() => {
+    const handleClickOutside = (event) => {
+      if (
+        toolStackFilterDropdownRef.current &&
+        !toolStackFilterDropdownRef.current.contains(event.target) &&
+        toolStackFilterButtonRef.current &&
+        !toolStackFilterButtonRef.current.contains(event.target)
+      ) {
+        setShowToolStackFilterDropdown(false);
+      }
+    };
+    if (showToolStackFilterDropdown) document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, [showToolStackFilterDropdown]);
+
+  // Close company view filter dropdowns when clicking outside
+  useEffect(() => {
+    const handle = (e) => {
+      if (
+        workArrangementDropdownRef.current && !workArrangementDropdownRef.current.contains(e.target) &&
+        workArrangementButtonRef.current && !workArrangementButtonRef.current.contains(e.target)
+      )
+        setShowWorkArrangementDropdown(false);
+    };
+    if (showWorkArrangementDropdown) document.addEventListener("mousedown", handle);
+    return () => document.removeEventListener("mousedown", handle);
+  }, [showWorkArrangementDropdown]);
+  useEffect(() => {
+    const handle = (e) => {
+      if (
+        companyTypeDropdownRef.current && !companyTypeDropdownRef.current.contains(e.target) &&
+        companyTypeButtonRef.current && !companyTypeButtonRef.current.contains(e.target)
+      )
+        setShowCompanyTypeDropdown(false);
+    };
+    if (showCompanyTypeDropdown) document.addEventListener("mousedown", handle);
+    return () => document.removeEventListener("mousedown", handle);
+  }, [showCompanyTypeDropdown]);
+  useEffect(() => {
+    const handle = (e) => {
+      if (
+        industryTypeDropdownRef.current && !industryTypeDropdownRef.current.contains(e.target) &&
+        industryTypeButtonRef.current && !industryTypeButtonRef.current.contains(e.target)
+      )
+        setShowIndustryTypeDropdown(false);
+    };
+    if (showIndustryTypeDropdown) document.addEventListener("mousedown", handle);
+    return () => document.removeEventListener("mousedown", handle);
+  }, [showIndustryTypeDropdown]);
+
   // Close search mode dropdown when clicking outside (mobile)
   useEffect(() => {
     const handleClickOutside = (event) => {
@@ -4992,91 +5137,127 @@ const MapComponent = ({ onOpenSettings, onViewModeChange, effectiveUser = null, 
 
               {/* Toggle: Person (users) / Job (suitcase) - hidden on mobile when search input focused */}
               <div className={`${searchBar["toggle-wrapper"]} border-0 overflow-visible shrink-0 md:pr-1 ${mobileSearchExpanded ? "hidden md:!flex" : ""}`} ref={searchModeDropdownRef}>
-                {/* Mobile: single button with chevron, dropdown with Person and Enterprise options */}
-                <div className="relative md:hidden shrink-0">
-                  <button
-                    type="button"
-                    onClick={() => setShowSearchModeDropdown(!showSearchModeDropdown)}
-                    className={`h-[34px] w-[46px] flex items-center justify-center gap-0.5 p-1 rounded-lg border-r border-brand-stroke-border hover:bg-brand-bg-fill transition-colors shrink-0 ${searchMode ? "bg-brand-bg-fill" : "bg-transparent"}`}
-                    title={searchMode === "person" ? (userAccountType === "Company" ? "Candidates" : "Gig work") : "All companies"}
-                    aria-expanded={showSearchModeDropdown}
-                    aria-haspopup="true"
-                  >
-                    {searchMode === "person" ? (
-                      <User size={20} className={`w-5 h-5 shrink-0 ${searchBar["toggle-segment-icon-active"]}`} />
-                    ) : (
-                      <Enterprise size={20} className={`w-5 h-5 shrink-0 ${searchBar["toggle-segment-icon-active"]}`} />
-                    )}
-                    <ChevronDown size={16} className="w-4 h-4 shrink-0 text-brand-stroke-strong" />
-                  </button>
-                  {showSearchModeDropdown && (
-                    <div className="absolute top-full left-0 mt-1 min-w-[140px] rounded-lg border border-brand-stroke-border bg-brand-bg-white shadow-lg z-[1001] py-1 overflow-hidden">
-                      {searchMode !== "person" && (
-                        <button
-                          type="button"
-                          onClick={() => {
-                            setSearchMode("person");
-                            setShowSearchModeDropdown(false);
-                          }}
-                          className="w-full flex items-center gap-2 px-3 py-2 text-left text-sm font-medium text-brand-text-strong hover:bg-brand-bg-fill transition-colors min-w-0"
-                        >
-                          <User size={20} className={`w-5 h-5 shrink-0 ${searchBar["toggle-segment-icon"]}`} />
-                          <span className="truncate">{userAccountType === "Company" ? "Candidates" : "Gig Workers"}</span>
-                        </button>
-                      )}
-                      {searchMode !== "company" && (
-                        <button
-                          type="button"
-                          onClick={() => {
-                            setSearchMode("company");
-                            setShowSearchModeDropdown(false);
-                          }}
-                          className="w-full flex items-center gap-2 px-3 py-2 text-left text-sm font-medium text-brand-text-strong hover:bg-brand-bg-fill transition-colors min-w-0"
-                        >
-                          <Enterprise size={20} className={`w-5 h-5 shrink-0 ${searchBar["toggle-segment-icon"]}`} />
-                          <span className="truncate">All Companies</span>
-                        </button>
+                {/* Hiding Candidates/Companies toggle for now - mobile and desktop segment buttons only; filter dropdown and company pill stay below */}
+                {!HIDE_CANDIDATES_COMPANIES_TOGGLE && (
+                  <>
+                    {/* Mobile: single button with chevron, dropdown with Person and Enterprise options */}
+                    <div className="relative md:hidden shrink-0">
+                      <button
+                        type="button"
+                        onClick={() => setShowSearchModeDropdown(!showSearchModeDropdown)}
+                        className={`h-[34px] w-[46px] flex items-center justify-center gap-0.5 p-1 rounded-lg border-r border-brand-stroke-border hover:bg-brand-bg-fill transition-colors shrink-0 ${searchMode ? "bg-brand-bg-fill" : "bg-transparent"}`}
+                        title={searchMode === "person" ? (userAccountType === "Company" ? "Candidates" : "Gig work") : "All companies"}
+                        aria-expanded={showSearchModeDropdown}
+                        aria-haspopup="true"
+                      >
+                        {searchMode === "person" ? (
+                          <User size={20} className={`w-5 h-5 shrink-0 ${searchBar["toggle-segment-icon-active"]}`} />
+                        ) : (
+                          <Enterprise size={20} className={`w-5 h-5 shrink-0 ${searchBar["toggle-segment-icon-active"]}`} />
+                        )}
+                        <ChevronDown size={16} className="w-4 h-4 shrink-0 text-brand-stroke-strong" />
+                      </button>
+                      {showSearchModeDropdown && (
+                        <div className="absolute top-full left-0 mt-1 min-w-[140px] rounded-lg border border-brand-stroke-border bg-brand-bg-white shadow-lg z-[1001] py-1 overflow-hidden">
+                          {searchMode !== "person" && (
+                            userAccountType === "Individual" ? (
+                              <Tooltip content="We are working on this feature to make it more secure, coming soon." as="div" className="w-full">
+                                <div className="w-full flex items-center gap-2 px-3 py-2 text-left text-sm font-medium text-brand-text-placeholder cursor-not-allowed opacity-60">
+                                  <User size={20} className={`w-5 h-5 shrink-0 ${searchBar["toggle-segment-icon"]}`} />
+                                  <span className="truncate">Gig Workers</span>
+                                </div>
+                              </Tooltip>
+                            ) : (
+                              <button
+                                type="button"
+                                onClick={() => {
+                                  setSearchMode("person");
+                                  setShowSearchModeDropdown(false);
+                                }}
+                                className="w-full flex items-center gap-2 px-3 py-2 text-left text-sm font-medium text-brand-text-strong hover:bg-brand-bg-fill transition-colors min-w-0"
+                              >
+                                <User size={20} className={`w-5 h-5 shrink-0 ${searchBar["toggle-segment-icon"]}`} />
+                                <span className="truncate">{userAccountType === "Company" ? "Candidates" : "Gig Workers"}</span>
+                              </button>
+                            )
+                          )}
+                          {searchMode !== "company" && (
+                            <button
+                              type="button"
+                              onClick={() => {
+                                setSearchMode("company");
+                                setShowSearchModeDropdown(false);
+                              }}
+                              className="w-full flex items-center gap-2 px-3 py-2 text-left text-sm font-medium text-brand-text-strong hover:bg-brand-bg-fill transition-colors min-w-0"
+                            >
+                              <Enterprise size={20} className={`w-5 h-5 shrink-0 ${searchBar["toggle-segment-icon"]}`} />
+                              <span className="truncate">All Companies</span>
+                            </button>
+                          )}
+                        </div>
                       )}
                     </div>
-                  )}
-                </div>
-                {/* Desktop: toggle buttons - Show Person and Enterprise (All Companies) for all account types */}
+                    {/* Desktop: toggle buttons - Show Person and Enterprise (All Companies) for all account types */}
+                    <div className="hidden md:flex items-center gap-1 shrink-0">
+                      <div className="flex rounded-full border border-brand-stroke-border overflow-hidden">
+                        {userAccountType === "Individual" ? (
+                          <Tooltip content="We are working on this feature to make it more secure, coming soon." as="span" className="inline-flex">
+                            <button
+                              type="button"
+                              disabled
+                              aria-disabled="true"
+                              className={`flex items-center gap-1.5 px-3 py-2 border-0 ${searchBar["toggle-segment"]} !rounded-l-md !rounded-r-none opacity-60 cursor-not-allowed pointer-events-none text-brand-text-placeholder`}
+                              title="Gigs (coming soon)"
+                            >
+                              <User size={20} className={`w-5 h-5 shrink-0 ${searchBar["toggle-segment-icon"]}`} />
+                              <span className="text-sm font-medium">Gigs</span>
+                            </button>
+                          </Tooltip>
+                        ) : (
+                          <button
+                            type="button"
+                            onClick={() => setSearchMode("person")}
+                            className={`flex items-center gap-1.5 px-3 py-2 border-0 ${searchBar["toggle-segment"]} ${searchMode === "person" ? searchBar["toggle-segment-active"] : ""} !rounded-l-md !rounded-r-none`}
+                            title={userAccountType === "Company" ? "Candidates" : "Gig work"}
+                          >
+                            <User
+                              size={20}
+                              className={`w-5 h-5 shrink-0 ${searchMode === "person" ? searchBar["toggle-segment-icon-active"] + " text-brand" : searchBar["toggle-segment-icon"]}`}
+                            />
+                            <span className={`text-sm font-medium ${searchMode === "person" ? searchBar["toggle-segment-icon-active"] + " text-brand" : searchBar["toggle-segment-icon"]}`}>
+                              {userAccountType === "Company" ? "Candidates" : "Gigs"}
+                            </span>
+                          </button>
+                        )}
+                        <button
+                          type="button"
+                          onClick={() => setSearchMode("company")}
+                          className={`flex items-center gap-1.5 px-3 py-2 border-0 ${searchBar["toggle-segment"]} ${searchMode === "company" ? searchBar["toggle-segment-active"] : ""} !rounded-r-md !rounded-l-none`}
+                          title="All companies"
+                        >
+                          <Enterprise
+                            size={20}
+                            className={`w-5 h-5 shrink-0 ${searchMode === "company" ? searchBar["toggle-segment-icon-active"] + " text-brand" : searchBar["toggle-segment-icon"]}`}
+                          />
+                          <span className={`text-sm font-medium ${searchMode === "company" ? searchBar["toggle-segment-icon-active"] + " text-brand" : searchBar["toggle-segment-icon"]}`}>Companies</span>
+                        </button>
+                      </div>
+                    </div>
+                  </>
+                )}
+                {/* Filter dropdown and company pill - always shown when not hiding toggle; when hiding, wrap in same desktop flex so filters still show */}
                 <div className="hidden md:flex items-center gap-1 shrink-0">
-                  <div className="flex rounded-full border border-brand-stroke-border overflow-hidden">
-                    <button
-                      type="button"
-                      onClick={() => setSearchMode("person")}
-                      className={`flex items-center gap-1.5 px-3 py-2 border-0 ${searchBar["toggle-segment"]} ${searchMode === "person" ? searchBar["toggle-segment-active"] : ""} !rounded-l-md !rounded-r-none`}
-                      title={userAccountType === "Company" ? "Candidates" : "Gig work"}
-                    >
-                      <User
-                        size={20}
-                        className={`w-5 h-5 shrink-0 ${searchMode === "person" ? searchBar["toggle-segment-icon-active"] + " text-brand" : searchBar["toggle-segment-icon"]}`}
-                      />
-                      <span className={`text-sm font-medium ${searchMode === "person" ? searchBar["toggle-segment-icon-active"] + " text-brand" : searchBar["toggle-segment-icon"]}`}>
-                        {userAccountType === "Company" ? "Candidates" : "Gigs"}
-                      </span>
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => setSearchMode("company")}
-                      className={`flex items-center gap-1.5 px-3 py-2 border-0 ${searchBar["toggle-segment"]} ${searchMode === "company" ? searchBar["toggle-segment-active"] : ""} !rounded-r-md !rounded-l-none`}
-                      title="All companies"
-                    >
-                      <Enterprise
-                        size={20}
-                        className={`w-5 h-5 shrink-0 ${searchMode === "company" ? searchBar["toggle-segment-icon-active"] + " text-brand" : searchBar["toggle-segment-icon"]}`}
-                      />
-                      <span className={`text-sm font-medium ${searchMode === "company" ? searchBar["toggle-segment-icon-active"] + " text-brand" : searchBar["toggle-segment-icon"]}`}>Companies</span>
-                    </button>
-                  </div>
                   {/* Filter dropdown - only show in person mode for all account types */}
                   {searchMode === "person" && (
                     <div className="relative shrink-0">
                       <button
                         ref={gigFilterButtonRef}
                         type="button"
-                        onClick={() => setShowGigFilterDropdown(!showGigFilterDropdown)}
+                        onClick={() => {
+                          setShowGigFilterDropdown(!showGigFilterDropdown);
+                          setShowYearsFilterDropdown(false);
+                          setShowToolStackFilterDropdown(false);
+                        }}
                         className="flex items-center gap-1.5 px-3 py-1.5 border rounded-full text-sm font-medium transition-colors shrink-0 bg-brand-bg-white border-brand-stroke-weak text-brand-text-strong hover:bg-brand-bg-fill cursor-pointer"
                         style={{ fontFamily: "Open Sans" }}
                         aria-label="Filter by service type"
@@ -5105,12 +5286,179 @@ const MapComponent = ({ onOpenSettings, onViewModeChange, effectiveUser = null, 
                       />
                     </div>
                   )}
-                  {/* Show "All Companies" label when in company mode */}
+                  {/* Years of experience and Tool/stack filters - Company account, person mode only */}
+                  {userAccountType === "Company" && searchMode === "person" && (
+                    <>
+                      <div className="relative shrink-0">
+                        <button
+                          ref={yearsFilterButtonRef}
+                          type="button"
+                          onClick={() => {
+                            setShowYearsFilterDropdown(!showYearsFilterDropdown);
+                            setShowToolStackFilterDropdown(false);
+                          }}
+                          className="flex items-center gap-1.5 px-3 py-1.5 border rounded-full text-sm font-medium transition-colors shrink-0 bg-brand-bg-white border-brand-stroke-weak text-brand-text-strong hover:bg-brand-bg-fill cursor-pointer"
+                          style={{ fontFamily: "Open Sans" }}
+                          aria-label="Filter by years of experience"
+                          title="Filter by years of experience"
+                        >
+                          <Filter size={16} className="shrink-0" />
+                          <span className="max-w-[100px] truncate">{selectedYearsExperience || "Years"}</span>
+                          <RiArrowDownSLine size={16} className="shrink-0" />
+                        </button>
+                        <OptionListFilterDropdown
+                          isOpen={showYearsFilterDropdown}
+                          onClose={() => setShowYearsFilterDropdown(false)}
+                          dropdownRef={yearsFilterDropdownRef}
+                          position={{ top: "100%", bottom: "auto", left: "0", right: "auto", marginTop: "8px" }}
+                          width="300px"
+                          title="Years of experience"
+                          allOptionLabel="Any"
+                          options={candidateYearsOptions}
+                          selectedValue={selectedYearsExperience}
+                          onSelect={(v) => setSelectedYearsExperience(v)}
+                          searchPlaceholder="Search..."
+                          emptyMessage="No options found"
+                        />
+                      </div>
+                      <div className="relative shrink-0">
+                        <button
+                          ref={toolStackFilterButtonRef}
+                          type="button"
+                          onClick={() => {
+                            setShowToolStackFilterDropdown(!showToolStackFilterDropdown);
+                            setShowYearsFilterDropdown(false);
+                          }}
+                          className="flex items-center gap-1.5 px-3 py-1.5 border rounded-full text-sm font-medium transition-colors shrink-0 bg-brand-bg-white border-brand-stroke-weak text-brand-text-strong hover:bg-brand-bg-fill cursor-pointer"
+                          style={{ fontFamily: "Open Sans" }}
+                          aria-label="Filter by tool/stack"
+                          title="Filter by tool/stack"
+                        >
+                          <Filter size={16} className="shrink-0" />
+                          <span className="max-w-[100px] truncate">{selectedToolStack || "Tool/stack"}</span>
+                          <RiArrowDownSLine size={16} className="shrink-0" />
+                        </button>
+                        <OptionListFilterDropdown
+                          isOpen={showToolStackFilterDropdown}
+                          onClose={() => setShowToolStackFilterDropdown(false)}
+                          dropdownRef={toolStackFilterDropdownRef}
+                          position={{ top: "100%", bottom: "auto", left: "0", right: "auto", marginTop: "8px" }}
+                          width="300px"
+                          title="Tool / stack"
+                          allOptionLabel="All"
+                          options={candidateToolStackOptions}
+                          selectedValue={selectedToolStack}
+                          onSelect={(v) => setSelectedToolStack(v)}
+                          searchPlaceholder="Search tools..."
+                          emptyMessage="No tools found"
+                        />
+                      </div>
+                    </>
+                  )}
+                  {/* Company view filters: Work arrangement, Company type, Industry type */}
                   {searchMode === "company" && (
-                    <div className="flex items-center gap-1.5 px-3 py-1.5 border rounded-full text-sm font-medium shrink-0 bg-brand-bg-fill border-brand-stroke-weak text-brand-text-placeholder">
-                      <Filter size={16} className="shrink-0" />
-                      <span className="max-w-[100px] truncate">All Companies</span>
-                    </div>
+                    <>
+                      <div className="relative shrink-0">
+                        <button
+                          ref={workArrangementButtonRef}
+                          type="button"
+                          onClick={() => {
+                            setShowWorkArrangementDropdown(!showWorkArrangementDropdown);
+                            setShowCompanyTypeDropdown(false);
+                            setShowIndustryTypeDropdown(false);
+                          }}
+                          className="flex items-center gap-1.5 px-3 py-1.5 border rounded-full text-sm font-medium transition-colors shrink-0 bg-brand-bg-white border-brand-stroke-weak text-brand-text-strong hover:bg-brand-bg-fill cursor-pointer"
+                          style={{ fontFamily: "Open Sans" }}
+                          aria-label="Filter by work arrangement"
+                          title="Filter by work arrangement"
+                        >
+                          <Filter size={16} className="shrink-0" />
+                          <span className="max-w-[100px] truncate">{selectedWorkArrangement || "Work arrangement"}</span>
+                          <RiArrowDownSLine size={16} className="shrink-0" />
+                        </button>
+                        <OptionListFilterDropdown
+                          isOpen={showWorkArrangementDropdown}
+                          onClose={() => setShowWorkArrangementDropdown(false)}
+                          dropdownRef={workArrangementDropdownRef}
+                          position={{ top: "100%", bottom: "auto", left: "0", right: "auto", marginTop: "8px" }}
+                          width="300px"
+                          title="Work arrangement"
+                          allOptionLabel="All"
+                          options={WORK_ARRANGEMENT_OPTIONS}
+                          selectedValue={selectedWorkArrangement}
+                          onSelect={(v) => setSelectedWorkArrangement(v)}
+                          searchPlaceholder="Search..."
+                          emptyMessage="No options found"
+                        />
+                      </div>
+                      <div className="relative shrink-0">
+                        <button
+                          ref={companyTypeButtonRef}
+                          type="button"
+                          onClick={() => {
+                            setShowCompanyTypeDropdown(!showCompanyTypeDropdown);
+                            setShowWorkArrangementDropdown(false);
+                            setShowIndustryTypeDropdown(false);
+                          }}
+                          className="flex items-center gap-1.5 px-3 py-1.5 border rounded-full text-sm font-medium transition-colors shrink-0 bg-brand-bg-white border-brand-stroke-weak text-brand-text-strong hover:bg-brand-bg-fill cursor-pointer"
+                          style={{ fontFamily: "Open Sans" }}
+                          aria-label="Filter by company type"
+                          title="Filter by company type"
+                        >
+                          <Filter size={16} className="shrink-0" />
+                          <span className="max-w-[100px] truncate">{selectedCompanyType || "Company type"}</span>
+                          <RiArrowDownSLine size={16} className="shrink-0" />
+                        </button>
+                        <OptionListFilterDropdown
+                          isOpen={showCompanyTypeDropdown}
+                          onClose={() => setShowCompanyTypeDropdown(false)}
+                          dropdownRef={companyTypeDropdownRef}
+                          position={{ top: "100%", bottom: "auto", left: "0", right: "auto", marginTop: "8px" }}
+                          width="300px"
+                          title="Company type"
+                          allOptionLabel="All"
+                          options={COMPANY_TYPE_OPTIONS}
+                          selectedValue={selectedCompanyType}
+                          onSelect={(v) => setSelectedCompanyType(v)}
+                          searchPlaceholder="Search..."
+                          emptyMessage="No options found"
+                        />
+                      </div>
+                      {/* Industry type: UI-only for now; filtering will be wired when backend supports Company.industry */}
+                      <div className="relative shrink-0">
+                        <button
+                          ref={industryTypeButtonRef}
+                          type="button"
+                          onClick={() => {
+                            setShowIndustryTypeDropdown(!showIndustryTypeDropdown);
+                            setShowWorkArrangementDropdown(false);
+                            setShowCompanyTypeDropdown(false);
+                          }}
+                          className="flex items-center gap-1.5 px-3 py-1.5 border rounded-full text-sm font-medium transition-colors shrink-0 bg-brand-bg-white border-brand-stroke-weak text-brand-text-strong hover:bg-brand-bg-fill cursor-pointer"
+                          style={{ fontFamily: "Open Sans" }}
+                          aria-label="Filter by industry type"
+                          title="Filter by industry type"
+                        >
+                          <Filter size={16} className="shrink-0" />
+                          <span className="max-w-[100px] truncate">{selectedIndustryType || "Industry"}</span>
+                          <RiArrowDownSLine size={16} className="shrink-0" />
+                        </button>
+                        <OptionListFilterDropdown
+                          isOpen={showIndustryTypeDropdown}
+                          onClose={() => setShowIndustryTypeDropdown(false)}
+                          dropdownRef={industryTypeDropdownRef}
+                          position={{ top: "100%", bottom: "auto", left: "0", right: "auto", marginTop: "8px" }}
+                          width="300px"
+                          title="Industry type"
+                          allOptionLabel="All"
+                          options={INDUSTRY_TYPE_OPTIONS}
+                          selectedValue={selectedIndustryType}
+                          onSelect={(v) => setSelectedIndustryType(v)}
+                          searchPlaceholder="Search..."
+                          emptyMessage="No options found"
+                        />
+                      </div>
+                    </>
                   )}
                 </div>
               </div>

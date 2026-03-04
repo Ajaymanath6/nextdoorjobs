@@ -73,11 +73,13 @@ export default function Sidebar({ activeItem = "jobs-near-you", onToggle, isOpen
       ? { id: "manage-jds", label: "Manage JD", icon: Archive, route: "/manage-jds" }
       : { id: "manage-resume", label: "Manage Resume", icon: Document, route: "/manage-resume", openSettingsSection: "resume" };
 
+  // Hiding Request a gig for now - do not delete
+  const HIDE_REQUEST_GIG = true;
   const navigationItems = [
     { id: "jobs-near-you", label: jobsNearYouLabel, icon: EarthFilled, route: "/jobs-near-you" },
     { id: "notifications", label: "Notifications", icon: Notification, route: notificationsRoute, badge: true },
     { id: "post-gig", label: postLabel, icon: Add, route: postRoute },
-    ...(accountType === "Individual" && typeof onRequestGig === "function"
+    ...(!HIDE_REQUEST_GIG && accountType === "Individual" && typeof onRequestGig === "function"
       ? [{ id: "request-gig", label: "Request a gig", icon: TaskAdd, onRequestGigAction: true }]
       : []),
     manageItem,
