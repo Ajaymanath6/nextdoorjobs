@@ -106,9 +106,9 @@ export default function Sidebar({ activeItem = "jobs-near-you", onToggle, isOpen
 
   return (
     <aside
-      className={`h-screen flex flex-col bg-white overflow-x-hidden min-w-0 ${
+      className={`h-screen flex flex-col bg-white min-w-0 ${
         isOpen ? sidebar["container-expanded"] : sidebar["container-collapsed"]
-      }`}
+      } ${isOpen ? "overflow-x-hidden" : "overflow-hidden"}`}
     >
       {/* Logo & Toggle Section - small logo; right icon (OpenPanelLeft) when panel open */}
       <div className={`${sidebar["logo-section"]} relative min-w-0 shrink-0`}>
@@ -148,8 +148,8 @@ export default function Sidebar({ activeItem = "jobs-near-you", onToggle, isOpen
         </div>
       </div>
 
-      {/* Navigation Section - when collapsed, hide overflow to avoid scrollbar on narrow strip */}
-      <nav className={`flex-1 min-w-0 ${sidebar["nav-container"]} ${isOpen ? "overflow-y-auto overflow-x-hidden" : "overflow-hidden"}`}>
+      {/* Navigation Section - when collapsed, no scroll; when expanded, scroll if needed */}
+      <nav className={`flex-1 min-h-0 min-w-0 ${sidebar["nav-container"]} ${isOpen ? "overflow-y-auto overflow-x-hidden" : "overflow-hidden"}`}>
         <ul className="space-y-2 min-w-0 w-full">
           {navigationItems.map((item) => {
             const IconComponent = item.icon;
@@ -200,8 +200,8 @@ export default function Sidebar({ activeItem = "jobs-near-you", onToggle, isOpen
         </ul>
       </nav>
 
-      {/* What's New Section */}
-      <div className="p-2 pt-1 pb-1">
+      {/* What's New Section - shrink-0 so nav gets remaining space */}
+      <div className="shrink-0 p-2 pt-1 pb-1">
         <Tooltip
           content={!isOpen ? (isDev ? "What's New" : "Coming soon") : ""}
           as="span"

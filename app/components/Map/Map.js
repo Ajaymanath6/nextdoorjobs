@@ -621,9 +621,10 @@ const MapComponent = ({ onOpenSettings, onViewModeChange, effectiveUser = null, 
     });
   };
 
-  // Render company markers with popups
+  // Render company markers with popups (never for Company accounts - they only see candidates)
   const renderCompanyMarkers = (companies) => {
     if (!mapInstanceRef.current || !window.L) return;
+    if (userAccountType === "Company") return;
     // Only render companies when in company mode
     if (searchMode !== "company") return;
 
@@ -2634,7 +2635,17 @@ const MapComponent = ({ onOpenSettings, onViewModeChange, effectiveUser = null, 
       return;
     }
 
-    // Only render companies when in company mode
+    // Company accounts only see candidates; never show any company markers
+    if (userAccountType === "Company") {
+      if (clusterGroupRef.current) {
+        mapInstanceRef.current.removeLayer(clusterGroupRef.current);
+        clusterGroupRef.current = null;
+      }
+      companyMarkersRef.current = [];
+      return;
+    }
+
+    // Only render companies when in company mode (Individual accounts only)
     if (searchMode !== "company") {
       // Clear company markers if switching away from company mode
       if (clusterGroupRef.current) {
