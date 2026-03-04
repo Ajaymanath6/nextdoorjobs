@@ -23,6 +23,7 @@ import {
   Home,
   Add,
   Settings,
+  LockedAndBlocked,
   Logout,
   StarFilled,
   UserMultiple,
@@ -189,9 +190,15 @@ const MapComponent = ({ onOpenSettings, onViewModeChange, effectiveUser = null, 
   const [selectedCompanyType, setSelectedCompanyType] = useState(null);
   const [selectedIndustryType, setSelectedIndustryType] = useState(null);
   const [selectedJobTitle, setSelectedJobTitle] = useState(null);
-  const [showCompanyFilterDropdown, setShowCompanyFilterDropdown] = useState(false);
-  const companyFilterDropdownRef = useRef(null);
-  const companyFilterButtonRef = useRef(null);
+  const [showWorkCompanyDropdown, setShowWorkCompanyDropdown] = useState(false);
+  const [showIndustryTypeDropdown, setShowIndustryTypeDropdown] = useState(false);
+  const [showJobTitleCompanyDropdown, setShowJobTitleCompanyDropdown] = useState(false);
+  const workCompanyDropdownRef = useRef(null);
+  const workCompanyButtonRef = useRef(null);
+  const industryTypeDropdownRef = useRef(null);
+  const industryTypeButtonRef = useRef(null);
+  const jobTitleCompanyDropdownRef = useRef(null);
+  const jobTitleCompanyButtonRef = useRef(null);
   const [stateForBucketModal, setStateForBucketModal] = useState(null);
   const [showStateCandidatesModal, setShowStateCandidatesModal] = useState(false);
   const [showCandidateBucketModal, setShowCandidateBucketModal] = useState(false);
@@ -4528,18 +4535,40 @@ const MapComponent = ({ onOpenSettings, onViewModeChange, effectiveUser = null, 
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, [showToolStackFilterDropdown]);
 
-  // Close company view combined filter dropdown when clicking outside
+  // Close company view filter dropdowns when clicking outside
   useEffect(() => {
     const handle = (e) => {
       if (
-        companyFilterDropdownRef.current && !companyFilterDropdownRef.current.contains(e.target) &&
-        companyFilterButtonRef.current && !companyFilterButtonRef.current.contains(e.target)
+        workCompanyDropdownRef.current && !workCompanyDropdownRef.current.contains(e.target) &&
+        workCompanyButtonRef.current && !workCompanyButtonRef.current.contains(e.target)
       )
-        setShowCompanyFilterDropdown(false);
+        setShowWorkCompanyDropdown(false);
     };
-    if (showCompanyFilterDropdown) document.addEventListener("mousedown", handle);
+    if (showWorkCompanyDropdown) document.addEventListener("mousedown", handle);
     return () => document.removeEventListener("mousedown", handle);
-  }, [showCompanyFilterDropdown]);
+  }, [showWorkCompanyDropdown]);
+  useEffect(() => {
+    const handle = (e) => {
+      if (
+        industryTypeDropdownRef.current && !industryTypeDropdownRef.current.contains(e.target) &&
+        industryTypeButtonRef.current && !industryTypeButtonRef.current.contains(e.target)
+      )
+        setShowIndustryTypeDropdown(false);
+    };
+    if (showIndustryTypeDropdown) document.addEventListener("mousedown", handle);
+    return () => document.removeEventListener("mousedown", handle);
+  }, [showIndustryTypeDropdown]);
+  useEffect(() => {
+    const handle = (e) => {
+      if (
+        jobTitleCompanyDropdownRef.current && !jobTitleCompanyDropdownRef.current.contains(e.target) &&
+        jobTitleCompanyButtonRef.current && !jobTitleCompanyButtonRef.current.contains(e.target)
+      )
+        setShowJobTitleCompanyDropdown(false);
+    };
+    if (showJobTitleCompanyDropdown) document.addEventListener("mousedown", handle);
+    return () => document.removeEventListener("mousedown", handle);
+  }, [showJobTitleCompanyDropdown]);
 
   // Close search mode dropdown when clicking outside (mobile)
   useEffect(() => {
@@ -5135,8 +5164,8 @@ const MapComponent = ({ onOpenSettings, onViewModeChange, effectiveUser = null, 
                         <div className="absolute top-full left-0 mt-1 min-w-[140px] rounded-lg border border-brand-stroke-border bg-brand-bg-white shadow-lg z-[1001] py-1 overflow-hidden">
                           {searchMode !== "person" && (
                             userAccountType === "Individual" ? (
-                              <Tooltip content="We are working on this feature to make it more secure, coming soon." as="div" className="w-full">
-                                <div className="w-full flex items-center gap-2 px-3 py-2 text-left text-sm font-medium text-brand-text-placeholder cursor-not-allowed opacity-60">
+                              <Tooltip content="This feature is coming soon." as="div" className="w-full">
+                                <div className="w-full flex items-center gap-2 px-3 py-2 text-left text-sm font-medium text-brand-text-placeholder cursor-not-allowed opacity-70">
                                   <User size={20} className={`w-5 h-5 shrink-0 ${searchBar["toggle-segment-icon"]}`} />
                                   <span className="truncate">Gig Workers</span>
                                 </div>
@@ -5171,34 +5200,36 @@ const MapComponent = ({ onOpenSettings, onViewModeChange, effectiveUser = null, 
                         </div>
                       )}
                     </div>
-                    {/* Desktop: toggle buttons - Show Person and Enterprise (All Companies) for all account types */}
-                    <div className="hidden md:flex items-center gap-1 shrink-0">
+                    {/* Desktop: toggle buttons - Companies selected by default with primary color; Gigs disabled with coming-soon tooltip */}
+                    <div className="hidden md:flex items-center gap-1 shrink-0 mr-1">
                       <div className="flex rounded-full border border-brand-stroke-border overflow-hidden">
                         {userAccountType === "Individual" ? (
-                          <Tooltip content="We are working on this feature to make it more secure, coming soon." as="span" className="inline-flex">
-                            <button
-                              type="button"
-                              disabled
-                              aria-disabled="true"
-                              className={`flex items-center gap-1.5 px-3 py-2 border-0 ${searchBar["toggle-segment"]} !rounded-l-md !rounded-r-none opacity-60 cursor-not-allowed pointer-events-none text-brand-text-placeholder`}
-                              title="Gigs (coming soon)"
-                            >
-                              <User size={20} className={`w-5 h-5 shrink-0 ${searchBar["toggle-segment-icon"]}`} />
-                              <span className="text-sm font-medium">Gigs</span>
-                            </button>
+                          <Tooltip content="This feature is coming soon." as="span" className="inline-flex">
+                            <span className="group flex rounded-l-md rounded-r-none">
+                              <button
+                                type="button"
+                                disabled
+                                aria-disabled="true"
+                                className="flex items-center gap-1.5 px-3 py-2 border-0 rounded-l-md rounded-r-none opacity-70 cursor-not-allowed bg-brand-bg-white text-brand-text-placeholder transition-opacity pointer-events-none"
+                              >
+                                <User size={20} className="w-5 h-5 shrink-0 text-brand-stroke-strong" />
+                                <span className="text-sm font-medium">Gigs</span>
+                                <LockedAndBlocked size={14} className="shrink-0 opacity-0 group-hover:opacity-100 transition-opacity text-brand-stroke-strong" aria-hidden />
+                              </button>
+                            </span>
                           </Tooltip>
                         ) : (
                           <button
                             type="button"
                             onClick={() => setSearchMode("person")}
-                            className={`flex items-center gap-1.5 px-3 py-2 border-0 ${searchBar["toggle-segment"]} ${searchMode === "person" ? searchBar["toggle-segment-active"] : ""} !rounded-l-md !rounded-r-none`}
+                            className={`flex items-center gap-1.5 px-3 py-2 border-0 ${searchBar["toggle-segment"]} ${searchMode === "person" ? searchBar["toggle-segment-active"] + " bg-brand/15 text-brand" : ""} !rounded-l-md !rounded-r-none`}
                             title={userAccountType === "Company" ? "Candidates" : "Gig work"}
                           >
                             <User
                               size={20}
-                              className={`w-5 h-5 shrink-0 ${searchMode === "person" ? searchBar["toggle-segment-icon-active"] + " text-brand" : searchBar["toggle-segment-icon"]}`}
+                              className={`w-5 h-5 shrink-0 ${searchMode === "person" ? "text-brand" : searchBar["toggle-segment-icon"]}`}
                             />
-                            <span className={`text-sm font-medium ${searchMode === "person" ? searchBar["toggle-segment-icon-active"] + " text-brand" : searchBar["toggle-segment-icon"]}`}>
+                            <span className={`text-sm font-medium ${searchMode === "person" ? "text-brand" : searchBar["toggle-segment-icon"]}`}>
                               {userAccountType === "Company" ? "Candidates" : "Gigs"}
                             </span>
                           </button>
@@ -5206,14 +5237,14 @@ const MapComponent = ({ onOpenSettings, onViewModeChange, effectiveUser = null, 
                         <button
                           type="button"
                           onClick={() => setSearchMode("company")}
-                          className={`flex items-center gap-1.5 px-3 py-2 border-0 ${searchBar["toggle-segment"]} ${searchMode === "company" ? searchBar["toggle-segment-active"] : ""} !rounded-r-md !rounded-l-none`}
+                          className={`flex items-center gap-1.5 px-3 py-2 border-0 ${searchBar["toggle-segment"]} ${searchMode === "company" ? searchBar["toggle-segment-active"] + " bg-brand/15 text-brand" : ""} !rounded-r-md !rounded-l-none`}
                           title="All companies"
                         >
                           <Enterprise
                             size={20}
-                            className={`w-5 h-5 shrink-0 ${searchMode === "company" ? searchBar["toggle-segment-icon-active"] + " text-brand" : searchBar["toggle-segment-icon"]}`}
+                            className={`w-5 h-5 shrink-0 ${searchMode === "company" ? "text-brand" : searchBar["toggle-segment-icon"]}`}
                           />
-                          <span className={`text-sm font-medium ${searchMode === "company" ? searchBar["toggle-segment-icon-active"] + " text-brand" : searchBar["toggle-segment-icon"]}`}>Companies</span>
+                          <span className={`text-sm font-medium ${searchMode === "company" ? "text-brand" : searchBar["toggle-segment-icon"]}`}>Companies</span>
                         </button>
                       </div>
                     </div>
@@ -5329,62 +5360,106 @@ const MapComponent = ({ onOpenSettings, onViewModeChange, effectiveUser = null, 
                       </div>
                     </>
                   )}
-                  {/* Company view: single combined filter (Work arrangement, Company type, Industry, Job titles) */}
+                  {/* Company view: Filter 1 = Work arrangement + Company type (combined); Filter 2 = Industry; Filter 3 = Job titles */}
                   {searchMode === "company" && (
-                    <div className="relative shrink-0">
-                      <button
-                        ref={companyFilterButtonRef}
-                        type="button"
-                        onClick={() => setShowCompanyFilterDropdown(!showCompanyFilterDropdown)}
-                        className="flex items-center gap-1.5 px-3 py-1.5 border rounded-full text-sm font-medium transition-colors shrink-0 bg-brand-bg-white border-brand-stroke-weak text-brand-text-strong hover:bg-brand-bg-fill cursor-pointer"
-                        style={{ fontFamily: "Open Sans" }}
-                        aria-label="Companies filters"
-                        title="Work arrangement, Company type, Industry, Job titles"
-                      >
-                        <Filter size={16} className="shrink-0" />
-                        <span className="max-w-[120px] truncate">
-                          {selectedWorkArrangement || selectedCompanyType || selectedIndustryType || selectedJobTitle || "Companies filters"}
-                        </span>
-                        <RiArrowDownSLine size={16} className="shrink-0" />
-                      </button>
-                      <CompanyFilterDropdown
-                        isOpen={showCompanyFilterDropdown}
-                        onClose={() => setShowCompanyFilterDropdown(false)}
-                        dropdownRef={companyFilterDropdownRef}
-                        position={{ top: "100%", bottom: "auto", left: "0", right: "auto", marginTop: "8px" }}
-                        width="320px"
-                        sections={[
-                          {
-                            id: "work",
-                            title: "Work arrangement",
-                            options: WORK_ARRANGEMENT_OPTIONS,
-                            selectedValue: selectedWorkArrangement,
-                            onSelect: setSelectedWorkArrangement,
-                          },
-                          {
-                            id: "companyType",
-                            title: "Company type",
-                            options: COMPANY_TYPE_OPTIONS,
-                            selectedValue: selectedCompanyType,
-                            onSelect: setSelectedCompanyType,
-                          },
-                          {
-                            id: "industry",
-                            title: "Industry type",
-                            options: INDUSTRY_TYPE_OPTIONS,
-                            selectedValue: selectedIndustryType,
-                            onSelect: setSelectedIndustryType,
-                          },
-                          {
-                            id: "jobTitle",
-                            title: "Job titles",
-                            options: Array.isArray(jobTitles) ? jobTitles.map((j) => (typeof j === "string" ? j : j?.title || "")).filter(Boolean) : [],
-                            selectedValue: selectedJobTitle,
-                            onSelect: setSelectedJobTitle,
-                          },
-                        ]}
-                      />
-                    </div>
+                    <>
+                      <div className="relative shrink-0">
+                        <button
+                          ref={workCompanyButtonRef}
+                          type="button"
+                          onClick={() => {
+                            setShowWorkCompanyDropdown(!showWorkCompanyDropdown);
+                            setShowIndustryTypeDropdown(false);
+                            setShowJobTitleCompanyDropdown(false);
+                          }}
+                          className="flex items-center gap-1.5 px-3 py-1.5 border rounded-full text-sm font-medium transition-colors shrink-0 bg-brand-bg-white border-brand-stroke-weak text-brand-text-strong hover:bg-brand-bg-fill cursor-pointer"
+                          style={{ fontFamily: "Open Sans" }}
+                          aria-label="Work arrangement and Company type"
+                          title="Work arrangement, Company type"
+                        >
+                          <Filter size={16} className="shrink-0" />
+                          <span className="max-w-[100px] truncate">{selectedWorkArrangement || selectedCompanyType || "Work & type"}</span>
+                          <RiArrowDownSLine size={16} className="shrink-0" />
+                        </button>
+                        <CompanyFilterDropdown
+                          isOpen={showWorkCompanyDropdown}
+                          onClose={() => setShowWorkCompanyDropdown(false)}
+                          dropdownRef={workCompanyDropdownRef}
+                          position={{ top: "100%", bottom: "auto", left: "0", right: "auto", marginTop: "8px" }}
+                          width="300px"
+                          sections={[
+                            { id: "work", title: "Work arrangement", options: WORK_ARRANGEMENT_OPTIONS, selectedValue: selectedWorkArrangement, onSelect: setSelectedWorkArrangement },
+                            { id: "companyType", title: "Company type", options: COMPANY_TYPE_OPTIONS, selectedValue: selectedCompanyType, onSelect: setSelectedCompanyType },
+                          ]}
+                        />
+                      </div>
+                      <div className="relative shrink-0">
+                        <button
+                          ref={industryTypeButtonRef}
+                          type="button"
+                          onClick={() => {
+                            setShowIndustryTypeDropdown(!showIndustryTypeDropdown);
+                            setShowWorkCompanyDropdown(false);
+                            setShowJobTitleCompanyDropdown(false);
+                          }}
+                          className="flex items-center gap-1.5 px-3 py-1.5 border rounded-full text-sm font-medium transition-colors shrink-0 bg-brand-bg-white border-brand-stroke-weak text-brand-text-strong hover:bg-brand-bg-fill cursor-pointer"
+                          style={{ fontFamily: "Open Sans" }}
+                          aria-label="Industry type"
+                          title="Industry type"
+                        >
+                          <Filter size={16} className="shrink-0" />
+                          <span className="max-w-[100px] truncate">{selectedIndustryType || "Industry"}</span>
+                          <RiArrowDownSLine size={16} className="shrink-0" />
+                        </button>
+                        <OptionListFilterDropdown
+                          isOpen={showIndustryTypeDropdown}
+                          onClose={() => setShowIndustryTypeDropdown(false)}
+                          dropdownRef={industryTypeDropdownRef}
+                          position={{ top: "100%", bottom: "auto", left: "0", right: "auto", marginTop: "8px" }}
+                          width="300px"
+                          title="Industry type"
+                          allOptionLabel="All"
+                          options={INDUSTRY_TYPE_OPTIONS}
+                          selectedValue={selectedIndustryType}
+                          onSelect={setSelectedIndustryType}
+                          searchPlaceholder="Search..."
+                          emptyMessage="No options found"
+                        />
+                      </div>
+                      <div className="relative shrink-0">
+                        <button
+                          ref={jobTitleCompanyButtonRef}
+                          type="button"
+                          onClick={() => {
+                            setShowJobTitleCompanyDropdown(!showJobTitleCompanyDropdown);
+                            setShowWorkCompanyDropdown(false);
+                            setShowIndustryTypeDropdown(false);
+                          }}
+                          className="flex items-center gap-1.5 px-3 py-1.5 border rounded-full text-sm font-medium transition-colors shrink-0 bg-brand-bg-white border-brand-stroke-weak text-brand-text-strong hover:bg-brand-bg-fill cursor-pointer"
+                          style={{ fontFamily: "Open Sans" }}
+                          aria-label="Job titles"
+                          title="Job titles"
+                        >
+                          <Filter size={16} className="shrink-0" />
+                          <span className="max-w-[100px] truncate">{selectedJobTitle || "Job roles"}</span>
+                          <RiArrowDownSLine size={16} className="shrink-0" />
+                        </button>
+                        <OptionListFilterDropdown
+                          isOpen={showJobTitleCompanyDropdown}
+                          onClose={() => setShowJobTitleCompanyDropdown(false)}
+                          dropdownRef={jobTitleCompanyDropdownRef}
+                          position={{ top: "100%", bottom: "auto", left: "0", right: "auto", marginTop: "8px" }}
+                          width="300px"
+                          title="Job titles"
+                          allOptionLabel="All"
+                          options={Array.isArray(jobTitles) ? jobTitles.map((j) => (typeof j === "string" ? j : j?.title || "")).filter(Boolean) : []}
+                          selectedValue={selectedJobTitle}
+                          onSelect={setSelectedJobTitle}
+                          searchPlaceholder="Search..."
+                          emptyMessage="No job titles found"
+                        />
+                      </div>
+                    </>
                   )}
                 </div>
               </div>
