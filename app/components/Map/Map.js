@@ -2271,12 +2271,11 @@ const MapComponent = ({ onOpenSettings, onViewModeChange, effectiveUser = null, 
     });
   };
 
-  // When parent provides effectiveUser (e.g. admin view-as), sync to local state
+  // When parent provides effectiveUser (e.g. admin view-as), sync to local state. Keep default searchMode "company" (do not override).
   useEffect(() => {
     if (effectiveUser == null) return;
     if (effectiveUser.accountType) {
       setUserAccountType(effectiveUser.accountType);
-      setSearchMode("person");
     }
     setMeUser({
       id: effectiveUser.id,
@@ -2307,14 +2306,13 @@ const MapComponent = ({ onOpenSettings, onViewModeChange, effectiveUser = null, 
   useEffect(() => {
     setIsClient(true);
     if (effectiveUser != null) return;
-    // Fetch user account type and set initial search mode; store user for locate-me avatar/logo
+    // Fetch user account type; store user for locate-me avatar/logo. Default searchMode stays "company" (Companies view selected).
     fetch("/api/auth/me", { credentials: "same-origin" })
       .then((res) => res.ok ? res.json() : null)
       .then((data) => {
         const user = data?.user ?? null;
         if (user?.accountType) {
           setUserAccountType(user.accountType);
-          setSearchMode("person");
         }
         setMeUser(user);
         // Only fetch total companies count for non-Company accounts (Company account count is set in company-mode effect)
