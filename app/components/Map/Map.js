@@ -5099,8 +5099,9 @@ const MapComponent = ({ onOpenSettings, onViewModeChange, effectiveUser = null, 
                 <div className="flex-1 min-w-0 h-9 rounded-full bg-brand-stroke-weak/30 animate-pulse" />
               </div>
             ) : (
-            {/* Mobile: single bar (Person/Job + input + Filter + Profile). Desktop: no bar, separate bordered controls. */}
-            <div className={`flex items-center gap-0 w-full rounded-full border border-brand-stroke-border bg-brand-bg-white min-h-[34px] overflow-visible md:border-0 md:bg-transparent md:rounded-none md:min-h-0`}>
+            <>
+              {/* Mobile: single bar (Person/Job + input + Filter + Profile). Desktop: no bar, separate bordered controls. */}
+              <div className={`flex items-center gap-0 w-full rounded-full border border-brand-stroke-border bg-brand-bg-white min-h-[34px] overflow-visible md:border-0 md:bg-transparent md:rounded-none md:min-h-0`}>
               {/* View Selector Button - Hidden for now, will add in later stages */}
               {/* <div className="relative flex-shrink-0">
                 <button
@@ -5823,7 +5824,8 @@ const MapComponent = ({ onOpenSettings, onViewModeChange, effectiveUser = null, 
               >
                 <Return size={20} className={searchBar["return-button-icon"]} />
               </button> */}
-          </div>
+              </div>
+            </>
             )}
         </div>
 
