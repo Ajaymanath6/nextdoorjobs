@@ -2271,11 +2271,12 @@ const MapComponent = ({ onOpenSettings, onViewModeChange, effectiveUser = null, 
     });
   };
 
-  // When parent provides effectiveUser (e.g. admin view-as), sync to local state. Keep default searchMode "company" (do not override).
+  // When parent provides effectiveUser (e.g. admin view-as), sync to local state. Company accounts default to candidates (person) view.
   useEffect(() => {
     if (effectiveUser == null) return;
     if (effectiveUser.accountType) {
       setUserAccountType(effectiveUser.accountType);
+      if (effectiveUser.accountType === "Company") setSearchMode("person");
     }
     setMeUser({
       id: effectiveUser.id,
@@ -2306,13 +2307,14 @@ const MapComponent = ({ onOpenSettings, onViewModeChange, effectiveUser = null, 
   useEffect(() => {
     setIsClient(true);
     if (effectiveUser != null) return;
-    // Fetch user account type; store user for locate-me avatar/logo. Default searchMode stays "company" (Companies view selected).
+    // Fetch user account type; store user for locate-me avatar/logo. Company accounts default to candidates (person) view.
     fetch("/api/auth/me", { credentials: "same-origin" })
       .then((res) => res.ok ? res.json() : null)
       .then((data) => {
         const user = data?.user ?? null;
         if (user?.accountType) {
           setUserAccountType(user.accountType);
+          if (user.accountType === "Company") setSearchMode("person");
         }
         setMeUser(user);
         // Only fetch total companies count for non-Company accounts (Company account count is set in company-mode effect)
@@ -5138,8 +5140,8 @@ const MapComponent = ({ onOpenSettings, onViewModeChange, effectiveUser = null, 
 
               {/* Toggle: Person (users) / Job (suitcase) - hidden on mobile when search input focused; 4px margin right */}
               <div className={`${searchBar["toggle-wrapper"]} border-0 overflow-visible shrink-0 md:pr-1 mr-1 ${mobileSearchExpanded ? "hidden md:!flex" : ""}`} ref={searchModeDropdownRef}>
-                {/* Candidates/Gigs | Companies toggle. For Individual (job seeker), Gigs is disabled with tooltip; Company view is default. Filter dropdown and company pill stay below. */}
-                {!HIDE_CANDIDATES_COMPANIES_TOGGLE && (
+                {/* Candidates/Gigs | Companies toggle. Hidden for Company accounts (they only see candidates). For Individual, Gigs is disabled with tooltip. Filter dropdown and company pill stay below. */}
+                {!HIDE_CANDIDATES_COMPANIES_TOGGLE && userAccountType !== "Company" && (
                   <>
                     {/* Mobile: single button with chevron, dropdown with Person and Enterprise options */}
                     <div className="relative md:hidden shrink-0">
@@ -5267,7 +5269,7 @@ const MapComponent = ({ onOpenSettings, onViewModeChange, effectiveUser = null, 
                         title="Filter gigs by service type"
                       >
                         <Filter size={16} className="shrink-0" />
-                        <span className="max-w-[100px] truncate">{selectedGigType || (userAccountType === "Company" ? "All Positions" : "All Gigs")}</span>
+                        <span className="max-w-[100px] truncate">{selectedGigType || (userAccountType === "Company" ? "Job roles" : "All Gigs")}</span>
                         <RiArrowDownSLine size={16} className="shrink-0" />
                       </button>
                       <GigFilterDropdown
