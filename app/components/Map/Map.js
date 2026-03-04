@@ -151,11 +151,11 @@ const MapComponent = ({ onOpenSettings, onViewModeChange, effectiveUser = null, 
   const [collegeDistances, setCollegeDistances] = useState({});
   const collegeLinesRef = useRef([]);
 
-  // Search bar mode toggle: "person" (users), "job" (company jobs), or "company" (all companies)
-  // Default to "person" for Individual/Gig Worker accounts, "job" for Company accounts
-  const [searchMode, setSearchMode] = useState("person");
-  /* Hiding Candidates/Companies toggle for now - do not delete */
-  const HIDE_CANDIDATES_COMPANIES_TOGGLE = true;
+  // Search bar mode toggle: "person" (Candidates/Gigs) | "company" (Companies).
+  // For Individual (job seeker): default to "company" view; Gigs option is disabled with tooltip.
+  // For Company account: default to "person" (Candidates) after account type is loaded.
+  const [searchMode, setSearchMode] = useState("company");
+  const HIDE_CANDIDATES_COMPANIES_TOGGLE = false;
   // Last district/state from locality search (e.g. for gig workers fetch)
   const [lastSearchedDistrict, setLastSearchedDistrict] = useState(null);
   const [lastSearchedState, setLastSearchedState] = useState(null);
@@ -5137,7 +5137,7 @@ const MapComponent = ({ onOpenSettings, onViewModeChange, effectiveUser = null, 
 
               {/* Toggle: Person (users) / Job (suitcase) - hidden on mobile when search input focused */}
               <div className={`${searchBar["toggle-wrapper"]} border-0 overflow-visible shrink-0 md:pr-1 ${mobileSearchExpanded ? "hidden md:!flex" : ""}`} ref={searchModeDropdownRef}>
-                {/* Hiding Candidates/Companies toggle for now - mobile and desktop segment buttons only; filter dropdown and company pill stay below */}
+                {/* Candidates/Gigs | Companies toggle. For Individual (job seeker), Gigs is disabled with tooltip; Company view is default. Filter dropdown and company pill stay below. */}
                 {!HIDE_CANDIDATES_COMPANIES_TOGGLE && (
                   <>
                     {/* Mobile: single button with chevron, dropdown with Person and Enterprise options */}
