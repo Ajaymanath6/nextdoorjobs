@@ -212,6 +212,10 @@ const MapComponent = ({ onOpenSettings, onViewModeChange, effectiveUser = null, 
     }
   }, [searchMode, onViewModeChange]);
 
+  // Derive account type and search mode for search bar UI so the correct bar shows on first paint (avoids Company user seeing job-seeker bar briefly after sign-in).
+  const accountTypeForUI = effectiveUser?.accountType ?? userAccountType;
+  const searchModeForUI = accountTypeForUI === "Company" ? "person" : searchMode;
+
   // Home location (from profile)
   const [homeLocation, setHomeLocation] = useState(null);
   const [showSuggestionsDropdown, setShowSuggestionsDropdown] = useState(false);
@@ -5082,12 +5086,19 @@ const MapComponent = ({ onOpenSettings, onViewModeChange, effectiveUser = null, 
         </div>
       )}
 
-      {/* Search Bar - visible on all viewports */}
+      {/* Search Bar - visible on all viewports. While account is loading, show skeleton so we never flash the wrong account-type bar. */}
       {isGlobeView && (
         <div className={`flex flex-col gap-4 top-3 md:top-4 ${searchBar.container} w-[calc(100vw-16px)] max-w-[960px]`}>
         <div className="flex flex-row items-center gap-2 w-full">
           {/* Search Bar Card - same corner radius (rounded-full), white bg; profile button is outside to the right. */}
           <div className={`flex-1 min-w-0 bg-brand-bg-white rounded-full border border-brand-stroke-border shadow-lg px-1.5 py-1.5 md:px-4 md:py-2`}>
+            {effectiveUserLoading ? (
+              /* Skeleton: same approximate layout, no account-specific UI until we know account type */
+              <div className="flex items-center gap-2 w-full min-h-[34px] md:min-h-0">
+                <div className="h-8 w-20 rounded-full bg-brand-stroke-weak/50 animate-pulse shrink-0" />
+                <div className="flex-1 min-w-0 h-9 rounded-full bg-brand-stroke-weak/30 animate-pulse" />
+              </div>
+            ) : (
             {/* Mobile: single bar (Person/Job + input + Filter + Profile). Desktop: no bar, separate bordered controls. */}
             <div className={`flex items-center gap-0 w-full rounded-full border border-brand-stroke-border bg-brand-bg-white min-h-[34px] overflow-visible md:border-0 md:bg-transparent md:rounded-none md:min-h-0`}>
               {/* View Selector Button - Hidden for now, will add in later stages */}
@@ -5141,7 +5152,7 @@ const MapComponent = ({ onOpenSettings, onViewModeChange, effectiveUser = null, 
               {/* Toggle: Person (users) / Job (suitcase) - hidden on mobile when search input focused; 4px margin right */}
               <div className={`${searchBar["toggle-wrapper"]} border-0 overflow-visible shrink-0 md:pr-1 mr-1 ${mobileSearchExpanded ? "hidden md:!flex" : ""}`} ref={searchModeDropdownRef}>
                 {/* Candidates/Gigs | Companies toggle. Hidden for Company accounts (they only see candidates). For Individual, Gigs is disabled with tooltip. Filter dropdown and company pill stay below. */}
-                {!HIDE_CANDIDATES_COMPANIES_TOGGLE && userAccountType !== "Company" && (
+                {!HIDE_CANDIDATES_COMPANIES_TOGGLE && accountTypeForUI !== "Company" && (
                   <>
                     {/* Mobile: single button with chevron, dropdown with Person and Enterprise options */}
                     <div className="relative md:hidden shrink-0">
@@ -5149,11 +5160,11 @@ const MapComponent = ({ onOpenSettings, onViewModeChange, effectiveUser = null, 
                         type="button"
                         onClick={() => setShowSearchModeDropdown(!showSearchModeDropdown)}
                         className={`h-[34px] w-[46px] flex items-center justify-center gap-0.5 p-1 rounded-lg border-r border-brand-stroke-border hover:bg-brand-bg-fill transition-colors shrink-0 ${searchMode ? "bg-brand-bg-fill" : "bg-transparent"}`}
-                        title={searchMode === "person" ? (userAccountType === "Company" ? "Candidates" : "Gig work") : "All companies"}
+                        title={searchModeForUI === "person" ? (accountTypeForUI === "Company" ? "Candidates" : "Gig work") : "All companies"}
                         aria-expanded={showSearchModeDropdown}
                         aria-haspopup="true"
                       >
-                        {searchMode === "person" ? (
+                        {searchModeForUI === "person" ? (
                           <User size={20} className={`w-5 h-5 shrink-0 ${searchBar["toggle-segment-icon-active"]}`} />
                         ) : (
                           <Enterprise size={20} className={`w-5 h-5 shrink-0 ${searchBar["toggle-segment-icon-active"]}`} />
@@ -5162,8 +5173,8 @@ const MapComponent = ({ onOpenSettings, onViewModeChange, effectiveUser = null, 
                       </button>
                       {showSearchModeDropdown && (
                         <div className="absolute top-full left-0 mt-1 min-w-[140px] rounded-lg border border-brand-stroke-border bg-brand-bg-white shadow-lg z-[1001] py-1 overflow-hidden">
-                          {searchMode !== "person" && (
-                            userAccountType === "Individual" ? (
+                          {searchModeForUI !== "person" && (
+                            accountTypeForUI === "Individual" ? (
                               <Tooltip content="This feature is coming soon." as="div" className="w-full">
                                 <div className="w-full flex items-center gap-2 px-3 py-2 text-left text-sm font-medium text-brand-text-placeholder cursor-not-allowed opacity-70">
                                   <User size={20} className={`w-5 h-5 shrink-0 ${searchBar["toggle-segment-icon"]}`} />
@@ -5180,11 +5191,11 @@ const MapComponent = ({ onOpenSettings, onViewModeChange, effectiveUser = null, 
                                 className="w-full flex items-center gap-2 px-3 py-2 text-left text-sm font-medium text-brand-text-strong hover:bg-brand-bg-fill transition-colors min-w-0"
                               >
                                 <User size={20} className={`w-5 h-5 shrink-0 ${searchBar["toggle-segment-icon"]}`} />
-                                <span className="truncate">{userAccountType === "Company" ? "Candidates" : "Gig Workers"}</span>
+                                <span className="truncate">{accountTypeForUI === "Company" ? "Candidates" : "Gig Workers"}</span>
                               </button>
                             )
                           )}
-                          {searchMode !== "company" && (
+                          {searchModeForUI !== "company" && (
                             <button
                               type="button"
                               onClick={() => {
@@ -5203,7 +5214,7 @@ const MapComponent = ({ onOpenSettings, onViewModeChange, effectiveUser = null, 
                     {/* Desktop: toggle buttons - Companies selected by default with primary color; Gigs disabled with coming-soon tooltip */}
                     <div className="hidden md:flex items-center gap-1 shrink-0 mr-1">
                       <div className="flex rounded-full border border-brand-stroke-border overflow-hidden">
-                        {userAccountType === "Individual" ? (
+                        {accountTypeForUI === "Individual" ? (
                           <Tooltip content="This feature is coming soon." as="span" className="inline-flex">
                             <span className="group flex rounded-l-md rounded-r-none">
                               <button
@@ -5222,27 +5233,27 @@ const MapComponent = ({ onOpenSettings, onViewModeChange, effectiveUser = null, 
                           <button
                             type="button"
                             onClick={() => setSearchMode("person")}
-                            className={`flex items-center gap-1.5 px-3 py-2 border-0 ${searchBar["toggle-segment"]} ${searchMode === "person" ? searchBar["toggle-segment-active"] + " bg-brand/15 text-brand" : ""} !rounded-l-md !rounded-r-none`}
-                            title={userAccountType === "Company" ? "Candidates" : "Gig work"}
+                            className={`flex items-center gap-1.5 px-3 py-2 border-0 ${searchBar["toggle-segment"]} ${searchModeForUI === "person" ? searchBar["toggle-segment-active"] + " bg-brand/15 text-brand" : ""} !rounded-l-md !rounded-r-none`}
+                            title={accountTypeForUI === "Company" ? "Candidates" : "Gig work"}
                           >
                             <User
                               size={20}
                               className={`w-5 h-5 shrink-0 ${searchMode === "person" ? "text-brand" : searchBar["toggle-segment-icon"]}`}
                             />
-                            <span className={`text-sm font-medium ${searchMode === "person" ? "text-brand" : searchBar["toggle-segment-icon"]}`}>
-                              {userAccountType === "Company" ? "Candidates" : "Gigs"}
+                            <span className={`text-sm font-medium ${searchModeForUI === "person" ? "text-brand" : searchBar["toggle-segment-icon"]}`}>
+                              {accountTypeForUI === "Company" ? "Candidates" : "Gigs"}
                             </span>
                           </button>
                         )}
                         <button
                           type="button"
                           onClick={() => setSearchMode("company")}
-                          className={`flex items-center gap-1.5 px-3 py-2 border-0 ${searchBar["toggle-segment"]} ${searchMode === "company" ? searchBar["toggle-segment-active"] + " bg-brand/15 text-brand" : ""} !rounded-r-md !rounded-l-none`}
+                          className={`flex items-center gap-1.5 px-3 py-2 border-0 ${searchBar["toggle-segment"]} ${searchModeForUI === "company" ? searchBar["toggle-segment-active"] + " bg-brand/15 text-brand" : ""} !rounded-r-md !rounded-l-none`}
                           title="All companies"
                         >
                           <Enterprise
                             size={20}
-                            className={`w-5 h-5 shrink-0 ${searchMode === "company" ? "text-brand" : searchBar["toggle-segment-icon"]}`}
+                            className={`w-5 h-5 shrink-0 ${searchModeForUI === "company" ? "text-brand" : searchBar["toggle-segment-icon"]}`}
                           />
                           <span className={`text-sm font-medium ${searchMode === "company" ? "text-brand" : searchBar["toggle-segment-icon"]}`}>Companies</span>
                         </button>
@@ -5253,7 +5264,7 @@ const MapComponent = ({ onOpenSettings, onViewModeChange, effectiveUser = null, 
                 {/* Filter dropdown and company pill - always shown when not hiding toggle; when hiding, wrap in same desktop flex so filters still show */}
                 <div className="hidden md:flex items-center gap-1 shrink-0">
                   {/* Filter dropdown - only show in person mode for all account types */}
-                  {searchMode === "person" && (
+                  {searchModeForUI === "person" && (
                     <div className="relative shrink-0">
                       <button
                         ref={gigFilterButtonRef}
@@ -5269,7 +5280,7 @@ const MapComponent = ({ onOpenSettings, onViewModeChange, effectiveUser = null, 
                         title="Filter gigs by service type"
                       >
                         <Filter size={16} className="shrink-0" />
-                        <span className="max-w-[100px] truncate">{selectedGigType || (userAccountType === "Company" ? "Job roles" : "All Gigs")}</span>
+                        <span className="max-w-[100px] truncate">{selectedGigType || (accountTypeForUI === "Company" ? "Job roles" : "All Gigs")}</span>
                         <RiArrowDownSLine size={16} className="shrink-0" />
                       </button>
                       <GigFilterDropdown
@@ -5292,7 +5303,7 @@ const MapComponent = ({ onOpenSettings, onViewModeChange, effectiveUser = null, 
                     </div>
                   )}
                   {/* Years of experience and Tool/stack filters - Company account, person mode only */}
-                  {userAccountType === "Company" && searchMode === "person" && (
+                  {accountTypeForUI === "Company" && searchModeForUI === "person" && (
                     <>
                       <div className="relative shrink-0">
                         <button
@@ -5361,7 +5372,7 @@ const MapComponent = ({ onOpenSettings, onViewModeChange, effectiveUser = null, 
                     </>
                   )}
                   {/* Company view: Filter 1 = Work arrangement + Company type (combined); Filter 2 = Industry; Filter 3 = Job titles */}
-                  {searchMode === "company" && (
+                  {searchModeForUI === "company" && (
                     <>
                       <div className="relative shrink-0">
                         <button
@@ -5533,9 +5544,9 @@ const MapComponent = ({ onOpenSettings, onViewModeChange, effectiveUser = null, 
                     boxShadow: "0 1px 6px rgba(32,33,36,0.08)",
                   }}
                   placeholder={
-                    searchMode === "company"
+                    searchModeForUI === "company"
                       ? "Jobs near you"
-                      : userAccountType === "Company"
+                      : accountTypeForUI === "Company"
                         ? "Candidates near you"
                         : "Gigs near you"
                   }
@@ -5754,7 +5765,7 @@ const MapComponent = ({ onOpenSettings, onViewModeChange, effectiveUser = null, 
                           });
                         }
                       }}
-                      showBucketIcon={userAccountType === "Company" && searchMode === "person"}
+                      showBucketIcon={accountTypeForUI === "Company" && searchModeForUI === "person"}
                       onBucketClick={(state) => {
                         setShowFilterDropdown(false);
                         setStateForBucketModal(state);
@@ -5813,10 +5824,11 @@ const MapComponent = ({ onOpenSettings, onViewModeChange, effectiveUser = null, 
                 <Return size={20} className={searchBar["return-button-icon"]} />
               </button> */}
           </div>
+            )}
         </div>
 
         {/* Fetch candidates: Company only, outside search bar, same line/height */}
-        {userAccountType === "Company" && searchMode === "person" && (
+        {accountTypeForUI === "Company" && searchModeForUI === "person" && (
           <button
             type="button"
             onClick={() => setShowCandidateBucketModal(true)}
@@ -5831,7 +5843,7 @@ const MapComponent = ({ onOpenSettings, onViewModeChange, effectiveUser = null, 
         </div>
 
           {/* Home badge - below search bar, when user has home and in person mode */}
-          {homeLocation && searchMode === "person" && (
+          {homeLocation && searchModeForUI === "person" && (
             <div className="relative self-start">
               <button
                 type="button"

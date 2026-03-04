@@ -148,8 +148,8 @@ export default function Sidebar({ activeItem = "jobs-near-you", onToggle, isOpen
         </div>
       </div>
 
-      {/* Navigation Section */}
-      <nav className={`flex-1 overflow-y-auto overflow-x-hidden min-w-0 ${sidebar["nav-container"]}`}>
+      {/* Navigation Section - when collapsed, hide overflow to avoid scrollbar on narrow strip */}
+      <nav className={`flex-1 min-w-0 ${sidebar["nav-container"]} ${isOpen ? "overflow-y-auto overflow-x-hidden" : "overflow-hidden"}`}>
         <ul className="space-y-2 min-w-0 w-full">
           {navigationItems.map((item) => {
             const IconComponent = item.icon;
