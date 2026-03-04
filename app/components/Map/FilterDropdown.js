@@ -162,7 +162,7 @@ export default function FilterDropdown({
                     onBucketClick(state);
                     onClose();
                   }}
-                  className="shrink-0 p-1.5 rounded-md hover:bg-brand-stroke-weak transition-all"
+                  className="shrink-0 p-1.5 rounded-md hover:bg-brand-bg-fill transition-all"
                   aria-label={`View candidates in ${state}`}
                   title={`View candidates in ${state}`}
                 >

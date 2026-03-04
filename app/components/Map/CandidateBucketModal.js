@@ -527,7 +527,7 @@ export default function CandidateBucketModal({
                                       type="button"
                                       onClick={(e) => handleSendInvite(e, gig)}
                                       disabled={!hasEmail}
-                                      className="p-2 rounded-md hover:bg-brand-stroke-weak text-brand-stroke-strong transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                                      className="p-2 rounded-md hover:bg-brand-bg-fill text-brand-stroke-strong transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                                       title={hasEmail ? "Send invite email" : "No email"}
                                       aria-label="Send invite email"
                                     >
@@ -536,7 +536,7 @@ export default function CandidateBucketModal({
                                     <button
                                       type="button"
                                       onClick={(e) => handleBookmark(e, gig)}
-                                      className="p-2 rounded-md hover:bg-brand-stroke-weak text-brand-stroke-strong transition-colors"
+                                      className="p-2 rounded-md hover:bg-brand-bg-fill text-brand-stroke-strong transition-colors"
                                       title={isBookmarked ? "Unbookmark" : "Bookmark"}
                                       aria-label={isBookmarked ? "Unbookmark" : "Bookmark"}
                                     >
@@ -549,7 +549,7 @@ export default function CandidateBucketModal({
                                     <button
                                       type="button"
                                       onClick={(e) => handleRemove(e, gig)}
-                                      className="p-2 rounded-md hover:bg-brand-stroke-weak text-red-600 transition-colors"
+                                      className="p-2 rounded-md hover:bg-brand-bg-fill text-red-600 transition-colors"
                                       title="Remove from list"
                                       aria-label="Remove candidate"
                                     >

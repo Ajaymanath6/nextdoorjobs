@@ -5134,7 +5134,7 @@ const MapComponent = ({ onOpenSettings, onViewModeChange, effectiveUser = null, 
                 {showViewDropdown && (
                   <div className="absolute top-full mt-2 left-0 w-[200px] bg-brand-bg-white border border-brand-stroke-border rounded-lg shadow-lg z-50">
                     <button
-                      className="w-full text-left px-4 py-2 hover:bg-brand-stroke-weak transition-colors flex items-center gap-2"
+                      className="w-full text-left px-4 py-2 hover:bg-brand-bg-fill transition-colors flex items-center gap-2"
                       onClick={() => {
                         setIsGlobeView(true);
                         setShowViewDropdown(false);
@@ -5146,7 +5146,7 @@ const MapComponent = ({ onOpenSettings, onViewModeChange, effectiveUser = null, 
                       </span>
                     </button>
                     <button
-                      className="w-full text-left px-4 py-2 hover:bg-brand-stroke-weak transition-colors flex items-center gap-2"
+                      className="w-full text-left px-4 py-2 hover:bg-brand-bg-fill transition-colors flex items-center gap-2"
                       onClick={() => {
                         setIsGlobeView(false);
                         setShowViewDropdown(false);
@@ -5574,7 +5574,7 @@ const MapComponent = ({ onOpenSettings, onViewModeChange, effectiveUser = null, 
                         setSearchQuery("");
                         searchInputRef.current?.focus();
                       }}
-                      className="md:hidden flex items-center justify-center p-1 rounded border-0 bg-transparent hover:bg-brand-stroke-weak cursor-pointer"
+                      className="md:hidden flex items-center justify-center p-1 rounded border-0 bg-transparent hover:bg-brand-bg-fill cursor-pointer"
                       aria-label="Clear search"
                     >
                       <Close size={24} className="w-6 h-6 shrink-0 text-brand-stroke-strong" />
@@ -5588,7 +5588,7 @@ const MapComponent = ({ onOpenSettings, onViewModeChange, effectiveUser = null, 
                         setSearchQuery("");
                         searchInputRef.current?.focus();
                       }}
-                      className="hidden md:flex items-center justify-center p-1 rounded border-0 bg-transparent hover:bg-brand-stroke-weak cursor-pointer shrink-0"
+                      className="hidden md:flex items-center justify-center p-1 rounded border-0 bg-transparent hover:bg-brand-bg-fill cursor-pointer shrink-0"
                       aria-label="Clear search"
                     >
                       <Close size={24} className="w-6 h-6 shrink-0 text-brand-stroke-strong" />
@@ -5603,7 +5603,7 @@ const MapComponent = ({ onOpenSettings, onViewModeChange, effectiveUser = null, 
                       <button
                         type="button"
                         onClick={() => setSelectedFilterOption(null)}
-                        className="shrink-0 p-0.5 rounded-full hover:bg-brand-stroke-weak transition-colors"
+                        className="shrink-0 p-0.5 rounded-full hover:bg-brand-bg-fill transition-colors"
                         aria-label="Clear state filter"
                       >
                         <Close size={14} className="w-3.5 h-3.5 text-brand-stroke-strong" />
@@ -5739,7 +5739,7 @@ const MapComponent = ({ onOpenSettings, onViewModeChange, effectiveUser = null, 
                     <button
                       type="button"
                       onClick={() => setSelectedFilterOption(null)}
-                      className="shrink-0 p-0.5 rounded-full hover:bg-brand-stroke-weak transition-colors"
+                      className="shrink-0 p-0.5 rounded-full hover:bg-brand-bg-fill transition-colors"
                       aria-label="Clear state filter"
                     >
                       <Close size={14} className="w-3.5 h-3.5 text-brand-stroke-strong" />

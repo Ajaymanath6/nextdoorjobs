@@ -276,7 +276,7 @@ export default function FilterBottomSheet({
                       <button
                         type="button"
                         onClick={() => removeSkill(skill)}
-                        className="ml-0.5 rounded-full p-0.5 hover:bg-brand-stroke-weak"
+                        className="ml-0.5 rounded-full p-0.5 hover:bg-brand-bg-fill"
                         aria-label={`Remove ${skill}`}
                       >
                         <Close size={14} className="text-brand-stroke-strong" />
@@ -540,7 +540,7 @@ export default function FilterBottomSheet({
                       <button
                         type="button"
                         onClick={() => removeSkill(skill)}
-                        className="ml-0.5 rounded-full p-0.5 hover:bg-brand-stroke-weak"
+                        className="ml-0.5 rounded-full p-0.5 hover:bg-brand-bg-fill"
                         aria-label={`Remove ${skill}`}
                       >
                         <Close size={14} className="text-brand-stroke-strong" />

@@ -198,7 +198,7 @@ export default function LocalityAutocomplete({
                 if (el) itemRefs.current[index] = el;
               }}
               onClick={() => handleSelect(item)}
-              className="hover:bg-brand-stroke-weak transition-colors duration-150"
+              className="hover:bg-brand-bg-fill transition-colors duration-150"
               style={{
                 fontFamily: "Open Sans",
                 padding: "10px 16px",
