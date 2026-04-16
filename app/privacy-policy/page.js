@@ -28,6 +28,13 @@ export default function PrivacyPolicyPage() {
           <p className={`text-sm md:text-base mt-2 ${brand.text.weak}`}>
             Last updated: {new Date().toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' })}
           </p>
+          <p className={`text-sm mt-3 ${brand.text.weak}`}>
+            This Privacy Policy works together with our{" "}
+            <Link href="/terms-of-service" className="text-brand underline hover:opacity-90">
+              Terms of Service
+            </Link>
+            .
+          </p>
         </div>
       </div>
 

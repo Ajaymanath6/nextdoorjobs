@@ -189,13 +189,23 @@ export default function EmailAuthForm({ onSubmit, isLoading = false }) {
               </button>
             </div>
 
-            <div className="text-center mt-3 pb-[42px]">
+            <div className="text-center mt-3 pb-[42px] flex flex-wrap items-center justify-center gap-x-2 gap-y-1 text-xs text-brand-text-weak" style={{ fontFamily: "Open Sans, sans-serif" }}>
+              <Link
+                href="/terms-of-service"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="hover:text-brand-text-strong hover:underline transition-colors"
+              >
+                Terms of Service
+              </Link>
+              <span aria-hidden className="text-brand-stroke-strong">
+                |
+              </span>
               <Link
                 href="/privacy-policy"
                 target="_blank"
                 rel="noopener noreferrer"
-                className="text-xs text-brand-text-weak hover:text-brand-text-strong hover:underline transition-colors"
-                style={{ fontFamily: "Open Sans, sans-serif" }}
+                className="hover:text-brand-text-strong hover:underline transition-colors"
               >
                 Privacy Policy
               </Link>

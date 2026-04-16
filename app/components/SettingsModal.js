@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect, useRef } from "react";
+import Link from "next/link";
 import { useRouter } from "next/navigation";
 import Modal from "./Modal";
 import {
@@ -2071,7 +2072,22 @@ export default function SettingsModal({ isOpen, onClose, initialSection }) {
               })}
             </div>
             {selectedPlanId && (
-              <div className="pt-2">
+              <div className="pt-2 space-y-3">
+                <p className="text-xs text-brand-text-weak leading-relaxed">
+                  By continuing, you agree to our{" "}
+                  <Link href="/terms-of-service" target="_blank" rel="noopener noreferrer" className="text-brand underline hover:opacity-90">
+                    Terms of Service
+                  </Link>{" "}
+                  and{" "}
+                  <Link href="/privacy-policy" target="_blank" rel="noopener noreferrer" className="text-brand underline hover:opacity-90">
+                    Privacy Policy
+                  </Link>
+                  . Payments are processed securely by Razorpay. See also{" "}
+                  <a href="https://razorpay.com/terms/" target="_blank" rel="noopener noreferrer" className="text-brand underline hover:opacity-90">
+                    Razorpay&apos;s terms
+                  </a>
+                  .
+                </p>
                 <button
                   type="button"
                   onClick={handleSubscriptionCheckout}
