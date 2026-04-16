@@ -8,8 +8,6 @@ import {
   Close,
   Settings,
   Receipt,
-  DataConnected,
-  SettingsAdjust,
   Edit,
   Add,
   Location,
@@ -30,11 +28,9 @@ const SECTIONS = [
   { id: "yourWork", label: "Your Work", icon: Add },
   { id: "company", label: "Company Details", icon: Receipt },
   { id: "subscription", label: "Subscription", icon: Receipt },
-  { id: "integration", label: "Integration", icon: DataConnected, disabled: true },
-  { id: "other", label: "Other", icon: SettingsAdjust, disabled: true },
 ];
 
-const VALID_SECTIONS = ["general", "resume", "yourWork", "company", "subscription", "integration", "other"];
+const VALID_SECTIONS = ["general", "resume", "yourWork", "company", "subscription"];
 
 const SUBSCRIPTION_PLANS = [
   {

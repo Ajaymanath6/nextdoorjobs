@@ -19,7 +19,8 @@ export async function POST() {
       );
     }
 
-    const clerkUser = await currentUser();
+    const clerkUser =
+      process.env.CLERK_SECRET_KEY?.trim() ? await currentUser() : null;
     if (clerkUser) {
       const clerkId = clerkUser.id;
       const existing = await prisma.user.findUnique({

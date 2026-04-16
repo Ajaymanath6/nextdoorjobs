@@ -17,6 +17,9 @@ export const metadata = {
   description: "Find jobs near you on the map",
 };
 
+/** Avoid static prerender of routes that use Clerk hooks when Clerk env is incomplete (local setup). */
+export const dynamic = "force-dynamic";
+
 export default function RootLayout({ children }) {
   const publishableKey = process.env.NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY;
 
@@ -47,12 +50,12 @@ export default function RootLayout({ children }) {
     </html>
   );
 
-  // Only wrap with ClerkProvider if key is available (prevents build errors)
-  if (!publishableKey) {
-    // During build, if key is missing, render without ClerkProvider
-    // This allows the build to complete even if env vars aren't set
+  // ClerkProvider requires both keys; secret is validated by middleware (see proxy.ts)
+  if (!publishableKey?.trim() || !process.env.CLERK_SECRET_KEY?.trim()) {
     if (process.env.NODE_ENV === 'production') {
-      console.warn('⚠️ NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY is not set. Clerk features will not work.');
+      console.warn(
+        '⚠️ Clerk keys incomplete (NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY and CLERK_SECRET_KEY). Clerk features disabled.'
+      );
     }
     return content;
   }

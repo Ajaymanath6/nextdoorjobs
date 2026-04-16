@@ -112,6 +112,9 @@ const clerkHandler = clerkMiddleware(async (auth, req) => {
 export default function middleware(req: Request) {
   const fapiResponse = clerkFapiProxy(req);
   if (fapiResponse) return fapiResponse;
+  if (!process.env.CLERK_SECRET_KEY?.trim()) {
+    return NextResponse.next();
+  }
   return clerkHandler(req);
 }
 

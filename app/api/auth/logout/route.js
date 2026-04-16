@@ -13,7 +13,11 @@ export async function POST() {
     cookieStore.delete("session_token");
 
     // Sign out from Clerk if user is authenticated via Clerk
-    const { userId } = await auth();
+    let userId = null;
+    if (process.env.CLERK_SECRET_KEY?.trim()) {
+      const authResult = await auth();
+      userId = authResult.userId;
+    }
     if (userId) {
       try {
         // Get the session token and sign out from Clerk
