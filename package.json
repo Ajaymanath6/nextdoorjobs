@@ -31,6 +31,7 @@
     "db:seed-colleges": "node scripts/seed-colleges.js",
     "db:seed-admin-owner": "node scripts/seed-admin-owner.js",
     "db:check": "node scripts/check-db.js",
+    "jobs:expire": "node scripts/expire-jobs.js",
     "db:update-colleges-locality": "node scripts/update-colleges-locality.js",
     "db:update-colleges-district": "node scripts/update-colleges-district.js",
     "db:fix-sequence": "node scripts/fix-sequence.js",

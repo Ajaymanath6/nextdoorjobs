@@ -64,7 +64,24 @@ async function seedAdminOwner() {
   await prisma.$disconnect();
 }
 
+function printConnectionHelp(err) {
+  const code = err?.code || "";
+  if (code === "ETIMEDOUT" || String(err?.message || "").includes("ETIMEDOUT")) {
+    console.error("\nDatabase connection timed out — your machine cannot reach Neon.");
+    console.error("Fix DATABASE_URL in .env.local:");
+    console.error("  1. Neon dashboard → Connection details → use the POOLED string (host contains -pooler).");
+    console.error("  2. Wake the project (open Neon console or load the app in the browser).");
+    console.error("  3. Ensure outbound port 5432 is allowed (VPN/firewall/corporate network).");
+    console.error("Then run: npm run db:check && npm run db:seed-admin-owner\n");
+    return;
+  }
+  if (code === "EAI_AGAIN" || code === "ENOTFOUND") {
+    console.error("\nCannot resolve database host — check DATABASE_URL hostname in .env.local.\n");
+  }
+}
+
 seedAdminOwner().catch((err) => {
-  console.error("Seed failed:", err);
+  console.error("Seed failed:", err?.message || err);
+  printConnectionHelp(err);
   process.exit(1);
 });

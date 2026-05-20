@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { activeJobWhere } from "../../../../../lib/jobExpiry";
 import { prisma } from "../../../../../lib/prisma";
 
 export async function GET(request, { params }) {
@@ -17,7 +18,7 @@ export async function GET(request, { params }) {
     const jobs = await prisma.jobPosition.findMany({
       where: {
         companyId,
-        isActive: true,
+        ...activeJobWhere(),
       },
       orderBy: {
         createdAt: "desc",

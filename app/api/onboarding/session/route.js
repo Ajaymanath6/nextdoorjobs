@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { currentUser } from "@clerk/nextjs/server";
+import { isClerkConfigured } from "../../../../lib/clerkConfig";
 import { prisma } from "../../../../lib/prisma";
 import { getCurrentUser } from "../../../../lib/getCurrentUser";
 
@@ -19,8 +20,7 @@ export async function POST() {
       );
     }
 
-    const clerkUser =
-      process.env.CLERK_SECRET_KEY?.trim() ? await currentUser() : null;
+    const clerkUser = isClerkConfigured() ? await currentUser() : null;
     if (clerkUser) {
       const clerkId = clerkUser.id;
       const existing = await prisma.user.findUnique({

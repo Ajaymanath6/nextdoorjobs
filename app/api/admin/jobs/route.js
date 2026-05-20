@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { activeJobWhere } from "../../../../lib/jobExpiry";
 import { getAdminSession } from "../../../../lib/adminAuth";
 import { prisma } from "../../../../lib/prisma";
 import { jobService } from "../../../../lib/services/job.service";
@@ -51,7 +52,7 @@ export async function GET(request) {
 
     const whereClause = {
       companyId: { in: companyIds },
-      isActive: true,
+      ...activeJobWhere(),
     };
 
     if (filter === "recent") {

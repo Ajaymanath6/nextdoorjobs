@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { activeJobWhere } from "../../../lib/jobExpiry";
 import { getCurrentUser } from "../../../lib/getCurrentUser";
 import { authService } from "../../../lib/services/auth.service";
 import { gigService } from "../../../lib/services/gig.service";
@@ -278,9 +279,7 @@ export async function GET(request) {
           latitude: { not: null },
           longitude: { not: null },
           jobPositions: {
-            some: {
-              isActive: true,
-            },
+            some: activeJobWhere(),
           },
         };
 
@@ -291,7 +290,7 @@ export async function GET(request) {
           where: companyWhereClause,
           include: {
             jobPositions: {
-              where: { isActive: true },
+              where: activeJobWhere(),
               select: { id: true },
             },
           },
@@ -391,14 +390,14 @@ export async function GET(request) {
           const companyWhereClause = {
             latitude: { not: null },
             longitude: { not: null },
-            jobPositions: { some: { isActive: true } },
+            jobPositions: { some: activeJobWhere() },
           };
           if (filters.state) companyWhereClause.state = filters.state;
           if (filters.district) companyWhereClause.district = filters.district;
           companies = await prisma.company.findMany({
             where: companyWhereClause,
             include: {
-              jobPositions: { where: { isActive: true }, select: { id: true } },
+              jobPositions: { where: activeJobWhere(), select: { id: true } },
             },
           });
         } catch (e) {

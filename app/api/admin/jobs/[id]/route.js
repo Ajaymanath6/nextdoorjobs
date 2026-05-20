@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { getEffectiveExpiry } from "../../../../../lib/jobExpiry";
 import { prisma } from "../../../../../lib/prisma";
 import { getAdminSession } from "../../../../../lib/adminAuth";
 
@@ -188,15 +189,17 @@ export async function POST(request, { params }) {
     }
 
     const now = new Date();
-    const newExpiresAt =
-      job.expiresAt && job.expiresAt > now
-        ? new Date(job.expiresAt.getTime() + 14 * 24 * 60 * 60 * 1000)
-        : new Date(now.getTime() + 14 * 24 * 60 * 60 * 1000);
+    const currentExpiry = getEffectiveExpiry(job);
+    const newExpiresAt = new Date(currentExpiry);
+    newExpiresAt.setDate(newExpiresAt.getDate() + 14);
 
     const updated = await prisma.jobPosition.update({
       where: { id: jobId },
       data: {
+        extensionCount: { increment: 1 },
         expiresAt: newExpiresAt,
+        autoDeletedAt: null,
+        isActive: true,
       },
     });
 

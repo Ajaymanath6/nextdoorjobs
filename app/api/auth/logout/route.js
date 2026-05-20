@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { auth, clerkClient } from '@clerk/nextjs/server';
 import { cookies } from "next/headers";
+import { isClerkConfigured } from "../../../../lib/clerkConfig";
 
 /**
  * POST /api/auth/logout
@@ -14,7 +15,7 @@ export async function POST() {
 
     // Sign out from Clerk if user is authenticated via Clerk
     let userId = null;
-    if (process.env.CLERK_SECRET_KEY?.trim()) {
+    if (isClerkConfigured()) {
       const authResult = await auth();
       userId = authResult.userId;
     }

@@ -84,9 +84,15 @@ export async function POST(request) {
     });
   } catch (e) {
     console.error("Admin POST company error:", e);
+    const msg = e.message || "Internal server error";
+    const isClient =
+      msg.includes("required") ||
+      msg.includes("Invalid") ||
+      msg.includes("too long") ||
+      msg.includes("not found");
     return NextResponse.json(
-      { error: e.message || "Internal server error" },
-      { status: e.message && e.message.includes("required") ? 400 : 500 }
+      { error: msg },
+      { status: isClient ? 400 : 500 }
     );
   }
 }

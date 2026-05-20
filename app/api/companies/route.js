@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { activeJobWhere } from "../../../lib/jobExpiry";
 import { prisma } from "../../../lib/prisma";
 
 /**
@@ -11,17 +12,22 @@ export async function GET(request) {
     const { searchParams } = new URL(request.url);
     const remoteType = searchParams.get("remoteType")?.trim() || null;
 
+    const liveJob = activeJobWhere();
     const jobPositionsCondition = remoteType
       ? {
           some: {
-            isActive: true,
-            OR: [
-              { remoteType: { equals: remoteType, mode: "insensitive" } },
-              { remoteType: { contains: remoteType, mode: "insensitive" } },
+            AND: [
+              liveJob,
+              {
+                OR: [
+                  { remoteType: { equals: remoteType, mode: "insensitive" } },
+                  { remoteType: { contains: remoteType, mode: "insensitive" } },
+                ],
+              },
             ],
           },
         }
-      : { some: { isActive: true } };
+      : { some: liveJob };
 
     const companies = await prisma.company.findMany({
       where: {
@@ -43,9 +49,7 @@ export async function GET(request) {
         _count: {
           select: {
             jobPositions: {
-              where: {
-                isActive: true,
-              },
+              where: activeJobWhere(),
             },
           },
         },

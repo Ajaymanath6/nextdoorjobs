@@ -1,5 +1,6 @@
 import { clerkMiddleware, createRouteMatcher, currentUser } from '@clerk/nextjs/server';
 import { NextResponse } from 'next/server';
+import { isClerkConfigured } from './lib/clerkConfig';
 import { prisma } from './lib/prisma';
 
 /** Proxy Frontend API requests to Clerk so custom domain (clerk.mapmygig.com) is not required. */
@@ -112,7 +113,7 @@ const clerkHandler = clerkMiddleware(async (auth, req) => {
 export default function middleware(req: Request) {
   const fapiResponse = clerkFapiProxy(req);
   if (fapiResponse) return fapiResponse;
-  if (!process.env.CLERK_SECRET_KEY?.trim()) {
+  if (!isClerkConfigured()) {
     return NextResponse.next();
   }
   return clerkHandler(req);

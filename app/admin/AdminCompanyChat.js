@@ -371,10 +371,14 @@ export default function AdminCompanyChat() {
   const [jobListingToEdit, setJobListingToEdit] = useState(null);
   const [jobListingExtendingId, setJobListingExtendingId] = useState(null);
   const jobDataRef = useRef({});
+  const companyDataRef = useRef({});
   const createdCompanyRef = useRef(null);
   useEffect(() => {
     jobDataRef.current = jobData;
   }, [jobData]);
+  useEffect(() => {
+    companyDataRef.current = companyData;
+  }, [companyData]);
   useEffect(() => {
     createdCompanyRef.current = createdCompany;
   }, [createdCompany]);
@@ -718,37 +722,54 @@ export default function AdminCompanyChat() {
     setTimeout(() => scrollToInlineRef.current?.(), 150);
   };
 
-  const handleLocationReceived = async (lat, lon) => {
-    const latitude = typeof lat === "number" ? lat : parseFloat(lat);
-    const longitude = typeof lon === "number" ? lon : parseFloat(lon);
-    let state = companyData?.state ?? null;
-    let district = companyData?.district ?? null;
+  /** Reverse-geocode coords; district falls back to locality when OSM has no county. */
+  const resolveStateDistrictFromCoords = async (latitude, longitude, existing = {}) => {
+    let state = (existing.state || "").trim() || null;
+    let district = (existing.district || "").trim() || null;
+    let pincode = (existing.pincode || "").trim() || null;
     try {
       const res = await fetch(
         `/api/geocode/reverse?lat=${latitude}&lon=${longitude}`
       );
       if (res.ok) {
         const data = await res.json();
-        state = data.state ?? state;
-        district = data.district ?? district;
+        state = (data.state || state || "").trim() || null;
+        district =
+          (data.district || data.locality || district || "").trim() || null;
+        pincode = (data.postcode || pincode || "").trim() || null;
       }
     } catch (_) {}
-    setCompanyData((prev) => ({
-      ...prev,
+    return { state, district, pincode };
+  };
+
+  const handleLocationReceived = async (lat, lon) => {
+    const latitude = typeof lat === "number" ? lat : parseFloat(lat);
+    const longitude = typeof lon === "number" ? lon : parseFloat(lon);
+    const base = companyDataRef.current || {};
+    const { state, district, pincode } = await resolveStateDistrictFromCoords(
+      latitude,
+      longitude,
+      base
+    );
+    const merged = {
+      ...base,
       latitude,
       longitude,
       ...(state && { state }),
       ...(district && { district }),
-    }));
+      ...(pincode && { pincode }),
+    };
+    companyDataRef.current = merged;
+    setCompanyData(merged);
     await addAIMessage(
       `Location saved: ${latitude.toFixed(4)}, ${longitude.toFixed(4)}${district && state ? ` • ${district}, ${state}` : ""}.`
     );
 
-    await handleCompanySubmit({});
+    await handleCompanySubmit(merged);
   };
 
   const handleLocationSkipped = async () => {
-    await handleCompanySubmit({});
+    await handleCompanySubmit(companyDataRef.current || {});
   };
 
   const handleWebsiteSubmitted = async (url) => {
@@ -758,7 +779,12 @@ export default function AdminCompanyChat() {
 
     if (!isSkip) {
       const normalizedUrl = /^https?:\/\//i.test(value) ? value : `https://${value}`;
-      setCompanyData((prev) => ({ ...prev, websiteUrl: normalizedUrl }));
+            const withUrl = {
+              ...companyDataRef.current,
+              websiteUrl: normalizedUrl,
+            };
+            companyDataRef.current = withUrl;
+            setCompanyData(withUrl);
 
       setIsLoading(true);
       try {
@@ -769,12 +795,14 @@ export default function AdminCompanyChat() {
           const logoData = await logoRes.json();
           if (logoData.success && logoData.logoUrl) {
             logoFetched = true;
-            setCompanyData((prev) => ({
-              ...prev,
+            const withLogo = {
+              ...companyDataRef.current,
               websiteUrl: normalizedUrl,
               logoPath: logoData.logoUrl,
               logoUrl: logoData.logoUrl,
-            }));
+            };
+            companyDataRef.current = withLogo;
+            setCompanyData(withLogo);
           }
         }
       } catch (e) {
@@ -793,14 +821,16 @@ export default function AdminCompanyChat() {
             typeof data.latitude === "number" &&
             typeof data.longitude === "number";
           if (hasAll) {
-            setCompanyData((prev) => ({
-              ...prev,
+            const fromUrl = {
+              ...companyDataRef.current,
               state: data.state,
               district: data.district,
               latitude: String(data.latitude),
               longitude: String(data.longitude),
               ...(data.pincode && { pincode: data.pincode }),
-            }));
+            };
+            companyDataRef.current = fromUrl;
+            setCompanyData(fromUrl);
           }
         }
       } catch (e) {
@@ -838,18 +868,73 @@ export default function AdminCompanyChat() {
   };
 
   const handleCompanySubmit = async (overrides = {}) => {
-    const c = { ...companyData, ...overrides };
+    let c = { ...companyDataRef.current, ...overrides };
     const name = (c.name || "").trim();
-    const state = (c.state || "").trim();
-    const district = (c.district || "").trim();
-    if (!name || !state || !district) {
+    let state = (c.state || "").trim();
+    let district = (c.district || "").trim();
+
+    const lat =
+      c.latitude != null && Number.isFinite(Number(c.latitude))
+        ? Number(c.latitude)
+        : null;
+    const lon =
+      c.longitude != null && Number.isFinite(Number(c.longitude))
+        ? Number(c.longitude)
+        : null;
+
+    if ((!state || !district) && lat != null && lon != null) {
+      const resolved = await resolveStateDistrictFromCoords(lat, lon, c);
+      state = (resolved.state || state || "").trim();
+      district = (resolved.district || district || "").trim();
+      c = {
+        ...c,
+        latitude: lat,
+        longitude: lon,
+        ...(state && { state }),
+        ...(district && { district }),
+        ...(resolved.pincode && { pincode: resolved.pincode }),
+      };
+      companyDataRef.current = c;
+      setCompanyData(c);
+    }
+
+    if (!name) {
       setChatMessages((prev) => [
         ...prev,
         {
           type: "ai",
-          text: "Company name, state, and district are required. Please try again.",
+          text: "Company name is missing. What's the company name?",
         },
       ]);
+      setCurrentField(COMPANY_FIELDS.NAME);
+      return;
+    }
+    if (!state || !district) {
+      setChatMessages((prev) => [
+        ...prev,
+        {
+          type: "ai",
+          text:
+            lat != null && lon != null
+              ? "Couldn't detect state or district from that location. Please pick the location again on the map."
+              : "Add company location on the map so we can detect state and district, or try again.",
+        },
+      ]);
+      setCurrentField(COMPANY_FIELDS.LOCATION);
+      setInlineComponent(
+        <GetCoordinatesButton
+          isMobile={isMobile}
+          onCoordinatesReceived={(latitude, longitude) => {
+            setInlineComponent(null);
+            handleLocationReceived(latitude, longitude);
+          }}
+          onSkip={() => {
+            setInlineComponent(null);
+            handleLocationSkipped();
+          }}
+        />
+      );
+      scrollToInline();
       return;
     }
     setIsLoading(true);
@@ -1080,6 +1165,7 @@ export default function AdminCompanyChat() {
     setChatMessages([{ type: "ai", text: INITIAL_AI_MESSAGE }]);
     setInlineComponent(null);
     setCompanyData({});
+    companyDataRef.current = {};
     setJobData({});
     setCurrentField(COMPANY_FIELDS.NAME);
     setCollectingCompany(true);
@@ -1094,6 +1180,7 @@ export default function AdminCompanyChat() {
     setIsTyping(false);
     setIsLoading(false);
     setCompanyData({});
+    companyDataRef.current = {};
     setJobData({});
     setCurrentField(COMPANY_FIELDS.NAME);
     setCollectingCompany(true);
@@ -1109,17 +1196,22 @@ export default function AdminCompanyChat() {
     setTimeout(async () => {
       if (collectingCompany) {
         switch (currentField) {
-          case COMPANY_FIELDS.NAME:
-            setCompanyData((prev) => ({ ...prev, name: value }));
+          case COMPANY_FIELDS.NAME: {
+            const next = { ...companyDataRef.current, name: value };
+            companyDataRef.current = next;
+            setCompanyData(next);
             await addAIMessage(
               `Got it! Company: "${value}". What does your company do? (short description or type skip)`
             );
             setCurrentField(COMPANY_FIELDS.DESCRIPTION);
             break;
+          }
 
           case COMPANY_FIELDS.DESCRIPTION:
             if (value.toLowerCase() !== "skip" && value) {
-              setCompanyData((prev) => ({ ...prev, description: value }));
+              const next = { ...companyDataRef.current, description: value };
+              companyDataRef.current = next;
+              setCompanyData(next);
             }
             await addAIMessage(
               "Do you have a company website URL? (Enter URL or skip)"
@@ -1129,7 +1221,9 @@ export default function AdminCompanyChat() {
               <UrlInput
                 onUrlSubmit={(url) => {
                   if (url.toLowerCase() !== "skip") {
-                    setCompanyData((prev) => ({ ...prev, websiteUrl: url }));
+                    const next = { ...companyDataRef.current, websiteUrl: url };
+                    companyDataRef.current = next;
+                    setCompanyData(next);
                   }
                   setInlineComponent(null);
                   handleWebsiteSubmitted(url);

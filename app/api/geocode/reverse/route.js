@@ -72,18 +72,19 @@ export async function GET(request) {
     }
 
     const state = addr.state || addr.region || null;
-    const district =
-      addr.county ||
-      addr.state_district ||
-      addr.district ||
-      addr.municipality ||
-      null;
     const locality =
       addr.village ||
       addr.suburb ||
       addr.town ||
       addr.city ||
       addr.hamlet ||
+      null;
+    const district =
+      addr.county ||
+      addr.state_district ||
+      addr.district ||
+      addr.municipality ||
+      locality ||
       null;
     const postcode = addr.postcode ? String(addr.postcode).trim() : null;
 

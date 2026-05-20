@@ -1,5 +1,6 @@
 import { Geist, Geist_Mono } from "next/font/google";
 import { ClerkProvider } from '@clerk/nextjs';
+import { getClerkProxyUrl, getClerkPublishableKey, isClerkConfigured } from '../lib/clerkConfig';
 import "./globals.css";
 
 const geistSans = Geist({
@@ -21,9 +22,9 @@ export const metadata = {
 export const dynamic = "force-dynamic";
 
 export default function RootLayout({ children }) {
-  const publishableKey = process.env.NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY;
+  const publishableKey = getClerkPublishableKey();
 
-  // Wrap content - conditionally use ClerkProvider only if key exists
+  // Wrap content - conditionally use ClerkProvider only if keys are valid
   const content = (
     <html lang="en">
       <head>
@@ -50,33 +51,26 @@ export default function RootLayout({ children }) {
     </html>
   );
 
-  // ClerkProvider requires both keys; secret is validated by middleware (see proxy.ts)
-  if (!publishableKey?.trim() || !process.env.CLERK_SECRET_KEY?.trim()) {
+  if (!isClerkConfigured() || !publishableKey) {
     if (process.env.NODE_ENV === 'production') {
       console.warn(
-        '⚠️ Clerk keys incomplete (NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY and CLERK_SECRET_KEY). Clerk features disabled.'
+        '⚠️ Clerk keys missing or invalid. Set NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY and CLERK_SECRET_KEY from the Clerk dashboard, then rebuild.'
       );
     }
     return content;
   }
 
-  // If Clerk Frontend API uses a custom domain (e.g. clerk.mapmygig.com) that doesn't serve the script,
-  // load clerk-js from a CDN so auth still works.
   const clerkJSUrl =
     process.env.NEXT_PUBLIC_CLERK_JS_URL ||
     "https://unpkg.com/@clerk/clerk-js@5/dist/clerk.browser.js";
 
-  // Send FAPI requests through our app's /__clerk proxy so custom domain is not required.
-  const baseUrl = process.env.NEXT_PUBLIC_APP_URL || "";
-  const proxyUrl =
-    process.env.NEXT_PUBLIC_CLERK_PROXY_URL ||
-    (baseUrl ? `${baseUrl.replace(/\/$/, "")}/__clerk` : "");
+  const proxyUrl = getClerkProxyUrl();
 
   return (
     <ClerkProvider
       publishableKey={publishableKey}
       clerkJSUrl={clerkJSUrl}
-      proxyUrl={proxyUrl}
+      {...(proxyUrl ? { proxyUrl } : {})}
     >
       {content}
     </ClerkProvider>

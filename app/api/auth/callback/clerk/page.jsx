@@ -1,13 +1,12 @@
 import { ClerkCallbackClient } from './ClerkCallbackClient';
+import { isClerkConfigured } from '../../../../../lib/clerkConfig';
 
 /**
  * OAuth redirect target for Clerk (see EmailAuthForm redirectUrl).
- * Only mounts Clerk client components when both keys are set (matches app/layout.js).
+ * Only mounts Clerk client components when both keys are valid (matches app/layout.js).
  */
 export default function ClerkCallbackPage() {
-  const publishable = process.env.NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY?.trim();
-  const secret = process.env.CLERK_SECRET_KEY?.trim();
-  if (!publishable || !secret) {
+  if (!isClerkConfigured()) {
     return (
       <div style={{ padding: '1.5rem', fontFamily: 'system-ui' }}>
         <p>Clerk OAuth callback is not configured.</p>
