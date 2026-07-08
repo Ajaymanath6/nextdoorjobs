@@ -149,10 +149,26 @@ export async function GET(request) {
       return NextResponse.json({ success: true, gigs });
     }
 
-    // Check if requesting user is a Company (use same auth as /api/auth/me so map sees candidates)
-    let currentUser = await authService.getCurrentUser();
+    // Resolve viewer account type. Auth must not 500 the public gigs list
+    // (DB timeouts / Clerk issues are common on cold start).
+    let currentUser = null;
+    try {
+      currentUser = await authService.getCurrentUser();
+    } catch (authErr) {
+      console.warn(
+        "GET /api/gigs: authService.getCurrentUser failed:",
+        authErr?.code || authErr?.message || authErr
+      );
+    }
     if (!currentUser) {
-      currentUser = await getCurrentUser();
+      try {
+        currentUser = await getCurrentUser();
+      } catch (authErr) {
+        console.warn(
+          "GET /api/gigs: getCurrentUser failed:",
+          authErr?.code || authErr?.message || authErr
+        );
+      }
     }
 
     // If Company account, return job seekers and companies with jobs
