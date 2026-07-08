@@ -10,9 +10,16 @@ export async function GET(request) {
   try {
     const { searchParams } = new URL(request.url);
     const query = searchParams.get("q");
+    const category = searchParams.get("category")?.trim() || null;
 
-    // Use JobService with Redis caching
-    const jobTitles = await jobService.getAllJobTitles(query);
+    let jobTitles = await jobService.getAllJobTitles(query);
+
+    if (category) {
+      const catLower = category.toLowerCase();
+      jobTitles = jobTitles.filter(
+        (j) => j.category && j.category.toLowerCase() === catLower
+      );
+    }
 
     return NextResponse.json(jobTitles);
   } catch (error) {

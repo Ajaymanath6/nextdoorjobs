@@ -248,6 +248,7 @@ model JobPosition {
   salaryMax           Int?                 @map("salary_max")
   jobDescription      String               @db.Text
   remoteType          String?              @map("remote_type") @db.VarChar(50)
+  employmentType      EmploymentType?      @map("employment_type")
   assistRelocation    Boolean?             @default(false) @map("assist_relocation")
   seniorityLevel      String?              @map("seniority_level") @db.VarChar(50)
   teamSize            String?              @map("team_size") @db.VarChar(50)
