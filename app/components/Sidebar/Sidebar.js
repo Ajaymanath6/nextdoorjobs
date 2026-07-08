@@ -24,7 +24,7 @@ const SIDEBAR_ICONS = {
 function SidebarNavIcon({ item }) {
   if (item.iconSrc) {
     return (
-      <span className="w-6 h-6 flex items-center justify-center shrink-0 bg-[#FFF4F1] rounded-sm overflow-hidden">
+      <span className="w-6 h-6 flex items-center justify-center shrink-0 bg-gray-100 rounded-sm overflow-hidden">
         <Image
           src={item.iconSrc}
           alt=""
@@ -38,7 +38,7 @@ function SidebarNavIcon({ item }) {
   }
   const IconComponent = item.icon;
   return (
-    <span className="w-6 h-6 flex items-center justify-center shrink-0 bg-[#FFF4F1] rounded-sm">
+    <span className="w-6 h-6 flex items-center justify-center shrink-0 bg-gray-100 rounded-sm">
       <IconComponent size={24} style={{ color: "rgba(87, 87, 87, 1)" }} />
     </span>
   );
@@ -212,7 +212,7 @@ export default function Sidebar({
 
   return (
     <aside
-      className={`h-screen flex flex-col bg-[#FFF4F1] min-w-0 ${
+      className={`h-screen flex flex-col bg-gray-100 min-w-0 ${
         isOpen ? sidebar["container-expanded"] : sidebar["container-collapsed"]
       } ${isOpen ? "overflow-x-hidden" : "overflow-visible"}`}
     >

@@ -32,8 +32,8 @@
   },
   "components": {
     "sidebar": {
-      "container-expanded": "w-52 bg-[#FFF4F1] transition-all duration-300",
-      "container-collapsed": "w-16 bg-[#FFF4F1] transition-all duration-300",
+      "container-expanded": "w-52 bg-gray-100 transition-all duration-300",
+      "container-collapsed": "w-16 bg-gray-100 transition-all duration-300",
       "logo-section": "p-4 border-b border-brand-stroke-border",
       "logo-container": "w-6 h-6",
       "logo-text": "text-brand-text-weak font-medium text-base leading-6 tracking-[-0.03em]",
