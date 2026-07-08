@@ -96,6 +96,26 @@ function buildJobMatchConditions(searchParams) {
  * GET /api/companies
  * Fetch companies with active jobs matching optional filters.
  */
+async function findCompaniesWithRetry(query, maxAttempts = 3) {
+  let lastError;
+  for (let attempt = 1; attempt <= maxAttempts; attempt++) {
+    try {
+      return await prisma.company.findMany(query);
+    } catch (err) {
+      lastError = err;
+      const isTimeout =
+        err?.code === "ETIMEDOUT" ||
+        (err?.message && String(err.message).includes("ETIMEDOUT"));
+      if (!isTimeout || attempt === maxAttempts) throw err;
+      console.warn(
+        `[GET /api/companies] timeout attempt ${attempt}/${maxAttempts}, retrying...`
+      );
+      await new Promise((r) => setTimeout(r, 1500 * attempt));
+    }
+  }
+  throw lastError;
+}
+
 export async function GET(request) {
   try {
     const { searchParams } = new URL(request.url);
@@ -104,11 +124,18 @@ export async function GET(request) {
 
     let titleList = null;
     if (industryCategory && !titleFilter) {
-      const titles = await prisma.jobTitle.findMany({
-        where: { category: { equals: industryCategory, mode: "insensitive" } },
-        select: { title: true },
-      });
-      titleList = titles.map((t) => t.title);
+      try {
+        const titles = await prisma.jobTitle.findMany({
+          where: { category: { equals: industryCategory, mode: "insensitive" } },
+          select: { title: true },
+        });
+        titleList = titles.map((t) => t.title);
+      } catch (titleErr) {
+        console.warn(
+          "[GET /api/companies] job titles lookup failed:",
+          titleErr?.code || titleErr?.message
+        );
+      }
     }
 
     const jobMatch = buildJobMatchConditions(searchParams);
@@ -126,7 +153,7 @@ export async function GET(request) {
         ? { fundingSeries: { in: FUNDING_MAP[companyFunding] } }
         : {};
 
-    const companies = await prisma.company.findMany({
+    const companies = await findCompaniesWithRetry({
       where: {
         AND: [
           { latitude: { not: null } },
@@ -176,6 +203,17 @@ export async function GET(request) {
     });
   } catch (error) {
     console.error("Error fetching companies:", error);
+    // Soft-fail on DB timeouts so the map still renders empty instead of hard 500
+    const isTimeout =
+      error?.code === "ETIMEDOUT" ||
+      (error?.message && String(error.message).includes("ETIMEDOUT"));
+    if (isTimeout) {
+      return NextResponse.json({
+        success: true,
+        companies: [],
+        warning: "Database temporarily unavailable; try again shortly",
+      });
+    }
     return NextResponse.json(
       {
         success: false,

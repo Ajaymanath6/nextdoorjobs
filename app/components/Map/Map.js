@@ -341,7 +341,11 @@ const MapComponent = ({ onOpenSettings, onViewModeChange, effectiveUser = null, 
   };
 
   const moreFiltersActive = Boolean(
-    selectedMoreFilters.experience ||
+    selectedEmploymentType ||
+      selectedIndustryType ||
+      selectedRole ||
+      selectedSalaryBand ||
+      selectedMoreFilters.experience ||
       selectedMoreFilters.companyType ||
       selectedMoreFilters.postedWithin
   );
@@ -359,6 +363,18 @@ const MapComponent = ({ onOpenSettings, onViewModeChange, effectiveUser = null, 
     setSelectedYearsExperience(null);
     setSelectedToolStack(null);
     closeFilterDropdowns();
+  };
+
+  const handleMoreFiltersApply = (filters = {}) => {
+    setSelectedEmploymentType(filters.employmentType || null);
+    setSelectedIndustryType(filters.industryType || null);
+    setSelectedRole(filters.role || null);
+    setSelectedSalaryBand(filters.salaryBand || null);
+    setSelectedMoreFilters({
+      experience: filters.experience || null,
+      companyType: filters.companyType || null,
+      postedWithin: filters.postedWithin || null,
+    });
   };
 
   const jobsFilterBarProps = {
@@ -5240,9 +5256,9 @@ const MapComponent = ({ onOpenSettings, onViewModeChange, effectiveUser = null, 
   }
 
   return (
-    <div className="flex-1 h-screen bg-gray-50 dark:bg-gray-950 relative overflow-hidden">
+    <div className="flex-1 h-full w-full bg-gray-50 dark:bg-gray-950 relative overflow-hidden rounded-[16px]">
       {/* Map Container */}
-      <div ref={mapRef} className="w-full h-full absolute inset-0" />
+      <div ref={mapRef} className="w-full h-full absolute inset-0 rounded-[16px]" />
 
       {/* Karma toasts (Company account, candidates view) — bottom-right */}
       {userAccountType === "Company" && searchMode === "person" && topCandidatesByKarma.length > 0 && (
@@ -5513,7 +5529,7 @@ const MapComponent = ({ onOpenSettings, onViewModeChange, effectiveUser = null, 
                       setShowCollegeAutocomplete(false);
                     }
                   }}
-                  className={`${searchBar["search-input"]} border-0 rounded-none md:border md:rounded-full bg-transparent hover:bg-transparent ${searchBar["search-input-text"]} ${searchBar["search-input-placeholder"]} search-input-focus-active focus:ring-2 focus:ring-inset focus:ring-brand focus:outline-none w-full text-sm md:text-base font-semibold py-1.5 pl-9 pr-9 md:py-2 md:pl-11 md:pr-11`}
+                  className={`${searchBar["search-input"]} border-0 rounded-none md:border md:rounded-full bg-brand-bg-white hover:bg-brand-bg-white ${searchBar["search-input-text"]} ${searchBar["search-input-placeholder"]} search-input-focus-active focus:ring-2 focus:ring-inset focus:ring-brand focus:outline-none w-full text-sm md:text-base font-semibold py-1.5 pl-9 pr-9 md:py-2 md:pl-11 md:pr-11`}
                   style={{
                     fontFamily: "Open Sans",
                     boxShadow: "0 1px 6px rgba(32,33,36,0.08)",
@@ -5573,12 +5589,12 @@ const MapComponent = ({ onOpenSettings, onViewModeChange, effectiveUser = null, 
                       </button>
                     </span>
                   ) : null}
-                  {/* Desktop: location filter button inside search bar - no bg on hover, icon turns primary on hover */}
+                  {/* Desktop: location filter button inside search bar */}
                   <button
                     type="button"
                     onMouseDown={(e) => e.preventDefault()}
                     onClick={() => setShowFilterDropdown(!showFilterDropdown)}
-                    className="group hidden md:flex items-center justify-center p-1.5 rounded border-0 bg-transparent hover:bg-transparent transition-colors shrink-0"
+                    className="group hidden md:flex items-center justify-center p-1.5 rounded border-0 bg-transparent transition-colors shrink-0"
                     aria-label="Location filter"
                   >
                     <Location size={24} className="text-brand-stroke-strong group-hover:text-brand w-6 h-6 shrink-0 transition-colors" />
@@ -5716,7 +5732,7 @@ const MapComponent = ({ onOpenSettings, onViewModeChange, effectiveUser = null, 
                     type="button"
                     onMouseDown={(e) => e.preventDefault()}
                     onClick={() => setShowFilterDropdown(!showFilterDropdown)}
-                    className="group h-[34px] w-[34px] md:hidden flex items-center justify-center p-1.5 rounded-lg border-0 bg-transparent hover:bg-transparent transition-colors shrink-0"
+                    className="group h-[34px] w-[34px] md:hidden flex items-center justify-center p-1.5 rounded-lg border-0 bg-transparent transition-colors shrink-0"
                     aria-label="Location filter"
                   >
                     <Location size={24} className="text-brand-stroke-strong group-hover:text-brand w-6 h-6 shrink-0 transition-colors" />
@@ -5945,7 +5961,7 @@ const MapComponent = ({ onOpenSettings, onViewModeChange, effectiveUser = null, 
                 <Enterprise size={14} className="shrink-0 text-brand" />
                 <div className="flex flex-col leading-tight">
                   <span className="text-[10px] md:text-xs text-brand-text-weak font-normal">
-                    Total Jobs
+                    Total Companies
                   </span>
                   <span className="text-sm md:text-base text-brand-text-strong font-semibold">
                     {totalCompaniesCount.toLocaleString()}
@@ -5956,7 +5972,7 @@ const MapComponent = ({ onOpenSettings, onViewModeChange, effectiveUser = null, 
                 <List size={14} className="shrink-0 text-brand" />
                 <div className="flex flex-col leading-tight">
                   <span className="text-[10px] md:text-xs text-brand-text-weak font-normal">
-                    Total jobs
+                    Total Jobs
                   </span>
                   <span className="text-sm md:text-base text-brand-text-strong font-semibold">
                     {totalJobsCount.toLocaleString()}
@@ -5966,7 +5982,7 @@ const MapComponent = ({ onOpenSettings, onViewModeChange, effectiveUser = null, 
             </>
           )
         ) : (
-          /* Individual/Gig Worker Account: Show Total Gigs in person mode, Total Companies in company mode */
+          /* Individual/Gig Worker Account: Show Total Gigs in person mode, Total Companies + Total Jobs in company mode */
           <>
             {searchMode === "person" ? (
               <div className="bg-white border border-brand-stroke-border rounded-lg shadow-lg px-2 py-1.5 md:px-3 md:py-2 flex items-center gap-1.5 md:gap-2 pointer-events-auto font-sans">
@@ -5986,7 +6002,7 @@ const MapComponent = ({ onOpenSettings, onViewModeChange, effectiveUser = null, 
                   <Enterprise size={14} className="shrink-0 text-brand" />
                   <div className="flex flex-col leading-tight">
                     <span className="text-[10px] md:text-xs text-brand-text-weak font-normal">
-                      Total Jobs
+                      Total Companies
                     </span>
                     <span className="text-sm md:text-base text-brand-text-strong font-semibold">
                       {totalCompaniesCount.toLocaleString()}
@@ -5997,7 +6013,7 @@ const MapComponent = ({ onOpenSettings, onViewModeChange, effectiveUser = null, 
                   <List size={14} className="shrink-0 text-brand" />
                   <div className="flex flex-col leading-tight">
                     <span className="text-[10px] md:text-xs text-brand-text-weak font-normal">
-                      Total jobs
+                      Total Jobs
                     </span>
                     <span className="text-sm md:text-base text-brand-text-strong font-semibold">
                       {totalJobsCount.toLocaleString()}
@@ -6136,8 +6152,25 @@ const MapComponent = ({ onOpenSettings, onViewModeChange, effectiveUser = null, 
       <JobsMoreFiltersDrawer
         isOpen={showMoreFiltersDrawer}
         onClose={() => setShowMoreFiltersDrawer(false)}
-        initialFilters={selectedMoreFilters}
-        onApply={setSelectedMoreFilters}
+        initialFilters={{
+          employmentType: selectedEmploymentType,
+          industryType: selectedIndustryType,
+          role: selectedRole,
+          salaryBand: selectedSalaryBand,
+          experience: selectedMoreFilters.experience,
+          companyType: selectedMoreFilters.companyType,
+          postedWithin: selectedMoreFilters.postedWithin,
+        }}
+        industryCategories={industryCategories}
+        roleOptions={roleOptions}
+        onIndustryChange={(cat) => {
+          setSelectedIndustryType(cat);
+          if (!cat) {
+            setSelectedRole(null);
+            setRoleOptions([]);
+          }
+        }}
+        onApply={handleMoreFiltersApply}
         onClearAll={clearAllJobFilters}
       />
 

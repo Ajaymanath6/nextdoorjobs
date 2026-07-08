@@ -7,8 +7,6 @@ import GigFilterDropdown from "./GigFilterDropdown";
 import {
   RADIUS_OPTIONS,
   WORK_MODE_OPTIONS,
-  EMPLOYMENT_OPTIONS,
-  SALARY_BANDS,
   GIG_SALARY_BANDS,
 } from "../../../lib/jobMapFilters";
 
@@ -59,32 +57,6 @@ export default function JobsFilterBar({
   setShowWorkModeDropdown,
   workModeButtonRef,
   workModeDropdownRef,
-  selectedEmploymentType,
-  onSelectEmploymentType,
-  showEmploymentDropdown,
-  setShowEmploymentDropdown,
-  employmentButtonRef,
-  employmentDropdownRef,
-  selectedIndustryType,
-  onSelectIndustryType,
-  showIndustryDropdown,
-  setShowIndustryDropdown,
-  industryButtonRef,
-  industryDropdownRef,
-  industryCategories,
-  selectedRole,
-  onSelectRole,
-  showRoleDropdown,
-  setShowRoleDropdown,
-  roleButtonRef,
-  roleDropdownRef,
-  roleOptions,
-  selectedSalaryBand,
-  onSelectSalaryBand,
-  showSalaryDropdown,
-  setShowSalaryDropdown,
-  salaryButtonRef,
-  salaryDropdownRef,
   onOpenMoreFilters,
   moreFiltersActive,
   candidateYearsOptions,
@@ -109,11 +81,6 @@ export default function JobsFilterBar({
       : "Radius";
 
   const workModeLabel = selectedWorkMode || "Work Mode";
-  const employmentLabel =
-    EMPLOYMENT_OPTIONS.find((e) => e.value === selectedEmploymentType)?.label ||
-    "Employment";
-  const roleLabel = selectedRole || "Role";
-  const salaryLabel = selectedSalaryBand || "Salary";
 
   if (searchModeForUI === "person") {
     return (
@@ -259,8 +226,34 @@ export default function JobsFilterBar({
     );
   }
 
+  // Jobs mode: keep bar short — Work Mode, Radius, More Filters
   return (
     <>
+      <div className="relative shrink-0">
+        <FilterPill
+          buttonRef={workModeButtonRef}
+          label={workModeLabel}
+          onClick={() => {
+            closeOtherDropdowns("workMode");
+            setShowWorkModeDropdown(!showWorkModeDropdown);
+          }}
+          ariaLabel="Work mode"
+        />
+        <OptionListFilterDropdown
+          isOpen={showWorkModeDropdown}
+          onClose={() => setShowWorkModeDropdown(false)}
+          dropdownRef={workModeDropdownRef}
+          position={{ top: "100%", bottom: "auto", left: "0", right: "auto", marginTop: "8px" }}
+          width="280px"
+          title="Work mode"
+          allOptionLabel="All"
+          options={WORK_MODE_OPTIONS.map((o) => o.label)}
+          selectedValue={selectedWorkMode}
+          onSelect={onSelectWorkMode}
+          searchPlaceholder=""
+          emptyMessage=""
+        />
+      </div>
       <div className="relative shrink-0">
         <FilterPill
           buttonRef={radiusButtonRef}
@@ -293,138 +286,6 @@ export default function JobsFilterBar({
           emptyMessage=""
         />
       </div>
-      <div className="relative shrink-0">
-        <FilterPill
-          buttonRef={workModeButtonRef}
-          label={workModeLabel}
-          onClick={() => {
-            closeOtherDropdowns("workMode");
-            setShowWorkModeDropdown(!showWorkModeDropdown);
-          }}
-          ariaLabel="Work mode"
-        />
-        <OptionListFilterDropdown
-          isOpen={showWorkModeDropdown}
-          onClose={() => setShowWorkModeDropdown(false)}
-          dropdownRef={workModeDropdownRef}
-          position={{ top: "100%", bottom: "auto", left: "0", right: "auto", marginTop: "8px" }}
-          width="280px"
-          title="Work mode"
-          allOptionLabel="All"
-          options={WORK_MODE_OPTIONS.map((o) => o.label)}
-          selectedValue={selectedWorkMode}
-          onSelect={onSelectWorkMode}
-          searchPlaceholder=""
-          emptyMessage=""
-        />
-      </div>
-      <div className="relative shrink-0">
-        <FilterPill
-          buttonRef={employmentButtonRef}
-          label={employmentLabel}
-          onClick={() => {
-            closeOtherDropdowns("employment");
-            setShowEmploymentDropdown(!showEmploymentDropdown);
-          }}
-          ariaLabel="Employment type"
-        />
-        <OptionListFilterDropdown
-          isOpen={showEmploymentDropdown}
-          onClose={() => setShowEmploymentDropdown(false)}
-          dropdownRef={employmentDropdownRef}
-          position={{ top: "100%", bottom: "auto", left: "0", right: "auto", marginTop: "8px" }}
-          width="280px"
-          title="Employment"
-          allOptionLabel="All"
-          options={EMPLOYMENT_OPTIONS.map((o) => o.label)}
-          selectedValue={EMPLOYMENT_OPTIONS.find((e) => e.value === selectedEmploymentType)?.label}
-          onSelect={(label) => {
-            const opt = EMPLOYMENT_OPTIONS.find((e) => e.label === label);
-            onSelectEmploymentType(opt ? opt.value : null);
-          }}
-          searchPlaceholder=""
-          emptyMessage=""
-        />
-      </div>
-      <div className="relative shrink-0">
-        <FilterPill
-          buttonRef={industryButtonRef}
-          label={selectedIndustryType || "Industry"}
-          onClick={() => {
-            closeOtherDropdowns("industry");
-            setShowIndustryDropdown(!showIndustryDropdown);
-          }}
-          ariaLabel="Industry"
-        />
-        <OptionListFilterDropdown
-          isOpen={showIndustryDropdown}
-          onClose={() => setShowIndustryDropdown(false)}
-          dropdownRef={industryDropdownRef}
-          position={{ top: "100%", bottom: "auto", left: "0", right: "auto", marginTop: "8px" }}
-          width="300px"
-          title="Industry"
-          allOptionLabel="All"
-          options={industryCategories}
-          selectedValue={selectedIndustryType}
-          onSelect={(v) => {
-            onSelectIndustryType(v);
-            onSelectRole(null);
-          }}
-          searchPlaceholder="Search..."
-          emptyMessage="No industries found"
-        />
-      </div>
-      <div className={`relative shrink-0 ${!selectedIndustryType ? "opacity-60" : ""}`}>
-        <FilterPill
-          buttonRef={roleButtonRef}
-          label={roleLabel}
-          onClick={() => {
-            if (!selectedIndustryType) return;
-            closeOtherDropdowns("role");
-            setShowRoleDropdown(!showRoleDropdown);
-          }}
-          ariaLabel="Job role"
-        />
-        <OptionListFilterDropdown
-          isOpen={showRoleDropdown && !!selectedIndustryType}
-          onClose={() => setShowRoleDropdown(false)}
-          dropdownRef={roleDropdownRef}
-          position={{ top: "100%", bottom: "auto", left: "0", right: "auto", marginTop: "8px" }}
-          width="300px"
-          title="Role"
-          allOptionLabel="All"
-          options={roleOptions}
-          selectedValue={selectedRole}
-          onSelect={onSelectRole}
-          searchPlaceholder="Search..."
-          emptyMessage={selectedIndustryType ? "No roles found" : "Select industry first"}
-        />
-      </div>
-      <div className="relative shrink-0">
-        <FilterPill
-          buttonRef={salaryButtonRef}
-          label={salaryLabel}
-          onClick={() => {
-            closeOtherDropdowns("salary");
-            setShowSalaryDropdown(!showSalaryDropdown);
-          }}
-          ariaLabel="Salary"
-        />
-        <OptionListFilterDropdown
-          isOpen={showSalaryDropdown}
-          onClose={() => setShowSalaryDropdown(false)}
-          dropdownRef={salaryDropdownRef}
-          position={{ top: "100%", bottom: "auto", left: "0", right: "auto", marginTop: "8px" }}
-          width="280px"
-          title="Salary"
-          allOptionLabel="All"
-          options={SALARY_BANDS.map((b) => b.label)}
-          selectedValue={selectedSalaryBand}
-          onSelect={onSelectSalaryBand}
-          searchPlaceholder=""
-          emptyMessage=""
-        />
-      </div>
       <button
         type="button"
         onClick={onOpenMoreFilters}
@@ -434,6 +295,8 @@ export default function JobsFilterBar({
             : "bg-brand-bg-white border-brand-stroke-weak text-brand-text-strong"
         }`}
         style={{ fontFamily: "Open Sans" }}
+        aria-label="More filters"
+        title="More filters"
       >
         <Filter size={16} className="shrink-0" />
         <span>More Filters</span>

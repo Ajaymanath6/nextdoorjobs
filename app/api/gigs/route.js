@@ -419,9 +419,23 @@ export async function GET(request) {
       pincode: searchParams.get("pincode"),
     };
 
-    // Use service layer with caching
-    const gigs = await gigService.getGigsByLocation(filters);
-    return NextResponse.json({ success: true, gigs });
+    try {
+      const gigs = await gigService.getGigsByLocation(filters);
+      return NextResponse.json({ success: true, gigs });
+    } catch (listErr) {
+      const isTimeout =
+        listErr?.code === "ETIMEDOUT" ||
+        (listErr?.message && String(listErr.message).includes("ETIMEDOUT"));
+      console.error("GET /api/gigs list error:", listErr?.code || listErr?.message);
+      if (isTimeout) {
+        return NextResponse.json({
+          success: true,
+          gigs: [],
+          warning: "Database temporarily unavailable; try again shortly",
+        });
+      }
+      throw listErr;
+    }
   } catch (err) {
     console.error("GET /api/gigs error:", err);
     return NextResponse.json(
