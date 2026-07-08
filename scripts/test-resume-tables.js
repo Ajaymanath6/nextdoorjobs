@@ -21,8 +21,21 @@ async function testResumeTables() {
     const educationCount = await prisma.resumeEducation.count();
     console.log(`   ✓ ResumeEducation table accessible. Count: ${educationCount}`);
 
-    // Test 4: Try to create a test resume (will fail if user doesn't exist, but that's OK)
-    console.log("\n4. Testing Resume table structure...");
+    // Test 4: New profile expansion tables
+    console.log("\n4. Testing ResumeSkill model access...");
+    const skillCount = await prisma.resumeSkill.count();
+    console.log(`   ✓ ResumeSkill table accessible. Count: ${skillCount}`);
+
+    console.log("\n5. Testing ResumeCertification model access...");
+    const certCount = await prisma.resumeCertification.count();
+    console.log(`   ✓ ResumeCertification table accessible. Count: ${certCount}`);
+
+    console.log("\n6. Testing ResumeLanguage model access...");
+    const langCount = await prisma.resumeLanguage.count();
+    console.log(`   ✓ ResumeLanguage table accessible. Count: ${langCount}`);
+
+    // Test 7: Try to create a test resume (will fail if user doesn't exist, but that's OK)
+    console.log("\n7. Testing Resume table structure...");
     try {
       // This will fail if user 999999 doesn't exist, but it tests the table structure
       await prisma.resume.findUnique({

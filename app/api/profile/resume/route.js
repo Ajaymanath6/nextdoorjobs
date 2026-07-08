@@ -1,9 +1,20 @@
 import { NextResponse } from "next/server";
 import { prisma } from "../../../../lib/prisma";
 import { getCurrentUser } from "../../../../lib/getCurrentUser";
-
-const MAX_WORK = 5;
-const MAX_EDUCATION = 5;
+import {
+  buildResumeData,
+  RESUME_INCLUDE,
+  MAX_WORK,
+  MAX_EDUCATION,
+  MAX_SKILLS,
+  MAX_CERTIFICATIONS,
+  MAX_LANGUAGES,
+  mapWorkExperience,
+  mapEducation,
+  mapSkill,
+  mapCertification,
+  mapLanguage,
+} from "../../../../lib/resumeValidation";
 
 /**
  * GET /api/profile/resume
@@ -24,10 +35,7 @@ export async function GET() {
 
     const resume = await prisma.resume.findUnique({
       where: { userId: user.id },
-      include: {
-        workExperiences: { orderBy: { orderIndex: "asc" } },
-        educations: { orderBy: { orderIndex: "asc" } },
-      },
+      include: RESUME_INCLUDE,
     });
 
     if (!resume) {
@@ -51,7 +59,6 @@ export async function GET() {
 /**
  * PATCH /api/profile/resume
  * Upsert resume for current user (Individual only).
- * Body: resume fields + workExperiences[], educations[]
  */
 export async function PATCH(request) {
   try {
@@ -67,108 +74,85 @@ export async function PATCH(request) {
     }
 
     const body = await request.json().catch(() => ({}));
-    const {
-      firstName,
-      lastName,
-      emailOverride,
-      currentPosition,
-      yearsExperience,
-      expectedSalaryPackage,
-      currentSalaryPackage,
-      currentSalaryVisibleToRecruiter,
-      workExperiences = [],
-      educations = [],
-    } = body;
+    const built = buildResumeData(body);
+    if (built.error) {
+      return NextResponse.json({ success: false, error: built.error }, { status: 400 });
+    }
 
-    const workList = Array.isArray(workExperiences) ? workExperiences.slice(0, MAX_WORK) : [];
-    const educationList = Array.isArray(educations) ? educations.slice(0, MAX_EDUCATION) : [];
-
-    const resumeData = {
-      firstName: typeof firstName === "string" ? firstName.trim().slice(0, 255) || null : null,
-      lastName: typeof lastName === "string" ? lastName.trim().slice(0, 255) || null : null,
-      emailOverride: typeof emailOverride === "string" ? emailOverride.trim().slice(0, 255) || null : null,
-      currentPosition: typeof currentPosition === "string" ? currentPosition.trim().slice(0, 255) || null : null,
-      yearsExperience: typeof yearsExperience === "string" ? yearsExperience.trim().slice(0, 50) || null : null,
-      expectedSalaryPackage: typeof expectedSalaryPackage === "string" ? expectedSalaryPackage.trim().slice(0, 100) || null : null,
-      currentSalaryPackage: typeof currentSalaryPackage === "string" ? currentSalaryPackage.trim().slice(0, 100) || null : null,
-      currentSalaryVisibleToRecruiter:
-        typeof currentSalaryVisibleToRecruiter === "boolean" ? currentSalaryVisibleToRecruiter : false,
-    };
+    const workList = Array.isArray(body.workExperiences)
+      ? body.workExperiences.slice(0, MAX_WORK).map(mapWorkExperience)
+      : [];
+    const educationList = Array.isArray(body.educations)
+      ? body.educations.slice(0, MAX_EDUCATION).map(mapEducation)
+      : [];
+    const skillList = Array.isArray(body.skills)
+      ? body.skills.slice(0, MAX_SKILLS).map(mapSkill).filter(Boolean)
+      : [];
+    const certList = Array.isArray(body.certifications)
+      ? body.certifications.slice(0, MAX_CERTIFICATIONS).map(mapCertification).filter(Boolean)
+      : [];
+    const langList = Array.isArray(body.languages)
+      ? body.languages.slice(0, MAX_LANGUAGES).map(mapLanguage).filter(Boolean)
+      : [];
 
     const resume = await prisma.resume.upsert({
       where: { userId: user.id },
       create: {
         userId: user.id,
-        ...resumeData,
+        ...built.data,
       },
-      update: resumeData,
+      update: built.data,
     });
 
     await prisma.resumeWorkExperience.deleteMany({ where: { resumeId: resume.id } });
     await prisma.resumeEducation.deleteMany({ where: { resumeId: resume.id } });
+    await prisma.resumeSkill.deleteMany({ where: { resumeId: resume.id } });
+    await prisma.resumeCertification.deleteMany({ where: { resumeId: resume.id } });
+    await prisma.resumeLanguage.deleteMany({ where: { resumeId: resume.id } });
 
     if (workList.length > 0) {
       await prisma.resumeWorkExperience.createMany({
-        data: workList.map((w, i) => ({
-          resumeId: resume.id,
-          companyName: typeof w.companyName === "string" ? w.companyName.trim().slice(0, 255) || null : null,
-          companyUrl: typeof w.companyUrl === "string" ? w.companyUrl.trim().slice(0, 500) || null : null,
-          position: typeof w.position === "string" ? w.position.trim().slice(0, 255) || null : null,
-          duties: typeof w.duties === "string" ? w.duties.trim().slice(0, 5000) || null : null,
-          year: typeof w.year === "string" ? w.year.trim().slice(0, 20) || null : null,
-          orderIndex: i,
-        })),
+        data: workList.map((w) => ({ resumeId: resume.id, ...w })),
       });
     }
-
     if (educationList.length > 0) {
       await prisma.resumeEducation.createMany({
-        data: educationList.map((e, i) => ({
-          resumeId: resume.id,
-          universityName: typeof e.universityName === "string" ? e.universityName.trim().slice(0, 255) || null : null,
-          streamName: typeof e.streamName === "string" ? e.streamName.trim().slice(0, 255) || null : null,
-          marksOrScore: typeof e.marksOrScore === "string" ? e.marksOrScore.trim().slice(0, 100) || null : null,
-          yearOfPassing: typeof e.yearOfPassing === "string" ? e.yearOfPassing.trim().slice(0, 20) || null : null,
-          orderIndex: i,
-        })),
+        data: educationList.map((e) => ({ resumeId: resume.id, ...e })),
+      });
+    }
+    if (skillList.length > 0) {
+      await prisma.resumeSkill.createMany({
+        data: skillList.map((s) => ({ resumeId: resume.id, ...s })),
+      });
+    }
+    if (certList.length > 0) {
+      await prisma.resumeCertification.createMany({
+        data: certList.map((c) => ({ resumeId: resume.id, ...c })),
+      });
+    }
+    if (langList.length > 0) {
+      await prisma.resumeLanguage.createMany({
+        data: langList.map((l) => ({ resumeId: resume.id, ...l })),
       });
     }
 
     const updated = await prisma.resume.findUnique({
       where: { id: resume.id },
-      include: {
-        workExperiences: { orderBy: { orderIndex: "asc" } },
-        educations: { orderBy: { orderIndex: "asc" } },
-      },
+      include: RESUME_INCLUDE,
     });
 
     return NextResponse.json({ success: true, resume: updated });
   } catch (error) {
     console.error("PATCH /api/profile/resume error:", error);
-    console.error("PATCH /api/profile/resume error stack:", error.stack);
-    console.error("PATCH /api/profile/resume error details:", {
-      message: error.message,
-      code: error.code,
-      meta: error.meta,
-    });
-    // Return detailed error in development, generic in production
     const errorResponse = {
       success: false,
       error: "Failed to save resume",
     };
-    
     if (process.env.NODE_ENV === "development") {
       errorResponse.details = error.message;
       errorResponse.code = error.code;
-      if (error.meta) {
-        errorResponse.meta = error.meta;
-      }
-      // Include stack trace only in development
-      if (error.stack) {
-        errorResponse.stack = error.stack;
-      }
+      if (error.meta) errorResponse.meta = error.meta;
     }
-    
     return NextResponse.json(errorResponse, { status: 500 });
   }
 }

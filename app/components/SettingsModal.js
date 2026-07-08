@@ -21,6 +21,18 @@ import AddHomeModal from "./Map/AddHomeModal";
 import themeClasses from "../theme-utility-classes.json";
 import { AVATARS } from "../../lib/avatars";
 import FundingSeriesBadges from "./Onboarding/FundingSeriesBadges";
+import { getDefaultResumeForm, resumeToForm, formToApiPayload } from "../../lib/resumeFormDefaults";
+import { GENDERS } from "../../lib/constants/profileEnums";
+import ProfileProfessionalSummary from "./Profile/ProfileProfessionalSummary";
+import ProfileSkillsEditor from "./Profile/ProfileSkillsEditor";
+import ProfileExperienceEditor from "./Profile/ProfileExperienceEditor";
+import ProfileEducationEditor from "./Profile/ProfileEducationEditor";
+import ProfileCertificationsEditor from "./Profile/ProfileCertificationsEditor";
+import ProfileLanguagesEditor from "./Profile/ProfileLanguagesEditor";
+import ProfileLinksEditor from "./Profile/ProfileLinksEditor";
+import ProfileJobPreferencesEditor from "./Profile/ProfileJobPreferencesEditor";
+import ProfileSalaryEditor from "./Profile/ProfileSalaryEditor";
+import ViewResumeContent, { formatResumeDate } from "./Profile/ViewResumeContent";
 
 const SECTIONS = [
   { id: "general", label: "General", icon: Settings },
@@ -89,6 +101,12 @@ export default function SettingsModal({ isOpen, onClose, initialSection }) {
   const [addEmailValue, setAddEmailValue] = useState("");
   const [phoneValue, setPhoneValue] = useState("");
   const [phoneSaving, setPhoneSaving] = useState(false);
+  const [phoneError, setPhoneError] = useState(null);
+  const [pincodeValue, setPincodeValue] = useState("");
+  const [pincodeSaving, setPincodeSaving] = useState(false);
+  const [genderValue, setGenderValue] = useState("");
+  const [dobValue, setDobValue] = useState("");
+  const [basicInfoSaving, setBasicInfoSaving] = useState(false);
   const [companies, setCompanies] = useState([]);
   const [selectedCompany, setSelectedCompany] = useState(null);
   const [companyLoading, setCompanyLoading] = useState(false);
@@ -111,18 +129,7 @@ export default function SettingsModal({ isOpen, onClose, initialSection }) {
   const [resumeUploading, setResumeUploading] = useState(false);
   const [resumeError, setResumeError] = useState(null);
   const [resumeSuccess, setResumeSuccess] = useState(false);
-  const [resumeForm, setResumeForm] = useState({
-    firstName: "",
-    lastName: "",
-    emailOverride: "",
-    currentPosition: "",
-    yearsExperience: "",
-    workExperiences: [{ companyName: "", companyUrl: "", position: "", duties: "", year: "" }],
-    educations: [{ universityName: "", streamName: "", marksOrScore: "", yearOfPassing: "" }],
-    expectedSalaryPackage: "",
-    currentSalaryPackage: "",
-    currentSalaryVisibleToRecruiter: false,
-  });
+  const [resumeForm, setResumeForm] = useState(getDefaultResumeForm());
 
   // Company edit state (Company account settings)
   const [editingCompanyName, setEditingCompanyName] = useState(false);
@@ -287,12 +294,17 @@ export default function SettingsModal({ isOpen, onClose, initialSection }) {
     }
   }, [isOpen, activeSection, user?.accountType, user?.homeLatitude, user?.homeLongitude]);
 
-  // Sync phone input from user when in General
+  // Sync phone and basic info from user when in General
   useEffect(() => {
     if (user && activeSection === "general") {
       setPhoneValue(user.phone ?? "");
+      setPincodeValue(user.homePincode ?? "");
+      setGenderValue(user.gender ?? "");
+      setDobValue(
+        user.dateOfBirth ? new Date(user.dateOfBirth).toISOString().slice(0, 10) : ""
+      );
     }
-  }, [user?.phone, activeSection, user?.id]);
+  }, [user?.phone, user?.homePincode, user?.gender, user?.dateOfBirth, activeSection, user?.id]);
 
   useEffect(() => {
     if (!isOpen || activeSection !== "resume" || user?.accountType !== "Individual") return;
@@ -303,45 +315,10 @@ export default function SettingsModal({ isOpen, onClose, initialSection }) {
         if (data?.success && data.resume) {
           const r = data.resume;
           setResume(r);
-          const work = (r.workExperiences && r.workExperiences.length) ? r.workExperiences : [{ companyName: "", companyUrl: "", position: "", duties: "", year: "" }];
-          const edu = (r.educations && r.educations.length) ? r.educations : [{ universityName: "", streamName: "", marksOrScore: "", yearOfPassing: "" }];
-          setResumeForm({
-            firstName: r.firstName ?? "",
-            lastName: r.lastName ?? "",
-            emailOverride: r.emailOverride != null && r.emailOverride !== "" ? r.emailOverride : (user?.email ?? ""),
-            currentPosition: r.currentPosition ?? "",
-            yearsExperience: r.yearsExperience ?? "",
-            workExperiences: work.map((w) => ({
-              companyName: w.companyName ?? "",
-              companyUrl: w.companyUrl ?? "",
-              position: w.position ?? "",
-              duties: w.duties ?? "",
-              year: w.year ?? "",
-            })),
-            educations: edu.map((e) => ({
-              universityName: e.universityName ?? "",
-              streamName: e.streamName ?? "",
-              marksOrScore: e.marksOrScore ?? "",
-              yearOfPassing: e.yearOfPassing ?? "",
-            })),
-            expectedSalaryPackage: r.expectedSalaryPackage ?? "",
-            currentSalaryPackage: r.currentSalaryPackage ?? "",
-            currentSalaryVisibleToRecruiter: r.currentSalaryVisibleToRecruiter ?? false,
-          });
+          setResumeForm(resumeToForm(r, user?.email ?? ""));
         } else {
           setResume(null);
-          setResumeForm({
-            firstName: "",
-            lastName: "",
-            emailOverride: user?.email ?? "",
-            currentPosition: "",
-            yearsExperience: "",
-            workExperiences: [{ companyName: "", companyUrl: "", position: "", duties: "", year: "" }],
-            educations: [{ universityName: "", streamName: "", marksOrScore: "", yearOfPassing: "" }],
-            expectedSalaryPackage: "",
-            currentSalaryPackage: "",
-            currentSalaryVisibleToRecruiter: false,
-          });
+          setResumeForm(getDefaultResumeForm(user?.email ?? ""));
         }
       })
       .catch(() => setResume(null))
@@ -392,7 +369,14 @@ export default function SettingsModal({ isOpen, onClose, initialSection }) {
       });
       const data = await res.json().catch(() => ({}));
       if (data.success && data.path) {
-        setResume((prev) => (prev ? { ...prev, resumeFilePath: data.path } : { resumeFilePath: data.path }));
+        setResume((prev) =>
+          prev
+            ? { ...prev, resumeFilePath: data.path, resumeLastUploadedAt: new Date().toISOString() }
+            : { resumeFilePath: data.path, resumeLastUploadedAt: new Date().toISOString() }
+        );
+        setResumeSuccess(true);
+        setResumeError(null);
+        setTimeout(() => setResumeSuccess(false), 5000);
       }
     } catch (err) {
       console.error("Resume upload error:", err);
@@ -524,33 +508,7 @@ export default function SettingsModal({ isOpen, onClose, initialSection }) {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
         credentials: "same-origin",
-        body: JSON.stringify({
-          firstName: resumeForm.firstName || null,
-          lastName: resumeForm.lastName || null,
-          emailOverride: resumeForm.emailOverride === (user?.email ?? "") ? null : (resumeForm.emailOverride || null),
-          currentPosition: resumeForm.currentPosition || null,
-          yearsExperience: resumeForm.yearsExperience || null,
-          workExperiences: resumeForm.workExperiences.filter(
-            (w) => w.companyName || w.companyUrl || w.position || w.duties || w.year
-          ).map((w, i) => ({
-            companyName: w.companyName,
-            companyUrl: w.companyUrl,
-            position: w.position,
-            duties: w.duties,
-            year: w.year,
-          })),
-          educations: resumeForm.educations.filter(
-            (e) => e.universityName || e.streamName || e.marksOrScore || e.yearOfPassing
-          ).map((e, i) => ({
-            universityName: e.universityName,
-            streamName: e.streamName,
-            marksOrScore: e.marksOrScore,
-            yearOfPassing: e.yearOfPassing,
-          })),
-          expectedSalaryPackage: resumeForm.expectedSalaryPackage || null,
-          currentSalaryPackage: resumeForm.currentSalaryPackage || null,
-          currentSalaryVisibleToRecruiter: resumeForm.currentSalaryVisibleToRecruiter,
-        }),
+        body: JSON.stringify(formToApiPayload(resumeForm, user?.email ?? "")),
       });
 
       if (!res.ok) {
@@ -570,43 +528,11 @@ export default function SettingsModal({ isOpen, onClose, initialSection }) {
         }
         throw new Error(errorMessage);
       }
-      
+
       if (data.resume) {
         setResume(data.resume);
-        // Update form state with saved data to ensure form reflects what was saved
-        const work = (data.resume.workExperiences && data.resume.workExperiences.length)
-          ? data.resume.workExperiences
-          : [{ companyName: "", companyUrl: "", position: "", duties: "", year: "" }];
-        const edu = (data.resume.educations && data.resume.educations.length)
-          ? data.resume.educations
-          : [{ universityName: "", streamName: "", marksOrScore: "", yearOfPassing: "" }];
-        setResumeForm({
-          firstName: data.resume.firstName ?? "",
-          lastName: data.resume.lastName ?? "",
-          emailOverride: data.resume.emailOverride != null && data.resume.emailOverride !== ""
-            ? data.resume.emailOverride
-            : (user?.email ?? ""),
-          currentPosition: data.resume.currentPosition ?? "",
-          yearsExperience: data.resume.yearsExperience ?? "",
-          workExperiences: work.map((w) => ({
-            companyName: w.companyName ?? "",
-            companyUrl: w.companyUrl ?? "",
-            position: w.position ?? "",
-            duties: w.duties ?? "",
-            year: w.year ?? "",
-          })),
-          educations: edu.map((e) => ({
-            universityName: e.universityName ?? "",
-            streamName: e.streamName ?? "",
-            marksOrScore: e.marksOrScore ?? "",
-            yearOfPassing: e.yearOfPassing ?? "",
-          })),
-          expectedSalaryPackage: data.resume.expectedSalaryPackage ?? "",
-          currentSalaryPackage: data.resume.currentSalaryPackage ?? "",
-          currentSalaryVisibleToRecruiter: data.resume.currentSalaryVisibleToRecruiter ?? false,
-        });
+        setResumeForm(resumeToForm(data.resume, user?.email ?? ""));
         setResumeSuccess(true);
-        // Clear success message after 3 seconds
         setTimeout(() => setResumeSuccess(false), 3000);
       } else {
         throw new Error(data.error || "Failed to save resume");
@@ -616,6 +542,49 @@ export default function SettingsModal({ isOpen, onClose, initialSection }) {
       setResumeError(err.message || "Failed to save resume. Please try again.");
     } finally {
       setResumeSaving(false);
+    }
+  };
+
+  const savePhone = async () => {
+    const trimmed = (phoneValue ?? "").trim().slice(0, 20);
+    if (!trimmed) {
+      setPhoneError("Phone number is required");
+      return;
+    }
+    if (trimmed === (user?.phone ?? "")) return;
+    setPhoneSaving(true);
+    setPhoneError(null);
+    try {
+      const res = await fetch("/api/profile", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        credentials: "same-origin",
+        body: JSON.stringify({ phone: trimmed }),
+      });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) {
+        setPhoneError(data.error || "Failed to save phone");
+        return;
+      }
+      if (data?.success && data.user) setUser((prev) => ({ ...prev, ...data.user }));
+    } finally {
+      setPhoneSaving(false);
+    }
+  };
+
+  const saveBasicInfoField = async (fields) => {
+    setBasicInfoSaving(true);
+    try {
+      const res = await fetch("/api/profile", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        credentials: "same-origin",
+        body: JSON.stringify(fields),
+      });
+      const data = await res.json().catch(() => ({}));
+      if (data?.success && data.user) setUser((prev) => ({ ...prev, ...data.user }));
+    } finally {
+      setBasicInfoSaving(false);
     }
   };
 
@@ -1029,33 +998,26 @@ export default function SettingsModal({ isOpen, onClose, initialSection }) {
                       <div className="border-t border-brand-stroke-weak" />
                       <div className="flex items-center justify-between gap-4 py-2">
                         <span className="text-sm text-brand-text-strong">
-                          Phone number
+                          Phone number <span className="text-brand">*</span>
                         </span>
-                        <input
-                          type="tel"
-                          value={phoneValue}
-                          onChange={(e) => setPhoneValue(e.target.value)}
-                          onBlur={async () => {
-                            const trimmed = (phoneValue ?? "").trim().slice(0, 20);
-                            if (trimmed === (user?.phone ?? "")) return;
-                            setPhoneSaving(true);
-                            try {
-                              const res = await fetch("/api/profile", {
-                                method: "PATCH",
-                                headers: { "Content-Type": "application/json" },
-                                credentials: "same-origin",
-                                body: JSON.stringify({ phone: trimmed || null }),
-                              });
-                              const data = await res.json().catch(() => ({}));
-                              if (data?.success && data.user) setUser((prev) => ({ ...prev, ...data.user }));
-                            } finally {
-                              setPhoneSaving(false);
-                            }
-                          }}
-                          placeholder="Add phone"
-                          className="w-48 rounded-lg border border-brand-stroke-border px-3 py-2 text-sm text-brand-text-strong placeholder:text-brand-text-placeholder focus:outline-none focus:ring-2 focus:ring-brand"
-                          disabled={phoneSaving}
-                        />
+                        <div className="flex flex-col items-end gap-1">
+                          <input
+                            type="tel"
+                            value={phoneValue}
+                            onChange={(e) => {
+                              setPhoneValue(e.target.value);
+                              if (phoneError) setPhoneError(null);
+                            }}
+                            onBlur={savePhone}
+                            placeholder="Add phone"
+                            className="w-48 rounded-lg border border-brand-stroke-border px-3 py-2 text-sm text-brand-text-strong placeholder:text-brand-text-placeholder focus:outline-none focus:ring-2 focus:ring-brand"
+                            disabled={phoneSaving}
+                            required
+                          />
+                          {phoneError && (
+                            <p className="text-xs text-red-600">{phoneError}</p>
+                          )}
+                        </div>
                       </div>
                       <div className="flex items-center justify-between gap-4 py-2">
                         <span className="text-sm text-brand-text-strong">
@@ -1096,6 +1058,100 @@ export default function SettingsModal({ isOpen, onClose, initialSection }) {
                     </>
                   )}
 
+                  {/* Basic Information - Individual only */}
+                  {user?.accountType === "Individual" && (
+                    <>
+                      <div className="border-t border-brand-stroke-weak" />
+                      <p className="text-sm font-medium text-brand-text-strong pt-2">Basic Information</p>
+                      <div className="flex items-center justify-between gap-4 py-2">
+                        <span className="text-sm text-brand-text-strong">Gender</span>
+                        <select
+                          value={genderValue}
+                          onChange={async (e) => {
+                            const val = e.target.value;
+                            setGenderValue(val);
+                            await saveBasicInfoField({ gender: val || null });
+                          }}
+                          disabled={basicInfoSaving}
+                          className="w-48 rounded-lg border border-brand-stroke-border px-3 py-2 text-sm text-brand-text-strong focus:outline-none focus:ring-2 focus:ring-brand"
+                        >
+                          <option value="">Prefer not to say</option>
+                          {GENDERS.map((g) => (
+                            <option key={g} value={g}>
+                              {g === "PreferNotToSay" ? "Prefer not to say" : g}
+                            </option>
+                          ))}
+                        </select>
+                      </div>
+                      <div className="flex items-center justify-between gap-4 py-2">
+                        <span className="text-sm text-brand-text-strong">Date of birth</span>
+                        <input
+                          type="date"
+                          value={dobValue}
+                          onChange={async (e) => {
+                            const val = e.target.value;
+                            setDobValue(val);
+                            await saveBasicInfoField({ dateOfBirth: val || null });
+                          }}
+                          disabled={basicInfoSaving}
+                          className="w-48 rounded-lg border border-brand-stroke-border px-3 py-2 text-sm text-brand-text-strong focus:outline-none focus:ring-2 focus:ring-brand"
+                        />
+                      </div>
+                      <div className="flex items-center justify-between gap-4 py-2">
+                        <span className="text-sm text-brand-text-strong">PIN code</span>
+                        <input
+                          type="text"
+                          value={pincodeValue}
+                          onChange={(e) => setPincodeValue(e.target.value.replace(/\D/g, "").slice(0, 6))}
+                          onBlur={async () => {
+                            const pin = pincodeValue.trim();
+                            if (pin === (user?.homePincode ?? "")) return;
+                            if (pin && !/^\d{6}$/.test(pin)) return;
+                            await saveBasicInfoField({ homePincode: pin || null });
+                          }}
+                          placeholder="6-digit PIN"
+                          disabled={pincodeSaving || basicInfoSaving}
+                          className="w-48 rounded-lg border border-brand-stroke-border px-3 py-2 text-sm text-brand-text-strong focus:outline-none focus:ring-2 focus:ring-brand"
+                          maxLength={6}
+                        />
+                      </div>
+                      <div className="flex items-center justify-between gap-4 py-2">
+                        <span className="text-sm text-brand-text-strong">Willing to relocate</span>
+                        <button
+                          type="button"
+                          role="switch"
+                          aria-checked={user?.willingToRelocate ?? false}
+                          onClick={async () => {
+                            const next = !(user?.willingToRelocate ?? false);
+                            setUser((prev) => ({ ...prev, willingToRelocate: next }));
+                            try {
+                              const res = await fetch("/api/profile", {
+                                method: "PATCH",
+                                headers: { "Content-Type": "application/json" },
+                                credentials: "same-origin",
+                                body: JSON.stringify({ willingToRelocate: next }),
+                              });
+                              const data = await res.json().catch(() => ({}));
+                              if (data?.success && data.user) setUser((prev) => ({ ...prev, ...data.user }));
+                              if (!res.ok) setUser((prev) => ({ ...prev, willingToRelocate: !next }));
+                            } catch {
+                              setUser((prev) => ({ ...prev, willingToRelocate: !next }));
+                            }
+                          }}
+                          className={`relative inline-flex h-6 w-11 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors focus:outline-none focus:ring-2 focus:ring-brand focus:ring-offset-2 ${
+                            user?.willingToRelocate ? "bg-brand" : "bg-brand-stroke-weak"
+                          }`}
+                        >
+                          <span
+                            className={`pointer-events-none inline-block h-5 w-5 transform rounded-full bg-white shadow ring-0 transition ${
+                              user?.willingToRelocate ? "translate-x-5" : "translate-x-1"
+                            }`}
+                          />
+                        </button>
+                      </div>
+                    </>
+                  )}
+
                   {/* Location - Only for Individual/Gig Worker accounts (same as home; used for gigs too) */}
                   {user?.accountType === "Individual" && (
                     <>
@@ -1121,6 +1177,7 @@ export default function SettingsModal({ isOpen, onClose, initialSection }) {
                               if (user.homeLocality) parts.push(user.homeLocality);
                               if (user.homeDistrict) parts.push(user.homeDistrict);
                               if (user.homeState) parts.push(user.homeState);
+                              if (user.homePincode) parts.push(`PIN: ${user.homePincode}`);
                               return (
                                 <>
                                   <span className="text-sm text-brand-text-strong">
@@ -1511,11 +1568,21 @@ export default function SettingsModal({ isOpen, onClose, initialSection }) {
                     className="inline-flex flex-col items-center gap-1 text-brand underline underline-offset-2 hover:opacity-80 disabled:opacity-50"
                   >
                     <Document size={20} className="shrink-0" />
-                    <span>Add</span>
+                    <span>{resumeUploading ? "Uploading…" : "Upload resume"}</span>
                   </button>
                   {resume?.resumeFilePath && (
                     <p className="text-xs text-brand-text-weak">
                       Current file: {resume.resumeFilePath.split("/").pop()}
+                    </p>
+                  )}
+                  {(resume?.resumeLastUploadedAt || resume?.updatedAt) && (
+                    <p className="text-xs text-brand-text-weak">
+                      Last updated: {formatResumeDate(resume.resumeLastUploadedAt || resume.updatedAt)}
+                    </p>
+                  )}
+                  {resumeSuccess && !resumeSaving && (
+                    <p className="text-xs text-brand">
+                      Resume uploaded — please review and save your details below.
                     </p>
                   )}
                   {resumeLoading ? (
@@ -1527,7 +1594,10 @@ export default function SettingsModal({ isOpen, onClose, initialSection }) {
                           <label className="block text-sm text-brand-text-strong mb-1">First Name</label>
                           <input
                             value={resumeForm.firstName}
-                            onChange={(e) => setResumeForm((f) => ({ ...f, firstName: handleTextInput(e.target.value) }))}
+                            onChange={(e) => {
+                              clearResumeMessages();
+                              setResumeForm((f) => ({ ...f, firstName: handleTextInput(e.target.value) }));
+                            }}
                             className={inputClass}
                             placeholder="First name"
                           />
@@ -1536,7 +1606,10 @@ export default function SettingsModal({ isOpen, onClose, initialSection }) {
                           <label className="block text-sm text-brand-text-strong mb-1">Last Name</label>
                           <input
                             value={resumeForm.lastName}
-                            onChange={(e) => setResumeForm((f) => ({ ...f, lastName: handleTextInput(e.target.value) }))}
+                            onChange={(e) => {
+                              clearResumeMessages();
+                              setResumeForm((f) => ({ ...f, lastName: handleTextInput(e.target.value) }));
+                            }}
                             className={inputClass}
                             placeholder="Last name"
                           />
@@ -1547,7 +1620,10 @@ export default function SettingsModal({ isOpen, onClose, initialSection }) {
                         <input
                           type="email"
                           value={resumeForm.emailOverride}
-                          onChange={(e) => setResumeForm((f) => ({ ...f, emailOverride: e.target.value }))}
+                          onChange={(e) => {
+                            clearResumeMessages();
+                            setResumeForm((f) => ({ ...f, emailOverride: e.target.value }));
+                          }}
                           className={inputClass}
                           placeholder="Email (from auth or your own)"
                         />
@@ -1557,7 +1633,10 @@ export default function SettingsModal({ isOpen, onClose, initialSection }) {
                         <label className="block text-sm text-brand-text-strong mb-1">Current position</label>
                         <input
                           value={resumeForm.currentPosition}
-                          onChange={(e) => setResumeForm((f) => ({ ...f, currentPosition: handleTextInput(e.target.value) }))}
+                          onChange={(e) => {
+                            clearResumeMessages();
+                            setResumeForm((f) => ({ ...f, currentPosition: handleTextInput(e.target.value) }));
+                          }}
                           className={inputClass}
                           placeholder="e.g. Software Engineer"
                         />
@@ -1566,241 +1645,78 @@ export default function SettingsModal({ isOpen, onClose, initialSection }) {
                         <label className="block text-sm text-brand-text-strong mb-1">Years of experience</label>
                         <input
                           value={resumeForm.yearsExperience}
-                          onChange={(e) => setResumeForm((f) => ({ ...f, yearsExperience: handleNumericInput(e.target.value) }))}
+                          onChange={(e) => {
+                            clearResumeMessages();
+                            setResumeForm((f) => ({ ...f, yearsExperience: handleNumericInput(e.target.value) }));
+                          }}
                           className={inputClass}
                           placeholder="e.g. 5"
                         />
                       </div>
-                      <div className="border-t border-brand-stroke-weak pt-4">
-                        <p className="text-sm font-medium text-brand-text-strong mb-3">Current / previous company</p>
-                        {resumeForm.workExperiences.map((w, idx) => (
-                          <div key={idx} className="mb-4 p-3 rounded-lg border border-brand-stroke-weak space-y-2 relative">
-                            <div className="flex items-center justify-between gap-2">
-                              {idx > 0 && <p className="text-xs text-brand-text-weak">Previous company</p>}
-                              <button
-                                type="button"
-                                onClick={() =>
-                                  setResumeForm((f) => ({
-                                    ...f,
-                                    workExperiences: f.workExperiences.filter((_, i) => i !== idx),
-                                  }))
-                                }
-                                className="text-sm text-brand-text-weak hover:text-brand ml-auto"
-                                aria-label="Remove company"
-                              >
-                                Remove
-                              </button>
-                            </div>
-                            <input
-                              value={w.companyName}
-                              onChange={(e) =>
-                                setResumeForm((f) => ({
-                                  ...f,
-                                  workExperiences: f.workExperiences.map((x, i) =>
-                                    i === idx ? { ...x, companyName: handleTextInput(e.target.value) } : x
-                                  ),
-                                }))
-                              }
-                              className={inputClass}
-                              placeholder="Company name"
-                            />
-                            <input
-                              value={w.companyUrl}
-                              onChange={(e) =>
-                                setResumeForm((f) => ({
-                                  ...f,
-                                  workExperiences: f.workExperiences.map((x, i) =>
-                                    i === idx ? { ...x, companyUrl: e.target.value } : x
-                                  ),
-                                }))
-                              }
-                              className={inputClass}
-                              placeholder="Company URL"
-                            />
-                            <input
-                              value={w.position}
-                              onChange={(e) =>
-                                setResumeForm((f) => ({
-                                  ...f,
-                                  workExperiences: f.workExperiences.map((x, i) =>
-                                    i === idx ? { ...x, position: handleTextInput(e.target.value) } : x
-                                  ),
-                                }))
-                              }
-                              className={inputClass}
-                              placeholder="Your position"
-                            />
-                            <textarea
-                              value={w.duties}
-                              onChange={(e) =>
-                                setResumeForm((f) => ({
-                                  ...f,
-                                  workExperiences: f.workExperiences.map((x, i) =>
-                                    i === idx ? { ...x, duties: handleTextInput(e.target.value) } : x
-                                  ),
-                                }))
-                              }
-                              className={`${inputClass} min-h-[60px]`}
-                              placeholder="Duties"
-                            />
-                            <input
-                              value={w.year}
-                              onChange={(e) =>
-                                setResumeForm((f) => ({
-                                  ...f,
-                                  workExperiences: f.workExperiences.map((x, i) =>
-                                    i === idx ? { ...x, year: handleNumericInput(e.target.value) } : x
-                                  ),
-                                }))
-                              }
-                              className={inputClass}
-                              placeholder="Year"
-                            />
-                          </div>
-                        ))}
-                        {resumeForm.workExperiences.length < 5 && (
-                          <button
-                            type="button"
-                            onClick={() =>
-                              setResumeForm((f) => ({
-                                ...f,
-                                workExperiences: [...f.workExperiences, { companyName: "", companyUrl: "", position: "", duties: "", year: "" }],
-                              }))
-                            }
-                            className="text-sm font-medium text-brand underline underline-offset-2 hover:opacity-80"
-                          >
-                            Add previous company
-                          </button>
-                        )}
-                      </div>
-                      <div className="border-t border-brand-stroke-weak pt-4">
-                        <p className="text-sm font-medium text-brand-text-strong mb-3">Education</p>
-                        {resumeForm.educations.map((e, idx) => (
-                          <div key={idx} className="mb-4 p-3 rounded-lg border border-brand-stroke-weak space-y-2">
-                            <div className="flex justify-end">
-                              <button
-                                type="button"
-                                onClick={() =>
-                                  setResumeForm((f) => ({
-                                    ...f,
-                                    educations: f.educations.filter((_, i) => i !== idx),
-                                  }))
-                                }
-                                className="text-sm text-brand-text-weak hover:text-brand"
-                                aria-label="Remove education"
-                              >
-                                Remove
-                              </button>
-                            </div>
-                            <input
-                              value={e.universityName}
-                              onChange={(ev) =>
-                                setResumeForm((f) => ({
-                                  ...f,
-                                  educations: f.educations.map((x, i) =>
-                                    i === idx ? { ...x, universityName: handleTextInput(ev.target.value) } : x
-                                  ),
-                                }))
-                              }
-                              className={inputClass}
-                              placeholder="University name"
-                            />
-                            <input
-                              value={e.streamName}
-                              onChange={(ev) =>
-                                setResumeForm((f) => ({
-                                  ...f,
-                                  educations: f.educations.map((x, i) =>
-                                    i === idx ? { ...x, streamName: handleTextInput(ev.target.value) } : x
-                                  ),
-                                }))
-                              }
-                              className={inputClass}
-                              placeholder="Stream name"
-                            />
-                            <input
-                              value={e.marksOrScore}
-                              onChange={(ev) =>
-                                setResumeForm((f) => ({
-                                  ...f,
-                                  educations: f.educations.map((x, i) =>
-                                    i === idx ? { ...x, marksOrScore: handleNumericInput(ev.target.value) } : x
-                                  ),
-                                }))
-                              }
-                              className={inputClass}
-                              placeholder="Marks / Score"
-                            />
-                            <input
-                              value={e.yearOfPassing}
-                              onChange={(ev) =>
-                                setResumeForm((f) => ({
-                                  ...f,
-                                  educations: f.educations.map((x, i) =>
-                                    i === idx ? { ...x, yearOfPassing: handleNumericInput(ev.target.value) } : x
-                                  ),
-                                }))
-                              }
-                              className={inputClass}
-                              placeholder="Year of passing"
-                            />
-                          </div>
-                        ))}
-                        {resumeForm.educations.length < 5 && (
-                          <button
-                            type="button"
-                            onClick={() =>
-                              setResumeForm((f) => ({
-                                ...f,
-                                educations: [...f.educations, { universityName: "", streamName: "", marksOrScore: "", yearOfPassing: "" }],
-                              }))
-                            }
-                            className="text-sm font-medium text-brand underline underline-offset-2 hover:opacity-80"
-                          >
-                            Add education
-                          </button>
-                        )}
-                      </div>
-                      <div className="grid grid-cols-2 gap-3">
-                        <div>
-                          <label className="block text-sm text-brand-text-strong mb-1">Expected salary package</label>
-                          <input
-                            value={resumeForm.expectedSalaryPackage}
-                            onChange={(e) => setResumeForm((f) => ({ ...f, expectedSalaryPackage: e.target.value }))}
-                            className={inputClass}
-                            placeholder="e.g. 10 LPA"
-                          />
-                        </div>
-                        <div>
-                          <label className="block text-sm text-brand-text-strong mb-1">Current salary package</label>
-                          <div className="flex items-center gap-2">
-                            <input
-                              value={resumeForm.currentSalaryPackage}
-                              onChange={(e) => setResumeForm((f) => ({ ...f, currentSalaryPackage: e.target.value }))}
-                              className={`${inputClass} flex-1`}
-                              placeholder="e.g. 8 LPA"
-                            />
-                            <label className="flex items-center gap-1.5 shrink-0 cursor-pointer">
-                              <input
-                                type="checkbox"
-                                checked={resumeForm.currentSalaryVisibleToRecruiter}
-                                onChange={(e) =>
-                                  setResumeForm((f) => ({ ...f, currentSalaryVisibleToRecruiter: e.target.checked }))
-                                }
-                                className="rounded border-brand-stroke-strong"
-                              />
-                              <span className="text-xs text-brand-text-strong">Visible to recruiter</span>
-                            </label>
-                          </div>
-                        </div>
-                      </div>
-                      {/* Error message */}
+
+                      <ProfileProfessionalSummary
+                        form={resumeForm}
+                        setForm={setResumeForm}
+                        inputClass={inputClass}
+                        onChange={clearResumeMessages}
+                      />
+                      <ProfileSkillsEditor
+                        form={resumeForm}
+                        setForm={setResumeForm}
+                        inputClass={inputClass}
+                        onChange={clearResumeMessages}
+                      />
+                      <ProfileExperienceEditor
+                        form={resumeForm}
+                        setForm={setResumeForm}
+                        inputClass={inputClass}
+                        handleTextInput={handleTextInput}
+                        onChange={clearResumeMessages}
+                      />
+                      <ProfileEducationEditor
+                        form={resumeForm}
+                        setForm={setResumeForm}
+                        inputClass={inputClass}
+                        handleTextInput={handleTextInput}
+                        handleNumericInput={handleNumericInput}
+                        onChange={clearResumeMessages}
+                      />
+                      <ProfileCertificationsEditor
+                        form={resumeForm}
+                        setForm={setResumeForm}
+                        inputClass={inputClass}
+                        onChange={clearResumeMessages}
+                      />
+                      <ProfileLanguagesEditor
+                        form={resumeForm}
+                        setForm={setResumeForm}
+                        inputClass={inputClass}
+                        onChange={clearResumeMessages}
+                      />
+                      <ProfileLinksEditor
+                        form={resumeForm}
+                        setForm={setResumeForm}
+                        inputClass={inputClass}
+                        onChange={clearResumeMessages}
+                      />
+                      <ProfileJobPreferencesEditor
+                        form={resumeForm}
+                        setForm={setResumeForm}
+                        inputClass={inputClass}
+                        onChange={clearResumeMessages}
+                      />
+                      <ProfileSalaryEditor
+                        form={resumeForm}
+                        setForm={setResumeForm}
+                        inputClass={inputClass}
+                        onChange={clearResumeMessages}
+                      />
+
                       {resumeError && (
                         <div className="mb-4 rounded-lg border border-brand-stroke-border bg-brand-bg-fill px-4 py-3">
                           <p className="text-sm text-brand-text-strong">{resumeError}</p>
                         </div>
                       )}
-                      {/* Success message */}
                       {resumeSuccess && (
                         <div className="mb-4 rounded-lg border border-brand-stroke-border bg-brand-bg-fill px-4 py-3">
                           <p className="text-sm text-brand-text-strong">Resume saved successfully!</p>
@@ -1815,7 +1731,7 @@ export default function SettingsModal({ isOpen, onClose, initialSection }) {
                         >
                           {resumeSaving ? "Saving…" : "Save resume"}
                         </button>
-                        {resume && (resume.firstName || resume.lastName || resume.currentPosition || resume.resumeFilePath || (resume.workExperiences && resume.workExperiences.length) || (resume.educations && resume.educations.length)) && (
+                        {resume && (
                           <button
                             type="button"
                             onClick={() => setShowViewResumeModal(true)}
@@ -1928,65 +1844,8 @@ export default function SettingsModal({ isOpen, onClose, initialSection }) {
               <Close size={20} className="text-brand-stroke-strong" />
             </button>
           </div>
-          <div className="flex-1 min-h-0 overflow-y-auto space-y-4 text-sm">
-            {resume && (
-              <>
-                <div>
-                  <p className="font-semibold text-brand-text-strong text-base">
-                    {[resume.firstName, resume.lastName].filter(Boolean).join(" ") || "—"}
-                  </p>
-                  {resume.emailOverride && (
-                    <p className="text-brand-text-weak mt-0.5">{resume.emailOverride}</p>
-                  )}
-                </div>
-                {(resume.currentPosition || resume.yearsExperience) && (
-                  <div className="border-t border-brand-stroke-weak pt-3">
-                    {resume.currentPosition && (
-                      <p className="text-brand-text-strong"><span className="font-medium">Position:</span> {resume.currentPosition}</p>
-                    )}
-                    {resume.yearsExperience && (
-                      <p className="text-brand-text-weak mt-0.5"><span className="font-medium text-brand-text-strong">Experience:</span> {resume.yearsExperience} years</p>
-                    )}
-                  </div>
-                )}
-                {resume.workExperiences && resume.workExperiences.length > 0 && (
-                  <div className="border-t border-brand-stroke-weak pt-3">
-                    <p className="font-medium text-brand-text-strong mb-2">Work</p>
-                    {resume.workExperiences.map((w, i) => (
-                      <div key={i} className="mb-3 text-brand-text-weak">
-                        <p className="font-medium text-brand-text-strong">{w.companyName || "Company"}{w.year ? ` (${w.year})` : ""}</p>
-                        {w.position && <p>{w.position}</p>}
-                        {w.duties && <p className="mt-0.5">{w.duties}</p>}
-                      </div>
-                    ))}
-                  </div>
-                )}
-                {resume.educations && resume.educations.length > 0 && (
-                  <div className="border-t border-brand-stroke-weak pt-3">
-                    <p className="font-medium text-brand-text-strong mb-2">Education</p>
-                    {resume.educations.map((e, i) => (
-                      <div key={i} className="mb-3 text-brand-text-weak">
-                        <p className="font-medium text-brand-text-strong">{e.universityName || "—"}{e.yearOfPassing ? ` (${e.yearOfPassing})` : ""}</p>
-                        {(e.streamName || e.marksOrScore) && <p>{[e.streamName, e.marksOrScore].filter(Boolean).join(" · ")}</p>}
-                      </div>
-                    ))}
-                  </div>
-                )}
-                {(resume.expectedSalaryPackage || resume.currentSalaryPackage) && (
-                  <div className="border-t border-brand-stroke-weak pt-3">
-                    {resume.expectedSalaryPackage && <p className="text-brand-text-weak"><span className="font-medium text-brand-text-strong">Expected salary:</span> {resume.expectedSalaryPackage}</p>}
-                    {resume.currentSalaryVisibleToRecruiter && resume.currentSalaryPackage && (
-                      <p className="text-brand-text-weak mt-0.5"><span className="font-medium text-brand-text-strong">Current salary:</span> {resume.currentSalaryPackage}</p>
-                    )}
-                  </div>
-                )}
-                {resume.resumeFilePath && (
-                  <div className="border-t border-brand-stroke-weak pt-3">
-                    <p className="text-brand-text-weak"><span className="font-medium text-brand-text-strong">Attached file:</span> {resume.resumeFilePath.split("/").pop()}</p>
-                  </div>
-                )}
-          </>
-            )}
+          <div className="flex-1 min-h-0 overflow-y-auto">
+            <ViewResumeContent resume={resume} />
           </div>
           <div className="flex shrink-0 gap-2 pt-4 border-t border-brand-stroke-weak mt-4">
             <button

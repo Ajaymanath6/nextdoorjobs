@@ -78,6 +78,7 @@ export default function AddHomeModal({ isOpen, onClose, onSaved, initialHome }) 
   const [coordsError, setCoordsError] = useState(null);
   const [mapsUrl, setMapsUrl] = useState("");
   const [mapsError, setMapsError] = useState(null);
+  const [pincode, setPincode] = useState(initialHome?.homePincode || "");
   const [saving, setSaving] = useState(false);
   const [saveError, setSaveError] = useState(null);
 
@@ -102,6 +103,9 @@ export default function AddHomeModal({ isOpen, onClose, onSaved, initialHome }) 
           homeLocality: locality,
           homeDistrict: district,
           homeState: state,
+          ...(pincode.trim() && /^\d{6}$/.test(pincode.trim())
+            ? { homePincode: pincode.trim() }
+            : {}),
         }),
       });
 
@@ -184,6 +188,20 @@ export default function AddHomeModal({ isOpen, onClose, onSaved, initialHome }) 
         <div className="px-6 py-4 space-y-4 max-h-[70vh] overflow-y-auto">
           {saveError && <p className="text-sm text-red-600" role="alert">{saveError}</p>}
           {error && <p className="text-sm text-red-600">{error}</p>}
+
+          <div className="space-y-2">
+            <label className={`text-sm font-medium ${brand.text.strong}`}>PIN code (optional)</label>
+            <input
+              type="text"
+              value={pincode}
+              onChange={(e) => setPincode(e.target.value.replace(/\D/g, "").slice(0, 6))}
+              placeholder="6-digit PIN"
+              className={inputClass}
+              style={fontStyle}
+              disabled={saving}
+              maxLength={6}
+            />
+          </div>
 
           <button
             type="button"

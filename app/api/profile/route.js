@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { getCurrentUser } from "../../../lib/getCurrentUser";
 import { userService } from "../../../lib/services/user.service";
 import { isValidAccountType } from "../../../lib/constants/accountTypes";
+import { GENDERS, isValidEnum } from "../../../lib/constants/profileEnums";
 
 const NAME_MAX_LENGTH = 255;
 
@@ -49,7 +50,7 @@ export async function GET() {
 /**
  * PATCH /api/profile
  * Update current user profile (e.g. display name, account type, home location).
- * Body: { name?: string, accountType?: "Company" | "Individual", homeLatitude?: number, homeLongitude?: number, homeLocality?: string, homeDistrict?: string, homeState?: string, phone?: string, phoneVisibleToRecruiters?: boolean }
+ * Body: { name?, accountType?, homeLatitude?, homeLongitude?, homeLocality?, homeDistrict?, homeState?, homePincode?, phone?, phoneVisibleToRecruiters?, gender?, dateOfBirth?, willingToRelocate? }
  */
 const PHONE_MAX_LENGTH = 20;
 
@@ -72,8 +73,12 @@ export async function PATCH(request) {
       homeLocality: rawHomeLocality,
       homeDistrict: rawHomeDistrict,
       homeState: rawHomeState,
+      homePincode: rawHomePincode,
       phone: rawPhone,
       phoneVisibleToRecruiters: rawPhoneVisibleToRecruiters,
+      gender: rawGender,
+      dateOfBirth: rawDateOfBirth,
+      willingToRelocate: rawWillingToRelocate,
     } = body;
 
     const hasUpdate =
@@ -84,8 +89,12 @@ export async function PATCH(request) {
       rawHomeLocality !== undefined ||
       rawHomeDistrict !== undefined ||
       rawHomeState !== undefined ||
+      rawHomePincode !== undefined ||
       rawPhone !== undefined ||
-      rawPhoneVisibleToRecruiters !== undefined;
+      rawPhoneVisibleToRecruiters !== undefined ||
+      rawGender !== undefined ||
+      rawDateOfBirth !== undefined ||
+      rawWillingToRelocate !== undefined;
 
     if (!hasUpdate) {
       return NextResponse.json(
@@ -137,12 +146,58 @@ export async function PATCH(request) {
     if (rawHomeState !== undefined) {
       updateData.homeState = typeof rawHomeState === "string" ? rawHomeState.trim().slice(0, 100) || null : null;
     }
+    if (rawHomePincode !== undefined) {
+      const pin = typeof rawHomePincode === "string" ? rawHomePincode.trim().slice(0, 10) || null : null;
+      if (pin && !/^\d{6}$/.test(pin)) {
+        return NextResponse.json({ error: "PIN code must be 6 digits" }, { status: 400 });
+      }
+      updateData.homePincode = pin;
+    }
     if (rawPhone !== undefined) {
       const phone = typeof rawPhone === "string" ? rawPhone.trim().slice(0, PHONE_MAX_LENGTH) || null : null;
+      if (user.accountType === "Individual" && !phone) {
+        return NextResponse.json(
+          { error: "Phone number is required for Individual accounts" },
+          { status: 400 }
+        );
+      }
       updateData.phone = phone;
     }
     if (rawPhoneVisibleToRecruiters !== undefined) {
       updateData.phoneVisibleToRecruiters = typeof rawPhoneVisibleToRecruiters === "boolean" ? rawPhoneVisibleToRecruiters : Boolean(rawPhoneVisibleToRecruiters);
+    }
+    if (rawGender !== undefined) {
+      if (rawGender === null || rawGender === "") {
+        updateData.gender = null;
+      } else if (isValidEnum(rawGender, GENDERS)) {
+        updateData.gender = rawGender;
+      } else {
+        return NextResponse.json({ error: "Invalid gender value" }, { status: 400 });
+      }
+    }
+    if (rawDateOfBirth !== undefined) {
+      if (rawDateOfBirth === null || rawDateOfBirth === "") {
+        updateData.dateOfBirth = null;
+      } else {
+        const dob = new Date(rawDateOfBirth);
+        if (Number.isNaN(dob.getTime())) {
+          return NextResponse.json({ error: "Invalid date of birth" }, { status: 400 });
+        }
+        const now = new Date();
+        if (dob >= now) {
+          return NextResponse.json({ error: "Date of birth must be in the past" }, { status: 400 });
+        }
+        const ageMs = now - dob;
+        const ageYears = ageMs / (365.25 * 24 * 60 * 60 * 1000);
+        if (ageYears < 16) {
+          return NextResponse.json({ error: "You must be at least 16 years old" }, { status: 400 });
+        }
+        updateData.dateOfBirth = dob;
+      }
+    }
+    if (rawWillingToRelocate !== undefined) {
+      updateData.willingToRelocate =
+        typeof rawWillingToRelocate === "boolean" ? rawWillingToRelocate : Boolean(rawWillingToRelocate);
     }
 
     // Use service layer with cache invalidation

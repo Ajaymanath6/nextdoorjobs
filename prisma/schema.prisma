@@ -74,6 +74,56 @@ enum AccountType {
   Individual
 }
 
+enum SkillProficiency {
+  Beginner
+  Intermediate
+  Advanced
+  Expert
+}
+
+enum EmploymentType {
+  FullTime
+  PartTime
+  Contract
+  Internship
+  Freelance
+}
+
+enum WorkMode {
+  Onsite
+  Remote
+  Hybrid
+}
+
+enum LanguageProficiency {
+  Basic
+  Intermediate
+  Fluent
+  Native
+}
+
+enum JobLookingFor {
+  FullTime
+  PartTime
+  Freelance
+  Internship
+}
+
+enum NoticePeriod {
+  Immediate
+  Days15
+  Days30
+  Days60
+  Custom
+}
+
+enum Gender {
+  Male
+  Female
+  Other
+  PreferNotToSay
+}
+
 enum JobCategory {
   EngineeringSoftwareQA
   DataScienceAnalytics
@@ -134,6 +184,10 @@ model User {
   homeLocality        String?               @map("home_locality")   @db.VarChar(255)
   homeDistrict        String?               @map("home_district")   @db.VarChar(100)
   homeState           String?               @map("home_state")      @db.VarChar(100)
+  homePincode         String?               @map("home_pincode")    @db.VarChar(10)
+  gender              Gender?
+  dateOfBirth         DateTime?             @map("date_of_birth")
+  willingToRelocate   Boolean?              @map("willing_to_relocate")
   isJobSeeker         Boolean?              @default(false) @map("is_job_seeker")
   jobSeekerSkills     String[]              @default([]) @map("job_seeker_skills")
   jobSeekerExperience Float?                @map("job_seeker_experience")
@@ -325,50 +379,122 @@ model Resume {
   id                              Int                    @id @default(autoincrement())
   userId                          Int                    @unique @map("user_id")
   resumeFilePath                  String?                @map("resume_file_path") @db.VarChar(500)
+  resumeLastUploadedAt            DateTime?              @map("resume_last_uploaded_at")
   firstName                       String?                @map("first_name") @db.VarChar(255)
   lastName                        String?                @map("last_name") @db.VarChar(255)
   emailOverride                   String?                @map("email_override") @db.VarChar(255)
   currentPosition                 String?                @map("current_position") @db.VarChar(255)
+  professionalHeadline            String?                @map("professional_headline") @db.VarChar(255)
+  aboutMe                         String?                @map("about_me") @db.Text
   yearsExperience                 String?                @map("years_experience") @db.VarChar(50)
   expectedSalaryPackage           String?                @map("expected_salary_package") @db.VarChar(100)
   currentSalaryPackage            String?                @map("current_salary_package") @db.VarChar(100)
   currentSalaryVisibleToRecruiter Boolean?               @default(false) @map("current_salary_visible_to_recruiter")
+  salaryCurrency                  String?                @default("INR") @map("salary_currency") @db.VarChar(10)
+  salaryNegotiable                Boolean?               @map("salary_negotiable")
+  hourlyRate                      String?                @map("hourly_rate") @db.VarChar(100)
+  dailyRate                       String?                @map("daily_rate") @db.VarChar(100)
+  projectRate                     String?                @map("project_rate") @db.VarChar(100)
+  lookingFor                      JobLookingFor[]        @default([]) @map("looking_for")
+  preferredJobRole                String?                @map("preferred_job_role") @db.VarChar(255)
+  preferredIndustry               String?                @map("preferred_industry") @db.VarChar(255)
+  workMode                        WorkMode?              @map("work_mode")
+  noticePeriod                    NoticePeriod?          @map("notice_period")
+  noticePeriodCustom              String?                @map("notice_period_custom") @db.VarChar(50)
+  linkedInUrl                     String?                @map("linkedin_url") @db.VarChar(500)
+  githubUrl                       String?                @map("github_url") @db.VarChar(500)
+  portfolioUrl                    String?                @map("portfolio_url") @db.VarChar(500)
+  behanceUrl                      String?                @map("behance_url") @db.VarChar(500)
+  dribbbleUrl                     String?                @map("dribbble_url") @db.VarChar(500)
+  otherLinks                      String?                @map("other_links") @db.Text
   createdAt                       DateTime               @default(now()) @map("created_at")
   updatedAt                       DateTime               @updatedAt @map("updated_at")
   user                            User                   @relation(fields: [userId], references: [id], onDelete: Cascade)
   workExperiences                 ResumeWorkExperience[]
   educations                      ResumeEducation[]
+  skills                          ResumeSkill[]
+  certifications                  ResumeCertification[]
+  languages                       ResumeLanguage[]
 
   @@map("resumes")
 }
 
 model ResumeWorkExperience {
-  id          Int     @id @default(autoincrement())
-  resumeId    Int     @map("resume_id")
-  companyName String? @map("company_name") @db.VarChar(255)
-  companyUrl  String? @map("company_url") @db.VarChar(500)
-  position    String? @db.VarChar(255)
-  duties      String? @db.Text
-  year        String? @db.VarChar(20)
-  orderIndex  Int     @default(0) @map("order_index")
-  resume      Resume  @relation(fields: [resumeId], references: [id], onDelete: Cascade)
+  id               Int             @id @default(autoincrement())
+  resumeId         Int             @map("resume_id")
+  companyName      String?         @map("company_name") @db.VarChar(255)
+  companyUrl       String?         @map("company_url") @db.VarChar(500)
+  position         String?         @db.VarChar(255)
+  duties           String?         @db.Text
+  responsibilities String?         @db.Text
+  keyAchievements  String?         @map("key_achievements") @db.Text
+  year             String?         @db.VarChar(20)
+  startDate        String?         @map("start_date") @db.VarChar(10)
+  endDate          String?         @map("end_date") @db.VarChar(10)
+  isCurrent        Boolean?        @default(false) @map("is_current")
+  employmentType   EmploymentType? @map("employment_type")
+  orderIndex       Int             @default(0) @map("order_index")
+  resume           Resume          @relation(fields: [resumeId], references: [id], onDelete: Cascade)
 
   @@index([resumeId])
   @@map("resume_work_experiences")
 }
 
 model ResumeEducation {
-  id            Int     @id @default(autoincrement())
-  resumeId      Int     @map("resume_id")
+  id             Int     @id @default(autoincrement())
+  resumeId       Int     @map("resume_id")
+  degree         String? @db.VarChar(255)
+  specialization String? @db.VarChar(255)
   universityName String? @map("university_name") @db.VarChar(255)
-  streamName    String? @map("stream_name") @db.VarChar(255)
-  marksOrScore  String? @map("marks_or_score") @db.VarChar(100)
-  yearOfPassing String? @map("year_of_passing") @db.VarChar(20)
-  orderIndex    Int     @default(0) @map("order_index")
-  resume        Resume  @relation(fields: [resumeId], references: [id], onDelete: Cascade)
+  streamName     String? @map("stream_name") @db.VarChar(255)
+  marksOrScore   String? @map("marks_or_score") @db.VarChar(100)
+  yearOfPassing  String? @map("year_of_passing") @db.VarChar(20)
+  startYear      String? @map("start_year") @db.VarChar(10)
+  endYear        String? @map("end_year") @db.VarChar(10)
+  orderIndex     Int     @default(0) @map("order_index")
+  resume         Resume  @relation(fields: [resumeId], references: [id], onDelete: Cascade)
 
   @@index([resumeId])
   @@map("resume_educations")
+}
+
+model ResumeSkill {
+  id           Int              @id @default(autoincrement())
+  resumeId     Int              @map("resume_id")
+  name         String           @db.VarChar(100)
+  isPrimary    Boolean          @default(false) @map("is_primary")
+  proficiency  SkillProficiency @default(Intermediate)
+  orderIndex   Int              @default(0) @map("order_index")
+  resume       Resume           @relation(fields: [resumeId], references: [id], onDelete: Cascade)
+
+  @@index([resumeId])
+  @@map("resume_skills")
+}
+
+model ResumeCertification {
+  id             Int     @id @default(autoincrement())
+  resumeId       Int     @map("resume_id")
+  name           String  @db.VarChar(255)
+  issuingOrg     String? @map("issuing_org") @db.VarChar(255)
+  year           String? @db.VarChar(10)
+  certificateUrl String? @map("certificate_url") @db.VarChar(500)
+  orderIndex     Int     @default(0) @map("order_index")
+  resume         Resume  @relation(fields: [resumeId], references: [id], onDelete: Cascade)
+
+  @@index([resumeId])
+  @@map("resume_certifications")
+}
+
+model ResumeLanguage {
+  id          Int                 @id @default(autoincrement())
+  resumeId    Int                 @map("resume_id")
+  language    String              @db.VarChar(100)
+  proficiency LanguageProficiency @default(Intermediate)
+  orderIndex  Int                 @default(0) @map("order_index")
+  resume      Resume              @relation(fields: [resumeId], references: [id], onDelete: Cascade)
+
+  @@index([resumeId])
+  @@map("resume_languages")
 }
 
 model Conversation {

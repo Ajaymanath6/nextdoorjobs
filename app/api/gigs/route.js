@@ -4,6 +4,43 @@ import { getCurrentUser } from "../../../lib/getCurrentUser";
 import { authService } from "../../../lib/services/auth.service";
 import { gigService } from "../../../lib/services/gig.service";
 import { prisma } from "../../../lib/prisma";
+import { RESUME_INCLUDE } from "../../../lib/resumeValidation";
+
+function getSeekerSkills(seeker) {
+  if (seeker.resume?.skills?.length) {
+    return seeker.resume.skills.map((s) => s.name).filter(Boolean);
+  }
+  return seeker.jobSeekerSkills || [];
+}
+
+function mapJobSeekerToGig(seeker) {
+  const lat = seeker.homeLatitude ?? seeker.gigs?.[0]?.latitude;
+  const lon = seeker.homeLongitude ?? seeker.gigs?.[0]?.longitude;
+  if (lat == null || lon == null) return null;
+  return {
+    id: seeker.id,
+    title: seeker.name,
+    serviceType: "Job Seeker",
+    state: seeker.homeState ?? seeker.gigs?.[0]?.state ?? null,
+    district: seeker.homeDistrict ?? seeker.gigs?.[0]?.district ?? null,
+    locality: seeker.homeLocality ?? seeker.gigs?.[0]?.locality ?? null,
+    latitude: lat,
+    longitude: lon,
+    user: {
+      id: seeker.id,
+      name: seeker.name,
+      avatarId: seeker.avatarId,
+      avatarUrl: seeker.avatarUrl,
+      phone: seeker.phone ?? null,
+      phoneVisibleToRecruiters: seeker.phoneVisibleToRecruiters ?? false,
+    },
+    jobSeekerSkills: getSeekerSkills(seeker),
+    jobSeekerExperience: seeker.jobSeekerExperience,
+    resume: seeker.resume || null,
+    email: seeker.email,
+    karmaScore: (seeker.candidateKarma?.emailClicks || 0) + (seeker.candidateKarma?.chatClicks || 0),
+  };
+}
 
 /**
  * POST /api/gigs
@@ -200,10 +237,7 @@ export async function GET(request) {
               select: { emailClicks: true, chatClicks: true },
             },
             resume: {
-              include: {
-                workExperiences: { orderBy: { orderIndex: "asc" } },
-                educations: { orderBy: { orderIndex: "asc" } },
-              },
+              include: RESUME_INCLUDE,
             },
             gigs: {
               where: { latitude: { not: null }, longitude: { not: null } },
@@ -229,45 +263,7 @@ export async function GET(request) {
 
         // Transform: use home coords if set, else first gig's coords; only include if we have valid lat/lon
         const transformedJobSeekers = jobSeekers
-          .map((seeker) => {
-            const lat = seeker.homeLatitude ?? seeker.gigs?.[0]?.latitude;
-            const lon = seeker.homeLongitude ?? seeker.gigs?.[0]?.longitude;
-            if (process.env.NODE_ENV === "development" && (lat == null || lon == null)) {
-              console.log("[GET /api/gigs] Skipping seeker (no coords):", {
-                id: seeker.id,
-                name: seeker.name,
-                homeLat: seeker.homeLatitude,
-                homeLon: seeker.homeLongitude,
-                gigsCount: seeker.gigs?.length || 0,
-                firstGigLat: seeker.gigs?.[0]?.latitude,
-                firstGigLon: seeker.gigs?.[0]?.longitude,
-              });
-            }
-            if (lat == null || lon == null) return null;
-            return {
-              id: seeker.id,
-              title: seeker.name,
-              serviceType: "Job Seeker",
-              state: seeker.homeState ?? seeker.gigs?.[0]?.state ?? null,
-              district: seeker.homeDistrict ?? seeker.gigs?.[0]?.district ?? null,
-              locality: seeker.homeLocality ?? seeker.gigs?.[0]?.locality ?? null,
-              latitude: lat,
-              longitude: lon,
-              user: {
-                id: seeker.id,
-                name: seeker.name,
-                avatarId: seeker.avatarId,
-                avatarUrl: seeker.avatarUrl,
-                phone: seeker.phone ?? null,
-                phoneVisibleToRecruiters: seeker.phoneVisibleToRecruiters ?? false,
-              },
-              jobSeekerSkills: seeker.jobSeekerSkills,
-              jobSeekerExperience: seeker.jobSeekerExperience,
-              resume: seeker.resume || null,
-              email: seeker.email,
-              karmaScore: (seeker.candidateKarma?.emailClicks || 0) + (seeker.candidateKarma?.chatClicks || 0),
-            };
-          })
+          .map((seeker) => mapJobSeekerToGig(seeker))
           .filter(Boolean);
 
         if (process.env.NODE_ENV === "development") {
@@ -350,10 +346,7 @@ export async function GET(request) {
                 select: { emailClicks: true, chatClicks: true },
               },
               resume: {
-                include: {
-                  workExperiences: { orderBy: { orderIndex: "asc" } },
-                  educations: { orderBy: { orderIndex: "asc" } },
-                },
+                include: RESUME_INCLUDE,
               },
             },
           });
@@ -361,29 +354,7 @@ export async function GET(request) {
           console.error("GET /api/gigs fallback job seekers error:", fallbackErr?.message);
         }
 
-        const transformed = fallbackSeekers.map((seeker) => ({
-          id: seeker.id,
-          title: seeker.name,
-          serviceType: "Job Seeker",
-          state: seeker.homeState,
-          district: seeker.homeDistrict,
-          locality: seeker.homeLocality,
-          latitude: seeker.homeLatitude,
-          longitude: seeker.homeLongitude,
-          user: {
-            id: seeker.id,
-            name: seeker.name,
-            avatarId: seeker.avatarId,
-            avatarUrl: seeker.avatarUrl,
-            phone: seeker.phone ?? null,
-            phoneVisibleToRecruiters: seeker.phoneVisibleToRecruiters ?? false,
-          },
-          jobSeekerSkills: seeker.jobSeekerSkills,
-          jobSeekerExperience: seeker.jobSeekerExperience,
-          resume: seeker.resume || null,
-          email: seeker.email,
-          karmaScore: (seeker.candidateKarma?.emailClicks || 0) + (seeker.candidateKarma?.chatClicks || 0),
-        }));
+        const transformed = fallbackSeekers.map((seeker) => mapJobSeekerToGig(seeker)).filter(Boolean);
 
         let companies = [];
         try {

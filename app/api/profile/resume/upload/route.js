@@ -77,9 +77,11 @@ export async function POST(request) {
       create: {
         userId: user.id,
         resumeFilePath: publicPath,
+        resumeLastUploadedAt: new Date(),
       },
       update: {
         resumeFilePath: publicPath,
+        resumeLastUploadedAt: new Date(),
       },
     });
 

@@ -65,6 +65,13 @@ function haversineKm(lat1, lon1, lat2, lon2) {
   return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
 }
 
+function getCandidateSkills(gig) {
+  if (gig?.resume?.skills?.length) {
+    return gig.resume.skills.map((s) => s.name).filter(Boolean);
+  }
+  return gig?.jobSeekerSkills || [];
+}
+
 // Company view filter options (work arrangement uses JobPosition.remoteType; company type and industry are UI-only until backend supports)
 const WORK_ARRANGEMENT_OPTIONS = ["Remote", "Hybrid", "Work from office"];
 const COMPANY_TYPE_OPTIONS = ["Startup", "MNC"];
@@ -267,7 +274,7 @@ const MapComponent = ({ onOpenSettings, onViewModeChange, effectiveUser = null, 
 
   const candidateToolStackOptions = useMemo(() => {
     if (userAccountType !== "Company" || !gigs.length) return [];
-    const skills = gigs.flatMap((g) => g.jobSeekerSkills || []).filter((s) => String(s).trim());
+    const skills = gigs.flatMap((g) => getCandidateSkills(g)).filter((s) => String(s).trim());
     return Array.from(new Set(skills)).sort();
   }, [userAccountType, gigs]);
 
@@ -912,7 +919,7 @@ const MapComponent = ({ onOpenSettings, onViewModeChange, effectiveUser = null, 
 
     const candidateMatchesToolStack = (gig, filterTool) => {
       if (!filterTool) return true;
-      const skills = gig.jobSeekerSkills || [];
+      const skills = getCandidateSkills(gig);
       if (!Array.isArray(skills) || skills.length === 0) return false;
       const f = filterTool.toLowerCase().trim();
       return skills.some((s) => String(s).toLowerCase().includes(f) || f.includes(String(s).toLowerCase()));
@@ -1127,9 +1134,12 @@ const MapComponent = ({ onOpenSettings, onViewModeChange, effectiveUser = null, 
                 <div class="map-popup-body">
                   <div class="map-popup-title">${escapeHtml(displayName)}</div>
                   <div class="map-popup-sub">${escapeHtml(displayEmail)}</div>
+                  ${r.professionalHeadline ? `<div class="map-popup-meta text-brand">${escapeHtml(r.professionalHeadline)}</div>` : ""}
                   ${displayPhone ? `<div class="map-popup-meta"><strong>Phone:</strong> ${escapeHtml(displayPhone)}</div>` : ""}
                   ${r.currentPosition ? `<div class="map-popup-meta"><strong>Position:</strong> ${escapeHtml(r.currentPosition)}</div>` : ""}
                   ${r.yearsExperience ? `<div class="map-popup-meta"><strong>Experience:</strong> ${escapeHtml(r.yearsExperience)} years</div>` : ""}
+                  ${r.workMode ? `<div class="map-popup-meta"><strong>Work mode:</strong> ${escapeHtml(r.workMode)}</div>` : ""}
+                  ${r.skills?.length ? `<div class="map-popup-meta"><strong>Skills:</strong> ${escapeHtml(r.skills.slice(0, 5).map((s) => s.name).join(", "))}</div>` : ""}
                 </div>
               </div>
               ${workHtml ? `<div class="map-popup-block"><strong class="map-popup-section-title">Work</strong>${workHtml}</div>` : ""}
@@ -3586,9 +3596,12 @@ const MapComponent = ({ onOpenSettings, onViewModeChange, effectiveUser = null, 
                 <div class="map-popup-body">
                   <div class="map-popup-title">${escapeHtml(displayName)}</div>
                   <div class="map-popup-sub">${escapeHtml(displayEmail)}</div>
+                  ${r.professionalHeadline ? `<div class="map-popup-meta text-brand">${escapeHtml(r.professionalHeadline)}</div>` : ""}
                   ${displayPhone ? `<div class="map-popup-meta"><strong>Phone:</strong> ${escapeHtml(displayPhone)}</div>` : ""}
                   ${r.currentPosition ? `<div class="map-popup-meta"><strong>Position:</strong> ${escapeHtml(r.currentPosition)}</div>` : ""}
                   ${r.yearsExperience ? `<div class="map-popup-meta"><strong>Experience:</strong> ${escapeHtml(r.yearsExperience)} years</div>` : ""}
+                  ${r.workMode ? `<div class="map-popup-meta"><strong>Work mode:</strong> ${escapeHtml(r.workMode)}</div>` : ""}
+                  ${r.skills?.length ? `<div class="map-popup-meta"><strong>Skills:</strong> ${escapeHtml(r.skills.slice(0, 5).map((s) => s.name).join(", "))}</div>` : ""}
                 </div>
               </div>
               ${workHtml ? `<div class="map-popup-block"><strong class="map-popup-section-title">Work</strong>${workHtml}</div>` : ""}
