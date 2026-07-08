@@ -32,8 +32,8 @@
   },
   "components": {
     "sidebar": {
-      "container-expanded": "w-52 bg-gray-100 transition-all duration-300",
-      "container-collapsed": "w-16 bg-gray-100 transition-all duration-300",
+      "container-expanded": "w-52 bg-gray-50 transition-all duration-300",
+      "container-collapsed": "w-16 bg-gray-50 transition-all duration-300",
       "logo-section": "p-4 border-b border-brand-stroke-border",
       "logo-container": "w-6 h-6",
       "logo-text": "text-brand-text-weak font-medium text-base leading-6 tracking-[-0.03em]",
@@ -43,7 +43,7 @@
       "nav-button-expanded": "",
       "nav-button-collapsed": "justify-center",
       "nav-button-active": "bg-brand-bg-white border-brand-stroke-weak shadow-[0_1px_1px_rgba(0,0,0,0.025)]",
-      "nav-button-hover": "hover:bg-brand-bg-fill",
+      "nav-button-hover": "hover:bg-white",
       "nav-icon-container": "w-6 h-6 flex items-center justify-center shrink-0",
       "nav-text": "text-brand-stroke-strong font-medium text-base leading-6 tracking-[-0.03em]",
       "whats-new-section": "p-2",

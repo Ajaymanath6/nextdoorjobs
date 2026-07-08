@@ -73,7 +73,7 @@ export default function AppShell({
   };
 
   return (
-    <div className="flex flex-col h-screen overflow-hidden bg-[#FFF4F1]">
+    <div className="flex flex-col h-screen overflow-hidden bg-gray-50">
       {isAdminViewAs && effectiveUser && (
         <div className="shrink-0 flex items-center justify-between gap-2 px-3 py-2 bg-brand text-brand-bg-white text-sm">
           <span>
