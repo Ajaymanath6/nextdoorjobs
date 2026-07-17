@@ -2828,8 +2828,12 @@ const MapComponent = ({ onOpenSettings, onViewModeChange, effectiveUser = null, 
 
     // Company accounts only see candidates; never show any company markers
     if (userAccountType === "Company") {
-      if (clusterGroupRef.current) {
-        mapInstanceRef.current.removeLayer(clusterGroupRef.current);
+      if (clusterGroupRef.current && mapInstanceRef.current) {
+        try {
+          mapInstanceRef.current.removeLayer(clusterGroupRef.current);
+        } catch {
+          /* ignore */
+        }
         clusterGroupRef.current = null;
       }
       companyMarkersRef.current = [];
@@ -2839,8 +2843,12 @@ const MapComponent = ({ onOpenSettings, onViewModeChange, effectiveUser = null, 
     // Only render companies when in company mode (Individual accounts only)
     if (searchMode !== "company") {
       // Clear company markers if switching away from company mode
-      if (clusterGroupRef.current) {
-        mapInstanceRef.current.removeLayer(clusterGroupRef.current);
+      if (clusterGroupRef.current && mapInstanceRef.current) {
+        try {
+          mapInstanceRef.current.removeLayer(clusterGroupRef.current);
+        } catch {
+          /* ignore */
+        }
         clusterGroupRef.current = null;
       }
       companyMarkersRef.current = [];
@@ -2913,8 +2921,11 @@ const MapComponent = ({ onOpenSettings, onViewModeChange, effectiveUser = null, 
           if (res.ok) {
             const data = await res.json();
             companies = data.companies || [];
+            if (data.warning) {
+              console.warn("[Map] Companies fetch warning:", data.warning);
+            }
           } else {
-            console.error("Failed to fetch companies:", res.status);
+            console.warn("Failed to fetch companies:", res.status);
             setTotalCompaniesCount(0);
             setTotalJobsCount(0);
           }
@@ -2925,8 +2936,16 @@ const MapComponent = ({ onOpenSettings, onViewModeChange, effectiveUser = null, 
         setTotalJobsCount(0);
       }
 
+      // Map may have unmounted / remounted during the async fetch
+      const map = mapInstanceRef.current;
+      if (!map) return;
+
       if (clusterGroupRef.current) {
-        mapInstanceRef.current.removeLayer(clusterGroupRef.current);
+        try {
+          map.removeLayer(clusterGroupRef.current);
+        } catch {
+          /* layer may already be gone */
+        }
         clusterGroupRef.current = null;
       }
       companyMarkersRef.current = [];
@@ -3105,7 +3124,8 @@ const MapComponent = ({ onOpenSettings, onViewModeChange, effectiveUser = null, 
 
         // Add hover tooltip for clusters
         clusterGroup.on('clustermouseover', async function(e) {
-          const cluster = e.layer;
+          const cluster = e?.layer;
+          if (!cluster || typeof cluster.getAllChildMarkers !== "function") return;
           const markers = cluster.getAllChildMarkers();
           const companies = markers.map(m => m.companyData).filter(Boolean);
           const companyCount = companies.length;
@@ -3139,14 +3159,16 @@ const MapComponent = ({ onOpenSettings, onViewModeChange, effectiveUser = null, 
                 </div>
               `;
               
-              cluster.bindTooltip(tooltipContent, {
-                permanent: false,
-                direction: 'top',
-                className: 'cluster-tooltip',
-                offset: [0, -10],
-                interactive: false,
-                opacity: 1,
-              }).openTooltip();
+              if (typeof cluster.bindTooltip === "function") {
+                cluster.bindTooltip(tooltipContent, {
+                  permanent: false,
+                  direction: 'top',
+                  className: 'cluster-tooltip',
+                  offset: [0, -10],
+                  interactive: false,
+                  opacity: 1,
+                }).openTooltip();
+              }
             }
           } catch (error) {
             console.error('Error fetching job titles for tooltip:', error);
@@ -3154,11 +3176,14 @@ const MapComponent = ({ onOpenSettings, onViewModeChange, effectiveUser = null, 
         });
 
         clusterGroup.on('clustermouseout', function(e) {
-          const cluster = e.layer;
-          cluster.closeTooltip();
+          const cluster = e?.layer;
+          if (cluster && typeof cluster.closeTooltip === "function") {
+            cluster.closeTooltip();
+          }
         });
 
         // Add cluster group to map
+        if (!mapInstanceRef.current) return;
         mapInstanceRef.current.addLayer(clusterGroup);
 
         // Calculate bounds from company coordinates only
@@ -3183,8 +3208,10 @@ const MapComponent = ({ onOpenSettings, onViewModeChange, effectiveUser = null, 
         const maxZoomLevel = companies.length >= 5 ? 12 : 14;
 
         setTimeout(() => {
+          if (!mapInstanceRef.current || !companyMarkersRef.current?.length) return;
           const group = new L.featureGroup(companyMarkersRef.current);
           const groupBounds = group.getBounds();
+          if (!groupBounds?.isValid?.()) return;
           const paddedBounds = groupBounds.pad(0.1);
           mapInstanceRef.current.fitBounds(paddedBounds, {
             maxZoom: maxZoomLevel,
@@ -6149,6 +6176,13 @@ const MapComponent = ({ onOpenSettings, onViewModeChange, effectiveUser = null, 
         }}
       />
 
+      <CompanyJobsSidebar
+        company={selectedCompanyForSidebar}
+        jobs={selectedCompanyJobs}
+        isOpen={showCompanyJobsSidebar}
+        onClose={() => setShowCompanyJobsSidebar(false)}
+      />
+
       <JobsMoreFiltersDrawer
         isOpen={showMoreFiltersDrawer}
         onClose={() => setShowMoreFiltersDrawer(false)}
@@ -6172,13 +6206,6 @@ const MapComponent = ({ onOpenSettings, onViewModeChange, effectiveUser = null, 
         }}
         onApply={handleMoreFiltersApply}
         onClearAll={clearAllJobFilters}
-      />
-
-      <CompanyJobsSidebar
-        company={selectedCompanyForSidebar}
-        jobs={selectedCompanyJobs}
-        isOpen={showCompanyJobsSidebar}
-        onClose={() => setShowCompanyJobsSidebar(false)}
       />
 
       {/* Loading overlay when switching to chat */}

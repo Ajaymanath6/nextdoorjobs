@@ -1,7 +1,6 @@
 "use client";
 
-import { Filter } from "@carbon/icons-react";
-import { RiArrowDownSLine } from "@remixicon/react";
+import { Funnel, CaretDown } from "@phosphor-icons/react";
 import OptionListFilterDropdown from "./OptionListFilterDropdown";
 import GigFilterDropdown from "./GigFilterDropdown";
 import {
@@ -16,14 +15,14 @@ function FilterPill({ buttonRef, label, onClick, ariaLabel }) {
       ref={buttonRef}
       type="button"
       onClick={onClick}
-      className="flex items-center gap-1.5 px-3 py-1.5 border rounded-full text-sm font-medium transition-colors shrink-0 bg-brand-bg-white border-brand-stroke-weak text-brand-text-strong hover:bg-brand-bg-fill cursor-pointer"
-      style={{ fontFamily: "Open Sans" }}
+      className="flex items-center gap-1.5 border rounded-full text-sm font-medium transition-colors shrink-0 bg-brand-bg-white border-brand-stroke-weak text-brand-text-strong hover:bg-brand-bg-fill cursor-pointer"
+      style={{ fontFamily: "Open Sans", padding: "8px" }}
       aria-label={ariaLabel}
       title={label}
     >
-      <Filter size={16} className="shrink-0" />
+      <Funnel size={16} className="shrink-0" />
       <span className="max-w-[110px] truncate">{label}</span>
-      <RiArrowDownSLine size={16} className="shrink-0" />
+      <CaretDown size={16} className="shrink-0" />
     </button>
   );
 }
@@ -74,6 +73,7 @@ export default function JobsFilterBar({
   toolStackFilterButtonRef,
   toolStackFilterDropdownRef,
   closeOtherDropdowns,
+  hideMoreFilters = false,
 }) {
   const radiusLabel =
     selectedRadiusKm != null
@@ -286,21 +286,23 @@ export default function JobsFilterBar({
           emptyMessage=""
         />
       </div>
-      <button
-        type="button"
-        onClick={onOpenMoreFilters}
-        className={`flex items-center gap-1.5 px-3 py-1.5 border rounded-full text-sm font-medium transition-colors shrink-0 hover:bg-brand-bg-fill cursor-pointer ${
-          moreFiltersActive
-            ? "border-brand bg-brand/10 text-brand"
-            : "bg-brand-bg-white border-brand-stroke-weak text-brand-text-strong"
-        }`}
-        style={{ fontFamily: "Open Sans" }}
-        aria-label="More filters"
-        title="More filters"
-      >
-        <Filter size={16} className="shrink-0" />
-        <span>More Filters</span>
-      </button>
+      {!hideMoreFilters && (
+        <button
+          type="button"
+          onClick={onOpenMoreFilters}
+          className={`flex items-center gap-1.5 border rounded-full text-sm font-medium transition-colors shrink-0 hover:bg-brand-bg-fill cursor-pointer ${
+            moreFiltersActive
+              ? "border-brand bg-brand/10 text-brand"
+              : "bg-brand-bg-white border-brand-stroke-weak text-brand-text-strong"
+          }`}
+          style={{ fontFamily: "Open Sans", padding: "8px" }}
+          aria-label="More filters"
+          title="More filters"
+        >
+          <Funnel size={16} className="shrink-0" />
+          <span className="max-w-[110px] truncate">More Filters</span>
+        </button>
+      )}
     </>
   );
 }

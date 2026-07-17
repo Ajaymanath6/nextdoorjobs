@@ -4,18 +4,13 @@ import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import Image from "next/image";
 import themeClasses from "../../theme-utility-classes.json";
-import {
-  OpenPanelLeft,
-  SidePanelOpen,
-  TaskAdd,
-} from "@carbon/icons-react";
+import { TaskAdd } from "@carbon/icons-react";
+import { Layout } from "@phosphor-icons/react";
 import Tooltip from "../Tooltip";
-import { useUnreadNotificationCount } from "../../hooks/useUnreadNotificationCount";
 
 const SIDEBAR_ICONS = {
   home: "/icons/sidebar/home.png",
   map: "/icons/sidebar/map.png",
-  notifications: "/icons/sidebar/notifications.png",
   settings: "/icons/sidebar/settings.png",
   speaker: "/icons/sidebar/speaker.png",
   myJobs: "/icons/sidebar/my-jobs.png",
@@ -57,7 +52,6 @@ export default function Sidebar({
   const router = useRouter();
   const [isOpen, setIsOpen] = useState(externalIsOpen !== undefined ? externalIsOpen : true);
   const [accountTypeFromAuth, setAccountTypeFromAuth] = useState(null);
-  const { count: notificationCount } = useUnreadNotificationCount();
 
   const sidebar = themeClasses.components.sidebar;
 
@@ -103,13 +97,6 @@ export default function Sidebar({
       iconSrc: SIDEBAR_ICONS.map,
       route: "/jobs-near-you",
     },
-    {
-      id: "notifications",
-      label: "Notifications",
-      iconSrc: SIDEBAR_ICONS.notifications,
-      route: "/notifications",
-      badge: true,
-    },
     ...(!HIDE_REQUEST_GIG && accountType === "Individual" && typeof onRequestGig === "function"
       ? [{ id: "request-gig", label: "Request a gig", icon: TaskAdd, onRequestGigAction: true }]
       : []),
@@ -143,14 +130,12 @@ export default function Sidebar({
     const enabledIdsProdForCompany = [
       "home",
       "jobs-near-you",
-      "notifications",
       "manage-jds",
       "settings",
     ];
     const enabledIdsProdForIndividual = [
       "home",
       "jobs-near-you",
-      "notifications",
       "request-gig",
       "manage-jds",
       "settings",
@@ -187,24 +172,8 @@ export default function Sidebar({
           )}
           <div className={`${sidebar["nav-icon-container"]} relative`}>
             <SidebarNavIcon item={item} />
-            {!isOpen && item.badge && notificationCount > 0 && (
-              <span
-                className="absolute -top-1 -right-1 bg-brand text-white text-xs font-bold rounded-full min-w-[18px] h-[18px] flex items-center justify-center px-1"
-                style={{ fontSize: "10px" }}
-              >
-                {notificationCount}
-              </span>
-            )}
           </div>
           {isOpen && <span className={`${sidebar["nav-text"]} min-w-0 truncate`}>{item.label}</span>}
-          {isOpen && item.badge && notificationCount > 0 && (
-            <span
-              className="ml-auto bg-brand text-white text-xs font-bold rounded-full min-w-[20px] h-[20px] flex items-center justify-center px-1.5"
-              style={{ fontSize: "10px" }}
-            >
-              {notificationCount}
-            </span>
-          )}
         </button>
       </Tooltip>
     );
@@ -237,13 +206,13 @@ export default function Sidebar({
               className={`${sidebar["toggle-button"]} w-full flex items-center justify-center rounded-lg bg-transparent hover:bg-white`}
               aria-label="Open sidebar"
             >
-              <SidePanelOpen size={20} style={{ color: "rgba(87, 87, 87, 1)" }} />
+              <Layout size={20} weight="duotone" style={{ color: "rgba(87, 87, 87, 1)" }} />
             </button>
           )}
 
           {isOpen && (
             <button onClick={handleToggle} className={sidebar["toggle-button"]} aria-label="Close sidebar">
-              <OpenPanelLeft size={20} style={{ color: "rgba(87, 87, 87, 1)" }} />
+              <Layout size={20} weight="duotone" style={{ color: "rgba(87, 87, 87, 1)" }} />
             </button>
           )}
         </div>

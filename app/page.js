@@ -1,13 +1,18 @@
 "use client";
 
 import AppShell from "./components/AppShell";
+import HomeJobsView from "./components/Home/HomeJobsView";
 
 export default function HomePage() {
   return (
     <AppShell activeItem="home">
-      <div className="flex h-full w-full items-center justify-center bg-white">
-        <p className="text-sm text-brand-text-weak font-sans">Home — coming soon</p>
-      </div>
+      {({ effectiveUser, effectiveUserLoading, onOpenSettings }) => (
+        <HomeJobsView
+          user={effectiveUser}
+          loading={effectiveUserLoading}
+          onOpenSettings={onOpenSettings}
+        />
+      )}
     </AppShell>
   );
 }

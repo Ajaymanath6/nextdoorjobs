@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { Document } from "@carbon/icons-react";
+import { FileText } from "@phosphor-icons/react";
 
 function truncateText(text, maxWords = 15) {
   if (!text) return "";
@@ -21,7 +21,13 @@ function getTimeAgo(dateString) {
   return `${diffDays} days ago`;
 }
 
-export default function JobDetailCard({ job, company, onApply }) {
+export default function JobDetailCard({
+  job,
+  company,
+  onApply,
+  onMarkApplied,
+  hasApplied = false,
+}) {
   const [showFullDescription, setShowFullDescription] = useState(false);
 
   const description = showFullDescription
@@ -29,13 +35,14 @@ export default function JobDetailCard({ job, company, onApply }) {
     : truncateText(job.jobDescription, 12);
 
   const needsTruncation = job.jobDescription && job.jobDescription.split(" ").length > 12;
+  const applied = hasApplied || job?.hasApplied;
 
   return (
     <div className="border border-brand-stroke-weak rounded-lg p-2.5 bg-brand-bg-white space-y-1.5 flex flex-col">
       {/* Header: Icon + Title + Seniority + Time - compact */}
       <div className="flex items-start gap-2 shrink-0">
         <div className="w-8 h-8 rounded-full bg-brand-bg-fill flex items-center justify-center shrink-0">
-          <Document size={16} className="text-brand-stroke-strong" />
+          <FileText size={16} className="text-brand-stroke-strong" />
         </div>
         <div className="flex-1 min-w-0">
           <h3 className="text-sm font-semibold text-brand-text-strong truncate">
@@ -57,7 +64,7 @@ export default function JobDetailCard({ job, company, onApply }) {
       {/* Job Description: collapsed = 2-line clamp, no overflow; expanded = full content, card grows */}
       <div className={`space-y-0.5 flex flex-col ${showFullDescription ? "" : "min-h-0"}`}>
         <div className="flex items-start gap-1.5 min-w-0">
-          <Document size={14} className="text-brand-stroke-strong shrink-0 mt-0.5" />
+          <FileText size={14} className="text-brand-stroke-strong shrink-0 mt-0.5" />
           <div className={`flex-1 min-w-0 ${showFullDescription ? "" : "overflow-hidden"}`}>
             <p className={`text-xs text-brand-text-strong ${showFullDescription ? "whitespace-pre-wrap" : "line-clamp-2 overflow-hidden"}`}>
               {description}
@@ -116,16 +123,33 @@ export default function JobDetailCard({ job, company, onApply }) {
         )}
       </div>
 
-      {/* Apply button: no border, light primary background */}
-      <div className="pt-1.5 shrink-0">
-        <button
-          type="button"
-          onClick={() => onApply?.(job)}
-          className="w-full py-2 rounded-md text-sm font-medium text-brand border-0 transition-opacity hover:opacity-90"
-          style={{ background: "var(--brand-primary-light)" }}
-        >
-          Apply
-        </button>
+      {/* Apply / mark applied */}
+      <div className="pt-1.5 shrink-0 space-y-1.5">
+        {applied ? (
+          <div className="w-full py-2 rounded-md text-sm font-medium text-center text-brand bg-brand/10">
+            Applied
+          </div>
+        ) : (
+          <>
+            <button
+              type="button"
+              onClick={() => onApply?.(job)}
+              className="w-full py-2 rounded-md text-sm font-medium text-brand border-0 transition-opacity hover:opacity-90"
+              style={{ background: "var(--brand-primary-light)" }}
+            >
+              Apply
+            </button>
+            {onMarkApplied && (
+              <button
+                type="button"
+                onClick={() => onMarkApplied(job)}
+                className="w-full text-xs font-medium text-brand-text-weak hover:text-brand underline"
+              >
+                Mark as applied
+              </button>
+            )}
+          </>
+        )}
       </div>
     </div>
   );

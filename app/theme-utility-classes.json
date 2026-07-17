@@ -132,7 +132,7 @@
       }
     },
     "filterDropdown": {
-      "container": "absolute bg-brand-bg-white rounded-lg border border-brand-stroke-border z-50 flex flex-col",
+      "container": "absolute bg-brand-bg-white rounded-lg border border-brand-stroke-border z-[200] flex flex-col",
       "container-padding": "p-2",
       "container-gap": "gap-2",
       "container-shadow": "shadow-[0px_10px_10px_-5px_rgba(0,0,0,0.04),0px_20px_25px_-5px_rgba(0,0,0,0.1)]",
@@ -143,7 +143,7 @@
       "country-button-icon": "text-brand-stroke-strong",
       "country-dropdown": "absolute bottom-full left-0 right-0 mb-1 bg-brand-bg-white border border-brand-stroke-border rounded-lg shadow-lg z-[60]",
       "country-dropdown-max-height": "max-h-[200px]",
-      "country-item": "w-full flex items-center gap-2 px-3 py-2 hover:bg-brand-bg-fill transition-colors text-left",
+      "country-item": "w-full flex items-center gap-2 p-2 hover:bg-brand-bg-fill transition-colors text-left",
       "country-item-text": "text-sm font-medium text-brand-text-weak",
       "search-container": "relative",
       "search-icon": "absolute left-3 top-1/2 transform -translate-y-1/2 text-brand-text-tertiary",
@@ -152,7 +152,7 @@
       "search-input-placeholder": "placeholder:text-brand-text-tertiary",
       "states-list": "flex-1 overflow-y-auto",
       "states-list-max-height": "max-h-[250px]",
-      "state-item": "w-full flex items-center gap-3 px-3 py-2 rounded-md transition-colors hover:bg-brand-bg-fill text-left",
+      "state-item": "w-full flex items-center gap-3 py-2 px-[4px] rounded-md transition-colors hover:bg-brand-bg-fill text-left",
       "state-item-text": "text-sm font-medium text-brand-text-weak",
       "empty-state": "px-3 py-2 text-sm text-brand-stroke-strong"
     }

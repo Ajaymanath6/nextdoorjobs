@@ -100,7 +100,11 @@ export default function AppShell({
           />
         </div>
 
-        <div className="flex-1 min-h-0 min-w-0 mt-4 md:mt-8 mr-4 mb-4 rounded-[16px] overflow-hidden relative">
+        <div className={`flex-1 min-h-0 min-w-0 mr-4 mb-4 rounded-[16px] relative ${
+          activeItem === "home"
+            ? "mt-0 overflow-visible"
+            : "mt-4 md:mt-8 overflow-hidden"
+        }`}>
           {typeof children === "function"
             ? children({
                 effectiveUser,
