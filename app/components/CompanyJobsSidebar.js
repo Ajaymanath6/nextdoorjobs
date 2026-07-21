@@ -3,7 +3,7 @@
 import { X } from "@phosphor-icons/react";
 import JobDetailCard from "./JobDetailCard";
 import { useConfirmApplied } from "../hooks/useConfirmApplied";
-import { useState, useCallback } from "react";
+import { useState, useCallback, useEffect } from "react";
 
 const ABOUT_COMPANY_TEXT = `UniCourt is a leader in making court data more accessible and useful with our Legal Data as a Service (LDaaS). We provide real-time access to court data through our APIs and online app for business development and intelligence, litigation analytics, litigation tracking, case research, investigations, background checks, due diligence, compliance, underwriting, machine learning models, and process automation.
 
@@ -11,8 +11,24 @@ We provide access to court data from state and federal courts to a diverse list 
 
 UniCourt is a legal technology company focused on using technology to unlock the potential of legal data. We are based in both California and Mangalore, India and our team includes legal professionals, data scientists, physicists, computer engineers, and sales and marketing, professionals.`;
 
-export default function CompanyJobsSidebar({ company, jobs, isOpen, onClose, onApplied }) {
+export default function CompanyJobsSidebar({ company, jobs, isOpen, onClose, onApplied, onSaved }) {
   const [appliedIds, setAppliedIds] = useState(() => new Set());
+  const [savedIds, setSavedIds] = useState(() => new Set());
+
+  useEffect(() => {
+    if (!isOpen) return;
+    let cancelled = false;
+    fetch("/api/job-saves", { credentials: "same-origin" })
+      .then((r) => (r.ok ? r.json() : null))
+      .then((data) => {
+        if (cancelled || !data?.success || !Array.isArray(data.jobs)) return;
+        setSavedIds(new Set(data.jobs.map((j) => j.id)));
+      })
+      .catch(() => {});
+    return () => {
+      cancelled = true;
+    };
+  }, [isOpen]);
 
   const handleApplied = useCallback(
     (job) => {
@@ -22,6 +38,32 @@ export default function CompanyJobsSidebar({ company, jobs, isOpen, onClose, onA
       onApplied?.(job);
     },
     [onApplied]
+  );
+
+  const handleSave = useCallback(
+    async (job, shouldSave) => {
+      if (job?.id == null) return;
+      const method = shouldSave ? "POST" : "DELETE";
+      try {
+        const res = await fetch("/api/job-saves", {
+          method,
+          credentials: "same-origin",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ jobId: job.id }),
+        });
+        if (!res.ok) return;
+        setSavedIds((prev) => {
+          const next = new Set(prev);
+          if (shouldSave) next.add(job.id);
+          else next.delete(job.id);
+          return next;
+        });
+        onSaved?.(job, shouldSave);
+      } catch {
+        // ignore
+      }
+    },
+    [onSaved]
   );
 
   const { startApply, modal } = useConfirmApplied({ onApplied: handleApplied });
@@ -112,6 +154,7 @@ export default function CompanyJobsSidebar({ company, jobs, isOpen, onClose, onA
                   job={job}
                   company={company}
                   hasApplied={appliedIds.has(job.id) || job.hasApplied}
+                  hasSaved={savedIds.has(job.id) || job.hasSaved}
                   onApply={(j) =>
                     startApply(
                       { ...j, company: j.company || company },
@@ -124,6 +167,7 @@ export default function CompanyJobsSidebar({ company, jobs, isOpen, onClose, onA
                       { openUrl: false }
                     )
                   }
+                  onSave={handleSave}
                 />
               ))
             )}

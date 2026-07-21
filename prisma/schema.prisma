@@ -206,6 +206,7 @@ model User {
   gigRequests         GigRequest[]
   gigReviewsGiven     GigReview[]     @relation("GigReviewReviewer")
   jobApplications     JobApplication[]
+  jobSaves            JobSave[]
 
   @@index([email])
   @@index([clerkId])
@@ -266,6 +267,7 @@ model JobPosition {
   company             Company              @relation(fields: [companyId], references: [id], onDelete: Cascade)
   onboardingSessions  OnboardingSession[]
   applications        JobApplication[]
+  saves               JobSave[]
 
   @@index([category])
   @@index([companyId])
@@ -285,6 +287,20 @@ model JobApplication {
   @@index([userId])
   @@index([jobPositionId])
   @@map("job_applications")
+}
+
+model JobSave {
+  id             Int         @id @default(autoincrement())
+  userId         Int         @map("user_id")
+  jobPositionId  Int         @map("job_position_id")
+  savedAt        DateTime    @default(now()) @map("saved_at")
+  user           User        @relation(fields: [userId], references: [id], onDelete: Cascade)
+  jobPosition    JobPosition @relation(fields: [jobPositionId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, jobPositionId])
+  @@index([userId])
+  @@index([jobPositionId])
+  @@map("job_saves")
 }
 
 model OnboardingSession {

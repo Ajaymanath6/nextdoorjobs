@@ -63,6 +63,9 @@ export default function HomeJobsView({ user, loading: userLoading, onOpenSetting
   const [appliedJobs, setAppliedJobs] = useState([]);
   const [appliedLoading, setAppliedLoading] = useState(false);
   const [appliedIds, setAppliedIds] = useState(() => new Set());
+  const [savedJobs, setSavedJobs] = useState([]);
+  const [savedLoading, setSavedLoading] = useState(false);
+  const [savedIds, setSavedIds] = useState(() => new Set());
   const [showProfileDropdown, setShowProfileDropdown] = useState(false);
   const [showWorkModeDropdown, setShowWorkModeDropdown] = useState(false);
   const [showRadiusDropdown, setShowRadiusDropdown] = useState(false);
@@ -199,6 +202,64 @@ export default function HomeJobsView({ user, loading: userLoading, onOpenSetting
     fetchAppliedJobs();
   }, [fetchAppliedJobs]);
 
+  const fetchSavedJobs = useCallback(async () => {
+    setSavedLoading(true);
+    try {
+      const res = await fetch("/api/job-saves", { credentials: "same-origin" });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok || data?.success === false) {
+        setSavedJobs([]);
+        return;
+      }
+      const list = Array.isArray(data.jobs) ? data.jobs : [];
+      setSavedJobs(list);
+      setSavedIds(new Set(list.map((j) => j.id)));
+    } catch {
+      setSavedJobs([]);
+    } finally {
+      setSavedLoading(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    fetchSavedJobs();
+  }, [fetchSavedJobs]);
+
+  const handleJobSave = useCallback(async (job, shouldSave) => {
+    if (job?.id == null) return;
+    const method = shouldSave ? "POST" : "DELETE";
+    try {
+      const res = await fetch("/api/job-saves", {
+        method,
+        credentials: "same-origin",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ jobId: job.id }),
+      });
+      if (!res.ok) return;
+      setSavedIds((prev) => {
+        const next = new Set(prev);
+        if (shouldSave) next.add(job.id);
+        else next.delete(job.id);
+        return next;
+      });
+      setSavedJobs((prev) => {
+        if (shouldSave) {
+          if (prev.some((j) => j.id === job.id)) return prev;
+          return [{ ...job, hasSaved: true, savedAt: new Date().toISOString() }, ...prev];
+        }
+        return prev.filter((j) => j.id !== job.id);
+      });
+      setJobs((prev) =>
+        prev.map((j) => (j.id === job.id ? { ...j, hasSaved: shouldSave } : j))
+      );
+      setAppliedJobs((prev) =>
+        prev.map((j) => (j.id === job.id ? { ...j, hasSaved: shouldSave } : j))
+      );
+    } catch {
+      // ignore
+    }
+  }, []);
+
   const handleJobApplied = useCallback((job) => {
     if (job?.id == null) return;
     setAppliedIds((prev) => new Set(prev).add(job.id));
@@ -260,7 +321,7 @@ export default function HomeJobsView({ user, loading: userLoading, onOpenSetting
   const tabCounts = {
     recommended: 0,
     all: filteredJobs.length,
-    saved: 0,
+    saved: savedJobs.length,
     applied: appliedJobs.length,
   };
 
@@ -462,6 +523,37 @@ export default function HomeJobsView({ user, loading: userLoading, onOpenSetting
                     job={job}
                     company={job.company}
                     hasApplied
+                    hasSaved={savedIds.has(job.id) || job.hasSaved}
+                    onSave={handleJobSave}
+                  />
+                ))}
+              </ul>
+            )
+          ) : activeTab === "saved" ? (
+            savedLoading ? (
+              <ul className="divide-y divide-brand-stroke-weak">
+                {[1, 2, 3].map((i) => (
+                  <li key={i} className="py-3.5">
+                    <div className="h-4 w-2/3 rounded bg-brand-bg-fill animate-pulse" />
+                    <div className="mt-2 h-3 w-1/3 rounded bg-brand-bg-fill animate-pulse" />
+                  </li>
+                ))}
+              </ul>
+            ) : savedJobs.length === 0 ? (
+              <div className="flex h-full min-h-[200px] items-center justify-center">
+                <p className="text-sm text-brand-text-weak">{emptyCopy.saved}</p>
+              </div>
+            ) : (
+              <ul className="w-full">
+                {savedJobs.map((job) => (
+                  <JobListRow
+                    key={job.id}
+                    job={job}
+                    company={job.company}
+                    hasSaved
+                    hasApplied={appliedIds.has(job.id) || job.hasApplied}
+                    onSave={handleJobSave}
+                    onMarkApplied={(j) => startApply(j, { openUrl: false })}
                   />
                 ))}
               </ul>
@@ -505,7 +597,9 @@ export default function HomeJobsView({ user, loading: userLoading, onOpenSetting
                   job={job}
                   company={job.company}
                   hasApplied={appliedIds.has(job.id) || job.hasApplied}
+                  hasSaved={savedIds.has(job.id) || job.hasSaved}
                   onMarkApplied={(j) => startApply(j, { openUrl: false })}
+                  onSave={handleJobSave}
                 />
               ))}
             </ul>

@@ -34,7 +34,9 @@ export default function JobListRow({
   job,
   company,
   onMarkApplied,
+  onSave,
   hasApplied = false,
+  hasSaved = false,
 }) {
   const companyData = company || job?.company;
   const companyName = companyData?.name;
@@ -50,6 +52,7 @@ export default function JobListRow({
   ].filter(Boolean);
 
   const applied = hasApplied || job?.hasApplied;
+  const saved = hasSaved || job?.hasSaved;
 
   return (
     <li className="list-none border-b border-brand-stroke-weak last:border-b-0">
@@ -72,9 +75,16 @@ export default function JobListRow({
         </div>
 
         <div className="flex-1 min-w-0">
-          <h3 className="text-base font-semibold text-brand-text-strong truncate">
-            {job?.title || "Untitled role"}
-          </h3>
+          <div className="flex items-center gap-2 min-w-0">
+            <h3 className="text-base font-semibold text-brand-text-strong truncate">
+              {job?.title || "Untitled role"}
+            </h3>
+            {saved && (
+              <span className="shrink-0 text-xs font-medium text-brand px-2 py-0.5 rounded-md bg-brand/10">
+                Saved
+              </span>
+            )}
+          </div>
           {details.length > 0 && (
             <p className="mt-1 text-sm text-brand-text-weak truncate">
               {details.join(" · ")}
@@ -86,25 +96,41 @@ export default function JobListRow({
           <span className="text-xs text-brand-text-weak whitespace-nowrap">
             {getTimeAgo(job?.createdAt)}
           </span>
-          {applied ? (
-            <span className="text-xs font-medium text-brand px-2 py-1 rounded-md bg-brand/10">
-              Applied
-            </span>
-          ) : onMarkApplied ? (
-            <button
-              type="button"
-              onClick={(e) => {
-                e.preventDefault();
-                e.stopPropagation();
-                onMarkApplied(job);
-              }}
-              className="text-xs font-medium text-brand-text-weak hover:text-brand underline"
-            >
-              Mark as applied
-            </button>
-          ) : null}
+          <div className="flex items-center gap-2">
+            {onSave && !saved && (
+              <button
+                type="button"
+                onClick={(e) => {
+                  e.preventDefault();
+                  e.stopPropagation();
+                  onSave(job, true);
+                }}
+                className="text-xs font-medium text-brand-text-weak hover:text-brand underline"
+              >
+                Save
+              </button>
+            )}
+            {applied ? (
+              <span className="text-xs font-medium text-brand px-2 py-1 rounded-md bg-brand/10">
+                Applied
+              </span>
+            ) : onMarkApplied ? (
+              <button
+                type="button"
+                onClick={(e) => {
+                  e.preventDefault();
+                  e.stopPropagation();
+                  onMarkApplied(job);
+                }}
+                className="text-xs font-medium text-brand-text-weak hover:text-brand underline"
+              >
+                Mark as applied
+              </button>
+            ) : null}
+          </div>
         </div>
       </div>
     </li>
   );
 }
+

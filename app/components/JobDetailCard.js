@@ -26,7 +26,9 @@ export default function JobDetailCard({
   company,
   onApply,
   onMarkApplied,
+  onSave,
   hasApplied = false,
+  hasSaved = false,
 }) {
   const [showFullDescription, setShowFullDescription] = useState(false);
 
@@ -36,6 +38,7 @@ export default function JobDetailCard({
 
   const needsTruncation = job.jobDescription && job.jobDescription.split(" ").length > 12;
   const applied = hasApplied || job?.hasApplied;
+  const saved = hasSaved || job?.hasSaved;
 
   return (
     <div className="border border-brand-stroke-weak rounded-lg p-2.5 bg-brand-bg-white space-y-1.5 flex flex-col">
@@ -53,6 +56,18 @@ export default function JobDetailCard({
               {job.seniorityLevel}
             </p>
           )}
+          <div className="flex flex-wrap gap-1 mt-1">
+            {saved && (
+              <span className="text-[10px] font-medium text-brand px-1.5 py-0.5 rounded bg-brand/10">
+                Saved
+              </span>
+            )}
+            {applied && (
+              <span className="text-[10px] font-medium text-brand px-1.5 py-0.5 rounded bg-brand/10">
+                Applied
+              </span>
+            )}
+          </div>
         </div>
         <span className="text-[10px] text-brand-text-weak shrink-0">
           {getTimeAgo(job.createdAt)}
@@ -123,34 +138,61 @@ export default function JobDetailCard({
         )}
       </div>
 
-      {/* Apply / mark applied */}
+      {/* Apply / Save / mark applied */}
       <div className="pt-1.5 shrink-0 space-y-1.5">
         {applied ? (
           <div className="w-full py-2 rounded-md text-sm font-medium text-center text-brand bg-brand/10">
             Applied
           </div>
         ) : (
-          <>
+          <div className="flex gap-2">
             <button
               type="button"
               onClick={() => onApply?.(job)}
-              className="w-full py-2 rounded-md text-sm font-medium text-brand border-0 transition-opacity hover:opacity-90"
+              className="flex-1 py-2 rounded-md text-sm font-medium text-brand border-0 transition-opacity hover:opacity-90"
               style={{ background: "var(--brand-primary-light)" }}
             >
               Apply
             </button>
-            {onMarkApplied && (
+            {onSave && (
               <button
                 type="button"
-                onClick={() => onMarkApplied(job)}
-                className="w-full text-xs font-medium text-brand-text-weak hover:text-brand underline"
+                onClick={() => onSave(job, !saved)}
+                className={`flex-1 py-2 rounded-md text-sm font-medium border transition-colors ${
+                  saved
+                    ? "border-brand bg-brand/10 text-brand"
+                    : "border-brand-stroke-weak text-brand-text-strong hover:bg-brand-bg-fill"
+                }`}
               >
-                Mark as applied
+                {saved ? "Saved" : "Save"}
               </button>
             )}
-          </>
+          </div>
+        )}
+        {!applied && onMarkApplied && (
+          <button
+            type="button"
+            onClick={() => onMarkApplied(job)}
+            className="w-full text-xs font-medium text-brand-text-weak hover:text-brand underline"
+          >
+            Mark as applied
+          </button>
+        )}
+        {applied && onSave && (
+          <button
+            type="button"
+            onClick={() => onSave(job, !saved)}
+            className={`w-full py-2 rounded-md text-sm font-medium border transition-colors ${
+              saved
+                ? "border-brand bg-brand/10 text-brand"
+                : "border-brand-stroke-weak text-brand-text-strong hover:bg-brand-bg-fill"
+            }`}
+          >
+            {saved ? "Saved" : "Save"}
+          </button>
         )}
       </div>
     </div>
   );
 }
+

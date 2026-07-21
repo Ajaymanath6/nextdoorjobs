@@ -37,12 +37,17 @@ import ViewResumeContent, { formatResumeDate } from "./Profile/ViewResumeContent
 const SECTIONS = [
   { id: "general", label: "General", icon: Settings },
   { id: "resume", label: "Resume", icon: Document },
-  { id: "yourWork", label: "Your Work", icon: Add },
   { id: "company", label: "Company Details", icon: Receipt },
   { id: "subscription", label: "Subscription", icon: Receipt },
 ];
 
-const VALID_SECTIONS = ["general", "resume", "yourWork", "company", "subscription"];
+const VALID_SECTIONS = ["general", "resume", "company", "subscription"];
+
+const SUBSCRIPTION_FEATURE_LIST = [
+  { label: "Job search" },
+  { label: "Gigs search" },
+  { label: "PRP", comingSoon: true },
+];
 
 const SUBSCRIPTION_PLANS = [
   {
@@ -52,12 +57,7 @@ const SUBSCRIPTION_PLANS = [
     badge: "Popular",
     price: 320,
     priceLabel: "/ year",
-    features: [
-      "Unlimited AI chat",
-      "5 lecture transcriptions / day",
-      "5 flashcard & practice sets / day",
-      "3 video generations / day",
-    ],
+    features: SUBSCRIPTION_FEATURE_LIST,
   },
   {
     id: "pro",
@@ -66,13 +66,7 @@ const SUBSCRIPTION_PLANS = [
     badge: "Best value",
     price: 800,
     priceLabel: "/ year",
-    features: [
-      "Everything in Starter",
-      "Unlimited transcriptions",
-      "Unlimited flashcard & practice sets",
-      "Unlimited video generations",
-      "Priority support",
-    ],
+    features: SUBSCRIPTION_FEATURE_LIST,
   },
 ];
 
@@ -844,7 +838,6 @@ export default function SettingsModal({ isOpen, onClose, initialSection }) {
                 {SECTIONS.filter(section => {
                   if (section.id === "company") return user?.accountType === "Company";
                   if (section.id === "resume") return user?.accountType === "Individual";
-                  if (section.id === "yourWork") return user?.accountType === "Individual";
                   if (section.id === "subscription") return user?.accountType === "Individual";
                   return true;
                 }).map(({ id, label, icon: Icon, disabled }) => (
@@ -1915,12 +1908,30 @@ export default function SettingsModal({ isOpen, onClose, initialSection }) {
                       <Receipt size={32} className="opacity-60" />
                     </div>
                     <ul className="mt-3 space-y-1.5">
-                      {plan.features.map((feature, i) => (
-                        <li key={i} className="flex items-center gap-2 text-sm text-brand-text-weak">
-                          <Checkmark size={16} className="shrink-0 text-brand" />
-                          <span>{feature}</span>
-                        </li>
-                      ))}
+                      {plan.features.map((feature, i) => {
+                        const label = typeof feature === "string" ? feature : feature.label;
+                        const comingSoon = typeof feature === "object" && feature.comingSoon;
+                        return (
+                          <li
+                            key={i}
+                            className={`flex items-center gap-2 text-sm ${
+                              comingSoon ? "text-brand-text-placeholder" : "text-brand-text-weak"
+                            }`}
+                          >
+                            {!comingSoon && (
+                              <Checkmark size={16} className="shrink-0 text-brand" />
+                            )}
+                            <span className={comingSoon ? "pl-0" : ""}>
+                              {label}
+                              {comingSoon ? (
+                                <span className="ml-1.5 text-xs font-medium text-brand-text-placeholder">
+                                  Coming soon
+                                </span>
+                              ) : null}
+                            </span>
+                          </li>
+                        );
+                      })}
                     </ul>
                   </button>
                 );

@@ -100,7 +100,7 @@ export default function Sidebar({
     ...(!HIDE_REQUEST_GIG && accountType === "Individual" && typeof onRequestGig === "function"
       ? [{ id: "request-gig", label: "Request a gig", icon: TaskAdd, onRequestGigAction: true }]
       : []),
-    { id: "manage-jds", label: "My jobs", iconSrc: SIDEBAR_ICONS.myJobs, route: "/my-jobs" },
+    { id: "manage-jds", label: "Saved jobs", iconSrc: SIDEBAR_ICONS.myJobs, route: "/my-jobs" },
     {
       id: "settings",
       label: "Settings",
