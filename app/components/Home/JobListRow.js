@@ -35,6 +35,7 @@ export default function JobListRow({
   company,
   onMarkApplied,
   onSave,
+  onSelect,
   hasApplied = false,
   hasSaved = false,
 }) {
@@ -53,10 +54,35 @@ export default function JobListRow({
 
   const applied = hasApplied || job?.hasApplied;
   const saved = hasSaved || job?.hasSaved;
+  const selectable = typeof onSelect === "function";
+
+  const handleActivate = () => {
+    if (selectable) onSelect(job);
+  };
 
   return (
-    <li className="list-none border-b border-brand-stroke-weak last:border-b-0">
-      <div className="flex items-center gap-4 py-4 px-1 md:px-2 hover:bg-brand-bg-fill/60 transition-colors">
+    <li className={`list-none border-b border-brand-stroke-weak last:border-b-0 ${selectable ? "cursor-pointer" : ""}`}>
+      <div
+        role={selectable ? "button" : undefined}
+        tabIndex={selectable ? 0 : undefined}
+        onClick={selectable ? handleActivate : undefined}
+        onKeyDown={
+          selectable
+            ? (e) => {
+                if (e.key === "Enter" || e.key === " ") {
+                  e.preventDefault();
+                  handleActivate();
+                }
+              }
+            : undefined
+        }
+        style={selectable ? { cursor: "pointer" } : undefined}
+        className={`flex items-center gap-4 py-4 px-1 md:px-2 transition-colors ${
+          selectable
+            ? "cursor-pointer hover:bg-brand-bg-fill/60"
+            : "hover:bg-brand-bg-fill/60"
+        }`}
+      >
         <div className="relative h-14 w-14 shrink-0 overflow-hidden rounded-lg border border-brand-stroke-weak bg-brand-bg-fill">
           {logoUrl ? (
             <Image
@@ -133,4 +159,3 @@ export default function JobListRow({
     </li>
   );
 }
-

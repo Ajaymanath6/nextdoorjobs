@@ -11,6 +11,7 @@ import {
   Briefcase,
 } from "@phosphor-icons/react";
 import JobListRow from "./JobListRow";
+import JobDetailPanel from "./JobDetailPanel";
 import JobsFiltersPanel from "../Map/JobsFiltersPanel";
 import JobsFilterBar from "../Map/JobsFilterBar";
 import {
@@ -55,6 +56,7 @@ export default function HomeJobsView({ user, loading: userLoading, onOpenSetting
   const [searchInput, setSearchInput] = useState("");
   const [debouncedQ, setDebouncedQ] = useState("");
   const [filters, setFilters] = useState({ ...EMPTY_FILTERS });
+  const [draftFilters, setDraftFilters] = useState({ ...EMPTY_FILTERS });
   const [industryCategories, setIndustryCategories] = useState([]);
   const [roleOptions, setRoleOptions] = useState([]);
   const [jobs, setJobs] = useState([]);
@@ -66,6 +68,7 @@ export default function HomeJobsView({ user, loading: userLoading, onOpenSetting
   const [savedJobs, setSavedJobs] = useState([]);
   const [savedLoading, setSavedLoading] = useState(false);
   const [savedIds, setSavedIds] = useState(() => new Set());
+  const [selectedJob, setSelectedJob] = useState(null);
   const [showProfileDropdown, setShowProfileDropdown] = useState(false);
   const [showWorkModeDropdown, setShowWorkModeDropdown] = useState(false);
   const [showRadiusDropdown, setShowRadiusDropdown] = useState(false);
@@ -73,12 +76,17 @@ export default function HomeJobsView({ user, loading: userLoading, onOpenSetting
   const workModeDropdownRef = useRef(null);
   const radiusButtonRef = useRef(null);
   const radiusDropdownRef = useRef(null);
+  const selectedJobRef = useRef(null);
 
   const displayName = user?.name?.trim() || "there";
 
   const handleFiltersChange = useCallback((next) => {
     setFilters({ ...EMPTY_FILTERS, ...next });
     setActiveTab("all");
+  }, []);
+
+  const handleDraftFiltersChange = useCallback((next) => {
+    setDraftFilters({ ...EMPTY_FILTERS, ...next });
   }, []);
 
   const closeOtherDropdowns = useCallback((except) => {
@@ -102,6 +110,23 @@ export default function HomeJobsView({ user, loading: userLoading, onOpenSetting
   }, [searchInput]);
 
   useEffect(() => {
+    if (!showWorkModeDropdown && !showRadiusDropdown) return;
+    const pairs = [
+      [workModeDropdownRef, workModeButtonRef, setShowWorkModeDropdown],
+      [radiusDropdownRef, radiusButtonRef, setShowRadiusDropdown],
+    ];
+    const handleClickOutside = (event) => {
+      pairs.forEach(([dropdownRef, buttonRef, setter]) => {
+        const inDropdown = dropdownRef.current?.contains(event.target);
+        const inButton = buttonRef.current?.contains(event.target);
+        if (!inDropdown && !inButton) setter(false);
+      });
+    };
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, [showWorkModeDropdown, showRadiusDropdown]);
+
+  useEffect(() => {
     fetch("/api/job-titles/categories", { credentials: "same-origin" })
       .then((r) => r.json())
       .then((data) => {
@@ -113,13 +138,13 @@ export default function HomeJobsView({ user, loading: userLoading, onOpenSetting
   }, []);
 
   useEffect(() => {
-    if (!filters.industryType) {
+    if (!draftFilters.industryType) {
       setRoleOptions([]);
       return;
     }
     let cancelled = false;
     fetch(
-      `/api/job-titles?category=${encodeURIComponent(filters.industryType)}`,
+      `/api/job-titles?category=${encodeURIComponent(draftFilters.industryType)}`,
       { credentials: "same-origin" }
     )
       .then((r) => r.json())
@@ -140,7 +165,7 @@ export default function HomeJobsView({ user, loading: userLoading, onOpenSetting
     return () => {
       cancelled = true;
     };
-  }, [filters.industryType]);
+  }, [draftFilters.industryType]);
 
   const fetchJobs = useCallback(async () => {
     setJobsLoading(true);
@@ -255,9 +280,29 @@ export default function HomeJobsView({ user, loading: userLoading, onOpenSetting
       setAppliedJobs((prev) =>
         prev.map((j) => (j.id === job.id ? { ...j, hasSaved: shouldSave } : j))
       );
+      setSelectedJob((prev) =>
+        prev?.id === job.id ? { ...prev, hasSaved: shouldSave } : prev
+      );
+      if (selectedJobRef.current?.id === job.id) {
+        selectedJobRef.current = {
+          ...selectedJobRef.current,
+          hasSaved: shouldSave,
+        };
+      }
     } catch {
       // ignore
     }
+  }, []);
+
+  const handleSelectJob = useCallback((job) => {
+    if (!job) return;
+    selectedJobRef.current = job;
+    setSelectedJob(job);
+  }, []);
+
+  const handleBackFromDetail = useCallback(() => {
+    selectedJobRef.current = null;
+    setSelectedJob(null);
   }, []);
 
   const handleJobApplied = useCallback((job) => {
@@ -270,7 +315,13 @@ export default function HomeJobsView({ user, loading: userLoading, onOpenSetting
     setJobs((prev) =>
       prev.map((j) => (j.id === job.id ? { ...j, hasApplied: true } : j))
     );
-    setActiveTab("applied");
+    if (selectedJobRef.current?.id === job.id) {
+      const next = { ...selectedJobRef.current, hasApplied: true };
+      selectedJobRef.current = next;
+      setSelectedJob(next);
+    } else {
+      setActiveTab("applied");
+    }
   }, []);
 
   const { startApply, modal: confirmAppliedModal } = useConfirmApplied({
@@ -312,6 +363,20 @@ export default function HomeJobsView({ user, loading: userLoading, onOpenSetting
     );
   }, [jobs, filters.radiusKm, user?.homeLatitude, user?.homeLongitude]);
 
+  const similarJobs = useMemo(() => {
+    if (!selectedJob) return [];
+    const others = filteredJobs.filter((j) => j.id !== selectedJob.id);
+    const sameCategoryOrCompany = others.filter(
+      (j) =>
+        (selectedJob.category && j.category === selectedJob.category) ||
+        (selectedJob.company?.id != null &&
+          j.company?.id === selectedJob.company.id)
+    );
+    const pool =
+      sameCategoryOrCompany.length > 0 ? sameCategoryOrCompany : others;
+    return pool.slice(0, 10);
+  }, [selectedJob, filteredJobs]);
+
   const hasHomeLocation =
     user?.homeLatitude != null &&
     user?.homeLongitude != null &&
@@ -327,7 +392,24 @@ export default function HomeJobsView({ user, loading: userLoading, onOpenSetting
 
   const handleClearAll = () => {
     setFilters({ ...EMPTY_FILTERS });
+    setDraftFilters({ ...EMPTY_FILTERS });
     setRoleOptions([]);
+    setActiveTab("all");
+  };
+
+  const handleApplySidebarFilters = () => {
+    setFilters((prev) => ({
+      ...EMPTY_FILTERS,
+      workMode: prev.workMode,
+      radiusKm: prev.radiusKm,
+      employmentType: draftFilters.employmentType || null,
+      industryType: draftFilters.industryType || null,
+      role: draftFilters.role || null,
+      salaryBand: draftFilters.salaryBand || null,
+      experience: draftFilters.experience || null,
+      companyType: draftFilters.companyType || null,
+      postedWithin: draftFilters.postedWithin || null,
+    }));
     setActiveTab("all");
   };
 
@@ -359,6 +441,17 @@ export default function HomeJobsView({ user, loading: userLoading, onOpenSetting
       style={{ fontFamily: "Open Sans, sans-serif" }}
     >
       <section className="flex flex-1 min-w-0 min-h-0 flex-col relative z-30">
+        {selectedJob ? (
+          <JobDetailPanel
+            job={selectedJob}
+            hasSaved={savedIds.has(selectedJob.id) || selectedJob.hasSaved}
+            hasApplied={appliedIds.has(selectedJob.id) || selectedJob.hasApplied}
+            onBack={handleBackFromDetail}
+            onSave={handleJobSave}
+            onApply={(j) => startApply(j, { openUrl: true })}
+          />
+        ) : (
+          <>
         <div className="shrink-0 relative z-40 px-[200px] pt-[32px] pb-3 space-y-4 overflow-visible">
           <div className="text-center pb-[16px]">
             <h1 className="text-xl md:text-2xl font-semibold text-brand-text-strong">
@@ -525,6 +618,7 @@ export default function HomeJobsView({ user, loading: userLoading, onOpenSetting
                     hasApplied
                     hasSaved={savedIds.has(job.id) || job.hasSaved}
                     onSave={handleJobSave}
+                    onSelect={handleSelectJob}
                   />
                 ))}
               </ul>
@@ -554,6 +648,7 @@ export default function HomeJobsView({ user, loading: userLoading, onOpenSetting
                     hasApplied={appliedIds.has(job.id) || job.hasApplied}
                     onSave={handleJobSave}
                     onMarkApplied={(j) => startApply(j, { openUrl: false })}
+                    onSelect={handleSelectJob}
                   />
                 ))}
               </ul>
@@ -600,11 +695,14 @@ export default function HomeJobsView({ user, loading: userLoading, onOpenSetting
                   hasSaved={savedIds.has(job.id) || job.hasSaved}
                   onMarkApplied={(j) => startApply(j, { openUrl: false })}
                   onSave={handleJobSave}
+                  onSelect={handleSelectJob}
                 />
               ))}
             </ul>
           )}
         </div>
+          </>
+        )}
       </section>
 
       <aside className="flex w-[336px] md:w-[396px] shrink-0 flex-col h-full min-h-0 border-l border-r border-brand-stroke-weak bg-brand-bg-white mr-[56px]">
@@ -693,36 +791,80 @@ export default function HomeJobsView({ user, loading: userLoading, onOpenSetting
           </div>
         </div>
 
-        {/* Filters */}
-        <div className="shrink-0 flex items-center justify-between px-4 py-3">
-          <h2 className="text-sm font-semibold text-brand-text-strong">Filters</h2>
-          <button
-            type="button"
-            onClick={handleClearAll}
-            className="text-xs font-medium text-brand hover:underline"
-          >
-            Clear all
-          </button>
-        </div>
-        <div className="flex-1 min-h-0 overflow-y-auto px-4 pb-4">
-          {filters.radiusKm && !hasHomeLocation && (
-            <p className="text-xs text-brand-text-weak mb-3">
-              Set your home location in Settings to filter by radius.
-            </p>
-          )}
-          <JobsFiltersPanel
-            filters={filters}
-            onChange={handleFiltersChange}
-            industryCategories={industryCategories}
-            roleOptions={roleOptions}
-            onIndustryChange={(cat) => {
-              if (!cat) setRoleOptions([]);
-            }}
-            showWorkMode={false}
-            showRadius={false}
-            layout="compact"
-          />
-        </div>
+        {selectedJob ? (
+          <>
+            <div className="shrink-0 flex items-center justify-between px-4 py-3 border-b border-brand-stroke-weak">
+              <h2 className="text-sm font-semibold text-brand-text-strong">
+                Similar jobs
+              </h2>
+            </div>
+            <div className="flex-1 min-h-0 overflow-y-auto">
+              {similarJobs.length === 0 ? (
+                <div className="flex min-h-[160px] items-center justify-center px-4">
+                  <p className="text-sm text-brand-text-weak text-center">
+                    No similar jobs right now
+                  </p>
+                </div>
+              ) : (
+                <ul className="w-full">
+                  {similarJobs.map((job) => (
+                    <JobListRow
+                      key={job.id}
+                      job={job}
+                      company={job.company}
+                      hasApplied={appliedIds.has(job.id) || job.hasApplied}
+                      hasSaved={savedIds.has(job.id) || job.hasSaved}
+                      onSelect={handleSelectJob}
+                      onSave={handleJobSave}
+                    />
+                  ))}
+                </ul>
+              )}
+            </div>
+          </>
+        ) : (
+          <>
+            {/* Filters */}
+            <div className="shrink-0 flex items-center justify-between px-4 py-3 border-b border-brand-stroke-weak">
+              <h2 className="text-sm font-semibold text-brand-text-strong">Filters</h2>
+            </div>
+            <div className="flex-1 min-h-0 overflow-y-auto px-4 py-4">
+              {filters.radiusKm && !hasHomeLocation && (
+                <p className="text-xs text-brand-text-weak mb-3">
+                  Set your home location in Settings to filter by radius.
+                </p>
+              )}
+              <JobsFiltersPanel
+                filters={draftFilters}
+                onChange={handleDraftFiltersChange}
+                industryCategories={industryCategories}
+                roleOptions={roleOptions}
+                onIndustryChange={(cat) => {
+                  if (!cat) setRoleOptions([]);
+                }}
+                showWorkMode={false}
+                showRadius={false}
+                layout="compact"
+              />
+            </div>
+            <div className="shrink-0 flex gap-2 border-t border-brand-stroke-weak px-4 py-4">
+              <button
+                type="button"
+                onClick={handleClearAll}
+                className="flex-1 px-4 py-2 rounded-md border border-brand-stroke-weak text-sm font-medium text-brand-text-strong hover:bg-brand-bg-fill"
+              >
+                Clear all
+              </button>
+              <button
+                type="button"
+                onClick={handleApplySidebarFilters}
+                className="flex-1 px-4 py-2 rounded-md bg-brand text-white text-sm font-medium hover:opacity-90"
+              >
+                Apply
+              </button>
+            </div>
+          </>
+        )}
       </aside>
       {confirmAppliedModal}
     </div>
