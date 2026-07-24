@@ -1,8 +1,6 @@
 "use client";
 
 import { useState, useEffect, useMemo, useCallback, useRef } from "react";
-import Image from "next/image";
-import { useRouter } from "next/navigation";
 import {
   MagnifyingGlass,
   User,
@@ -11,20 +9,23 @@ import {
   Briefcase,
 } from "@phosphor-icons/react";
 import JobListRow from "./JobListRow";
+import GigListRow from "./GigListRow";
 import JobDetailPanel from "./JobDetailPanel";
 import JobsFiltersPanel from "../Map/JobsFiltersPanel";
 import JobsFilterBar from "../Map/JobsFilterBar";
+import LocalityAutocomplete from "../Map/LocalityAutocomplete";
+import GigWorkerProfileModal from "../Map/GigWorkerProfileModal";
 import {
   SALARY_BANDS,
   buildJobsFeedQuery,
+  jobMatchesWorkMode,
+  gigMatchesSalaryBand,
 } from "../../../lib/jobMapFilters";
 import { filterByRadius } from "../../../lib/mapDistance";
 import { getAvatarUrlById } from "../../../lib/avatars";
-import { useUnreadNotificationCount } from "../../hooks/useUnreadNotificationCount";
 import { useConfirmApplied } from "../../hooks/useConfirmApplied";
 
 const TABS = [
-  { id: "recommended", label: "Recommended" },
   { id: "all", label: "All jobs" },
   { id: "saved", label: "Saved" },
   { id: "applied", label: "Applied" },
@@ -47,14 +48,38 @@ function salaryBandFromLabel(label) {
   return SALARY_BANDS.find((b) => b.label === label) || null;
 }
 
-export default function HomeJobsView({ user, loading: userLoading, onOpenSettings }) {
-  const router = useRouter();
-  const { count: notificationCount } = useUnreadNotificationCount();
-  const profileRef = useRef(null);
+function placeLabel(place) {
+  if (!place) return "";
+  if (place.localityName) {
+    return [place.localityName, place.district, place.state].filter(Boolean).join(", ");
+  }
+  return [place.name, place.district, place.state].filter(Boolean).join(", ");
+}
 
+function gigMatchesServiceType(gig, filterType) {
+  if (!filterType) return true;
+  const st = (gig.serviceType || "").toLowerCase();
+  const ft = filterType.toLowerCase();
+  return st === ft || st.includes(ft) || ft.includes(st);
+}
+
+export default function HomeJobsView({ user, loading: userLoading, onOpenSettings }) {
+  const profileRef = useRef(null);
+  const localityDropdownRef = useRef(null);
+
+  const [listMode, setListMode] = useState("jobs"); // "jobs" | "gigs"
   const [activeTab, setActiveTab] = useState("all");
   const [searchInput, setSearchInput] = useState("");
-  const [debouncedQ, setDebouncedQ] = useState("");
+  const [committedQ, setCommittedQ] = useState("");
+  const [selectedPlace, setSelectedPlace] = useState(null);
+  const [localities, setLocalities] = useState([]);
+  const [indiaSuggestions, setIndiaSuggestions] = useState([]);
+  const [indiaSuggestionsLoading, setIndiaSuggestionsLoading] = useState(false);
+  const [showLocationSuggestions, setShowLocationSuggestions] = useState(false);
+  const indiaSearchDebounceRef = useRef(null);
+  const indiaSearchAbortRef = useRef(null);
+  const indiaSearchCacheRef = useRef(new Map());
+
   const [filters, setFilters] = useState({ ...EMPTY_FILTERS });
   const [draftFilters, setDraftFilters] = useState({ ...EMPTY_FILTERS });
   const [industryCategories, setIndustryCategories] = useState([]);
@@ -62,6 +87,18 @@ export default function HomeJobsView({ user, loading: userLoading, onOpenSetting
   const [jobs, setJobs] = useState([]);
   const [jobsLoading, setJobsLoading] = useState(true);
   const [jobsError, setJobsError] = useState(null);
+  const [gigs, setGigs] = useState([]);
+  const [gigsLoading, setGigsLoading] = useState(false);
+  const [gigsError, setGigsError] = useState(null);
+  const [selectedGigType, setSelectedGigType] = useState(null);
+  const [selectedGigSalaryBand, setSelectedGigSalaryBand] = useState(null);
+  const [showGigFilterDropdown, setShowGigFilterDropdown] = useState(false);
+  const [showGigSalaryDropdown, setShowGigSalaryDropdown] = useState(false);
+  const gigFilterButtonRef = useRef(null);
+  const gigFilterDropdownRef = useRef(null);
+  const gigSalaryButtonRef = useRef(null);
+  const gigSalaryDropdownRef = useRef(null);
+  const [selectedGig, setSelectedGig] = useState(null);
   const [appliedJobs, setAppliedJobs] = useState([]);
   const [appliedLoading, setAppliedLoading] = useState(false);
   const [appliedIds, setAppliedIds] = useState(() => new Set());
@@ -79,9 +116,19 @@ export default function HomeJobsView({ user, loading: userLoading, onOpenSetting
   const selectedJobRef = useRef(null);
 
   const displayName = user?.name?.trim() || "there";
+  const isGigsMode = listMode === "gigs";
+
+  const commitSearch = useCallback(() => {
+    setSelectedPlace(null);
+    setCommittedQ(searchInput.trim());
+    setShowLocationSuggestions(false);
+    if (!isGigsMode) setActiveTab("all");
+  }, [searchInput, isGigsMode]);
 
   const handleFiltersChange = useCallback((next) => {
-    setFilters({ ...EMPTY_FILTERS, ...next });
+    const merged = { ...EMPTY_FILTERS, ...next };
+    setFilters(merged);
+    setDraftFilters(merged);
     setActiveTab("all");
   }, []);
 
@@ -92,6 +139,8 @@ export default function HomeJobsView({ user, loading: userLoading, onOpenSetting
   const closeOtherDropdowns = useCallback((except) => {
     if (except !== "workMode") setShowWorkModeDropdown(false);
     if (except !== "radius") setShowRadiusDropdown(false);
+    if (except !== "gig") setShowGigFilterDropdown(false);
+    if (except !== "gigSalary") setShowGigSalaryDropdown(false);
   }, []);
 
   const moreFiltersActive = Boolean(
@@ -105,15 +154,12 @@ export default function HomeJobsView({ user, loading: userLoading, onOpenSetting
   );
 
   useEffect(() => {
-    const t = setTimeout(() => setDebouncedQ(searchInput.trim()), 300);
-    return () => clearTimeout(t);
-  }, [searchInput]);
-
-  useEffect(() => {
-    if (!showWorkModeDropdown && !showRadiusDropdown) return;
+    if (!showWorkModeDropdown && !showRadiusDropdown && !showGigFilterDropdown && !showGigSalaryDropdown) return;
     const pairs = [
       [workModeDropdownRef, workModeButtonRef, setShowWorkModeDropdown],
       [radiusDropdownRef, radiusButtonRef, setShowRadiusDropdown],
+      [gigFilterDropdownRef, gigFilterButtonRef, setShowGigFilterDropdown],
+      [gigSalaryDropdownRef, gigSalaryButtonRef, setShowGigSalaryDropdown],
     ];
     const handleClickOutside = (event) => {
       pairs.forEach(([dropdownRef, buttonRef, setter]) => {
@@ -124,7 +170,75 @@ export default function HomeJobsView({ user, loading: userLoading, onOpenSetting
     };
     document.addEventListener("mousedown", handleClickOutside);
     return () => document.removeEventListener("mousedown", handleClickOutside);
-  }, [showWorkModeDropdown, showRadiusDropdown]);
+  }, [showWorkModeDropdown, showRadiusDropdown, showGigFilterDropdown, showGigSalaryDropdown]);
+
+  useEffect(() => {
+    fetch("/api/localities")
+      .then((r) => r.json())
+      .then((data) => {
+        const list = Array.isArray(data)
+          ? data
+          : Array.isArray(data?.localities)
+            ? data.localities
+            : [];
+        setLocalities(list);
+      })
+      .catch(() => setLocalities([]));
+  }, []);
+
+  useEffect(() => {
+    const q = searchInput?.trim() || "";
+    if (q.length < 2 || selectedPlace) {
+      setIndiaSuggestions([]);
+      setIndiaSuggestionsLoading(false);
+      return undefined;
+    }
+    if (indiaSearchDebounceRef.current) clearTimeout(indiaSearchDebounceRef.current);
+    setIndiaSuggestionsLoading(true);
+    indiaSearchDebounceRef.current = setTimeout(() => {
+      const cacheKey = q;
+      const cached = indiaSearchCacheRef.current.get(cacheKey);
+      if (cached) {
+        setIndiaSuggestions(cached);
+        setIndiaSuggestionsLoading(false);
+        return;
+      }
+      if (indiaSearchAbortRef.current) indiaSearchAbortRef.current.abort();
+      const controller = new AbortController();
+      indiaSearchAbortRef.current = controller;
+      fetch(`/api/india/search?q=${encodeURIComponent(q)}`, {
+        signal: controller.signal,
+        credentials: "same-origin",
+      })
+        .then((r) => r.json())
+        .then((data) => {
+          const results = Array.isArray(data?.suggestions)
+            ? data.suggestions
+            : Array.isArray(data?.results)
+              ? data.results
+              : Array.isArray(data)
+                ? data
+                : [];
+          const mapped = results.map((item) => ({
+            ...item,
+            listItemType: item.listItemType || "india_place",
+          }));
+          indiaSearchCacheRef.current.set(cacheKey, mapped);
+          if (indiaSearchCacheRef.current.size > 20) {
+            const firstKey = indiaSearchCacheRef.current.keys().next().value;
+            indiaSearchCacheRef.current.delete(firstKey);
+          }
+          setIndiaSuggestions(mapped);
+        })
+        .catch((err) => {
+          if (err?.name !== "AbortError") setIndiaSuggestions([]);
+        })
+        .finally(() => setIndiaSuggestionsLoading(false));
+    }, 150);
+    return () => {
+      if (indiaSearchDebounceRef.current) clearTimeout(indiaSearchDebounceRef.current);
+    };
+  }, [searchInput, selectedPlace]);
 
   useEffect(() => {
     fetch("/api/job-titles/categories", { credentials: "same-origin" })
@@ -182,7 +296,7 @@ export default function HomeJobsView({ user, loading: userLoading, onOpenSetting
           companyType: filters.companyType,
           postedWithin: filters.postedWithin,
         },
-        q: debouncedQ || undefined,
+        q: committedQ || undefined,
       });
       const res = await fetch(url, { credentials: "same-origin" });
       const data = await res.json().catch(() => ({}));
@@ -198,11 +312,40 @@ export default function HomeJobsView({ user, loading: userLoading, onOpenSetting
     } finally {
       setJobsLoading(false);
     }
-  }, [filters, debouncedQ]);
+  }, [filters, committedQ]);
 
   useEffect(() => {
     fetchJobs();
   }, [fetchJobs]);
+
+  const fetchGigs = useCallback(async () => {
+    setGigsLoading(true);
+    setGigsError(null);
+    try {
+      const params = new URLSearchParams();
+      if (selectedPlace?.state) params.set("state", selectedPlace.state);
+      if (selectedPlace?.district) params.set("district", selectedPlace.district);
+      const qs = params.toString();
+      const url = qs ? `/api/gigs?${qs}` : "/api/gigs";
+      const res = await fetch(url, { credentials: "same-origin" });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok || data?.success === false) {
+        setGigs([]);
+        setGigsError(data?.error || "Failed to load gigs");
+        return;
+      }
+      setGigs(Array.isArray(data.gigs) ? data.gigs : []);
+    } catch {
+      setGigs([]);
+      setGigsError("Failed to load gigs");
+    } finally {
+      setGigsLoading(false);
+    }
+  }, [selectedPlace?.state, selectedPlace?.district]);
+
+  useEffect(() => {
+    if (isGigsMode) fetchGigs();
+  }, [isGigsMode, fetchGigs]);
 
   const fetchAppliedJobs = useCallback(async () => {
     setAppliedLoading(true);
@@ -340,7 +483,23 @@ export default function HomeJobsView({ user, loading: userLoading, onOpenSetting
   }, [showProfileDropdown]);
 
   const filteredJobs = useMemo(() => {
-    if (!filters.radiusKm) return jobs;
+    let list = jobs;
+    if (filters.workMode) {
+      list = list.filter((j) => jobMatchesWorkMode(j, filters.workMode));
+    }
+    if (selectedPlace?.state || selectedPlace?.district) {
+      const state = (selectedPlace.state || "").toLowerCase();
+      const district = (selectedPlace.district || "").toLowerCase();
+      list = list.filter((j) => {
+        const cState = (j.company?.state || "").toLowerCase();
+        const cDistrict = (j.company?.district || "").toLowerCase();
+        if (district && cDistrict && cDistrict !== district) return false;
+        if (state && cState && cState !== state) return false;
+        if (district && !cDistrict && state && cState !== state) return false;
+        return true;
+      });
+    }
+    if (!filters.radiusKm) return list;
     const homeLat = user?.homeLatitude;
     const homeLon = user?.homeLongitude;
     if (
@@ -349,10 +508,10 @@ export default function HomeJobsView({ user, loading: userLoading, onOpenSetting
       !Number.isFinite(Number(homeLat)) ||
       !Number.isFinite(Number(homeLon))
     ) {
-      return jobs;
+      return list;
     }
     return filterByRadius(
-      jobs.map((j) => ({
+      list.map((j) => ({
         ...j,
         latitude: j.company?.latitude ?? j.company?.lat,
         longitude: j.company?.longitude ?? j.company?.lon,
@@ -361,7 +520,54 @@ export default function HomeJobsView({ user, loading: userLoading, onOpenSetting
       Number(homeLon),
       filters.radiusKm
     );
-  }, [jobs, filters.radiusKm, user?.homeLatitude, user?.homeLongitude]);
+  }, [
+    jobs,
+    filters.workMode,
+    filters.radiusKm,
+    selectedPlace,
+    user?.homeLatitude,
+    user?.homeLongitude,
+  ]);
+
+  const filteredGigs = useMemo(() => {
+    let list = gigs;
+    if (selectedGigType) {
+      list = list.filter((g) => gigMatchesServiceType(g, selectedGigType));
+    }
+    if (selectedGigSalaryBand) {
+      list = list.filter((g) => gigMatchesSalaryBand(g, selectedGigSalaryBand));
+    }
+    if (committedQ && isGigsMode) {
+      const q = committedQ.toLowerCase();
+      list = list.filter((g) => {
+        const title = (g.title || "").toLowerCase();
+        const service = (g.serviceType || "").toLowerCase();
+        const name = (g.user?.name || "").toLowerCase();
+        return title.includes(q) || service.includes(q) || name.includes(q);
+      });
+    }
+    if (!filters.radiusKm) return list;
+    const homeLat = user?.homeLatitude;
+    const homeLon = user?.homeLongitude;
+    if (
+      homeLat == null ||
+      homeLon == null ||
+      !Number.isFinite(Number(homeLat)) ||
+      !Number.isFinite(Number(homeLon))
+    ) {
+      return list;
+    }
+    return filterByRadius(list, Number(homeLat), Number(homeLon), filters.radiusKm);
+  }, [
+    gigs,
+    selectedGigType,
+    selectedGigSalaryBand,
+    committedQ,
+    isGigsMode,
+    filters.radiusKm,
+    user?.homeLatitude,
+    user?.homeLongitude,
+  ]);
 
   const similarJobs = useMemo(() => {
     if (!selectedJob) return [];
@@ -384,7 +590,6 @@ export default function HomeJobsView({ user, loading: userLoading, onOpenSetting
     Number.isFinite(Number(user.homeLongitude));
 
   const tabCounts = {
-    recommended: 0,
     all: filteredJobs.length,
     saved: savedJobs.length,
     applied: appliedJobs.length,
@@ -394,22 +599,25 @@ export default function HomeJobsView({ user, loading: userLoading, onOpenSetting
     setFilters({ ...EMPTY_FILTERS });
     setDraftFilters({ ...EMPTY_FILTERS });
     setRoleOptions([]);
+    setSelectedGigType(null);
+    setSelectedGigSalaryBand(null);
+    setSelectedPlace(null);
+    setCommittedQ("");
+    setSearchInput("");
     setActiveTab("all");
   };
 
+  const handleSelectPlace = useCallback((place) => {
+    setSelectedPlace(place);
+    setSearchInput(placeLabel(place));
+    setCommittedQ("");
+    setShowLocationSuggestions(false);
+    setIndiaSuggestions([]);
+    if (!isGigsMode) setActiveTab("all");
+  }, [isGigsMode]);
+
   const handleApplySidebarFilters = () => {
-    setFilters((prev) => ({
-      ...EMPTY_FILTERS,
-      workMode: prev.workMode,
-      radiusKm: prev.radiusKm,
-      employmentType: draftFilters.employmentType || null,
-      industryType: draftFilters.industryType || null,
-      role: draftFilters.role || null,
-      salaryBand: draftFilters.salaryBand || null,
-      experience: draftFilters.experience || null,
-      companyType: draftFilters.companyType || null,
-      postedWithin: draftFilters.postedWithin || null,
-    }));
+    setFilters({ ...EMPTY_FILTERS, ...draftFilters });
     setActiveTab("all");
   };
 
@@ -430,7 +638,6 @@ export default function HomeJobsView({ user, loading: userLoading, onOpenSetting
       : null;
 
   const emptyCopy = {
-    recommended: "No recommended jobs yet",
     saved: "No saved jobs yet",
     applied: "No applied jobs yet",
   };
@@ -458,7 +665,9 @@ export default function HomeJobsView({ user, loading: userLoading, onOpenSetting
               {userLoading ? "Welcome…" : `Welcome, ${displayName}`}
             </h1>
             <p className="text-sm text-brand-text-weak mt-0.5">
-              Find jobs near you that match your interests
+              {isGigsMode
+                ? "Find gigs near you that match your skills"
+                : "Find jobs near you that match your interests"}
             </p>
           </div>
 
@@ -468,18 +677,35 @@ export default function HomeJobsView({ user, loading: userLoading, onOpenSetting
                 <div className="flex rounded-full border border-brand-stroke-border overflow-hidden shrink-0">
                   <button
                     type="button"
-                    onClick={() => router.push("/jobs-near-you")}
-                    className="flex items-center gap-1.5 px-3 py-2 border-0 bg-transparent text-brand-text-weak hover:bg-brand-bg-fill transition-colors !rounded-l-md !rounded-r-none"
+                    onClick={() => {
+                      setListMode("gigs");
+                      setSelectedJob(null);
+                      selectedJobRef.current = null;
+                    }}
+                    className={`flex items-center gap-1.5 px-3 py-2 border-0 transition-colors !rounded-l-md !rounded-r-none ${
+                      isGigsMode
+                        ? "bg-brand/15 text-brand"
+                        : "bg-transparent text-brand-text-weak hover:bg-brand-bg-fill"
+                    }`}
                     title="Gigs"
+                    aria-current={isGigsMode ? "page" : undefined}
                   >
                     <User size={18} className="shrink-0" />
                     <span className="text-sm font-medium">Gigs</span>
                   </button>
                   <button
                     type="button"
-                    className="flex items-center gap-1.5 px-3 py-2 border-0 bg-brand/15 text-brand transition-colors !rounded-r-md !rounded-l-none"
+                    onClick={() => {
+                      setListMode("jobs");
+                      setSelectedGig(null);
+                    }}
+                    className={`flex items-center gap-1.5 px-3 py-2 border-0 transition-colors !rounded-r-md !rounded-l-none ${
+                      !isGigsMode
+                        ? "bg-brand/15 text-brand"
+                        : "bg-transparent text-brand-text-weak hover:bg-brand-bg-fill"
+                    }`}
                     title="Jobs"
-                    aria-current="page"
+                    aria-current={!isGigsMode ? "page" : undefined}
                   >
                     <Briefcase size={18} className="shrink-0" />
                     <span className="text-sm font-medium">Jobs</span>
@@ -487,80 +713,172 @@ export default function HomeJobsView({ user, loading: userLoading, onOpenSetting
                 </div>
               )}
               <div className="relative flex-1 min-w-0">
-                <MagnifyingGlass
-                  size={20}
-                  className="absolute left-2.5 top-1/2 -translate-y-1/2 text-brand-stroke-strong pointer-events-none"
-                />
+                <button
+                  type="button"
+                  onClick={commitSearch}
+                  className="absolute left-2.5 top-1/2 -translate-y-1/2 z-10 text-brand-stroke-strong hover:text-brand transition-colors"
+                  aria-label="Search"
+                >
+                  <MagnifyingGlass size={20} />
+                </button>
                 <input
                   type="search"
                   value={searchInput}
                   onChange={(e) => {
                     setSearchInput(e.target.value);
-                    setActiveTab("all");
+                    setSelectedPlace(null);
+                    setShowLocationSuggestions(true);
                   }}
-                  placeholder="Jobs near you"
+                  onFocus={() => setShowLocationSuggestions(true)}
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter") {
+                      e.preventDefault();
+                      commitSearch();
+                    }
+                    if (e.key === "Escape") {
+                      setShowLocationSuggestions(false);
+                    }
+                  }}
+                  placeholder={isGigsMode ? "Search gigs or location" : "Search jobs or location"}
                   className="w-full rounded-xl border-0 bg-transparent py-2 pl-9 pr-3 text-sm font-semibold text-brand-text-strong placeholder:text-brand-text-placeholder focus:outline-none focus:ring-0"
-                  aria-label="Search jobs"
+                  aria-label={isGigsMode ? "Search gigs" : "Search jobs"}
                   style={{ fontFamily: "Open Sans" }}
+                  autoComplete="off"
+                />
+                <LocalityAutocomplete
+                  isOpen={
+                    showLocationSuggestions &&
+                    searchInput.trim().length >= 2 &&
+                    !selectedPlace
+                  }
+                  onClose={() => setShowLocationSuggestions(false)}
+                  dropdownRef={localityDropdownRef}
+                  position={{
+                    top: "100%",
+                    bottom: "auto",
+                    left: "0",
+                    right: "auto",
+                    marginTop: "8px",
+                  }}
+                  width="100%"
+                  localities={localities}
+                  indiaSuggestions={indiaSuggestions}
+                  indiaSuggestionsLoading={indiaSuggestionsLoading}
+                  onSelect={handleSelectPlace}
+                  searchQuery={searchInput}
                 />
               </div>
               <div className="flex items-center gap-2 shrink-0 overflow-visible">
-                <JobsFilterBar
-                  searchModeForUI="company"
-                  accountTypeForUI={user?.accountType || "Individual"}
-                  userAccountType={user?.accountType || null}
-                  gigs={[]}
-                  selectedGigType={null}
-                  onSelectGigType={() => {}}
-                  showGigFilterDropdown={false}
-                  setShowGigFilterDropdown={() => {}}
-                  gigFilterButtonRef={{ current: null }}
-                  gigFilterDropdownRef={{ current: null }}
-                  selectedGigSalaryBand={null}
-                  onSelectGigSalaryBand={() => {}}
-                  showGigSalaryDropdown={false}
-                  setShowGigSalaryDropdown={() => {}}
-                  gigSalaryButtonRef={{ current: null }}
-                  gigSalaryDropdownRef={{ current: null }}
-                  selectedRadiusKm={filters.radiusKm}
-                  onSelectRadiusKm={(km) => {
-                    handleFiltersChange({ ...filters, radiusKm: km });
-                  }}
-                  showRadiusDropdown={showRadiusDropdown}
-                  setShowRadiusDropdown={setShowRadiusDropdown}
-                  radiusButtonRef={radiusButtonRef}
-                  radiusDropdownRef={radiusDropdownRef}
-                  selectedWorkMode={filters.workMode}
-                  onSelectWorkMode={(mode) => {
-                    handleFiltersChange({ ...filters, workMode: mode });
-                  }}
-                  showWorkModeDropdown={showWorkModeDropdown}
-                  setShowWorkModeDropdown={setShowWorkModeDropdown}
-                  workModeButtonRef={workModeButtonRef}
-                  workModeDropdownRef={workModeDropdownRef}
-                  onOpenMoreFilters={() => {}}
-                  moreFiltersActive={moreFiltersActive}
-                  candidateYearsOptions={[]}
-                  selectedYearsExperience={null}
-                  onSelectYearsExperience={() => {}}
-                  showYearsFilterDropdown={false}
-                  setShowYearsFilterDropdown={() => {}}
-                  yearsFilterButtonRef={{ current: null }}
-                  yearsFilterDropdownRef={{ current: null }}
-                  candidateToolStackOptions={[]}
-                  selectedToolStack={null}
-                  onSelectToolStack={() => {}}
-                  showToolStackFilterDropdown={false}
-                  setShowToolStackFilterDropdown={() => {}}
-                  toolStackFilterButtonRef={{ current: null }}
-                  toolStackFilterDropdownRef={{ current: null }}
-                  closeOtherDropdowns={closeOtherDropdowns}
-                  hideMoreFilters
-                />
+                {isGigsMode ? (
+                  <JobsFilterBar
+                    searchModeForUI="person"
+                    accountTypeForUI={user?.accountType || "Individual"}
+                    userAccountType={user?.accountType || null}
+                    gigs={gigs}
+                    selectedGigType={selectedGigType}
+                    onSelectGigType={setSelectedGigType}
+                    showGigFilterDropdown={showGigFilterDropdown}
+                    setShowGigFilterDropdown={setShowGigFilterDropdown}
+                    gigFilterButtonRef={gigFilterButtonRef}
+                    gigFilterDropdownRef={gigFilterDropdownRef}
+                    selectedGigSalaryBand={selectedGigSalaryBand}
+                    onSelectGigSalaryBand={setSelectedGigSalaryBand}
+                    showGigSalaryDropdown={showGigSalaryDropdown}
+                    setShowGigSalaryDropdown={setShowGigSalaryDropdown}
+                    gigSalaryButtonRef={gigSalaryButtonRef}
+                    gigSalaryDropdownRef={gigSalaryDropdownRef}
+                    selectedRadiusKm={filters.radiusKm}
+                    onSelectRadiusKm={(km) => {
+                      handleFiltersChange({ ...filters, radiusKm: km });
+                    }}
+                    showRadiusDropdown={showRadiusDropdown}
+                    setShowRadiusDropdown={setShowRadiusDropdown}
+                    radiusButtonRef={radiusButtonRef}
+                    radiusDropdownRef={radiusDropdownRef}
+                    selectedWorkMode={null}
+                    onSelectWorkMode={() => {}}
+                    showWorkModeDropdown={false}
+                    setShowWorkModeDropdown={() => {}}
+                    workModeButtonRef={workModeButtonRef}
+                    workModeDropdownRef={workModeDropdownRef}
+                    onOpenMoreFilters={() => {}}
+                    moreFiltersActive={false}
+                    candidateYearsOptions={[]}
+                    selectedYearsExperience={null}
+                    onSelectYearsExperience={() => {}}
+                    showYearsFilterDropdown={false}
+                    setShowYearsFilterDropdown={() => {}}
+                    yearsFilterButtonRef={{ current: null }}
+                    yearsFilterDropdownRef={{ current: null }}
+                    candidateToolStackOptions={[]}
+                    selectedToolStack={null}
+                    onSelectToolStack={() => {}}
+                    showToolStackFilterDropdown={false}
+                    setShowToolStackFilterDropdown={() => {}}
+                    toolStackFilterButtonRef={{ current: null }}
+                    toolStackFilterDropdownRef={{ current: null }}
+                    closeOtherDropdowns={closeOtherDropdowns}
+                    hideMoreFilters
+                  />
+                ) : (
+                  <JobsFilterBar
+                    searchModeForUI="company"
+                    accountTypeForUI={user?.accountType || "Individual"}
+                    userAccountType={user?.accountType || null}
+                    gigs={[]}
+                    selectedGigType={null}
+                    onSelectGigType={() => {}}
+                    showGigFilterDropdown={false}
+                    setShowGigFilterDropdown={() => {}}
+                    gigFilterButtonRef={{ current: null }}
+                    gigFilterDropdownRef={{ current: null }}
+                    selectedGigSalaryBand={null}
+                    onSelectGigSalaryBand={() => {}}
+                    showGigSalaryDropdown={false}
+                    setShowGigSalaryDropdown={() => {}}
+                    gigSalaryButtonRef={{ current: null }}
+                    gigSalaryDropdownRef={{ current: null }}
+                    selectedRadiusKm={filters.radiusKm}
+                    onSelectRadiusKm={(km) => {
+                      handleFiltersChange({ ...filters, radiusKm: km });
+                    }}
+                    showRadiusDropdown={showRadiusDropdown}
+                    setShowRadiusDropdown={setShowRadiusDropdown}
+                    radiusButtonRef={radiusButtonRef}
+                    radiusDropdownRef={radiusDropdownRef}
+                    selectedWorkMode={filters.workMode}
+                    onSelectWorkMode={(mode) => {
+                      handleFiltersChange({ ...filters, workMode: mode });
+                    }}
+                    showWorkModeDropdown={showWorkModeDropdown}
+                    setShowWorkModeDropdown={setShowWorkModeDropdown}
+                    workModeButtonRef={workModeButtonRef}
+                    workModeDropdownRef={workModeDropdownRef}
+                    onOpenMoreFilters={() => {}}
+                    moreFiltersActive={moreFiltersActive}
+                    candidateYearsOptions={[]}
+                    selectedYearsExperience={null}
+                    onSelectYearsExperience={() => {}}
+                    showYearsFilterDropdown={false}
+                    setShowYearsFilterDropdown={() => {}}
+                    yearsFilterButtonRef={{ current: null }}
+                    yearsFilterDropdownRef={{ current: null }}
+                    candidateToolStackOptions={[]}
+                    selectedToolStack={null}
+                    onSelectToolStack={() => {}}
+                    showToolStackFilterDropdown={false}
+                    setShowToolStackFilterDropdown={() => {}}
+                    toolStackFilterButtonRef={{ current: null }}
+                    toolStackFilterDropdownRef={{ current: null }}
+                    closeOtherDropdowns={closeOtherDropdowns}
+                    hideMoreFilters
+                  />
+                )}
               </div>
             </div>
           </div>
 
+          {!isGigsMode && (
           <div className="flex gap-1 overflow-x-auto pt-[24px]" role="tablist">
             {TABS.map((tab) => {
               const isActive = activeTab === tab.id;
@@ -590,11 +908,60 @@ export default function HomeJobsView({ user, loading: userLoading, onOpenSetting
               );
             })}
           </div>
+          )}
+          {isGigsMode && (
+            <div className="pt-[24px]">
+              <p className="text-sm font-medium text-brand-text-strong">
+                All gigs
+                <span className="ml-1.5 tabular-nums text-brand-text-placeholder">
+                  {filteredGigs.length}
+                </span>
+              </p>
+            </div>
+          )}
           <div className="border-b border-brand-stroke-weak" />
         </div>
 
         <div className="flex-1 min-h-0 overflow-y-auto px-[200px]">
-          {activeTab === "applied" ? (
+          {isGigsMode ? (
+            gigsLoading ? (
+              <ul className="divide-y divide-brand-stroke-weak">
+                {[1, 2, 3, 4, 5].map((i) => (
+                  <li key={i} className="py-3.5">
+                    <div className="h-4 w-2/3 rounded bg-brand-bg-fill animate-pulse" />
+                    <div className="mt-2 h-3 w-1/3 rounded bg-brand-bg-fill animate-pulse" />
+                  </li>
+                ))}
+              </ul>
+            ) : gigsError ? (
+              <div className="flex h-full min-h-[200px] flex-col items-center justify-center gap-2">
+                <p className="text-sm text-brand-text-weak">{gigsError}</p>
+                <button
+                  type="button"
+                  onClick={fetchGigs}
+                  className="text-sm text-brand underline"
+                >
+                  Try again
+                </button>
+              </div>
+            ) : filteredGigs.length === 0 ? (
+              <div className="flex h-full min-h-[200px] items-center justify-center">
+                <p className="text-sm text-brand-text-weak">
+                  No gigs match your filters
+                </p>
+              </div>
+            ) : (
+              <ul className="w-full">
+                {filteredGigs.map((gig) => (
+                  <GigListRow
+                    key={gig.id}
+                    gig={gig}
+                    onSelect={setSelectedGig}
+                  />
+                ))}
+              </ul>
+            )
+          ) : activeTab === "applied" ? (
             appliedLoading ? (
               <ul className="divide-y divide-brand-stroke-weak">
                 {[1, 2, 3].map((i) => (
@@ -706,32 +1073,7 @@ export default function HomeJobsView({ user, loading: userLoading, onOpenSetting
       </section>
 
       <aside className="flex w-[336px] md:w-[396px] shrink-0 flex-col h-full min-h-0 border-l border-r border-brand-stroke-weak bg-brand-bg-white mr-[56px]">
-        {/* Notif next to round profile (right-aligned), smaller, no border */}
         <div className="shrink-0 flex items-center justify-end gap-1.5 px-4 py-3 border-b border-brand-stroke-weak">
-          <button
-            type="button"
-            onClick={() => router.push("/notifications")}
-            className="relative h-9 w-9 flex items-center justify-center rounded-full bg-transparent hover:bg-brand-bg-fill transition-colors"
-            aria-label="Notifications"
-          >
-            <Image
-              src="/icons/sidebar/notifications.png"
-              alt=""
-              width={22}
-              height={22}
-              className="h-[22px] w-[22px] object-contain"
-              unoptimized
-            />
-            {notificationCount > 0 && (
-              <span
-                className="absolute -top-0.5 -right-0.5 bg-brand text-white text-xs font-bold rounded-full min-w-[16px] h-4 flex items-center justify-center px-0.5"
-                style={{ fontSize: "9px" }}
-              >
-                {notificationCount > 99 ? "99+" : notificationCount}
-              </span>
-            )}
-          </button>
-
           <div className="relative" ref={profileRef}>
             <button
               type="button"
@@ -867,6 +1209,11 @@ export default function HomeJobsView({ user, loading: userLoading, onOpenSetting
         )}
       </aside>
       {confirmAppliedModal}
+      <GigWorkerProfileModal
+        isOpen={Boolean(selectedGig)}
+        onClose={() => setSelectedGig(null)}
+        gig={selectedGig}
+      />
     </div>
   );
 }

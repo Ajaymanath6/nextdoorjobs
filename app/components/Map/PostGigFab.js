@@ -12,7 +12,7 @@ export default function PostGigFab({ accountType }) {
     <button
       type="button"
       onClick={() => router.push(route)}
-      className="fixed right-8 bottom-8 z-[1500] flex items-center gap-2 rounded-full border border-brand-stroke-weak bg-white px-4 py-2.5 shadow-md transition-all hover:bg-brand-bg-fill hover:shadow-lg active:scale-[0.98]"
+      className="fixed right-8 bottom-16 z-[1500] flex items-center gap-2 rounded-full border border-brand-stroke-weak bg-white px-4 py-2.5 shadow-md transition-all hover:bg-brand-bg-fill hover:shadow-lg active:scale-[0.98]"
       aria-label={label}
       title={label}
       style={{ fontFamily: "Open Sans, sans-serif" }}

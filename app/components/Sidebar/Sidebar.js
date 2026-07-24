@@ -1,18 +1,17 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { useRouter } from "next/navigation";
+import { useRouter, usePathname } from "next/navigation";
 import Image from "next/image";
 import themeClasses from "../../theme-utility-classes.json";
 import { TaskAdd } from "@carbon/icons-react";
-import { Layout } from "@phosphor-icons/react";
+import { Layout, CircleNotch } from "@phosphor-icons/react";
 import Tooltip from "../Tooltip";
 
 const SIDEBAR_ICONS = {
   home: "/icons/sidebar/home.png",
   map: "/icons/sidebar/map.png",
   settings: "/icons/sidebar/settings.png",
-  speaker: "/icons/sidebar/speaker.png",
   myJobs: "/icons/sidebar/my-jobs.png",
 };
 
@@ -48,10 +47,13 @@ export default function Sidebar({
   effectiveUser = null,
   effectiveUserLoading = true,
   onRequestGig,
+  onNavigatingChange,
 }) {
   const router = useRouter();
+  const pathname = usePathname();
   const [isOpen, setIsOpen] = useState(externalIsOpen !== undefined ? externalIsOpen : true);
   const [accountTypeFromAuth, setAccountTypeFromAuth] = useState(null);
+  const [pendingNavId, setPendingNavId] = useState(null);
 
   const sidebar = themeClasses.components.sidebar;
 
@@ -72,6 +74,21 @@ export default function Sidebar({
       })
       .catch(() => {});
   }, [effectiveUser]);
+
+  useEffect(() => {
+    if (!pendingNavId) return;
+    setPendingNavId(null);
+    onNavigatingChange?.(false);
+  }, [pathname]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  useEffect(() => {
+    if (!pendingNavId) return undefined;
+    const timeoutId = setTimeout(() => {
+      setPendingNavId(null);
+      onNavigatingChange?.(false);
+    }, 8000);
+    return () => clearTimeout(timeoutId);
+  }, [pendingNavId, onNavigatingChange]);
 
   const handleToggle = () => {
     const newState = !isOpen;
@@ -121,12 +138,18 @@ export default function Sidebar({
       onOpenSettingsWithSection(item.openSettingsSection);
       return;
     }
+    if (item.route === pathname) {
+      return;
+    }
+    setPendingNavId(item.id);
+    onNavigatingChange?.(true);
     router.push(item.route);
   };
 
   const renderNavButton = (item, options = {}) => {
     const { bottom = false } = options;
     const isActive = activeItem === item.id;
+    const isPending = pendingNavId === item.id;
     const enabledIdsProdForCompany = [
       "home",
       "jobs-near-you",
@@ -155,23 +178,30 @@ export default function Sidebar({
       >
         <button
           onClick={() => !isDisabled && handleNavigation(item)}
-          disabled={isDisabled}
+          disabled={isDisabled || Boolean(pendingNavId)}
           aria-label={item.label}
           aria-current={isActive ? "page" : undefined}
+          aria-busy={isPending || undefined}
           className={`${sidebar["nav-button"]} w-full ${
             isOpen ? sidebar["nav-button-expanded"] : sidebar["nav-button-collapsed"]
-          } ${isActive ? sidebar["nav-button-active"] : sidebar["nav-button-hover"]} ${
+          } ${isActive || isPending ? sidebar["nav-button-active"] : sidebar["nav-button-hover"]} ${
             isDisabled ? "opacity-50 cursor-not-allowed" : ""
           }`}
         >
-          {isActive && (
+          {(isActive || isPending) && (
             <span
               className="absolute left-0 top-1/2 -translate-y-1/2 w-1 h-8 bg-brand rounded-r-sm"
               aria-hidden
             />
           )}
           <div className={`${sidebar["nav-icon-container"]} relative`}>
-            <SidebarNavIcon item={item} />
+            {isPending ? (
+              <span className="w-6 h-6 flex items-center justify-center shrink-0">
+                <CircleNotch size={20} className="animate-spin text-brand" />
+              </span>
+            ) : (
+              <SidebarNavIcon item={item} />
+            )}
           </div>
           {isOpen && <span className={`${sidebar["nav-text"]} min-w-0 truncate`}>{item.label}</span>}
         </button>
@@ -231,18 +261,6 @@ export default function Sidebar({
           ))}
         </ul>
       </nav>
-
-      <div className="shrink-0 p-2 pt-1 pb-1">
-        {renderNavButton(
-          {
-            id: "whats-new",
-            label: "What's New",
-            iconSrc: SIDEBAR_ICONS.speaker,
-            route: "/roadmap",
-          },
-          { bottom: true, disabled: !isDev }
-        )}
-      </div>
     </aside>
   );
 }

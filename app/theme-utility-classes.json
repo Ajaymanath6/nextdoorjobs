@@ -132,7 +132,7 @@
       }
     },
     "filterDropdown": {
-      "container": "absolute bg-brand-bg-white rounded-lg border border-brand-stroke-border z-[200] flex flex-col",
+      "container": "absolute bg-brand-bg-white rounded-lg border border-brand-stroke-border z-[5000] flex flex-col",
       "container-padding": "p-2",
       "container-gap": "gap-2",
       "container-shadow": "shadow-[0px_10px_10px_-5px_rgba(0,0,0,0.04),0px_20px_25px_-5px_rgba(0,0,0,0.1)]",

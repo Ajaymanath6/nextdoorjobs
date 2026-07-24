@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import Sidebar from "./Sidebar/Sidebar";
 import SettingsModal from "./SettingsModal";
 import RequestGigModal from "./RequestGigModal";
@@ -18,6 +18,11 @@ export default function AppShell({
   const [effectiveUser, setEffectiveUser] = useState(null);
   const [effectiveUserLoading, setEffectiveUserLoading] = useState(true);
   const [isAdminViewAs, setIsAdminViewAs] = useState(false);
+  const [isNavigating, setIsNavigating] = useState(false);
+
+  const handleNavigatingChange = useCallback((navigating) => {
+    setIsNavigating(Boolean(navigating));
+  }, []);
 
   const resolvedViewMode = viewMode ?? internalViewMode;
   const setViewMode = onViewModeChange ?? setInternalViewMode;
@@ -97,14 +102,27 @@ export default function AppShell({
             effectiveUser={effectiveUser}
             effectiveUserLoading={effectiveUserLoading}
             onRequestGig={() => setShowRequestGigModal(true)}
+            onNavigatingChange={handleNavigatingChange}
           />
         </div>
 
-        <div className={`flex-1 min-h-0 min-w-0 mr-4 mb-4 rounded-[16px] relative ${
+        <div className={`flex-1 min-h-0 min-w-0 mr-4 mb-4 relative ${
           activeItem === "home"
-            ? "mt-0 overflow-visible"
-            : "mt-4 md:mt-8 overflow-hidden"
+            ? "mt-0 overflow-visible rounded-[16px]"
+            : activeItem === "jobs-near-you"
+              ? "mt-0 overflow-hidden"
+              : "mt-4 md:mt-8 overflow-hidden rounded-[16px]"
         }`}>
+          {isNavigating && (
+            <div
+              className="pointer-events-none absolute inset-x-0 top-0 z-50 h-0.5 overflow-hidden rounded-t-[16px]"
+              role="progressbar"
+              aria-label="Loading page"
+              aria-busy="true"
+            >
+              <div className="h-full w-1/3 bg-brand animate-[navProgress_1.1s_ease-in-out_infinite]" />
+            </div>
+          )}
           {typeof children === "function"
             ? children({
                 effectiveUser,

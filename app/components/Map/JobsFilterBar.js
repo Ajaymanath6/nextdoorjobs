@@ -9,13 +9,17 @@ import {
   GIG_SALARY_BANDS,
 } from "../../../lib/jobMapFilters";
 
-function FilterPill({ buttonRef, label, onClick, ariaLabel }) {
+function FilterPill({ buttonRef, label, onClick, ariaLabel, active = false }) {
   return (
     <button
       ref={buttonRef}
       type="button"
       onClick={onClick}
-      className="flex items-center gap-1.5 border rounded-full text-sm font-medium transition-colors shrink-0 bg-brand-bg-white border-brand-stroke-weak text-brand-text-strong hover:bg-brand-bg-fill cursor-pointer"
+      className={`flex items-center gap-1.5 border rounded-full text-sm font-medium transition-colors shrink-0 hover:bg-brand-bg-fill cursor-pointer ${
+        active
+          ? "border-brand bg-brand/10 text-brand"
+          : "bg-brand-bg-white border-brand-stroke-weak text-brand-text-strong"
+      }`}
       style={{ fontFamily: "Open Sans", padding: "8px" }}
       aria-label={ariaLabel}
       title={label}
@@ -109,10 +113,11 @@ export default function JobsFilterBar({
         </div>
         {accountTypeForUI === "Individual" && (
           <>
-            <div className="relative shrink-0">
+            <div className="relative shrink-0 z-[5001]">
               <FilterPill
                 buttonRef={radiusButtonRef}
                 label={radiusLabel}
+                active={selectedRadiusKm != null}
                 onClick={() => {
                   closeOtherDropdowns("radius");
                   setShowRadiusDropdown(!showRadiusDropdown);
@@ -134,8 +139,12 @@ export default function JobsFilterBar({
                     : null
                 }
                 onSelect={(label) => {
+                  if (label == null) {
+                    onSelectRadiusKm?.(null);
+                    return;
+                  }
                   const opt = RADIUS_OPTIONS.find((r) => r.label === label);
-                  onSelectRadiusKm(opt ? opt.value : null);
+                  onSelectRadiusKm?.(opt ? opt.value : null);
                 }}
                 searchPlaceholder=""
                 emptyMessage=""
@@ -229,10 +238,11 @@ export default function JobsFilterBar({
   // Jobs mode: keep bar short — Work Mode, Radius, More Filters
   return (
     <>
-      <div className="relative shrink-0">
+      <div className="relative shrink-0 z-[5001]">
         <FilterPill
           buttonRef={workModeButtonRef}
           label={workModeLabel}
+          active={Boolean(selectedWorkMode)}
           onClick={() => {
             closeOtherDropdowns("workMode");
             setShowWorkModeDropdown(!showWorkModeDropdown);
@@ -249,15 +259,18 @@ export default function JobsFilterBar({
           allOptionLabel="All"
           options={WORK_MODE_OPTIONS.map((o) => o.label)}
           selectedValue={selectedWorkMode}
-          onSelect={onSelectWorkMode}
+          onSelect={(mode) => {
+            onSelectWorkMode?.(mode);
+          }}
           searchPlaceholder=""
           emptyMessage=""
         />
       </div>
-      <div className="relative shrink-0">
+      <div className="relative shrink-0 z-[5001]">
         <FilterPill
           buttonRef={radiusButtonRef}
           label={radiusLabel}
+          active={selectedRadiusKm != null}
           onClick={() => {
             closeOtherDropdowns("radius");
             setShowRadiusDropdown(!showRadiusDropdown);
@@ -279,8 +292,12 @@ export default function JobsFilterBar({
               : null
           }
           onSelect={(label) => {
+            if (label == null) {
+              onSelectRadiusKm?.(null);
+              return;
+            }
             const opt = RADIUS_OPTIONS.find((r) => r.label === label);
-            onSelectRadiusKm(opt ? opt.value : null);
+            onSelectRadiusKm?.(opt ? opt.value : null);
           }}
           searchPlaceholder=""
           emptyMessage=""

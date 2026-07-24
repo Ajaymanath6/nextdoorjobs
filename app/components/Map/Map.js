@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import dynamic from "next/dynamic";
 import { useRouter } from "next/navigation";
@@ -43,10 +43,12 @@ import CompanyJobsSidebar from "../CompanyJobsSidebar";
 import LoadingSpinner from "../LoadingSpinner";
 import JobsFilterBar from "./JobsFilterBar";
 import JobsMoreFiltersDrawer from "./JobsMoreFiltersDrawer";
-import { filterByRadius, getRadiusAnchor } from "../../../lib/mapDistance";
+import { filterByRadius, getRadiusAnchor, fitMapToRadiusKm } from "../../../lib/mapDistance";
 import {
   buildCompaniesQuery,
+  buildCompanyJobsQuery,
   SALARY_BANDS,
+  RADIUS_OPTIONS,
   gigMatchesSalaryBand,
 } from "../../../lib/jobMapFilters";
 import { getStateCenter } from "../../../lib/indiaStateCenters";
@@ -105,6 +107,7 @@ const MapComponent = ({ onOpenSettings, onViewModeChange, effectiveUser = null, 
   const [locationError, setLocationError] = useState(null);
   const [showEmptyState, setShowEmptyState] = useState(false);
   const [emptyStateQuery, setEmptyStateQuery] = useState("");
+  const [emptyStateTitle, setEmptyStateTitle] = useState(null);
   const autocompleteRef = useRef(null);
   const jobAutocompleteRef = useRef(null);
   const collegeAutocompleteRef = useRef(null);
@@ -162,6 +165,7 @@ const MapComponent = ({ onOpenSettings, onViewModeChange, effectiveUser = null, 
   // Search bar mode toggle: "person" (Candidates/Gigs) | "company" (Jobs).
   // For Individual: default to Jobs view; Gigs toggle enabled.
   const [searchMode, setSearchMode] = useState("company");
+  const [isDesktopFilterBar, setIsDesktopFilterBar] = useState(true);
   const HIDE_CANDIDATES_COMPANIES_TOGGLE = false;
   // Last district/state from locality search (e.g. for gig workers fetch)
   const [lastSearchedDistrict, setLastSearchedDistrict] = useState(null);
@@ -192,6 +196,8 @@ const MapComponent = ({ onOpenSettings, onViewModeChange, effectiveUser = null, 
   const toolStackFilterButtonRef = useRef(null);
   // Jobs view filters (searchMode === "company")
   const [selectedRadiusKm, setSelectedRadiusKm] = useState(null);
+  const [radiusZoomNonce, setRadiusZoomNonce] = useState(0);
+  const radiusCircleLayerRef = useRef(null);
   const [selectedWorkMode, setSelectedWorkMode] = useState(null);
   const [selectedEmploymentType, setSelectedEmploymentType] = useState(null);
   const [selectedIndustryType, setSelectedIndustryType] = useState(null);
@@ -229,6 +235,16 @@ const MapComponent = ({ onOpenSettings, onViewModeChange, effectiveUser = null, 
   /** Last selected India place from search autocomplete or location filter: { type, name, state, district? } */
   const [lastSelectedIndiaPlace, setLastSelectedIndiaPlace] = useState(null);
 
+  // Only mount one JobsFilterBar (desktop OR mobile) so dropdown refs aren't shared/stolen
+  useEffect(() => {
+    if (typeof window === "undefined") return undefined;
+    const mq = window.matchMedia("(min-width: 768px)");
+    const update = () => setIsDesktopFilterBar(mq.matches);
+    update();
+    mq.addEventListener("change", update);
+    return () => mq.removeEventListener("change", update);
+  }, []);
+
   // Notify parent of view mode (person = gigs, company = jobs) for sidebar label
   useEffect(() => {
     if (typeof onViewModeChange === "function") {
@@ -242,6 +258,45 @@ const MapComponent = ({ onOpenSettings, onViewModeChange, effectiveUser = null, 
 
   // Home location (from profile)
   const [homeLocation, setHomeLocation] = useState(null);
+
+  // Label above the map: selected/searched place, else user's home default
+  const mapLocationLabel = useMemo(() => {
+    if (lastSelectedIndiaPlace?.name) {
+      const parts = [
+        lastSelectedIndiaPlace.name,
+        lastSelectedIndiaPlace.district &&
+        lastSelectedIndiaPlace.district !== lastSelectedIndiaPlace.name
+          ? lastSelectedIndiaPlace.district
+          : null,
+        lastSelectedIndiaPlace.state &&
+        lastSelectedIndiaPlace.state !== lastSelectedIndiaPlace.name &&
+        lastSelectedIndiaPlace.state !== lastSelectedIndiaPlace.district
+          ? lastSelectedIndiaPlace.state
+          : null,
+      ].filter(Boolean);
+      return [...new Set(parts)].join(", ");
+    }
+    if (lastSearchedDistrict || lastSearchedState) {
+      return [lastSearchedDistrict, lastSearchedState].filter(Boolean).join(", ");
+    }
+    if (selectedFilterOption?.state) {
+      return selectedFilterOption.state;
+    }
+    if (homeLocation) {
+      return (
+        [homeLocation.homeLocality, homeLocation.homeDistrict, homeLocation.homeState]
+          .filter(Boolean)
+          .join(", ") || "Home"
+      );
+    }
+    return null;
+  }, [
+    lastSelectedIndiaPlace,
+    lastSearchedDistrict,
+    lastSearchedState,
+    selectedFilterOption?.state,
+    homeLocation,
+  ]);
   const [showSuggestionsDropdown, setShowSuggestionsDropdown] = useState(false);
   const [showAddHomeModal, setShowAddHomeModal] = useState(false);
   const [showLocateMeCoordModal, setShowLocateMeCoordModal] = useState(false);
@@ -350,6 +405,138 @@ const MapComponent = ({ onOpenSettings, onViewModeChange, effectiveUser = null, 
       selectedMoreFilters.postedWithin
   );
 
+  // Draw radius circle and zoom map to cover the selected km around home/map center
+  const homeLocationRef = useRef(homeLocation);
+  homeLocationRef.current = homeLocation;
+  const meUserRef = useRef(meUser);
+  meUserRef.current = meUser;
+
+  const clearRadiusCircle = useCallback(() => {
+    const map = mapInstanceRef.current;
+    if (radiusCircleLayerRef.current && map) {
+      try {
+        map.removeLayer(radiusCircleLayerRef.current);
+      } catch {
+        /* already removed */
+      }
+      radiusCircleLayerRef.current = null;
+    }
+  }, []);
+
+  const resolveRadiusAnchor = useCallback((map) => {
+    const home = homeLocationRef.current;
+    let anchor = getRadiusAnchor(home, map);
+    if (anchor) return anchor;
+
+    const me = meUserRef.current;
+    if (
+      me?.homeLatitude != null &&
+      me?.homeLongitude != null &&
+      Number.isFinite(Number(me.homeLatitude)) &&
+      Number.isFinite(Number(me.homeLongitude))
+    ) {
+      return {
+        lat: Number(me.homeLatitude),
+        lon: Number(me.homeLongitude),
+        source: "meUser",
+      };
+    }
+
+    try {
+      const center = map?.getCenter?.();
+      if (center?.lat != null && center?.lng != null) {
+        return { lat: center.lat, lon: center.lng, source: "map" };
+      }
+    } catch {
+      /* ignore */
+    }
+    return null;
+  }, []);
+
+  const applyRadiusOverlayAndZoom = useCallback((radiusKm) => {
+    const map = mapInstanceRef.current;
+    const L = typeof window !== "undefined" ? window.L : null;
+
+    if (!map || !radiusKm) {
+      clearRadiusCircle();
+      return false;
+    }
+
+    const anchor = resolveRadiusAnchor(map);
+    if (!anchor) {
+      clearRadiusCircle();
+      return false;
+    }
+
+    try {
+      map.invalidateSize?.(false);
+    } catch {
+      /* ignore */
+    }
+
+    clearRadiusCircle();
+
+    if (L?.circle) {
+      const circle = L.circle([anchor.lat, anchor.lon], {
+        radius: Number(radiusKm) * 1000,
+        color: "#F84416",
+        weight: 2,
+        opacity: 0.85,
+        fillColor: "#F84416",
+        fillOpacity: 0.08,
+        interactive: false,
+      });
+      circle.addTo(map);
+      radiusCircleLayerRef.current = circle;
+      try {
+        map.fitBounds(circle.getBounds(), {
+          padding: [48, 48],
+          maxZoom: 15,
+          animate: true,
+        });
+      } catch {
+        fitMapToRadiusKm(map, anchor.lat, anchor.lon, radiusKm);
+      }
+    } else {
+      fitMapToRadiusKm(map, anchor.lat, anchor.lon, radiusKm);
+    }
+    return true;
+  }, [clearRadiusCircle, resolveRadiusAnchor]);
+
+  useEffect(() => {
+    if (!selectedRadiusKm) {
+      clearRadiusCircle();
+      return undefined;
+    }
+    if (!mapReady) return undefined;
+    applyRadiusOverlayAndZoom(selectedRadiusKm);
+    // Do not clear circle on cleanup — that raced with zoom and wiped the overlay
+    return undefined;
+  }, [selectedRadiusKm, homeLocation, mapReady, radiusZoomNonce, applyRadiusOverlayAndZoom, clearRadiusCircle]);
+
+  const handleSelectRadiusKm = useCallback(
+    (km) => {
+      const nextKm = km == null ? null : Number(km);
+      setSelectedRadiusKm(Number.isFinite(nextKm) ? nextKm : null);
+      setRadiusZoomNonce((n) => n + 1);
+      if (Number.isFinite(nextKm) && nextKm > 0) {
+        // Retry zoom: map/markers effects often fight the first fitBounds
+        const run = () => applyRadiusOverlayAndZoom(nextKm);
+        queueMicrotask(run);
+        setTimeout(run, 50);
+        setTimeout(run, 250);
+        setTimeout(run, 500);
+      } else {
+        clearRadiusCircle();
+      }
+    },
+    [applyRadiusOverlayAndZoom, clearRadiusCircle]
+  );
+
+  const handleSelectWorkMode = useCallback((mode) => {
+    setSelectedWorkMode(mode || null);
+  }, []);
+
   const clearAllJobFilters = () => {
     setSelectedRadiusKm(null);
     setSelectedWorkMode(null);
@@ -377,6 +564,79 @@ const MapComponent = ({ onOpenSettings, onViewModeChange, effectiveUser = null, 
     });
   };
 
+  const getActiveJobFilterParams = useCallback(
+    () => ({
+      workMode: selectedWorkMode,
+      employmentType: selectedEmploymentType,
+      industryCategory: selectedIndustryType,
+      roleTitle: selectedRole,
+      salaryBand: selectedSalaryBand
+        ? SALARY_BANDS.find((b) => b.label === selectedSalaryBand) || null
+        : null,
+      moreFilters: selectedMoreFilters,
+    }),
+    [
+      selectedWorkMode,
+      selectedEmploymentType,
+      selectedIndustryType,
+      selectedRole,
+      selectedSalaryBand,
+      selectedMoreFilters,
+    ]
+  );
+
+  const jobFilterParamsRef = useRef(getActiveJobFilterParams());
+  jobFilterParamsRef.current = getActiveJobFilterParams();
+
+  const openCompanyJobsSidebar = useCallback(async (company) => {
+    if (!company?.id) return;
+    try {
+      const res = await fetch(
+        buildCompanyJobsQuery(company.id, jobFilterParamsRef.current)
+      );
+      if (res.ok) {
+        const data = await res.json();
+        setSelectedCompanyForSidebar(company);
+        setSelectedCompanyJobs(data.jobs || []);
+        setShowCompanyJobsSidebar(true);
+      } else {
+        console.error("API error:", res.status, res.statusText);
+      }
+    } catch (e) {
+      console.error("Failed to fetch company jobs:", e);
+    }
+  }, []);
+
+  // Keep open company sidebar in sync when work mode / job filters change
+  useEffect(() => {
+    if (!showCompanyJobsSidebar || !selectedCompanyForSidebar?.id) return;
+    let cancelled = false;
+    (async () => {
+      try {
+        const res = await fetch(
+          buildCompanyJobsQuery(
+            selectedCompanyForSidebar.id,
+            getActiveJobFilterParams()
+          )
+        );
+        if (!res.ok || cancelled) return;
+        const data = await res.json();
+        if (!cancelled) {
+          setSelectedCompanyJobs(data.jobs || []);
+        }
+      } catch {
+        /* ignore */
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [
+    showCompanyJobsSidebar,
+    selectedCompanyForSidebar?.id,
+    getActiveJobFilterParams,
+  ]);
+
   const jobsFilterBarProps = {
     searchModeForUI,
     accountTypeForUI,
@@ -395,13 +655,13 @@ const MapComponent = ({ onOpenSettings, onViewModeChange, effectiveUser = null, 
     gigSalaryButtonRef,
     gigSalaryDropdownRef,
     selectedRadiusKm,
-    onSelectRadiusKm: setSelectedRadiusKm,
+    onSelectRadiusKm: handleSelectRadiusKm,
     showRadiusDropdown,
     setShowRadiusDropdown,
     radiusButtonRef,
     radiusDropdownRef,
     selectedWorkMode,
-    onSelectWorkMode: setSelectedWorkMode,
+    onSelectWorkMode: handleSelectWorkMode,
     showWorkModeDropdown,
     setShowWorkModeDropdown,
     workModeButtonRef,
@@ -466,8 +726,22 @@ const MapComponent = ({ onOpenSettings, onViewModeChange, effectiveUser = null, 
 
   // Fetch user profile for home location
   useEffect(() => {
+    const fromEffective = effectiveUser;
+    if (
+      fromEffective?.homeLatitude != null &&
+      fromEffective?.homeLongitude != null
+    ) {
+      setHomeLocation({
+        homeLatitude: fromEffective.homeLatitude,
+        homeLongitude: fromEffective.homeLongitude,
+        homeLocality: fromEffective.homeLocality,
+        homeDistrict: fromEffective.homeDistrict,
+        homeState: fromEffective.homeState,
+      });
+      return;
+    }
     fetch("/api/profile", { credentials: "same-origin" })
-      .then((r) => r.ok ? r.json() : null)
+      .then((r) => (r.ok ? r.json() : null))
       .then((data) => {
         if (data?.success && data.user?.homeLatitude != null && data.user?.homeLongitude != null) {
           setHomeLocation({
@@ -480,7 +754,7 @@ const MapComponent = ({ onOpenSettings, onViewModeChange, effectiveUser = null, 
         }
       })
       .catch(() => {});
-  }, []);
+  }, [effectiveUser]);
 
   // Load locations data (client-side only)
   useEffect(() => {
@@ -952,22 +1226,7 @@ const MapComponent = ({ onOpenSettings, onViewModeChange, effectiveUser = null, 
       // Add click handler to fetch and display jobs in sidebar
       marker.on("click", async () => {
         console.log('🔍 Company pin clicked:', company.id, company.company_name || company.name);
-        try {
-          const res = await fetch(`/api/companies/${company.id}/jobs`);
-          console.log('📡 API response status:', res.status);
-          if (res.ok) {
-            const data = await res.json();
-            console.log('✅ Jobs fetched:', data.jobs?.length || 0, 'jobs');
-            setSelectedCompanyForSidebar(company);
-            setSelectedCompanyJobs(data.jobs || []);
-            setShowCompanyJobsSidebar(true);
-            console.log('✅ Sidebar state set to true');
-          } else {
-            console.error('❌ API error:', res.status, res.statusText);
-          }
-        } catch (e) {
-          console.error("❌ Failed to fetch company jobs:", e);
-        }
+        await openCompanyJobsSidebar(company);
       });
 
       clusterGroup.addLayer(marker);
@@ -1335,9 +1594,6 @@ const MapComponent = ({ onOpenSettings, onViewModeChange, effectiveUser = null, 
                 <a href="${(displayEmail && displayEmail !== "—") ? `https://mail.google.com/mail/?view=cm&fs=1&to=${encodeURIComponent(displayEmail)}` : `mailto:${escapeHtml(displayEmail || "")}`}" class="map-popup-action-link" title="Email" aria-label="Email" target="_blank" rel="noopener noreferrer">
                   <svg width="20" height="20" viewBox="0 0 32 32" fill="currentColor" xmlns="http://www.w3.org/2000/svg"><path d="M28,6H4A2,2,0,0,0,2,8V24a2,2,0,0,0,2,2H28a2,2,0,0,0,2-2V8A2,2,0,0,0,28,6ZM25.8,8,16,14.78,6.2,8ZM4,24V8.91l11.43,7.91a1,1,0,0,0,1.14,0L28,8.91V24Z"/></svg>
                 </a>
-                <a href="#" class="map-popup-action-link map-popup-action-chat ${disableChat ? 'map-popup-action-chat-disabled' : ''}" title="Chat" aria-label="Chat" data-action="chat" data-gig-id="${gig.id}">
-                  <svg width="20" height="20" viewBox="0 0 32 32" fill="currentColor" xmlns="http://www.w3.org/2000/svg"><path d="M17.74,30,16,29l4-7h6a2,2,0,0,0,2-2V8a2,2,0,0,0-2-2H6A2,2,0,0,0,4,8V20a2,2,0,0,0,2,2h9v2H6a4,4,0,0,1-4-4V8A4,4,0,0,1,6,4H26a4,4,0,0,1,4,4V20a4,4,0,0,1-4,4H21.16Z"/><path d="M8 10H24V12H8zM8 16H18V18H8z"/></svg>
-                </a>
                 <button type="button" class="map-popup-action-see-more map-popup-action-link" data-action="see-more-work" data-gig-id="${gig.id}" title="See more work">See more work</button>
               </div>
             </div>
@@ -1392,9 +1648,6 @@ const MapComponent = ({ onOpenSettings, onViewModeChange, effectiveUser = null, 
           <div class="map-popup-actions">
             <a href="${emailHref}" class="map-popup-action-link${emailDisabledClass}" title="Email" aria-label="Email" target="_blank" rel="noopener noreferrer">
               <svg width="20" height="20" viewBox="0 0 32 32" fill="currentColor" xmlns="http://www.w3.org/2000/svg"><path d="M28,6H4A2,2,0,0,0,2,8V24a2,2,0,0,0,2,2H28a2,2,0,0,0,2-2V8A2,2,0,0,0,28,6ZM25.8,8,16,14.78,6.2,8ZM4,24V8.91l11.43,7.91a1,1,0,0,0,1.14,0L28,8.91V24Z"/></svg>
-            </a>
-            <a href="#" class="map-popup-action-link map-popup-action-chat${chatDisabledClass}" title="Chat" aria-label="Chat" data-action="chat" data-gig-id="${gig.id}">
-              <svg width="20" height="20" viewBox="0 0 32 32" fill="currentColor" xmlns="http://www.w3.org/2000/svg"><path d="M17.74,30,16,29l4-7h6a2,2,0,0,0,2-2V8a2,2,0,0,0-2-2H6A2,2,0,0,0,4,8V20a2,2,0,0,0,2,2h9v2H6a4,4,0,0,1-4-4V8A4,4,0,0,1,6,4H26a4,4,0,0,1,4,4V20a4,4,0,0,1-4,4H21.16Z"/><path d="M8 10H24V12H8zM8 16H18V18H8z"/></svg>
             </a>
             <button type="button" class="map-popup-action-see-more map-popup-action-link" data-action="see-more-work" data-gig-id="${gig.id}" title="See more work">See more work</button>
           </div>
@@ -2970,7 +3223,22 @@ const MapComponent = ({ onOpenSettings, onViewModeChange, effectiveUser = null, 
       }
       setTotalJobsCount((companies || []).reduce((s, c) => s + (c.jobCount || 0), 0));
 
+      const jobFiltersActive = Boolean(
+        selectedWorkMode ||
+          selectedRadiusKm ||
+          selectedEmploymentType ||
+          selectedIndustryType ||
+          selectedRole ||
+          selectedSalaryBand ||
+          selectedMoreFilters?.experience ||
+          selectedMoreFilters?.companyType ||
+          selectedMoreFilters?.postedWithin
+      );
+
       if (companies && companies.length > 0) {
+        setShowEmptyState(false);
+        setEmptyStateQuery("");
+        setEmptyStateTitle(null);
         // Create marker cluster group for companies with glassmorphism style
         const clusterGroup = L.markerClusterGroup({
           chunkedLoading: true,
@@ -3100,22 +3368,7 @@ const MapComponent = ({ onOpenSettings, onViewModeChange, effectiveUser = null, 
           // Add click handler to fetch and display jobs
           marker.on("click", async () => {
             console.log('🔍 Company pin clicked:', company.id, company.company_name || company.name);
-            try {
-              const res = await fetch(`/api/companies/${company.id}/jobs`);
-              console.log('📡 API response status:', res.status);
-              if (res.ok) {
-                const data = await res.json();
-                console.log('✅ Jobs fetched:', data.jobs?.length || 0, 'jobs');
-                setSelectedCompanyForSidebar(company);
-                setSelectedCompanyJobs(data.jobs || []);
-                setShowCompanyJobsSidebar(true);
-                console.log('✅ Sidebar state set to true');
-              } else {
-                console.error('❌ API error:', res.status, res.statusText);
-              }
-            } catch (e) {
-              console.error("❌ Failed to fetch company jobs:", e);
-            }
+            await openCompanyJobsSidebar(company);
           });
 
           clusterGroup.addLayer(marker);
@@ -3208,7 +3461,20 @@ const MapComponent = ({ onOpenSettings, onViewModeChange, effectiveUser = null, 
         const maxZoomLevel = companies.length >= 5 ? 12 : 14;
 
         setTimeout(() => {
-          if (!mapInstanceRef.current || !companyMarkersRef.current?.length) return;
+          if (!mapInstanceRef.current) return;
+          if (selectedRadiusKm) {
+            const radiusAnchor = getRadiusAnchor(homeLocation, mapInstanceRef.current);
+            if (radiusAnchor) {
+              fitMapToRadiusKm(
+                mapInstanceRef.current,
+                radiusAnchor.lat,
+                radiusAnchor.lon,
+                selectedRadiusKm
+              );
+              return;
+            }
+          }
+          if (!companyMarkersRef.current?.length) return;
           const group = new L.featureGroup(companyMarkersRef.current);
           const groupBounds = group.getBounds();
           if (!groupBounds?.isValid?.()) return;
@@ -3217,11 +3483,25 @@ const MapComponent = ({ onOpenSettings, onViewModeChange, effectiveUser = null, 
             maxZoom: maxZoomLevel,
           });
         }, 200);
+      } else if (jobFiltersActive && userAccountType !== "Company") {
+        const radiusLabel =
+          selectedRadiusKm != null
+            ? RADIUS_OPTIONS.find((r) => r.value === selectedRadiusKm)?.label
+            : null;
+        // Still zoom to radius even when no pins match
+        if (selectedRadiusKm) {
+          applyRadiusOverlayAndZoom(selectedRadiusKm);
+        }
+        setEmptyStateTitle("No jobs match your filters");
+        setEmptyStateQuery(
+          selectedWorkMode || radiusLabel || selectedRole || selectedIndustryType || "your filters"
+        );
+        setShowEmptyState(true);
       }
     };
 
     addMarkersToMap();
-  }, [mapInstanceRef.current, locationsData, searchMode, userAccountType, selectedWorkMode, selectedEmploymentType, selectedIndustryType, selectedRole, selectedSalaryBand, selectedMoreFilters, selectedRadiusKm, homeLocation]);
+  }, [mapInstanceRef.current, locationsData, searchMode, userAccountType, selectedWorkMode, selectedEmploymentType, selectedIndustryType, selectedRole, selectedSalaryBand, selectedMoreFilters, selectedRadiusKm, homeLocation, applyRadiusOverlayAndZoom]);
 
   // Zoom to job coordinates when arriving from "See your posting on the map"
   useEffect(() => {
@@ -3835,9 +4115,6 @@ const MapComponent = ({ onOpenSettings, onViewModeChange, effectiveUser = null, 
                 <a href="${(displayEmail && displayEmail !== "—") ? `https://mail.google.com/mail/?view=cm&fs=1&to=${encodeURIComponent(displayEmail)}` : `mailto:${escapeHtml(displayEmail || "")}`}" class="map-popup-action-link" title="Email" aria-label="Email" target="_blank" rel="noopener noreferrer">
                   <svg width="20" height="20" viewBox="0 0 32 32" fill="currentColor" xmlns="http://www.w3.org/2000/svg"><path d="M28,6H4A2,2,0,0,0,2,8V24a2,2,0,0,0,2,2H28a2,2,0,0,0,2-2V8A2,2,0,0,0,28,6ZM25.8,8,16,14.78,6.2,8ZM4,24V8.91l11.43,7.91a1,1,0,0,0,1.14,0L28,8.91V24Z"/></svg>
                 </a>
-                <a href="#" class="map-popup-action-link map-popup-action-chat ${disableChat ? 'map-popup-action-chat-disabled' : ''}" title="Chat" aria-label="Chat" data-action="chat" data-gig-id="${gig.id}">
-                  <svg width="20" height="20" viewBox="0 0 32 32" fill="currentColor" xmlns="http://www.w3.org/2000/svg"><path d="M17.74,30,16,29l4-7h6a2,2,0,0,0,2-2V8a2,2,0,0,0-2-2H6A2,2,0,0,0,4,8V20a2,2,0,0,0,2,2h9v2H6a4,4,0,0,1-4-4V8A4,4,0,0,1,6,4H26a4,4,0,0,1,4,4V20a4,4,0,0,1-4,4H21.16Z"/><path d="M8 10H24V12H8zM8 16H18V18H8z"/></svg>
-                </a>
                 <button type="button" class="map-popup-action-see-more map-popup-action-link" data-action="see-more-work" data-gig-id="${gig.id}" title="See more work">See more work</button>
               </div>
             </div>
@@ -3892,9 +4169,6 @@ const MapComponent = ({ onOpenSettings, onViewModeChange, effectiveUser = null, 
           <div class="map-popup-actions">
             <a href="${emailHref}" class="map-popup-action-link${emailDisabledClass}" title="Email" aria-label="Email" target="_blank" rel="noopener noreferrer">
               <svg width="20" height="20" viewBox="0 0 32 32" fill="currentColor" xmlns="http://www.w3.org/2000/svg"><path d="M28,6H4A2,2,0,0,0,2,8V24a2,2,0,0,0,2,2H28a2,2,0,0,0,2-2V8A2,2,0,0,0,28,6ZM25.8,8,16,14.78,6.2,8ZM4,24V8.91l11.43,7.91a1,1,0,0,0,1.14,0L28,8.91V24Z"/></svg>
-            </a>
-            <a href="#" class="map-popup-action-link map-popup-action-chat${chatDisabledClass}" title="Chat" aria-label="Chat" data-action="chat" data-gig-id="${gig.id}">
-              <svg width="20" height="20" viewBox="0 0 32 32" fill="currentColor" xmlns="http://www.w3.org/2000/svg"><path d="M17.74,30,16,29l4-7h6a2,2,0,0,0,2-2V8a2,2,0,0,0-2-2H6A2,2,0,0,0,4,8V20a2,2,0,0,0,2,2h9v2H6a4,4,0,0,1-4-4V8A4,4,0,0,1,6,4H26a4,4,0,0,1,4,4V20a4,4,0,0,1-4,4H21.16Z"/><path d="M8 10H24V12H8zM8 16H18V18H8z"/></svg>
             </a>
             <button type="button" class="map-popup-action-see-more map-popup-action-link" data-action="see-more-work" data-gig-id="${gig.id}" title="See more work">See more work</button>
           </div>
@@ -4363,6 +4637,7 @@ const MapComponent = ({ onOpenSettings, onViewModeChange, effectiveUser = null, 
                 console.log("🔍 Showing empty state for college:", collegeName);
                 setTimeout(() => {
                   setEmptyStateQuery(collegeName);
+                  setEmptyStateTitle(null);
                   setShowEmptyState(true);
                 }, 100);
               } else {
@@ -4466,6 +4741,7 @@ const MapComponent = ({ onOpenSettings, onViewModeChange, effectiveUser = null, 
               console.log("🔍 Showing empty state for:", localityName);
               setTimeout(() => {
                 setEmptyStateQuery(localityName);
+                setEmptyStateTitle(null);
                 setShowEmptyState(true);
                 console.log("✅ Empty state should be visible now, showEmptyState:", true);
               }, 100);
@@ -4795,11 +5071,18 @@ const MapComponent = ({ onOpenSettings, onViewModeChange, effectiveUser = null, 
     ];
     const handle = (e) => {
       pairs.forEach(([dropdownRef, buttonRef, setter]) => {
+        const inDropdown = dropdownRef.current?.contains(e.target);
+        const inButton = buttonRef.current?.contains(e.target);
+        // Also treat clicks inside any open filter menu as inside (shared-ref / duplicate bars)
+        const inAnyFilterMenu = e.target?.closest?.(
+          "[data-filter-dropdown-menu='true']"
+        );
         if (
           dropdownRef.current &&
-          !dropdownRef.current.contains(e.target) &&
+          !inDropdown &&
           buttonRef.current &&
-          !buttonRef.current.contains(e.target)
+          !inButton &&
+          !inAnyFilterMenu
         ) {
           setter(false);
         }
@@ -4958,6 +5241,7 @@ const MapComponent = ({ onOpenSettings, onViewModeChange, effectiveUser = null, 
     if (showEmptyState) {
       setShowEmptyState(false);
       setEmptyStateQuery("");
+      setEmptyStateTitle(null);
     }
     
     // Show autocomplete if query is at least 2 characters
@@ -4996,6 +5280,12 @@ const MapComponent = ({ onOpenSettings, onViewModeChange, effectiveUser = null, 
   const handleLocalitySelect = (locality) => {
     const selectedLocalityName = locality.localityName;
     console.log("📍 Locality selected:", selectedLocalityName);
+    setLastSelectedIndiaPlace({
+      type: "locality",
+      name: selectedLocalityName,
+      state: locality.state ?? null,
+      district: locality.district ?? null,
+    });
     setSearchQuery(selectedLocalityName);
     setShowAutocomplete(false);
     
@@ -5157,6 +5447,7 @@ const MapComponent = ({ onOpenSettings, onViewModeChange, effectiveUser = null, 
           if (response.status === 404) {
             setTimeout(() => {
               setEmptyStateQuery(selectedCollegeName);
+              setEmptyStateTitle(null);
               setShowEmptyState(true);
             }, 100);
           } else {
@@ -5283,7 +5574,21 @@ const MapComponent = ({ onOpenSettings, onViewModeChange, effectiveUser = null, 
   }
 
   return (
-    <div className="flex-1 h-full w-full bg-gray-50 dark:bg-gray-950 relative overflow-hidden rounded-[16px]">
+    <div className="flex flex-col h-full w-full min-h-0">
+      {/* Location context — sits in the former top padding above the map */}
+      <div className="shrink-0 flex items-center justify-center px-3 py-2 md:py-2.5 min-h-[2.5rem] md:min-h-[3rem]">
+        <p
+          className={`truncate max-w-[min(100%,42rem)] text-center text-sm md:text-[15px] font-semibold ${
+            mapLocationLabel ? "text-brand-text-strong" : "text-brand-text-weak"
+          }`}
+          style={{ fontFamily: "Open Sans, sans-serif" }}
+          title={mapLocationLabel || undefined}
+        >
+          {mapLocationLabel || "Select a location"}
+        </p>
+      </div>
+
+      <div className="flex-1 min-h-0 w-full bg-gray-50 dark:bg-gray-950 relative overflow-hidden rounded-[16px]">
       {/* Map Container */}
       <div ref={mapRef} className="w-full h-full absolute inset-0 rounded-[16px]" />
 
@@ -5342,7 +5647,7 @@ const MapComponent = ({ onOpenSettings, onViewModeChange, effectiveUser = null, 
         <div className={`flex flex-col gap-4 top-3 md:top-4 ${searchBar.container} w-[calc(100vw-16px)] max-w-[960px]`}>
         <div className="flex flex-row items-center gap-2 w-full">
           {/* Search Bar Card - same corner radius (rounded-full), white bg; profile button is outside to the right. */}
-          <div className={`flex-1 min-w-0 bg-brand-bg-white rounded-full border border-brand-stroke-border shadow-lg px-1.5 py-1.5 md:px-4 md:py-2`}>
+          <div className={`flex-1 min-w-0 bg-brand-bg-white rounded-full border border-brand-stroke-border shadow-lg px-1.5 py-1.5 md:px-4 md:py-2 overflow-visible`}>
             {effectiveUserLoading ? (
               /* Skeleton: same approximate layout, no account-specific UI until we know account type */
               <div className="flex items-center gap-2 w-full min-h-[34px] md:min-h-0">
@@ -5487,10 +5792,12 @@ const MapComponent = ({ onOpenSettings, onViewModeChange, effectiveUser = null, 
                     </div>
                   </>
                 )}
-                {/* Filter pills - desktop */}
-                <div className="hidden md:flex items-center gap-1 shrink-0">
-                  <JobsFilterBar {...jobsFilterBarProps} />
-                </div>
+                {/* Filter pills - desktop only (single mount — shared refs) */}
+                {isDesktopFilterBar && (
+                  <div className="hidden md:flex items-center gap-1 shrink-0">
+                    <JobsFilterBar {...jobsFilterBarProps} />
+                  </div>
+                )}
               </div>
 
               {/* Search Input with Autocomplete - overflow-visible so dropdown is not clipped */}
@@ -5861,9 +6168,9 @@ const MapComponent = ({ onOpenSettings, onViewModeChange, effectiveUser = null, 
         )}
         </div>
 
-          {/* Mobile: horizontally scrollable filter pills */}
-          {!effectiveUserLoading && (
-            <div className={`md:hidden w-full overflow-x-auto ${mobileSearchExpanded ? "hidden" : ""}`}>
+          {/* Mobile: horizontally scrollable filter pills (unmounted on desktop) */}
+          {!effectiveUserLoading && !isDesktopFilterBar && (
+            <div className={`w-full overflow-x-auto ${mobileSearchExpanded ? "hidden" : ""}`}>
               <div className="flex items-center gap-1 py-1 min-w-max">
                 <JobsFilterBar {...jobsFilterBarProps} />
               </div>
@@ -5941,8 +6248,10 @@ const MapComponent = ({ onOpenSettings, onViewModeChange, effectiveUser = null, 
         onClose={() => {
           setShowEmptyState(false);
           setEmptyStateQuery("");
+          setEmptyStateTitle(null);
         }}
         query={emptyStateQuery}
+        title={emptyStateTitle}
       />
 
       {/* Loading Overlay */}
@@ -6210,6 +6519,7 @@ const MapComponent = ({ onOpenSettings, onViewModeChange, effectiveUser = null, 
 
       {/* Loading overlay when switching to chat */}
       {isSwitchingToChat && <LoadingSpinner size="lg" overlay={true} />}
+      </div>
     </div>
   );
 };

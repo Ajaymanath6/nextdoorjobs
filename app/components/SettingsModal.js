@@ -43,10 +43,16 @@ const SECTIONS = [
 
 const VALID_SECTIONS = ["general", "resume", "company", "subscription"];
 
-const SUBSCRIPTION_FEATURE_LIST = [
+const STARTER_FEATURES = [
+  { label: "Job search" },
+  { label: "Gigs search" },
+];
+
+const PRO_FEATURES = [
   { label: "Job search" },
   { label: "Gigs search" },
   { label: "PRP", comingSoon: true },
+  { label: "Post gigs", comingSoon: true },
 ];
 
 const SUBSCRIPTION_PLANS = [
@@ -57,7 +63,8 @@ const SUBSCRIPTION_PLANS = [
     badge: "Popular",
     price: 320,
     priceLabel: "/ year",
-    features: SUBSCRIPTION_FEATURE_LIST,
+    features: STARTER_FEATURES,
+    selectable: true,
   },
   {
     id: "pro",
@@ -66,7 +73,8 @@ const SUBSCRIPTION_PLANS = [
     badge: "Best value",
     price: 800,
     priceLabel: "/ year",
-    features: SUBSCRIPTION_FEATURE_LIST,
+    features: PRO_FEATURES,
+    selectable: false,
   },
 ];
 
@@ -1879,15 +1887,16 @@ export default function SettingsModal({ isOpen, onClose, initialSection }) {
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               {SUBSCRIPTION_PLANS.map((plan) => {
                 const isSelected = selectedPlanId === plan.id;
-                return (
-                  <button
-                    key={plan.id}
-                    type="button"
-                    onClick={() => setSelectedPlanId(plan.id)}
-                    className={`flex flex-col text-left p-4 rounded-lg border-[1.5px] transition-colors ${
-                      isSelected ? "border-brand bg-brand/5" : "border-brand-stroke-weak hover:bg-brand-bg-fill"
-                    }`}
-                  >
+                const selectable = plan.selectable !== false;
+                const cardClassName = `flex flex-col text-left p-4 rounded-lg border-[1.5px] transition-colors ${
+                  selectable
+                    ? isSelected
+                      ? "border-brand bg-brand/5"
+                      : "border-brand-stroke-weak hover:bg-brand-bg-fill cursor-pointer"
+                    : "border-brand-stroke-weak opacity-90 cursor-default"
+                }`;
+                const cardBody = (
+                  <>
                     <div className="flex items-start justify-between gap-2">
                       <div>
                         <h3 className="text-base font-semibold text-brand-text-strong">{plan.name}</h3>
@@ -1933,6 +1942,29 @@ export default function SettingsModal({ isOpen, onClose, initialSection }) {
                         );
                       })}
                     </ul>
+                  </>
+                );
+
+                if (!selectable) {
+                  return (
+                    <div
+                      key={plan.id}
+                      className={cardClassName}
+                      aria-disabled="true"
+                    >
+                      {cardBody}
+                    </div>
+                  );
+                }
+
+                return (
+                  <button
+                    key={plan.id}
+                    type="button"
+                    onClick={() => setSelectedPlanId(plan.id)}
+                    className={cardClassName}
+                  >
+                    {cardBody}
                   </button>
                 );
               })}

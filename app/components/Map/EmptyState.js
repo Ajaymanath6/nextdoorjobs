@@ -3,13 +3,19 @@
 import { Query } from "@carbon/icons-react";
 import themeClasses from "../../theme-utility-classes.json";
 
-export default function EmptyState({ isOpen, onClose, query = "" }) {
-  // Debug logging
-  console.log("🔍 EmptyState render:", { isOpen, query });
-  
+export default function EmptyState({ isOpen, onClose, query = "", title = null }) {
   if (!isOpen) return null;
 
   const brand = themeClasses.brand;
+
+  const resolvedTitle =
+    title ||
+    (query &&
+    (query.toLowerCase().includes("college") ||
+      query.toLowerCase().includes("university") ||
+      query.toLowerCase().includes("institute"))
+      ? "We haven't reached the college you're searching for"
+      : "We haven't reached the locality you're searching for");
 
   return (
     <div
@@ -29,7 +35,6 @@ export default function EmptyState({ isOpen, onClose, query = "" }) {
         }}
         onClick={(e) => e.stopPropagation()} // Prevent closing when clicking on content
       >
-        {/* Query Icon */}
         <div
           className="mx-auto mb-6 flex items-center justify-center"
           style={{
@@ -47,7 +52,6 @@ export default function EmptyState({ isOpen, onClose, query = "" }) {
           />
         </div>
 
-        {/* Message */}
         <h2
           className={`${brand.text.strong} mb-2`}
           style={{
@@ -58,9 +62,7 @@ export default function EmptyState({ isOpen, onClose, query = "" }) {
             marginBottom: "8px",
           }}
         >
-          {query && (query.toLowerCase().includes('college') || query.toLowerCase().includes('university') || query.toLowerCase().includes('institute'))
-            ? "We haven't reached the college you're searching for"
-            : "We haven't reached the locality you're searching for"}
+          {resolvedTitle}
         </h2>
 
         {query && (
@@ -73,11 +75,18 @@ export default function EmptyState({ isOpen, onClose, query = "" }) {
               marginTop: "8px",
             }}
           >
-            Searched for: <span style={{ fontWeight: 600 }}>{query}</span>
+            {title ? (
+              <>
+                Filtered by: <span style={{ fontWeight: 600 }}>{query}</span>
+              </>
+            ) : (
+              <>
+                Searched for: <span style={{ fontWeight: 600 }}>{query}</span>
+              </>
+            )}
           </p>
         )}
 
-        {/* Hint */}
         <p
           className={brand.text.tertiary}
           style={{
@@ -93,4 +102,3 @@ export default function EmptyState({ isOpen, onClose, query = "" }) {
     </div>
   );
 }
-

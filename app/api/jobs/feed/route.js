@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { activeJobWhere } from "../../../../lib/jobExpiry";
 import { prisma } from "../../../../lib/prisma";
+import { remoteTypePrismaOr } from "../../../../lib/jobMapFilters";
 
 const FUNDING_MAP = {
   Startup: ["Seed", "Bootstrapped"],
@@ -25,13 +26,9 @@ function buildJobMatchConditions(searchParams) {
   const conditions = [{ ...liveJob }];
 
   const remoteType = searchParams.get("remoteType")?.trim();
-  if (remoteType) {
-    conditions.push({
-      OR: [
-        { remoteType: { equals: remoteType, mode: "insensitive" } },
-        { remoteType: { contains: remoteType, mode: "insensitive" } },
-      ],
-    });
+  const remoteOr = remoteTypePrismaOr(remoteType);
+  if (remoteOr) {
+    conditions.push(remoteOr);
   }
 
   const employmentType = searchParams.get("employmentType")?.trim();
