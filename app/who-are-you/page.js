@@ -89,14 +89,20 @@ export default function WhoAreYouPage() {
           <link rel="preload" href="/account-type-bg.png" as="image" />
         </Head>
         <div
-          className="min-h-screen flex flex-col items-center justify-center gap-3 bg-brand-bg-fill"
-          style={{ fontFamily: "Open Sans, sans-serif" }}
+          className="min-h-screen flex flex-col items-center justify-center gap-3"
+          style={{
+            fontFamily: "Open Sans, sans-serif",
+            backgroundImage: "url(/account-type-bg.png)",
+            backgroundSize: "cover",
+            backgroundPosition: "center",
+            backgroundRepeat: "no-repeat",
+          }}
         >
           <div
-            className="rounded-full h-10 w-10 border-2 border-brand-stroke-weak border-t-brand animate-spin"
+            className="rounded-full h-10 w-10 border-2 border-white/30 border-t-white animate-spin"
             aria-hidden
           />
-          <p className="text-brand-text-strong text-sm">Loading…</p>
+          <p className="text-white text-sm">Loading…</p>
         </div>
       </>
     );
@@ -120,9 +126,9 @@ export default function WhoAreYouPage() {
         >
           <div
             className="rounded-full h-12 w-12 border-4 loading-spinner mx-auto mb-4"
-            style={{ borderColor: "rgba(0,0,0,0.1)", borderTopColor: "#F84416" }}
+            style={{ borderColor: "rgba(255,255,255,0.3)", borderTopColor: "#FFFFFF" }}
           />
-          <p className="text-gray-600" style={{ fontFamily: "Open Sans, sans-serif" }}>
+          <p className="text-white" style={{ fontFamily: "Open Sans, sans-serif" }}>
             Loading...
           </p>
         </div>
