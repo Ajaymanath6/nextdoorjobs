@@ -15,13 +15,10 @@ function FilterPill({ buttonRef, label, onClick, ariaLabel, active = false }) {
       ref={buttonRef}
       type="button"
       onClick={onClick}
-      className={`flex items-center gap-1.5 border rounded-full text-sm font-medium transition-colors shrink-0 hover:bg-brand-bg-fill cursor-pointer ${
-        active
-          ? "border-brand bg-brand/10 text-brand"
-          : "bg-brand-bg-white border-brand-stroke-weak text-brand-text-strong"
-      }`}
+      className="flex items-center gap-1.5 border rounded-full text-sm font-medium transition-colors shrink-0 hover:bg-brand-bg-fill cursor-pointer bg-brand-bg-white border-brand-stroke-weak text-brand-text-strong"
       style={{ fontFamily: "Open Sans", padding: "8px" }}
       aria-label={ariaLabel}
+      aria-pressed={active}
       title={label}
     >
       <Funnel size={16} className="shrink-0" />
@@ -307,13 +304,10 @@ export default function JobsFilterBar({
         <button
           type="button"
           onClick={onOpenMoreFilters}
-          className={`flex items-center gap-1.5 border rounded-full text-sm font-medium transition-colors shrink-0 hover:bg-brand-bg-fill cursor-pointer ${
-            moreFiltersActive
-              ? "border-brand bg-brand/10 text-brand"
-              : "bg-brand-bg-white border-brand-stroke-weak text-brand-text-strong"
-          }`}
+          className="flex items-center gap-1.5 border rounded-full text-sm font-medium transition-colors shrink-0 hover:bg-brand-bg-fill cursor-pointer bg-brand-bg-white border-brand-stroke-weak text-brand-text-strong"
           style={{ fontFamily: "Open Sans", padding: "8px" }}
           aria-label="More filters"
+          aria-pressed={moreFiltersActive}
           title="More filters"
         >
           <Funnel size={16} className="shrink-0" />

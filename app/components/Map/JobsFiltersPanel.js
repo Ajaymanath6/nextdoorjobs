@@ -12,12 +12,8 @@ import {
   SALARY_BANDS,
 } from "../../../lib/jobMapFilters";
 
-export function chipClass(active) {
-  return `p-1 rounded-full text-sm border cursor-pointer transition-colors ${
-    active
-      ? "border-brand bg-brand/10 text-brand"
-      : "border-brand-stroke-weak text-brand-text-strong hover:bg-brand-bg-fill"
-  }`;
+export function chipClass(_active) {
+  return "p-1 rounded-full text-sm border cursor-pointer transition-colors border-brand-stroke-weak text-brand-text-strong hover:bg-brand-bg-fill";
 }
 
 const triggerClass =
