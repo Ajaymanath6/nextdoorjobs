@@ -488,10 +488,10 @@ export default function AdminCompanyChat() {
       ? `Using existing company "${normalizedCompany.name}" at ${locationLabel}. `
       : `Using existing company "${normalizedCompany.name}". `;
 
-    await addAIMessage(
-      `${prefix}${descriptionText} Now let's add a new job. What's the job title?`,
-      { skipTyping: true }
-    );
+    await addAIMessage(`${prefix}${descriptionText}`, { skipTyping: true });
+    await addAIMessage("Now let's add a new job. What's the job title?", {
+      skipTyping: true,
+    });
   };
 
   const handleShowRecentJobs = async () => {
