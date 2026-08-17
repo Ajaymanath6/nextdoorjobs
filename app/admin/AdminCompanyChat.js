@@ -169,6 +169,45 @@ function formatPostedAt(createdAt) {
   return `Posted ${weekday}`;
 }
 
+function JobDescriptionPreview({ text }) {
+  const [expanded, setExpanded] = useState(false);
+  const [overflows, setOverflows] = useState(false);
+  const textRef = useRef(null);
+
+  useEffect(() => {
+    setExpanded(false);
+  }, [text]);
+
+  useEffect(() => {
+    const el = textRef.current;
+    if (!el || expanded) return;
+    setOverflows(el.scrollHeight > el.clientHeight + 1);
+  }, [text, expanded]);
+
+  if (!text) return null;
+
+  return (
+    <div className="mt-0.5">
+      <p
+        ref={textRef}
+        className={`text-xs text-brand-text-weak break-words ${expanded ? "" : "line-clamp-2"}`}
+        style={{ fontFamily: "Open Sans, sans-serif" }}
+      >
+        {text}
+      </p>
+      {(overflows || expanded) && (
+        <button
+          type="button"
+          onClick={() => setExpanded((v) => !v)}
+          className="text-xs font-medium text-brand-text-strong mt-0.5 hover:underline"
+        >
+          {expanded ? "See less" : "See more"}
+        </button>
+      )}
+    </div>
+  );
+}
+
 function JobListingPanelJobs({
   jobs,
   emptyMessage,
@@ -231,7 +270,7 @@ function JobListingPanelJobs({
               return (
                 <li
                   key={job.id}
-                  className="flex items-center gap-2 py-2 border-b border-brand-stroke-weak last:border-b-0 last:pb-0 first:pt-0"
+                  className="flex items-start gap-2 py-2 border-b border-brand-stroke-weak last:border-b-0 last:pb-0 first:pt-0"
                 >
                   <div className="flex-1 min-w-0">
                     <p
@@ -240,12 +279,7 @@ function JobListingPanelJobs({
                     >
                       {job.title}
                     </p>
-                    <p
-                      className="text-xs text-brand-text-weak mt-0.5 break-words"
-                      style={{ fontFamily: "Open Sans, sans-serif" }}
-                    >
-                      {job.jobDescription}
-                    </p>
+                    <JobDescriptionPreview text={job.jobDescription} />
                   </div>
                   <div className="shrink-0 flex items-center gap-1.5">
                     {formatPostedAt(job.createdAt) ? (
