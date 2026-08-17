@@ -125,6 +125,11 @@ function ExistingCompanyPicker({ companies, onSelect, onDelete }) {
                   <span className="font-medium text-brand-text-strong truncate">
                     {company.name}
                   </span>
+                  {locationLabel ? (
+                    <span className="text-xs text-brand-text-weak truncate">
+                      {locationLabel}
+                    </span>
+                  ) : null}
                 </button>
                 <button
                   type="button"
@@ -384,21 +389,18 @@ export default function AdminCompanyChat() {
   }, [createdCompany]);
 
   useEffect(() => {
-    // Fetch admin jobs once to derive companies that already have at least one active job
     const fetchExistingCompanies = async () => {
       try {
-        const res = await fetch("/api/admin/jobs", {
+        const res = await fetch("/api/admin/companies", {
           method: "GET",
           credentials: "include",
         });
         const data = await res.json().catch(() => ({}));
-        const jobs = Array.isArray(data.jobs) ? data.jobs : [];
-        const byId = new Map();
-        for (const job of jobs) {
-          const c = job?.company;
-          if (!c || !c.id) continue;
-          if (!byId.has(c.id)) {
-            byId.set(c.id, {
+        const companies = Array.isArray(data.companies) ? data.companies : [];
+        setExistingJobCompanies(
+          companies
+            .filter((c) => c && c.id)
+            .map((c) => ({
               id: c.id,
               name: c.name || "",
               description: c.description || "",
@@ -415,12 +417,10 @@ export default function AdminCompanyChat() {
               district: c.district || "",
               pincode: c.pincode || "",
               logoPath: c.logoPath || "",
-            });
-          }
-        }
-        setExistingJobCompanies(Array.from(byId.values()));
+            }))
+        );
       } catch (err) {
-        console.error("Failed to fetch existing admin companies with jobs:", err);
+        console.error("Failed to fetch existing admin companies:", err);
       } finally {
         setExistingJobCompaniesLoaded(true);
       }
@@ -433,12 +433,13 @@ export default function AdminCompanyChat() {
     setExistingJobCompanies((prev) => prev.filter((c) => c.id !== companyId));
   };
 
-  const handleExistingCompanySelected = async (company) => {
-    // Synthetic user message so history is clear
-    setChatMessages((prev) => [
-      ...prev,
-      { type: "user", text: `Use existing company: ${company?.name || ""}` },
-    ]);
+  const handleExistingCompanySelected = async (company, options = {}) => {
+    if (!options.skipUserMessage) {
+      setChatMessages((prev) => [
+        ...prev,
+        { type: "user", text: `Use existing company: ${company?.name || ""}` },
+      ]);
+    }
 
     // Prefill local company data for any later use (map zoom, etc.)
     setCompanyData({
@@ -677,8 +678,8 @@ export default function AdminCompanyChat() {
   }, []);
 
   useEffect(() => {
-    // When starting from the very first question and admin already has jobs,
-    // offer a dropdown to reuse an existing company instead of re-answering company questions.
+    // When starting from the company-name question, offer saved companies
+    // so the admin can reuse details instead of re-answering company questions.
     if (
       !existingJobCompaniesLoaded ||
       existingJobCompanies.length === 0 ||
@@ -965,10 +966,30 @@ export default function AdminCompanyChat() {
       const result = await res.json().catch(() => ({}));
 
       if (res.ok && result.success && result.company) {
-        setCreatedCompany({
-          ...result.company,
-          latitude: c.latitude != null ? Number(c.latitude) : null,
-          longitude: c.longitude != null ? Number(c.longitude) : null,
+        const savedCompany = {
+          id: result.company.id,
+          name: result.company.name || name,
+          description: result.company.description || c.description || "",
+          websiteUrl: c.websiteUrl || "",
+          latitude:
+            c.latitude != null && Number.isFinite(Number(c.latitude))
+              ? Number(c.latitude)
+              : null,
+          longitude:
+            c.longitude != null && Number.isFinite(Number(c.longitude))
+              ? Number(c.longitude)
+              : null,
+          state: result.company.state || state,
+          district: result.company.district || district,
+          pincode: c.pincode || "",
+          logoPath: result.company.logoPath || c.logoPath || c.logoUrl || "",
+        };
+        setCreatedCompany(savedCompany);
+        setExistingJobCompanies((prev) => {
+          if (prev.some((company) => company.id === savedCompany.id)) {
+            return prev;
+          }
+          return [savedCompany, ...prev];
         });
         setCollectingCompany(false);
         setCompanyData({});
@@ -1197,6 +1218,17 @@ export default function AdminCompanyChat() {
       if (collectingCompany) {
         switch (currentField) {
           case COMPANY_FIELDS.NAME: {
+            const existingMatch = existingJobCompanies.find(
+              (company) =>
+                (company.name || "").trim().toLowerCase() ===
+                value.trim().toLowerCase()
+            );
+            if (existingMatch) {
+              await handleExistingCompanySelected(existingMatch, {
+                skipUserMessage: true,
+              });
+              break;
+            }
             const next = { ...companyDataRef.current, name: value };
             companyDataRef.current = next;
             setCompanyData(next);
