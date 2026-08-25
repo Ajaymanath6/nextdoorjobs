@@ -1,6 +1,6 @@
 "use client";
 
-import { useRef, useCallback } from "react";
+import { useRef, useCallback, useState, useEffect } from "react";
 import dynamic from "next/dynamic";
 import EmailAuthForm from "./EmailAuthForm";
 import ProfileBubbleBackground from "./ProfileBubbleBackground";
@@ -24,6 +24,14 @@ const Map = dynamic(() => import("../Map/Map"), {
  * Pan/zoom + company pins/sidebar work; gated actions call onRequireAuth.
  */
 export default function GuestJobsMap({ onRequireAuth }) {
+  const [zoomHint, setZoomHint] = useState("Ctrl + scroll to zoom");
+
+  useEffect(() => {
+    if (typeof navigator === "undefined") return;
+    const isMac = /Mac|iPhone|iPad|iPod/i.test(navigator.platform || navigator.userAgent || "");
+    setZoomHint(isMac ? "⌘ + scroll to zoom" : "Ctrl + scroll to zoom");
+  }, []);
+
   return (
     <div className="relative w-full h-full min-h-0">
       <Map
@@ -32,6 +40,15 @@ export default function GuestJobsMap({ onRequireAuth }) {
         effectiveUser={null}
         effectiveUserLoading={false}
       />
+      <div
+        className="pointer-events-none absolute bottom-4 left-1/2 z-[1100] -translate-x-1/2 rounded-full border border-brand-stroke-weak bg-brand-bg-white/95 px-3 py-1.5 shadow-md"
+        style={{ fontFamily: "Open Sans, sans-serif" }}
+      >
+        <p className="whitespace-nowrap text-xs font-medium text-brand-text-strong">
+          {zoomHint}
+          <span className="text-brand-text-weak"> · scroll to explore · use + / − to zoom</span>
+        </p>
+      </div>
     </div>
   );
 }

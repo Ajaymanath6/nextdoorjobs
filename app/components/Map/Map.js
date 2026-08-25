@@ -2924,12 +2924,22 @@ const MapComponent = ({
     else map.scrollWheelZoom.enable();
   }, [guestMode, mapReady]);
 
-  // Guest map: forward wheel to the page scroll container (html/body are overflow:hidden)
+  // Guest map: plain wheel scrolls the page; Ctrl/Cmd + wheel zooms the map
   useEffect(() => {
     if (!guestMode || !mapReady || !mapRef.current) return;
     const el = mapRef.current;
     const onWheel = (e) => {
+      const map = mapInstanceRef.current;
       const scroller = el.closest("[data-guest-scroll]");
+
+      if ((e.ctrlKey || e.metaKey) && map) {
+        e.preventDefault();
+        e.stopPropagation();
+        if (e.deltaY < 0) map.zoomIn({ animate: false });
+        else if (e.deltaY > 0) map.zoomOut({ animate: false });
+        return;
+      }
+
       if (!scroller) return;
       e.preventDefault();
       scroller.scrollTop += e.deltaY;
