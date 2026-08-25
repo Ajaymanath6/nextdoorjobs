@@ -24,6 +24,8 @@ import {
 import { filterByRadius } from "../../../lib/mapDistance";
 import { getAvatarUrlById } from "../../../lib/avatars";
 import { useConfirmApplied } from "../../hooks/useConfirmApplied";
+import { useClerk } from "@clerk/nextjs";
+import { logoutToGuestMap } from "../../../lib/logoutToGuestMap";
 
 const TABS = [
   { id: "all", label: "All jobs" },
@@ -64,6 +66,7 @@ function gigMatchesServiceType(gig, filterType) {
 }
 
 export default function HomeJobsView({ user, loading: userLoading, onOpenSettings }) {
+  const { signOut } = useClerk();
   const profileRef = useRef(null);
   const localityDropdownRef = useRef(null);
 
@@ -623,12 +626,7 @@ export default function HomeJobsView({ user, loading: userLoading, onOpenSetting
 
   const handleLogout = async () => {
     setShowProfileDropdown(false);
-    try {
-      await fetch("/api/auth/logout", { method: "POST", credentials: "same-origin" });
-    } catch {
-      /* ignore */
-    }
-    window.location.href = "/onboarding";
+    await logoutToGuestMap(signOut);
   };
 
   const avatarSrc = user?.avatarUrl

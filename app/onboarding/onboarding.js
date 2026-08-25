@@ -122,18 +122,8 @@ export default function OnboardingPage() {
 
   const handleProfileLogout = async () => {
     setShowUserDropdown(false);
-    try {
-      await fetch("/api/auth/logout", { method: "POST" });
-      if (signOut) {
-        await signOut({ redirectUrl: "/onboarding" });
-      } else {
-        window.location.href = "/onboarding";
-      }
-    } catch (e) {
-      console.error("Logout error:", e);
-      await fetch("/api/auth/logout", { method: "POST" }).catch(() => {});
-      window.location.href = "/onboarding";
-    }
+    const { logoutToGuestMap } = await import("../../lib/logoutToGuestMap");
+    await logoutToGuestMap(signOut);
   };
 
   const [chatMessages, setChatMessages] = useState([]);
@@ -348,11 +338,12 @@ export default function OnboardingPage() {
       return;
     }
 
-    const t = setTimeout(() => {
-      setCheckingAuth(false);
-      setShowAuth(true);
-    }, 400);
-    return () => clearTimeout(t);
+    // Logged out / no Clerk session: always show guest map, never chat
+    setCheckingAuth(false);
+    setShowAuth(true);
+    setChatMessages([]);
+    setUserData(null);
+    setCompanyData(null);
   }, [clerkUser, clerkLoaded]);
 
   // Restore chat state from localStorage when userData is available

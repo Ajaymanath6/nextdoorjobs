@@ -123,18 +123,8 @@ export default function OnboardingPage() {
 
   const handleProfileLogout = async () => {
     setShowUserDropdown(false);
-    try {
-      await fetch("/api/auth/logout", { method: "POST" });
-      if (signOut) {
-        await signOut({ redirectUrl: "/onboarding" });
-      } else {
-        window.location.href = "/onboarding";
-      }
-    } catch (e) {
-      console.error("Logout error:", e);
-      await fetch("/api/auth/logout", { method: "POST" }).catch(() => {});
-      window.location.href = "/onboarding";
-    }
+    const { logoutToGuestMap } = await import("../../lib/logoutToGuestMap");
+    await logoutToGuestMap(signOut);
   };
 
   const [chatMessages, setChatMessages] = useState([]);
