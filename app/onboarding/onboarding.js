@@ -7,6 +7,7 @@ import { WatsonHealthRotate_360, List, UserAvatar, User, Settings, Logout, Earth
 import ChatInterface from "../components/Onboarding/ChatInterface";
 import SettingsModal from "../components/SettingsModal";
 import EmailAuthForm from "../components/Onboarding/EmailAuthForm";
+import { GuestOnboardingLanding } from "../components/Onboarding/GuestJobsMap";
 import StateDistrictSelector from "../components/Onboarding/StateDistrictSelector";
 import LogoPicker from "../components/Onboarding/LogoPicker";
 import UrlInput from "../components/Onboarding/UrlInput";
@@ -1860,15 +1861,10 @@ setCurrentField(GIG_FIELDS.CUSTOMERS_TILL_DATE);
   // Show email authentication overlay (only after checking auth to avoid flash)
   if (showAuth) {
     return (
-      <div className="fixed inset-0 w-full h-full overflow-hidden bg-brand-bg-fill bg-cover bg-center bg-no-repeat" style={{ backgroundImage: "url(/back.png)" }}>
-        {/* Animated bubble background above the image */}
-        <ProfileBubbleBackground />
-
-        {/* Sign-up modal overlay – card aligned to top, 24px margin (header is inside the card) */}
-        <div className="absolute inset-0 z-10 flex items-start justify-center px-0 overflow-y-auto">
-          <EmailAuthForm onSubmit={handleEmailAuth} isLoading={isLoading} />
-        </div>
-      </div>
+      <GuestOnboardingLanding
+        onSubmit={handleEmailAuth}
+        isLoading={isLoading}
+      />
     );
   }
 

@@ -53,6 +53,9 @@ const isPublicRoute = createRouteMatcher([
   '/api/search-college',
   '/api/colleges',
   '/api/job-titles',
+  // Guest map on /onboarding: read-only company pins + sidebar jobs
+  '/api/companies',
+  '/api/companies/(.*)',
 ]);
 
 const clerkHandler = clerkMiddleware(async (auth, req) => {

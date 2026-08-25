@@ -79,7 +79,14 @@ function getCandidateSkills(gig) {
 
 
 // Dynamic import of Leaflet to avoid SSR issues
-const MapComponent = ({ onOpenSettings, onViewModeChange, effectiveUser = null, effectiveUserLoading = true }) => {
+const MapComponent = ({
+  onOpenSettings,
+  onViewModeChange,
+  effectiveUser = null,
+  effectiveUserLoading = true,
+  guestMode = false,
+  onRequireAuth = null,
+}) => {
   const router = useRouter();
   const { signOut } = useClerk();
   const mapRef = useRef(null);
@@ -253,8 +260,12 @@ const MapComponent = ({ onOpenSettings, onViewModeChange, effectiveUser = null, 
   }, [searchMode, onViewModeChange]);
 
   // Derive account type and search mode for search bar UI so the correct bar shows on first paint (avoids Company user seeing job-seeker bar briefly after sign-in).
-  const accountTypeForUI = effectiveUser?.accountType ?? userAccountType;
-  const searchModeForUI = accountTypeForUI === "Company" ? "person" : searchMode;
+  const accountTypeForUI = guestMode
+    ? "Individual"
+    : (effectiveUser?.accountType ?? userAccountType);
+  const searchModeForUI = guestMode
+    ? "company"
+    : (accountTypeForUI === "Company" ? "person" : searchMode);
 
   // Home location (from profile)
   const [homeLocation, setHomeLocation] = useState(null);
@@ -640,7 +651,7 @@ const MapComponent = ({ onOpenSettings, onViewModeChange, effectiveUser = null, 
   const jobsFilterBarProps = {
     searchModeForUI,
     accountTypeForUI,
-    userAccountType,
+    userAccountType: guestMode ? "Individual" : userAccountType,
     gigs,
     selectedGigType,
     onSelectGigType: setSelectedGigType,
@@ -726,6 +737,7 @@ const MapComponent = ({ onOpenSettings, onViewModeChange, effectiveUser = null, 
 
   // Fetch user profile for home location
   useEffect(() => {
+    if (guestMode) return;
     const fromEffective = effectiveUser;
     if (
       fromEffective?.homeLatitude != null &&
@@ -754,7 +766,7 @@ const MapComponent = ({ onOpenSettings, onViewModeChange, effectiveUser = null, 
         }
       })
       .catch(() => {});
-  }, [effectiveUser]);
+  }, [effectiveUser, guestMode]);
 
   // Load locations data (client-side only)
   useEffect(() => {
@@ -2755,6 +2767,26 @@ const MapComponent = ({ onOpenSettings, onViewModeChange, effectiveUser = null, 
 
   useEffect(() => {
     setIsClient(true);
+    if (guestMode) {
+      setUserAccountType("Individual");
+      setSearchMode("company");
+      fetch("/api/companies")
+        .then((res) => (res.ok ? res.json() : null))
+        .then((data) => {
+          if (data?.companies && Array.isArray(data.companies)) {
+            const visibleCompanies = data.companies.filter((company) => {
+              const name = company.name || company.company_name || "";
+              return name !== "Test234";
+            });
+            setTotalCompaniesCount(visibleCompanies.length);
+            setTotalJobsCount(
+              visibleCompanies.reduce((s, c) => s + (c.jobCount || 0), 0)
+            );
+          }
+        })
+        .catch(() => {});
+      return;
+    }
     if (effectiveUser != null) return;
     // Fetch user account type; store user for locate-me avatar/logo. Company accounts default to candidates (person) view.
     fetch("/api/auth/me", { credentials: "same-origin" })
@@ -2784,7 +2816,7 @@ const MapComponent = ({ onOpenSettings, onViewModeChange, effectiveUser = null, 
         }
       })
       .catch(() => {});
-  }, [effectiveUser]);
+  }, [effectiveUser, guestMode]);
 
   useEffect(() => {
     // Only run on client side
@@ -2826,6 +2858,8 @@ const MapComponent = ({ onOpenSettings, onViewModeChange, effectiveUser = null, 
           attributionControl: true,
           zoomAnimation: true,
           zoomAnimationThreshold: 4,
+          // Guest landing: let wheel scroll the page instead of zooming the map
+          scrollWheelZoom: !guestMode,
         }).setView([initialLat, initialLon], zoom);
 
           // Tile layer with OpenStreetMap
@@ -2837,6 +2871,17 @@ const MapComponent = ({ onOpenSettings, onViewModeChange, effectiveUser = null, 
 
           mapInstanceRef.current = map;
           setMapReady(true);
+
+          // Guest map sits in a newly laid-out viewport; force Leaflet to recalculate size
+          if (guestMode) {
+            setTimeout(() => {
+              try {
+                map.invalidateSize();
+              } catch (_) {
+                /* ignore */
+              }
+            }, 100);
+          }
 
           // zoomToJobCoords is handled in a separate effect; it flies to the job coords (single company favicon pin, no extra marker)
         }).catch((error) => {
@@ -2869,7 +2914,29 @@ const MapComponent = ({ onOpenSettings, onViewModeChange, effectiveUser = null, 
         delete window.L;
       }
     };
-  }, [isClient]);
+  }, [isClient, guestMode]);
+
+  // Keep wheel-zoom disabled in guest mode if map was already created
+  useEffect(() => {
+    const map = mapInstanceRef.current;
+    if (!map || !map.scrollWheelZoom) return;
+    if (guestMode) map.scrollWheelZoom.disable();
+    else map.scrollWheelZoom.enable();
+  }, [guestMode, mapReady]);
+
+  // Guest map: forward wheel to the page scroll container (html/body are overflow:hidden)
+  useEffect(() => {
+    if (!guestMode || !mapReady || !mapRef.current) return;
+    const el = mapRef.current;
+    const onWheel = (e) => {
+      const scroller = el.closest("[data-guest-scroll]");
+      if (!scroller) return;
+      e.preventDefault();
+      scroller.scrollTop += e.deltaY;
+    };
+    el.addEventListener("wheel", onWheel, { passive: false });
+    return () => el.removeEventListener("wheel", onWheel);
+  }, [guestMode, mapReady]);
 
   // "Locate me on map": Company = first company with coords + logo; Individual = first gig, else home, else modal
   const runLocateMeOnMap = () => {
@@ -3053,6 +3120,7 @@ const MapComponent = ({ onOpenSettings, onViewModeChange, effectiveUser = null, 
 
   // One-time zoom to user location on sign-in when map is ready; if no location, show location modal (signed-in users only)
   useEffect(() => {
+    if (guestMode) return;
     if (!mapReady || !mapInstanceRef.current || typeof window === "undefined" || hasInitialZoomToUserRun.current) return;
     hasInitialZoomToUserRun.current = true;
     fetch("/api/auth/me", { credentials: "same-origin" })
@@ -3061,7 +3129,7 @@ const MapComponent = ({ onOpenSettings, onViewModeChange, effectiveUser = null, 
         if (data?.success && data?.user) runLocateMeOnMap();
       })
       .catch(() => {});
-  }, [mapReady]);
+  }, [mapReady, guestMode]);
 
   // Check for openAddHomeModal flag from Settings
   useEffect(() => {
@@ -3075,7 +3143,12 @@ const MapComponent = ({ onOpenSettings, onViewModeChange, effectiveUser = null, 
 
   // Add markers when locations data and map are ready (companies only when in company mode)
   useEffect(() => {
-    if (!mapInstanceRef.current || !locationsData) {
+    if (!mapReady || !mapInstanceRef.current) {
+      return;
+    }
+    // Static locations.json is only a readiness gate for legacy map chrome; guest mode
+    // loads companies from the API and should not wait on it.
+    if (!guestMode && !locationsData) {
       return;
     }
 
@@ -3170,17 +3243,28 @@ const MapComponent = ({ onOpenSettings, onViewModeChange, effectiveUser = null, 
             salaryBand: salaryBandObj,
             moreFilters: selectedMoreFilters,
           });
-          const res = await fetch(url);
-          if (res.ok) {
-            const data = await res.json();
-            companies = data.companies || [];
-            if (data.warning) {
-              console.warn("[Map] Companies fetch warning:", data.warning);
+          const maxAttempts = guestMode ? 3 : 1;
+          for (let attempt = 1; attempt <= maxAttempts; attempt++) {
+            const res = await fetch(url);
+            if (res.ok) {
+              const data = await res.json();
+              companies = data.companies || [];
+              if (data.warning) {
+                console.warn("[Map] Companies fetch warning:", data.warning);
+              }
+              if (companies.length > 0 || !data.warning || attempt === maxAttempts) {
+                break;
+              }
+            } else {
+              console.warn("Failed to fetch companies:", res.status);
+              if (attempt === maxAttempts) {
+                setTotalCompaniesCount(0);
+                setTotalJobsCount(0);
+              }
             }
-          } else {
-            console.warn("Failed to fetch companies:", res.status);
-            setTotalCompaniesCount(0);
-            setTotalJobsCount(0);
+            if (attempt < maxAttempts) {
+              await new Promise((r) => setTimeout(r, 800 * attempt));
+            }
           }
         }
       } catch (error) {
@@ -3501,7 +3585,7 @@ const MapComponent = ({ onOpenSettings, onViewModeChange, effectiveUser = null, 
     };
 
     addMarkersToMap();
-  }, [mapInstanceRef.current, locationsData, searchMode, userAccountType, selectedWorkMode, selectedEmploymentType, selectedIndustryType, selectedRole, selectedSalaryBand, selectedMoreFilters, selectedRadiusKm, homeLocation, applyRadiusOverlayAndZoom]);
+  }, [mapReady, guestMode, locationsData, searchMode, userAccountType, selectedWorkMode, selectedEmploymentType, selectedIndustryType, selectedRole, selectedSalaryBand, selectedMoreFilters, selectedRadiusKm, homeLocation, applyRadiusOverlayAndZoom]);
 
   // Zoom to job coordinates when arriving from "See your posting on the map"
   useEffect(() => {
@@ -5715,7 +5799,13 @@ const MapComponent = ({ onOpenSettings, onViewModeChange, effectiveUser = null, 
                     <div className="relative md:hidden shrink-0">
                       <button
                         type="button"
-                        onClick={() => setShowSearchModeDropdown(!showSearchModeDropdown)}
+                        onClick={() => {
+                          if (guestMode) {
+                            onRequireAuth?.();
+                            return;
+                          }
+                          setShowSearchModeDropdown(!showSearchModeDropdown);
+                        }}
                         className={`h-[34px] w-[46px] flex items-center justify-center gap-0.5 p-1 rounded-lg border-r border-brand-stroke-border hover:bg-brand-bg-fill transition-colors shrink-0 ${searchMode ? "bg-brand-bg-fill" : "bg-transparent"}`}
                         title={searchModeForUI === "person" ? (accountTypeForUI === "Company" ? "Candidates" : "Gigs") : "Jobs"}
                         aria-expanded={showSearchModeDropdown}
@@ -5734,6 +5824,11 @@ const MapComponent = ({ onOpenSettings, onViewModeChange, effectiveUser = null, 
                             <button
                               type="button"
                               onClick={() => {
+                                if (guestMode) {
+                                  onRequireAuth?.();
+                                  setShowSearchModeDropdown(false);
+                                  return;
+                                }
                                 setSearchMode("person");
                                 setShowSearchModeDropdown(false);
                               }}
@@ -5764,7 +5859,13 @@ const MapComponent = ({ onOpenSettings, onViewModeChange, effectiveUser = null, 
                       <div className="flex rounded-full border border-brand-stroke-border overflow-hidden">
                         <button
                           type="button"
-                          onClick={() => setSearchMode("person")}
+                          onClick={() => {
+                            if (guestMode) {
+                              onRequireAuth?.();
+                              return;
+                            }
+                            setSearchMode("person");
+                          }}
                           className={`flex items-center gap-1.5 px-3 py-2 border-0 ${searchBar["toggle-segment"]} ${searchModeForUI === "person" ? searchBar["toggle-segment-active"] + " bg-brand/15 text-brand" : ""} !rounded-l-md !rounded-r-none`}
                           title={accountTypeForUI === "Company" ? "Candidates" : "Gigs"}
                         >
@@ -6223,11 +6324,14 @@ const MapComponent = ({ onOpenSettings, onViewModeChange, effectiveUser = null, 
         </div>
       )}
 
-      {/* Profile button - fixed at right corner of viewport, 60x60 */}
+      {/* Profile button - fixed at right corner of viewport, 60x60 (hidden in guest map — use signup below) */}
+      {!guestMode && (
       <div className={`fixed right-4 top-4 z-[1000] ${mobileSearchExpanded || showFilterDropdown ? "hidden md:flex" : "flex"}`} ref={profileRef}>
         <button
           type="button"
-          onClick={() => setShowProfileDropdown((v) => !v)}
+          onClick={() => {
+            setShowProfileDropdown((v) => !v);
+          }}
           className="h-[60px] w-[60px] flex items-center justify-center rounded-full border border-brand-stroke-border bg-white hover:bg-brand-bg-fill transition-colors shadow-sm"
           aria-label="Profile menu"
           aria-expanded={showProfileDropdown}
@@ -6241,6 +6345,7 @@ const MapComponent = ({ onOpenSettings, onViewModeChange, effectiveUser = null, 
           )}
         </button>
       </div>
+      )}
 
       {/* Empty State Overlay */}
       <EmptyState
@@ -6490,6 +6595,8 @@ const MapComponent = ({ onOpenSettings, onViewModeChange, effectiveUser = null, 
         jobs={selectedCompanyJobs}
         isOpen={showCompanyJobsSidebar}
         onClose={() => setShowCompanyJobsSidebar(false)}
+        guestMode={guestMode}
+        onRequireAuth={onRequireAuth}
       />
 
       <JobsMoreFiltersDrawer

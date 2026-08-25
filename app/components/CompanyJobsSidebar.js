@@ -11,12 +11,21 @@ We provide access to court data from state and federal courts to a diverse list 
 
 UniCourt is a legal technology company focused on using technology to unlock the potential of legal data. We are based in both California and Mangalore, India and our team includes legal professionals, data scientists, physicists, computer engineers, and sales and marketing, professionals.`;
 
-export default function CompanyJobsSidebar({ company, jobs, isOpen, onClose, onApplied, onSaved }) {
+export default function CompanyJobsSidebar({
+  company,
+  jobs,
+  isOpen,
+  onClose,
+  onApplied,
+  onSaved,
+  guestMode = false,
+  onRequireAuth,
+}) {
   const [appliedIds, setAppliedIds] = useState(() => new Set());
   const [savedIds, setSavedIds] = useState(() => new Set());
 
   useEffect(() => {
-    if (!isOpen) return;
+    if (!isOpen || guestMode) return;
     let cancelled = false;
     fetch("/api/job-saves", { credentials: "same-origin" })
       .then((r) => (r.ok ? r.json() : null))
@@ -28,7 +37,7 @@ export default function CompanyJobsSidebar({ company, jobs, isOpen, onClose, onA
     return () => {
       cancelled = true;
     };
-  }, [isOpen]);
+  }, [isOpen, guestMode]);
 
   const handleApplied = useCallback(
     (job) => {
@@ -42,6 +51,10 @@ export default function CompanyJobsSidebar({ company, jobs, isOpen, onClose, onA
 
   const handleSave = useCallback(
     async (job, shouldSave) => {
+      if (guestMode) {
+        onRequireAuth?.();
+        return;
+      }
       if (job?.id == null) return;
       const method = shouldSave ? "POST" : "DELETE";
       try {
@@ -63,10 +76,21 @@ export default function CompanyJobsSidebar({ company, jobs, isOpen, onClose, onA
         // ignore
       }
     },
-    [onSaved]
+    [onSaved, guestMode, onRequireAuth]
   );
 
   const { startApply, modal } = useConfirmApplied({ onApplied: handleApplied });
+
+  const handleApplyClick = useCallback(
+    (job, openUrl) => {
+      if (guestMode) {
+        onRequireAuth?.();
+        return;
+      }
+      startApply({ ...job, company: job.company || company }, { openUrl });
+    },
+    [guestMode, onRequireAuth, startApply, company]
+  );
 
   if (!isOpen || !company) return null;
 
@@ -155,18 +179,8 @@ export default function CompanyJobsSidebar({ company, jobs, isOpen, onClose, onA
                   company={company}
                   hasApplied={appliedIds.has(job.id) || job.hasApplied}
                   hasSaved={savedIds.has(job.id) || job.hasSaved}
-                  onApply={(j) =>
-                    startApply(
-                      { ...j, company: j.company || company },
-                      { openUrl: true }
-                    )
-                  }
-                  onMarkApplied={(j) =>
-                    startApply(
-                      { ...j, company: j.company || company },
-                      { openUrl: false }
-                    )
-                  }
+                  onApply={(j) => handleApplyClick(j, true)}
+                  onMarkApplied={(j) => handleApplyClick(j, false)}
                   onSave={handleSave}
                 />
               ))

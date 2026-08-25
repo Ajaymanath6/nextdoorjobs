@@ -69,6 +69,7 @@ export default function EmailAuthForm({ onSubmit, isLoading = false }) {
 
   return (
     <div
+      id="signup"
       className="relative w-full box-border flex flex-col overflow-visible"
       style={{
         marginLeft: "24px",
