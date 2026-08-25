@@ -6,7 +6,6 @@ import { useUser, useClerk } from "@clerk/nextjs";
 import { WatsonHealthRotate_360, List, UserAvatar, User, Settings, Logout, EarthFilled, Chat, ArrowLeft, Location, Notification } from "@carbon/icons-react";
 import ChatInterface from "../components/Onboarding/ChatInterface";
 import SettingsModal from "../components/SettingsModal";
-import EmailAuthForm from "../components/Onboarding/EmailAuthForm";
 import { GuestOnboardingLanding } from "../components/Onboarding/GuestJobsMap";
 import StateDistrictSelector from "../components/Onboarding/StateDistrictSelector";
 import LogoPicker from "../components/Onboarding/LogoPicker";

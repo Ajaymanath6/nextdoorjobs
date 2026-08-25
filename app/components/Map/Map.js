@@ -2858,8 +2858,6 @@ const MapComponent = ({
           attributionControl: true,
           zoomAnimation: true,
           zoomAnimationThreshold: 4,
-          // Guest landing: let wheel scroll the page instead of zooming the map
-          scrollWheelZoom: !guestMode,
         }).setView([initialLat, initialLon], zoom);
 
           // Tile layer with OpenStreetMap
@@ -2915,38 +2913,6 @@ const MapComponent = ({
       }
     };
   }, [isClient, guestMode]);
-
-  // Keep wheel-zoom disabled in guest mode if map was already created
-  useEffect(() => {
-    const map = mapInstanceRef.current;
-    if (!map || !map.scrollWheelZoom) return;
-    if (guestMode) map.scrollWheelZoom.disable();
-    else map.scrollWheelZoom.enable();
-  }, [guestMode, mapReady]);
-
-  // Guest map: plain wheel scrolls the page; Ctrl/Cmd + wheel zooms the map
-  useEffect(() => {
-    if (!guestMode || !mapReady || !mapRef.current) return;
-    const el = mapRef.current;
-    const onWheel = (e) => {
-      const map = mapInstanceRef.current;
-      const scroller = el.closest("[data-guest-scroll]");
-
-      if ((e.ctrlKey || e.metaKey) && map) {
-        e.preventDefault();
-        e.stopPropagation();
-        if (e.deltaY < 0) map.zoomIn({ animate: false });
-        else if (e.deltaY > 0) map.zoomOut({ animate: false });
-        return;
-      }
-
-      if (!scroller) return;
-      e.preventDefault();
-      scroller.scrollTop += e.deltaY;
-    };
-    el.addEventListener("wheel", onWheel, { passive: false });
-    return () => el.removeEventListener("wheel", onWheel);
-  }, [guestMode, mapReady]);
 
   // "Locate me on map": Company = first company with coords + logo; Individual = first gig, else home, else modal
   const runLocateMeOnMap = () => {

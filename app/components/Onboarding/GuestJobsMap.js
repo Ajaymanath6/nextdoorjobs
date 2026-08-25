@@ -1,9 +1,10 @@
 "use client";
 
-import { useRef, useCallback, useState, useEffect } from "react";
+import { useState, useCallback, useEffect } from "react";
 import dynamic from "next/dynamic";
+import { createPortal } from "react-dom";
+import { X } from "@phosphor-icons/react";
 import EmailAuthForm from "./EmailAuthForm";
-import ProfileBubbleBackground from "./ProfileBubbleBackground";
 
 const Map = dynamic(() => import("../Map/Map"), {
   ssr: false,
@@ -21,17 +22,8 @@ const Map = dynamic(() => import("../Map/Map"), {
 
 /**
  * Interactive jobs map for unauthenticated /onboarding visitors.
- * Pan/zoom + company pins/sidebar work; gated actions call onRequireAuth.
  */
 export default function GuestJobsMap({ onRequireAuth }) {
-  const [zoomHint, setZoomHint] = useState("Ctrl + scroll to zoom");
-
-  useEffect(() => {
-    if (typeof navigator === "undefined") return;
-    const isMac = /Mac|iPhone|iPad|iPod/i.test(navigator.platform || navigator.userAgent || "");
-    setZoomHint(isMac ? "⌘ + scroll to zoom" : "Ctrl + scroll to zoom");
-  }, []);
-
   return (
     <div className="relative w-full h-full min-h-0">
       <Map
@@ -40,55 +32,85 @@ export default function GuestJobsMap({ onRequireAuth }) {
         effectiveUser={null}
         effectiveUserLoading={false}
       />
-      <div
-        className="pointer-events-none absolute bottom-4 left-1/2 z-[1100] -translate-x-1/2 rounded-full border border-brand-stroke-weak bg-brand-bg-white/95 px-3 py-1.5 shadow-md"
-        style={{ fontFamily: "Open Sans, sans-serif" }}
-      >
-        <p className="whitespace-nowrap text-xs font-medium text-brand-text-strong">
-          {zoomHint}
-          <span className="text-brand-text-weak"> · scroll to explore · use + / − to zoom</span>
-        </p>
-      </div>
     </div>
   );
 }
 
+function GuestAuthModal({ isOpen, onClose, onSubmit, isLoading }) {
+  const [mounted, setMounted] = useState(false);
+
+  useEffect(() => {
+    setMounted(true);
+  }, []);
+
+  useEffect(() => {
+    if (!isOpen) return;
+    const onKey = (e) => {
+      if (e.key === "Escape") onClose?.();
+    };
+    document.addEventListener("keydown", onKey);
+    return () => document.removeEventListener("keydown", onKey);
+  }, [isOpen, onClose]);
+
+  if (!mounted || !isOpen) return null;
+
+  return createPortal(
+    <div
+      className="fixed inset-0 z-[10050] flex items-center justify-center p-4"
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby="guest-auth-title"
+    >
+      <button
+        type="button"
+        className="absolute inset-0 bg-black/45 backdrop-blur-[2px] border-0 cursor-default"
+        aria-label="Close sign in"
+        onClick={onClose}
+      />
+      <div className="relative z-10 w-full max-w-[420px] max-h-[min(90dvh,720px)] overflow-y-auto rounded-2xl bg-brand-bg-white shadow-2xl border border-brand-stroke-weak">
+        <button
+          type="button"
+          onClick={onClose}
+          className="absolute top-3 right-3 z-20 p-2 rounded-full text-brand-text-weak hover:bg-brand-bg-fill hover:text-brand-text-strong transition-colors"
+          aria-label="Close"
+        >
+          <X size={20} />
+        </button>
+        <div className="px-6 pt-8 pb-6">
+          <EmailAuthForm
+            variant="modal"
+            onSubmit={onSubmit}
+            isLoading={isLoading}
+          />
+        </div>
+      </div>
+    </div>,
+    document.body
+  );
+}
+
 /**
- * Full guest landing: viewport-tall map, then signup below.
- * Uses a fixed-height scroll container so users can scroll down and back up
- * (html/body are overflow:hidden app-wide).
+ * Guest landing: full-viewport jobs map only.
+ * Apply / gated actions open a modern signup/login modal.
  */
 export function GuestOnboardingLanding({ onSubmit, isLoading }) {
-  const scrollRef = useRef(null);
+  const [authOpen, setAuthOpen] = useState(false);
 
-  const scrollToSignup = useCallback(() => {
-    const container = scrollRef.current;
-    const el = typeof document !== "undefined" ? document.getElementById("signup") : null;
-    if (!container || !el) return;
-    const containerRect = container.getBoundingClientRect();
-    const elRect = el.getBoundingClientRect();
-    const top = elRect.top - containerRect.top + container.scrollTop;
-    container.scrollTo({ top, behavior: "smooth" });
+  const openAuth = useCallback(() => {
+    setAuthOpen(true);
   }, []);
 
   return (
-    <div
-      ref={scrollRef}
-      data-guest-scroll
-      className="h-[100dvh] w-full overflow-y-auto overscroll-y-contain bg-brand-bg-fill"
-    >
-      <div className="w-full h-[100dvh] relative shrink-0 border-b border-brand-stroke-weak">
-        <GuestJobsMap onRequireAuth={scrollToSignup} />
+    <div className="h-[100dvh] w-full overflow-hidden bg-brand-bg-fill">
+      <div className="w-full h-full relative">
+        <GuestJobsMap onRequireAuth={openAuth} />
       </div>
-      <div
-        className="relative w-full shrink-0 bg-brand-bg-fill bg-cover bg-center bg-no-repeat"
-        style={{ backgroundImage: "url(/back.png)" }}
-      >
-        <ProfileBubbleBackground />
-        <div className="relative z-10 flex items-start justify-center px-0 py-4">
-          <EmailAuthForm onSubmit={onSubmit} isLoading={isLoading} />
-        </div>
-      </div>
+      <GuestAuthModal
+        isOpen={authOpen}
+        onClose={() => setAuthOpen(false)}
+        onSubmit={onSubmit}
+        isLoading={isLoading}
+      />
     </div>
   );
 }
